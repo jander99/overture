@@ -1,14 +1,26 @@
 # Overture
 
-Unified configuration management for Claude Code and GitHub Copilot. Keep your AI coding assistants in sync—same MCP servers, consistent settings, seamless coordination.
+Configuration management for Claude Code. Simplify your Claude Code setup with centralized configuration for MCP servers, subagents, skills, hooks, and plugins.
 
 ## Overview
 
-Overture manages configuration across Claude Code and GitHub Copilot, ensuring both tools operate with identical settings when they share capabilities. As each platform evolves, Overture scales with them, handling shared features like MCP servers while accommodating tool-specific configurations like Code's subagents, skills, hooks, and plugins.
+Overture manages Claude Code configuration, providing a streamlined way to define and deploy settings for MCP servers and Claude Code's advanced features including subagents, skills, hooks, and plugins.
 
 ## Features
 
-- **Unified Configuration** — Define settings once, deploy to both Claude Code and Copilot
-- **MCP Server Sync** — Automatically synchronize Model Context Protocol server configurations
-- **Tool-Specific Extensions** — Support for Code's advanced features (subagents, skills, hooks, plugins) while maintaining Copilot compatibility
-- **Single Source of Truth** — Centralized config management eliminates drift between tools
+- **Unified Configuration** — Define Claude Code settings in a single, manageable format
+- **MCP Server Management** — Configure Model Context Protocol servers with ease
+- **Advanced Features Support** — Full support for Code's subagents, skills, hooks, and plugins
+- **Single Source of Truth** — Centralized config management eliminates configuration drift
+
+## Development Requirements
+
+To develop Overture (not required for using it), you'll need the following MCP servers configured in Claude Code:
+
+- **sequentialthinking** — Complex problem-solving and architectural planning
+- **filesystem** — File operations and codebase management
+- **context7** — Up-to-date documentation for Claude Code and dependencies
+- **memory** — Cross-conversation context and architectural decision tracking
+- **nx** — (Optional) Build orchestration if the project adopts a monorepo structure
+
+See `CLAUDE.md` for detailed guidance on when and how to use each MCP server.

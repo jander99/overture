@@ -4,12 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Overture is a unified configuration management tool for Claude Code and GitHub Copilot. The project aims to:
+Overture is a configuration management tool for Claude Code. The project aims to:
 
-- Synchronize settings between Claude Code and GitHub Copilot
-- Manage Model Context Protocol (MCP) server configurations across both platforms
-- Support tool-specific features (Claude Code's subagents, skills, hooks, plugins) while maintaining Copilot compatibility
-- Provide a single source of truth for AI coding assistant configuration
+- Manage Model Context Protocol (MCP) server configurations
+- Support Claude Code's advanced features (subagents, skills, hooks, plugins)
+- Provide a single source of truth for Claude Code configuration
 
 ## Project Status
 
@@ -19,17 +18,71 @@ This is an early-stage project. The repository currently contains only documenta
 
 When implementing this project, consider:
 
-1. **Configuration Schema**: Design a flexible schema that accommodates both shared settings (MCP servers) and tool-specific configurations (Claude Code subagents/skills/hooks/plugins vs Copilot-specific features)
+1. **Configuration Schema**: Design a flexible schema that accommodates MCP servers and Claude Code-specific features (subagents, skills, hooks, plugins)
 
-2. **File Formats**: Determine output format compatibility:
+2. **File Formats**:
    - Claude Code uses JSON configuration files in `.claude/` directory
-   - GitHub Copilot uses various configuration mechanisms
+   - Determine how Overture will generate or transform these configurations
 
-3. **Synchronization Strategy**: Decide whether Overture will:
-   - Generate separate config files for each tool
-   - Act as a translation layer
-   - Maintain a master config with tool-specific exports
+3. **Configuration Strategy**: Decide whether Overture will:
+   - Generate Claude Code config files directly
+   - Act as a validation and management layer
+   - Maintain a master config with templating capabilities
 
 4. **MCP Server Management**: Handle MCP server configurations including server names, commands, arguments, and environment variables
 
-5. **Version Control**: Consider how configuration changes should be tracked and versioned across different tools
+5. **Version Control**: Consider how configuration changes should be tracked and versioned
+
+## Required MCP Servers for Development
+
+The following MCP servers are required for development work on Overture (not for using Overture). These servers provide essential capabilities for working with this codebase:
+
+### sequentialthinking
+**When to use**: For complex, multi-step problem-solving that requires careful analysis and planning.
+
+Use this server when:
+- Breaking down complex architectural decisions into logical steps
+- Analyzing configuration schema design options
+- Planning configuration management strategies
+- Working through edge cases in configuration validation
+- Any task requiring systematic thinking and revision of assumptions
+
+### filesystem
+**When to use**: For all file operations in the project.
+
+Use this server when:
+- Reading, writing, or editing configuration files
+- Creating directory structures for test fixtures
+- Searching for files or patterns across the codebase
+- Managing generated configuration outputs
+- Working with example configurations
+
+### context7
+**When to use**: For retrieving up-to-date documentation for libraries and frameworks.
+
+Use this server when:
+- Looking up Claude Code configuration file formats and options
+- Finding documentation on MCP server setup and configuration
+- Checking API references for external dependencies
+- Verifying current best practices for Claude Code configuration
+
+### memory
+**When to use**: For maintaining project context and relationships across conversations.
+
+Use this server when:
+- Tracking architectural decisions and their rationales
+- Maintaining relationships between configuration concepts
+- Recording Claude Code feature mappings
+- Building knowledge about configuration schema design
+- Preserving context about configuration management strategies
+
+### nx
+**When to use**: If the project adopts Nx for monorepo management (future consideration).
+
+Use this server when:
+- Setting up build and task orchestration
+- Managing multiple packages or plugins
+- Configuring project-level tooling
+- Working with Nx-specific configuration
+
+**Note**: The nx server is listed for potential future use if Overture grows into a monorepo structure or needs advanced build orchestration.
