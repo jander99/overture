@@ -1,0 +1,19 @@
+{
+  "name": "@overture/cli-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/cli-e2e/src",
+  "projectType": "application",
+  "implicitDependencies": ["@overture/cli"],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{projectRoot}/test-output/jest/coverage"],
+      "options": {
+        "jestConfig": "apps/cli-e2e/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "dependsOn": ["@overture/cli:build", "@overture/cli:serve"]
+    }
+  },
+  "tags": []
+}
