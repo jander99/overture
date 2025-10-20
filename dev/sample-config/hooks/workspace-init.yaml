@@ -1,0 +1,61 @@
+name: workspace-init
+description: Initializes workspace environment when Claude Code starts
+
+# Event trigger - this would be a session-start event in a real implementation
+event: session-start
+
+# No filter needed for session start
+filter: {}
+
+# Command to execute
+command: |
+  #!/bin/bash
+
+  echo "Initializing workspace..."
+
+  # Create necessary directories if they don't exist
+  mkdir -p .tmp
+  mkdir -p .logs
+
+  # Set up environment
+  export WORKSPACE_ROOT=$(pwd)
+  export WORKSPACE_INITIALIZED=true
+
+  # Check for required tools
+  echo "Checking required tools..."
+
+  MISSING_TOOLS=()
+
+  if ! command -v git &> /dev/null; then
+    MISSING_TOOLS+=("git")
+  fi
+
+  if [ ${#MISSING_TOOLS[@]} -gt 0 ]; then
+    echo "Warning: Missing tools: ${MISSING_TOOLS[*]}"
+  else
+    echo "All required tools are available"
+  fi
+
+  # Load project-specific environment if exists
+  if [ -f .env.local ]; then
+    echo "Loading local environment variables..."
+    set -a
+    source .env.local
+    set +a
+  fi
+
+  # Display workspace info
+  echo "Workspace initialized at: $WORKSPACE_ROOT"
+  echo "Git branch: $(git branch --show-current 2>/dev/null || echo 'not a git repo')"
+
+  # Create initialization log
+  echo "$(date): Workspace initialized" >> .logs/init.log
+
+  echo "Workspace ready!"
+
+# Environment variables
+env:
+  WORKSPACE_INITIALIZED: "true"
+
+# Dependencies
+dependencies: []

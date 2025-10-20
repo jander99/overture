@@ -1,0 +1,44 @@
+name: static-analysis
+description: Performs static code analysis to gather metrics and identify patterns
+version: 1.0.0
+
+# Dependencies
+dependencies:
+  hooks:
+    - hook:setup-analysis-tools  # Ensure analysis tools are available
+
+# Skill implementation files
+files:
+  - analyzer.py
+  - rules.json
+  - formatters.js
+
+# Entry point
+entrypoint: analyzer.py
+
+# Configuration
+config:
+  # Languages to analyze
+  languages:
+    - python
+    - javascript
+    - typescript
+    - go
+
+  # Metrics to collect
+  metrics:
+    - cyclomatic_complexity
+    - lines_of_code
+    - code_duplication
+    - test_coverage
+
+  # Analysis rules
+  rules:
+    max_function_length: 50
+    max_complexity: 10
+    min_test_coverage: 80
+
+  # Output format
+  output:
+    format: json
+    include_recommendations: true

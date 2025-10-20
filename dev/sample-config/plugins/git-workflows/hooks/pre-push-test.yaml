@@ -1,0 +1,59 @@
+name: pre-push-test
+description: Runs tests before pushing to ensure code quality
+
+# Event trigger
+event: tool-call
+
+# Filter to only trigger on git push operations
+filter:
+  tool: Bash
+  pattern: "git\\s+push.*"
+
+# Command to execute
+command: |
+  #!/bin/bash
+  set -e
+
+  echo "Running pre-push tests..."
+
+  # Get the current branch
+  BRANCH=$(git branch --show-current)
+
+  # Skip tests for certain branches if needed
+  if [[ "$BRANCH" == "experimental"* ]]; then
+    echo "Skipping tests for experimental branch"
+    exit 0
+  fi
+
+  # Run tests based on project type
+  if [ -f "package.json" ]; then
+    echo "Running npm tests..."
+    npm test || {
+      echo "Tests failed. Push aborted."
+      exit 1
+    }
+  elif [ -f "pytest.ini" ] || [ -f "setup.py" ]; then
+    echo "Running Python tests..."
+    pytest || {
+      echo "Tests failed. Push aborted."
+      exit 1
+    }
+  elif [ -f "go.mod" ]; then
+    echo "Running Go tests..."
+    go test ./... || {
+      echo "Tests failed. Push aborted."
+      exit 1
+    }
+  else
+    echo "No test configuration found. Proceeding with push."
+  fi
+
+  echo "All tests passed!"
+
+# Environment variables
+env:
+  CI: "true"
+  NODE_ENV: "test"
+
+# Dependencies
+dependencies: []

@@ -1,0 +1,50 @@
+name: testing-utils
+description: Utilities for test generation, execution, and coverage analysis
+version: 1.0.0
+
+# Dependencies
+dependencies:
+  hooks: []
+
+# Skill implementation files
+files:
+  - test-generator.py
+  - coverage-analyzer.sh
+  - mock-builder.js
+
+# Entry point
+entrypoint: test-generator.py
+
+# Configuration
+config:
+  # Test frameworks supported
+  frameworks:
+    javascript:
+      - jest
+      - mocha
+      - vitest
+    python:
+      - pytest
+      - unittest
+    go:
+      - testing
+      - testify
+
+  # Coverage thresholds
+  coverage:
+    minimum_line: 80
+    minimum_branch: 75
+    minimum_function: 90
+
+  # Test generation settings
+  generation:
+    include_edge_cases: true
+    include_error_cases: true
+    include_integration_tests: false
+    mock_external_dependencies: true
+
+  # Output preferences
+  output:
+    verbose: true
+    show_coverage_diff: true
+    fail_on_threshold: true
