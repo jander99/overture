@@ -5,7 +5,7 @@
 This document captures future ideas, feature concepts, and long-term vision for Overture. As the project matures, these ideas will migrate to GitHub Projects and Issues for formal tracking and implementation.
 
 **Status**: Living document, updated as vision evolves
-**Last Updated**: 2025-10-19
+**Last Updated**: 2025-10-20
 
 ---
 
@@ -15,53 +15,77 @@ This document captures future ideas, feature concepts, and long-term vision for 
 
 **The Dream**: Write one configuration file, sync to all tools, share with your team, and maintain consistency effortlessly.
 
+**Key Principles**:
+- **User Scope**: Global configurations for individual developers
+- **Project Scope**: Team-shared configurations that live in repositories
+- **Seamless Integration**: Configurations merge intelligently across scopes
+
 ---
 
 ## Near-Term Ideas (Month 1-3)
 
-### 1. GitHub Repository Template ⭐ HIGH PRIORITY
+### 1. Configuration Repository Template ⭐ HIGH PRIORITY
 
-**Problem**: Users installing from homebrew/apt don't have access to example configurations.
+**Context**: Claude Code natively supports project-scoped MCP servers via `.mcp.json`. Overture leverages this but focuses on cleaner configuration management.
 
-**Solution**: Official GitHub template repository
+**Problem**: Users need a starting point for their Overture configuration repository.
 
-```
-Repository: overture-dev/overture-config-template
+**Solution**: Official GitHub template repository for Overture configs
 
-Structure:
-├── .github/workflows/
-│   ├── validate.yml          # Auto-validate on PR
-│   ├── sync.yml              # Auto-sync on merge
-│   └── publish.yml           # Publish plugins on release
-├── plugins/
-│   ├── example-python/
-│   ├── example-typescript/
-│   └── example-web/
-├── config.yaml               # Template configuration
-├── README.md                 # Quick start guide
-└── docs/
-    ├── getting-started.md
-    ├── creating-plugins.md
-    └── best-practices.md
+```bash
+# Create config repo from template
+gh repo create my-overture-config --template overture-dev/config-template
+
+# Structure:
+my-overture-config/
+├── config.yaml              # Main configuration
+├── mcp-servers.yaml         # MCP server definitions
+├── hooks.yaml               # Hook configurations
+├── commands/                # Slash commands
+├── agents/                  # Subagent definitions
+├── skills/                  # Skill definitions
+├── templates/               # Reusable templates
+├── scripts/                 # Hook scripts
+├── environments/            # Environment profiles
+│   ├── development.yaml
+│   ├── staging.yaml
+│   └── production.yaml
+└── README.md                # Setup instructions
 ```
 
 **User Workflow**:
 ```bash
-# From GitHub UI: "Use this template"
-# Or:
-gh repo create my-overture-config --template overture-dev/overture-config-template
-git clone git@github.com:username/my-overture-config ~/.overture
-overture link ~/.overture
+# Clone your config repo
+git clone git@github.com:username/my-overture-config.git ~/overture-configs
+
+# Use in a project
+cd ~/projects/my-app
+overture init --config ~/overture-configs
+# Creates .overture symlink
+# Generates .claude/ directory
+
+# Claude Code uses generated configuration
+claude
 ```
 
 **Benefits**:
-- ✅ Pre-configured CI/CD
+- ✅ Pre-configured directory structure
 - ✅ Working examples to learn from
-- ✅ Documentation included
-- ✅ Community patterns shared
-- ✅ Easy onboarding for new users
+- ✅ Best practices baked in
+- ✅ Easy to fork and customize
+- ✅ Version controlled configuration
 
-**Implementation Priority**: Month 2-3
+**Team Workflow**:
+```bash
+# Team creates shared config repo
+git clone git@github.com:company/team-overture-config.git ~/work/team-config
+
+# Each team member links projects
+cd ~/work/project
+overture init --config ~/work/team-config
+```
+
+**Implementation Priority**: Month 1-2 (foundational feature)
 
 ### 2. Template Library
 
@@ -407,13 +431,13 @@ Running plugin tests...
 ✓ MCP servers accessible
 ✓ No circular dependencies
 ✓ CLAUDE.md under token budget
-✓ Copilot sync successful
 
 Integration tests:
 ✓ Installs to Claude Code
 ✓ Subagent invocable
 ✓ Skills load correctly
 ✓ Hooks execute
+✓ Commands accessible
 
 All tests passed!
 ```
@@ -686,9 +710,9 @@ Phase 1 (Month 1-3): MVP
 └─> GitHub template
 
 Phase 2 (Month 4-6): Ecosystem
-├─> Copilot sync
 ├─> Plugin marketplace
 ├─> Templates library
+├─> Advanced validation
 └─> Community building
 
 Phase 3 (Month 7-12): Expansion
@@ -736,7 +760,7 @@ The key is to **start simple**, **iterate quickly**, and **listen to users**.
 ---
 
 **Document Status**: Living
-**Last Updated**: 2025-10-19
+**Last Updated**: 2025-10-20
 **Next Review**: When reaching major milestones
 
 **Questions or ideas?** Open an issue or start a discussion!

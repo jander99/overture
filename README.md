@@ -1,17 +1,48 @@
 # Overture
 
-Configuration management for Claude Code. Simplify your Claude Code setup with centralized configuration for MCP servers, subagents, skills, hooks, and plugins.
+> Transforms maintainable YAML/Markdown configurations into Claude Code's native JSON format, providing validation, templating, and environment management as a single source of truth.
 
 ## Overview
 
-Overture manages Claude Code configuration, providing a streamlined way to define and deploy settings for MCP servers and Claude Code's advanced features including subagents, skills, hooks, and plugins.
+Overture manages Claude Code configuration through a symlink-based model where configuration lives in a version-controlled repository and generates Claude Code's native files. This provides:
+
+- **Separation of Concerns** — Config repo separate from projects
+- **Reusability** — One config repo serves multiple projects
+- **Team Sharing** — Version control and distribute configurations via git
+- **Clean Projects** — No config clutter in project directories
+
+## How It Works
+
+```bash
+# Config repo (version controlled)
+~/overture-configs/
+  config.yaml
+  mcp-servers.yaml
+  hooks.yaml
+  commands/
+  agents/
+  skills/
+
+# In your project
+~/projects/my-app/
+  .overture -> ~/overture-configs/  # Symlink to config
+  .claude/                          # Generated (gitignored)
+  src/
+
+# Generate Claude Code configuration
+cd ~/projects/my-app
+overture generate  # Follows symlink, creates .claude/
+```
 
 ## Features
 
-- **Unified Configuration** — Define Claude Code settings in a single, manageable format
-- **MCP Server Management** — Configure Model Context Protocol servers with ease
-- **Advanced Features Support** — Full support for Code's subagents, skills, hooks, and plugins
-- **Single Source of Truth** — Centralized config management eliminates configuration drift
+- **YAML-Based Configuration** — Cleaner, more maintainable than JSON
+- **Variable Substitution** — Environment variables, git context, project paths
+- **Environment Profiles** — Different configs for dev/staging/production
+- **Validation** — Syntax, schema, semantic, and runtime validation
+- **Templating** — Reusable templates and file inclusion
+- **Hooks & Automation** — Event-driven workflows with validation guardrails
+- **Full Claude Code Support** — Commands, agents, skills, hooks, MCP servers, plugins
 
 ## Development Requirements
 

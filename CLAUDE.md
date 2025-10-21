@@ -33,6 +33,13 @@ When implementing this project, consider:
 
 5. **Version Control**: Consider how configuration changes should be tracked and versioned
 
+6. **Project-Scoped MCP Servers**: Support `.mcp.json` files for project-specific MCP server configurations:
+   - Define project-level MCP servers that can be version controlled and shared with teams
+   - Establish precedence rules between user-scope and project-scope configurations
+   - Handle merging strategies when both scopes define the same server
+   - Enable projects to declare required MCP servers as dependencies
+   - Consider how project-scoped servers integrate with Claude Code's existing configuration system
+
 ## Required MCP Servers for Development
 
 The following MCP servers are required for development work on Overture (not for using Overture). These servers provide essential capabilities for working with this codebase:
