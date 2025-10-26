@@ -15,7 +15,13 @@
         "bundle": false,
         "main": "{projectRoot}/src/main.ts",
         "tsConfig": "{projectRoot}/tsconfig.app.json",
-        "assets": ["{projectRoot}/src/assets"],
+        "assets": [
+          {
+            "input": "{projectRoot}/src/assets",
+            "glob": "**/*",
+            "output": "apps/cli/src/assets"
+          }
+        ],
         "esbuildOptions": {
           "sourcemap": true,
           "outExtension": {
