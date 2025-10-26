@@ -306,6 +306,22 @@ See `CLAUDE.md` for detailed MCP usage guidance.
 
 See [docs/related-projects.md](docs/related-projects.md) for detailed analysis.
 
+## Documentation
+
+### User Guides
+- **[User Guide](docs/user-guide.md)** - Complete guide to using Overture
+- **[Configuration Schema](docs/overture-schema.md)** - Full configuration reference
+- **[Examples](docs/examples.md)** - Configuration examples for different project types
+- **[Plugin Builder How-To](docs/plugin-builder-how-to.md)** - Guide to building Overture plugins
+
+### Project Documentation
+- **[Implementation Plan](docs/implementation-plan.md)** - Development roadmap and milestones
+- **[Related Projects](docs/related-projects.md)** - Analysis of similar tools in the ecosystem
+
+### Design & Research
+- **[Architecture Research](docs/architecture.md)** - Deep-dive into Claude Code architecture
+- **[Vision Document](docs/vision.md)** - Long-term roadmap and future feature ideas
+
 ## License
 
 MIT
