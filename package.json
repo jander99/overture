@@ -20,7 +20,7 @@
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "20.19.9",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.25.11",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "jest": "^30.0.2",
