@@ -23,12 +23,12 @@ export class TemplateLoader {
    */
   static registerHelpers(): void {
     Handlebars.registerHelper('json', (context) => {
-      return JSON.stringify(context, null, 2);
+      return new Handlebars.SafeString(JSON.stringify(context, null, 2));
     });
 
     Handlebars.registerHelper('yaml', (context) => {
       // Simple YAML serialization (or use js-yaml)
-      return JSON.stringify(context, null, 2);
+      return new Handlebars.SafeString(JSON.stringify(context, null, 2));
     });
   }
 }

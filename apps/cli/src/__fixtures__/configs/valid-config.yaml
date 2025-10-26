@@ -1,0 +1,28 @@
+version: '1.0'
+project:
+  name: test-project
+  type: python-backend
+  description: A test project
+plugins:
+  python-development:
+    marketplace: claude-code-workflows
+    enabled: true
+    mcps:
+      - python-repl
+      - ruff
+mcp:
+  python-repl:
+    command: uvx
+    args:
+      - mcp-server-python-repl
+    scope: project
+    enabled: true
+  ruff:
+    command: uvx
+    args:
+      - mcp-server-ruff
+    scope: project
+    enabled: true
+  filesystem:
+    scope: global
+    enabled: true

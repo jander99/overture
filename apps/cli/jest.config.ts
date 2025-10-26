@@ -18,4 +18,18 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: 'test-output/jest/coverage',
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.spec.ts',
+    '!src/__fixtures__/**',
+    '!src/main.ts',
+  ],
+  coverageThresholds: {
+    global: {
+      branches: 80,
+      functions: 85,
+      lines: 80,
+      statements: 80,
+    },
+  },
 };
