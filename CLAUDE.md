@@ -20,10 +20,12 @@ This project is in **active development** with architecture and documentation co
 - [x] **Configuration Schema** — YAML configuration format designed (see docs/overture-schema.md)
 - [x] **Documentation** — Complete examples and schema documentation
 - [x] **Nx Workspace** — Monorepo structure initialized
-- [ ] **CLI Implementation** — Command-line interface (overture init, add, sync)
-- [ ] **Plugin Registry** — Mapping of plugins to recommended MCPs
-- [ ] **Configuration Generator** — Generates .mcp.json and CLAUDE.md from config
-- [ ] **Validation Engine** — Validates MCP availability and configuration
+- [x] **CLI Implementation** — Command-line interface (overture init, sync, validate, mcp list/enable)
+- [x] **Configuration Generator** — Generates .mcp.json and CLAUDE.md from config
+- [x] **Validation Engine** — Validates MCP availability and configuration
+- [x] **Test Suite** — Comprehensive Jest tests with 98%+ core coverage
+- [ ] **Plugin Registry** — Mapping of plugins to recommended MCPs (in progress)
+- [ ] **E2E Tests** — End-to-end testing in apps/cli-e2e/
 
 Current workspace structure:
 ```
@@ -335,6 +337,341 @@ Include Claude Code attribution:
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
+
+## Working with Nx
+
+This project uses Nx for monorepo management and build orchestration. **Always use Nx commands** instead of npm scripts or direct tool invocation.
+
+### Nx MCP Server Tools
+
+The Nx MCP server provides several tools for workspace management:
+
+#### `nx_workspace`
+**Purpose:** Get an overview of the entire workspace structure, projects, and dependency graph.
+
+**When to use:**
+- Starting work on the project (session start checklist)
+- Understanding project relationships
+- Checking for project graph errors
+- Getting a high-level view of the monorepo architecture
+
+**Example:**
+```typescript
+// Get full workspace overview
+mcp__nx-mcp__nx_workspace()
+
+// Filter to specific projects
+mcp__nx-mcp__nx_workspace({ filter: "cli" })
+mcp__nx-mcp__nx_workspace({ filter: "tag:type:app" })
+```
+
+#### `nx_project_details`
+**Purpose:** Get detailed configuration for a specific project including targets, dependencies, and options.
+
+**When to use:**
+- Understanding what tasks are available for a project
+- Checking project configuration before running commands
+- Analyzing build/test configurations
+- Understanding project dependencies
+
+**Example:**
+```typescript
+// Get full project details
+mcp__nx-mcp__nx_project_details({ projectName: "@overture/cli" })
+
+// Get specific configuration path
+mcp__nx-mcp__nx_project_details({
+  projectName: "@overture/cli",
+  filter: "targets.build"
+})
+```
+
+#### `nx_docs`
+**Purpose:** Retrieve up-to-date Nx documentation relevant to your query.
+
+**When to use:**
+- Questions about Nx configuration
+- Learning about Nx features
+- Understanding best practices
+- Troubleshooting Nx issues
+- **ALWAYS use this instead of assuming Nx behavior**
+
+**Example:**
+```typescript
+mcp__nx-mcp__nx_docs({ userQuery: "how to configure esbuild in nx" })
+mcp__nx-mcp__nx_docs({ userQuery: "nx migrate workflow" })
+```
+
+#### `nx_generators` & `nx_generator_schema`
+**Purpose:** List available generators and get their schemas.
+
+**When to use:**
+- Creating new projects, libraries, or components
+- Understanding generator options before scaffolding
+
+### Nx Command Patterns
+
+**Always use Nx commands for tasks:**
+
+```bash
+# ✅ Correct - use nx
+nx build @overture/cli
+nx test @overture/cli
+nx test @overture/cli --watch
+nx affected --target=test
+nx run-many --target=build --all
+
+# ❌ Incorrect - don't use npm scripts or direct tools
+npm run build
+npm test
+jest
+```
+
+### Updating Nx Dependencies
+
+**CRITICAL:** Always use `nx migrate` for Nx version updates:
+
+```bash
+# Check for available updates
+nx migrate latest
+
+# Or update to specific version
+nx migrate @nx/workspace@22.1.0
+
+# Review package.json changes
+git diff package.json
+
+# Install dependencies
+npm install
+
+# Run any generated migrations (if migrations.json exists)
+nx migrate --run-migrations
+
+# Clean up after successful migration
+rm migrations.json
+
+# Test everything works
+nx build @overture/cli
+nx test @overture/cli
+
+# Commit changes
+git add .
+git commit -m "build(deps): update Nx to vX.Y.Z"
+```
+
+**Why `nx migrate` is required:**
+- Updates all Nx packages with correct version alignment
+- Pins Nx packages to exact versions (removes `^` prefix)
+- Generates code migrations for breaking changes
+- Updates workspace configuration automatically
+
+### Common Nx Workflows for This Project
+
+#### Running Tests
+```bash
+# Run all tests for CLI
+nx test @overture/cli
+
+# Run tests in watch mode
+nx test @overture/cli --watch
+
+# Run tests with coverage
+nx test @overture/cli --coverage
+
+# Run affected tests (only projects changed)
+nx affected --target=test
+```
+
+#### Building
+```bash
+# Build for development
+nx build @overture/cli
+
+# Build for production
+nx build @overture/cli --configuration=production
+
+# Build all affected projects
+nx affected --target=build
+```
+
+#### Analyzing Dependencies
+```bash
+# See dependency graph
+nx graph
+
+# See dependencies for specific project
+nx graph --focus=@overture/cli
+
+# Check circular dependencies
+nx graph --affected
+```
+
+#### Workspace Information
+```bash
+# List all projects
+nx show projects
+
+# Show project details as JSON
+nx show project @overture/cli --json
+
+# List available plugins
+nx list
+```
+
+### Nx Best Practices for Overture
+
+1. **Always use MCP tools first** — Use `nx_workspace` and `nx_project_details` to understand structure before making changes
+
+2. **Use `nx_docs` liberally** — Don't assume Nx behavior, especially for:
+   - Configuration options
+   - Migration procedures
+   - Plugin capabilities
+   - Build optimization
+
+3. **Validate with Nx commands** — Before committing:
+   ```bash
+   nx build @overture/cli  # Ensure build works
+   nx test @overture/cli   # Ensure tests pass
+   nx lint @overture/cli   # Ensure code quality
+   ```
+
+4. **Use affected commands** — For efficiency in CI/CD:
+   ```bash
+   nx affected --target=test --base=main
+   nx affected --target=build --base=main
+   ```
+
+5. **Update dependencies properly**:
+   - Nx packages: Use `nx migrate`
+   - Other packages: Use `npm install` or `npm update`
+   - Never manually edit Nx package versions in package.json
+
+## Workflow Quality Checklists
+
+**IMPORTANT**: Claude should reference these checklists and **proactively remind the user** when they're not being followed. These practices improve code quality, collaboration, and knowledge retention.
+
+### ✅ Session Start Checklist
+
+**Claude: Check this list at the start of EVERY session**
+
+- [ ] **Review memory graph** — Use `mcp__memory__read_graph` to understand previous context
+- [ ] **Check CLAUDE.md** — Review project-specific guidance and status
+- [ ] **Create task list** — Use `TodoWrite` to plan session work
+- [ ] **Check git status** — Understand current branch and uncommitted changes
+- [ ] **For complex tasks** — Use `sequentialthinking` MCP to break down approach
+- [ ] **Identify MCP needs** — Determine which MCPs will be needed for the session
+
+### 🏗️ During Implementation Checklist
+
+**Claude: Remind the user when these practices aren't being followed**
+
+- [ ] **Use TDD** — Write failing tests BEFORE implementation (red-green-refactor)
+- [ ] **Use context7 for library docs** — Don't guess at API usage (commander, zod, jest, etc.)
+- [ ] **Use nx_docs for Nx questions** — Don't assume Nx behavior or configuration
+- [ ] **Use Nx commands** — Always use `nx test`, `nx build`, etc. (not npm scripts or direct tools)
+- [ ] **Use feature branches** — Create branches for new work: `git checkout -b feat/feature-name`
+- [ ] **Update TodoWrite** — Mark tasks as in_progress/completed in real-time
+- [ ] **Track challenges** — Create memory entities for problems encountered and solutions found
+- [ ] **Document decisions** — Create docs/adr/NNNN-decision-name.md for architectural choices
+
+### 📝 Before Committing Checklist
+
+**Claude: Validate this list before ANY git commit**
+
+- [ ] **Run tests** — Execute `nx test @overture/cli` to ensure all tests pass
+- [ ] **Run build** — Execute `nx build @overture/cli` to ensure clean build
+- [ ] **Review diff** — Check `git diff` to ensure commit is focused (< 500 lines ideal)
+- [ ] **Conventional commit** — Use proper prefix (feat:, fix:, docs:, refactor:, test:)
+- [ ] **Commit message body** — Add explanation for complex changes (what and why)
+- [ ] **Claude attribution** — Include Claude Code attribution footer
+- [ ] **Update status** — Update CLAUDE.md checkboxes if milestone completed
+- [ ] **Track metrics** — Add memory observations for coverage changes
+
+### 🧪 After Test Run Checklist
+
+**Claude: Execute this after running tests**
+
+- [ ] **Track coverage** — Add memory observation with coverage metrics
+  ```
+  mcp__memory__add_observations({
+    entityName: "Test Coverage Metrics",
+    contents: ["YYYY-MM-DD: XX% core coverage, NNN tests passing"]
+  })
+  ```
+- [ ] **Document failures** — Create memory entities for test failures and fixes
+- [ ] **Update test count** — Track total test count over time
+
+### 🎯 MCP Best Practices
+
+**Claude: Apply these rules when selecting tools**
+
+1. **sequentialthinking** — ALWAYS use for:
+   - Complex feature planning
+   - Architectural decisions
+   - Multi-step problem solving
+   - Breaking down large tasks
+
+2. **context7** — ALWAYS use for:
+   - Library API lookups (don't guess!)
+   - Framework documentation
+   - Unknown CLI tools or commands
+   - Checking latest best practices
+
+3. **memory** — ALWAYS use for:
+   - Tracking implementation decisions across sessions
+   - Recording challenges and solutions
+   - Updating coverage metrics after tests
+   - Storing dependency information
+
+4. **Task tool** — Use for:
+   - Parallel agent execution (test batches, etc.)
+   - Complex multi-file operations
+   - Specialized agent capabilities
+
+### 📊 Quality Metrics Tracking
+
+**Claude: Track these metrics in memory after each significant change**
+
+```typescript
+// Example memory update pattern
+mcp__memory__add_observations({
+  entityName: "Overture CLI Implementation",
+  contents: [
+    "YYYY-MM-DD: Coverage: XX.X% (branches), YY.Y% (functions), ZZ.Z% (lines)",
+    "YYYY-MM-DD: Test count: NNN passing, 0 failing",
+    "YYYY-MM-DD: Build time: X.Xs, Bundle size: YYY KB"
+  ]
+})
+```
+
+### 🚨 Common Anti-Patterns to Avoid
+
+**Claude: Actively warn when detecting these patterns**
+
+❌ **Don't:**
+- Commit without running tests
+- Write implementation before tests (unless prototyping)
+- Guess at library APIs instead of using context7
+- Bundle multiple unrelated changes in one commit
+- Skip commit message bodies for complex changes
+- Forget to update CLAUDE.md status after milestones
+- Work directly on main branch for new features
+- Skip TodoWrite for multi-step tasks
+- Use npm scripts or direct tools (jest, tsc) instead of Nx commands
+- Manually update Nx package versions in package.json
+- Skip `nx migrate` for Nx version updates
+
+✅ **Do:**
+- Follow TDD: test first, then implementation
+- Use context7 to look up correct library usage
+- Create focused, single-purpose commits
+- Write descriptive commit messages with bodies
+- Update documentation immediately after changes
+- Use feature branches for experimental work
+- Track all multi-step work with TodoWrite
+- Always use `nx` commands for build, test, lint tasks
+- Use `nx migrate` for all Nx dependency updates
+- Use `nx_docs` MCP tool before assuming Nx behavior
 
 ## Related Projects
 
