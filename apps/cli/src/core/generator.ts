@@ -2,7 +2,13 @@ import * as path from 'path';
 import { FsUtils } from '../infrastructure/fs-utils';
 import { TemplateLoader } from '../infrastructure/template-loader';
 import type { OvertureConfig, McpJson, GeneratorResult } from '../domain/types';
-import { MCP_JSON_FILE, CLAUDE_MD_FILE } from '../domain/constants';
+import {
+  MCP_JSON_FILE,
+  CLAUDE_MD_FILE,
+  CLAUDE_MD_START_MARKER,
+  CLAUDE_MD_END_MARKER,
+  CLAUDE_MD_USER_INSTRUCTION,
+} from '../domain/constants';
 import { Logger } from '../utils/logger';
 
 /**
@@ -63,43 +69,58 @@ export class Generator {
   }
 
   /**
-   * Preserve custom sections in existing CLAUDE.md.
-   * Content after the custom marker is preserved and appended to new content.
+   * Update the Overture-managed section in CLAUDE.md using paired boundary markers.
+   * Follows the Nx MCP pattern for safe, non-destructive updates.
    *
-   * @param newContent - Newly generated CLAUDE.md content
+   * This method:
+   * - Creates a new managed section if none exists (appends to end)
+   * - Replaces existing managed section if found
+   * - Preserves all user content outside the markers
+   * - Never modifies content written by users or other tools
+   *
+   * @param managedContent - Newly generated content for the managed section
    * @param existingPath - Path to existing CLAUDE.md file
-   * @returns Combined content with preserved custom sections
+   * @returns Complete CLAUDE.md content with updated managed section
    */
-  static async preserveCustomSections(
-    newContent: string,
+  static async updateManagedSection(
+    managedContent: string,
     existingPath: string
   ): Promise<string> {
+    // Wrap managed content with markers
+    const wrappedContent =
+      `${CLAUDE_MD_START_MARKER}\n` +
+      `${CLAUDE_MD_USER_INSTRUCTION}\n\n` +
+      `${managedContent}\n\n` +
+      `${CLAUDE_MD_END_MARKER}\n`;
+
+    // If no existing file, return just the wrapped managed section
     if (!(await FsUtils.exists(existingPath))) {
-      return newContent;
+      return wrappedContent;
     }
 
     const existingContent = await FsUtils.readFile(existingPath);
 
-    // Find custom section marker
-    const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-    const markerIndex = existingContent.indexOf(customMarker);
+    // Find existing managed section
+    const startIdx = existingContent.indexOf(CLAUDE_MD_START_MARKER);
+    const endIdx = existingContent.indexOf(CLAUDE_MD_END_MARKER);
 
-    if (markerIndex === -1) {
-      return newContent; // No custom sections to preserve
+    // If no managed section exists, append to end
+    if (startIdx === -1 || endIdx === -1) {
+      // Add spacing before appending
+      const separator = existingContent.trim() ? '\n\n' : '';
+      return existingContent.trim() + separator + wrappedContent;
     }
 
-    // Extract custom content
-    const customContent = existingContent.substring(
-      markerIndex + customMarker.length
-    );
+    // Replace existing managed section
+    const before = existingContent.substring(0, startIdx);
+    const after = existingContent.substring(endIdx + CLAUDE_MD_END_MARKER.length);
 
-    // Append to new content
-    return newContent + '\n\n' + customContent;
+    return before + wrappedContent + after;
   }
 
   /**
    * Generate all configuration files (.mcp.json and CLAUDE.md).
-   * Preserves custom sections in existing CLAUDE.md.
+   * Updates the Overture-managed section in CLAUDE.md using paired markers.
    *
    * @param config - Overture configuration
    * @param outputDir - Directory to write files to (defaults to current working directory)
@@ -120,10 +141,10 @@ export class Generator {
     );
     Logger.success(`Generated ${MCP_JSON_FILE}`);
 
-    // Generate CLAUDE.md
-    let claudeMd = await this.generateClaudeMd(config);
+    // Generate CLAUDE.md (managed section only)
+    const managedContent = await this.generateClaudeMd(config);
     const claudeMdPath = path.join(outputDir, CLAUDE_MD_FILE);
-    claudeMd = await this.preserveCustomSections(claudeMd, claudeMdPath);
+    const claudeMd = await this.updateManagedSection(managedContent, claudeMdPath);
     await FsUtils.writeFile(claudeMdPath, claudeMd);
     Logger.success(`Generated ${CLAUDE_MD_FILE}`);
 

@@ -443,129 +443,188 @@ describe('Generator', () => {
     });
   });
 
-  describe('preserveCustomSections', () => {
-    it('should return new content if no existing file exists', async () => {
+  describe('updateManagedSection', () => {
+    const START_MARKER = '<!-- overture configuration start-->';
+    const END_MARKER = '<!-- overture configuration end-->';
+    const USER_INSTRUCTION = '<!-- Leave the start & end comments to automatically receive updates. -->';
+
+    it('should wrap managed content with markers for new file', async () => {
       (FsUtils.exists as jest.Mock).mockResolvedValue(false);
 
-      const newContent = '# New Content';
+      const managedContent = '## Configured Plugins\n\nNo plugins configured.';
       const existingPath = '/path/to/CLAUDE.md';
 
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
+      const result = await Generator.updateManagedSection(managedContent, existingPath);
 
-      expect(result).toBe(newContent);
+      expect(result).toContain(START_MARKER);
+      expect(result).toContain(USER_INSTRUCTION);
+      expect(result).toContain(managedContent);
+      expect(result).toContain(END_MARKER);
       expect(FsUtils.exists).toHaveBeenCalledWith(existingPath);
       expect(FsUtils.readFile).not.toHaveBeenCalled();
     });
 
-    it('should preserve content after custom marker', async () => {
-      const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-      const existingContent = `Generated content
-${customMarker}
-Custom section 1
-Custom section 2`;
+    it('should append managed section when no existing section found', async () => {
+      const userContent = `# My Project\n\nUser-written content here.`;
+
+      (FsUtils.exists as jest.Mock).mockResolvedValue(true);
+      (FsUtils.readFile as jest.Mock).mockResolvedValue(userContent);
+
+      const managedContent = '## Configured Plugins\n\ntest-plugin';
+      const existingPath = '/path/to/CLAUDE.md';
+
+      const result = await Generator.updateManagedSection(managedContent, existingPath);
+
+      expect(result).toContain('User-written content here.');
+      expect(result).toContain(START_MARKER);
+      expect(result).toContain(managedContent);
+      expect(result).toContain(END_MARKER);
+      expect(result.indexOf('User-written content')).toBeLessThan(result.indexOf(START_MARKER));
+    });
+
+    it('should replace existing managed section', async () => {
+      const existingContent = `# My Project
+
+User content before.
+
+${START_MARKER}
+${USER_INSTRUCTION}
+
+## Configured Plugins
+
+old-plugin
+
+${END_MARKER}
+
+User content after.`;
 
       (FsUtils.exists as jest.Mock).mockResolvedValue(true);
       (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
 
-      const newContent = '# New Generated Content';
+      const newManagedContent = '## Configured Plugins\n\nnew-plugin';
       const existingPath = '/path/to/CLAUDE.md';
 
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
+      const result = await Generator.updateManagedSection(newManagedContent, existingPath);
 
-      expect(result).toContain(newContent);
-      expect(result).toContain('Custom section 1');
-      expect(result).toContain('Custom section 2');
+      expect(result).toContain('User content before.');
+      expect(result).toContain('User content after.');
+      expect(result).toContain('new-plugin');
+      expect(result).not.toContain('old-plugin');
     });
 
-    it('should append custom content with newlines', async () => {
-      const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-      const customPart = '\nCustom content here';
-      const existingContent = `Generated\n${customMarker}${customPart}`;
+    it('should preserve user content above managed section', async () => {
+      const existingContent = `# Project Overview
+
+This is my project.
+
+## Architecture
+
+Custom architecture notes.
+
+${START_MARKER}
+${USER_INSTRUCTION}
+
+Old managed content
+
+${END_MARKER}`;
 
       (FsUtils.exists as jest.Mock).mockResolvedValue(true);
       (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
 
-      const newContent = 'New generated content';
+      const newManagedContent = 'New managed content';
       const existingPath = '/path/to/CLAUDE.md';
 
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
+      const result = await Generator.updateManagedSection(newManagedContent, existingPath);
 
-      expect(result).toBe(newContent + '\n\n' + customPart);
+      expect(result).toContain('Project Overview');
+      expect(result).toContain('This is my project.');
+      expect(result).toContain('Architecture');
+      expect(result).toContain('Custom architecture notes.');
+      expect(result).toContain('New managed content');
     });
 
-    it('should return new content if marker not found', async () => {
-      const existingContent = 'Existing content without marker';
+    it('should preserve user content below managed section', async () => {
+      const existingContent = `${START_MARKER}
+${USER_INSTRUCTION}
+
+Old managed content
+
+${END_MARKER}
+
+## Custom Notes
+
+User notes that should be preserved.`;
 
       (FsUtils.exists as jest.Mock).mockResolvedValue(true);
       (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
 
-      const newContent = '# New Content';
+      const newManagedContent = 'New managed content';
       const existingPath = '/path/to/CLAUDE.md';
 
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
+      const result = await Generator.updateManagedSection(newManagedContent, existingPath);
 
-      expect(result).toBe(newContent);
+      expect(result).toContain('New managed content');
+      expect(result).toContain('Custom Notes');
+      expect(result).toContain('User notes that should be preserved.');
+      expect(result).not.toContain('Old managed content');
     });
 
-    it('should handle empty custom section', async () => {
-      const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-      const existingContent = `Generated content\n${customMarker}`;
-
-      (FsUtils.exists as jest.Mock).mockResolvedValue(true);
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
-
-      const newContent = 'New generated content';
-      const existingPath = '/path/to/CLAUDE.md';
-
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
-
-      expect(result).toContain(newContent);
-    });
-
-    it('should preserve multi-line custom content', async () => {
-      const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-      const customContent = `
-## Custom Section
-This is custom content that should be preserved.
-
-### Subsection
-More custom content here.`;
-
-      const existingContent = `Generated content\n${customMarker}${customContent}`;
-
-      (FsUtils.exists as jest.Mock).mockResolvedValue(true);
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
-
-      const newContent = 'New content';
-      const existingPath = '/path/to/CLAUDE.md';
-
-      const result = await Generator.preserveCustomSections(newContent, existingPath);
-
-      expect(result).toContain('Custom Section');
-      expect(result).toContain('Subsection');
-      expect(result).toContain('More custom content here.');
-    });
-
-    it('should call FsUtils.exists with correct path', async () => {
+    it('should handle empty managed content', async () => {
       (FsUtils.exists as jest.Mock).mockResolvedValue(false);
 
-      const existingPath = '/custom/path/CLAUDE.md';
-      await Generator.preserveCustomSections('new content', existingPath);
+      const managedContent = '';
+      const existingPath = '/path/to/CLAUDE.md';
 
-      expect(FsUtils.exists).toHaveBeenCalledWith(existingPath);
+      const result = await Generator.updateManagedSection(managedContent, existingPath);
+
+      expect(result).toContain(START_MARKER);
+      expect(result).toContain(END_MARKER);
     });
 
-    it('should call FsUtils.readFile with correct path when file exists', async () => {
-      const existingPath = '/custom/path/CLAUDE.md';
-      const customMarker = '<!-- Custom sections below this comment will be preserved -->';
-      const existingContent = `Content\n${customMarker}\nCustom`;
+    it('should preserve Nx managed section', async () => {
+      const existingContent = `# My Project
+
+${START_MARKER}
+${USER_INSTRUCTION}
+
+Old plugins list
+
+${END_MARKER}
+
+<!-- nx configuration start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+Nx-specific content
+
+<!-- nx configuration end-->`;
 
       (FsUtils.exists as jest.Mock).mockResolvedValue(true);
       (FsUtils.readFile as jest.Mock).mockResolvedValue(existingContent);
 
-      await Generator.preserveCustomSections('new content', existingPath);
+      const newManagedContent = 'New plugins list';
+      const existingPath = '/path/to/CLAUDE.md';
 
-      expect(FsUtils.readFile).toHaveBeenCalledWith(existingPath);
+      const result = await Generator.updateManagedSection(newManagedContent, existingPath);
+
+      expect(result).toContain('New plugins list');
+      expect(result).toContain('nx configuration start');
+      expect(result).toContain('Nx-specific content');
+      expect(result).not.toContain('Old plugins list');
+    });
+
+    it('should add proper spacing when appending to non-empty file', async () => {
+      const userContent = '# My Project';
+
+      (FsUtils.exists as jest.Mock).mockResolvedValue(true);
+      (FsUtils.readFile as jest.Mock).mockResolvedValue(userContent);
+
+      const managedContent = 'Managed content';
+      const existingPath = '/path/to/CLAUDE.md';
+
+      const result = await Generator.updateManagedSection(managedContent, existingPath);
+
+      // Should have spacing between user content and managed section
+      expect(result).toMatch(/# My Project\n\n<!--/);
     });
   });
 
@@ -636,15 +695,15 @@ More custom content here.`;
       expect(mcpContent).toContain('    "test-mcp"');
     });
 
-    it('should write CLAUDE.md with preserved custom sections', async () => {
-      const preservedContent = 'Generated CLAUDE.md with custom';
+    it('should write CLAUDE.md with managed section', async () => {
+      const managedSectionContent = 'Wrapped managed content';
       (FsUtils.writeFile as jest.Mock).mockResolvedValue(undefined);
       (FsUtils.exists as jest.Mock).mockResolvedValue(false);
       jest.spyOn(Generator, 'generateMcpJson').mockReturnValue({
         mcpServers: {},
       });
-      jest.spyOn(Generator, 'generateClaudeMd').mockResolvedValue('Generated CLAUDE.md');
-      jest.spyOn(Generator, 'preserveCustomSections').mockResolvedValue(preservedContent);
+      jest.spyOn(Generator, 'generateClaudeMd').mockResolvedValue('Generated managed content');
+      jest.spyOn(Generator, 'updateManagedSection').mockResolvedValue(managedSectionContent);
 
       const config: OvertureConfig = {
         version: '1.0',
@@ -657,14 +716,14 @@ More custom content here.`;
       await Generator.generateFiles(config, outputDir);
 
       const claudeMdPath = path.join(outputDir, 'CLAUDE.md');
-      expect(Generator.preserveCustomSections).toHaveBeenCalledWith(
-        'Generated CLAUDE.md',
+      expect(Generator.updateManagedSection).toHaveBeenCalledWith(
+        'Generated managed content',
         claudeMdPath
       );
 
       const claudeMdWrite = (FsUtils.writeFile as jest.Mock).mock.calls[1];
       expect(claudeMdWrite[0]).toBe(claudeMdPath);
-      expect(claudeMdWrite[1]).toBe(preservedContent);
+      expect(claudeMdWrite[1]).toBe(managedSectionContent);
     });
 
     it('should return GeneratorResult with correct structure', async () => {
@@ -677,7 +736,7 @@ More custom content here.`;
       (FsUtils.exists as jest.Mock).mockResolvedValue(false);
       jest.spyOn(Generator, 'generateMcpJson').mockReturnValue(mockMcpJson);
       jest.spyOn(Generator, 'generateClaudeMd').mockResolvedValue(mockClaudeMd);
-      jest.spyOn(Generator, 'preserveCustomSections').mockResolvedValue(mockClaudeMd);
+      jest.spyOn(Generator, 'updateManagedSection').mockResolvedValue(mockClaudeMd);
 
       const config: OvertureConfig = {
         version: '1.0',
@@ -908,7 +967,7 @@ This is custom user content.`;
 
       jest.spyOn(Generator, 'generateMcpJson').mockReturnValue({ mcpServers: {} });
       jest.spyOn(Generator, 'generateClaudeMd').mockResolvedValue('# New Generated Content');
-      jest.spyOn(Generator, 'preserveCustomSections').mockResolvedValue(expectedPreservedContent);
+      jest.spyOn(Generator, 'updateManagedSection').mockResolvedValue(expectedPreservedContent);
 
       const config: OvertureConfig = {
         version: '1.0',

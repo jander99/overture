@@ -1,53 +1,227 @@
 # Overture
 
-> The missing orchestration layer between Claude Code plugins and MCP servers
+> Configuration orchestrator and documentation generator for AI-assisted development
+
+**Overture eliminates configuration chaos across AI development tools.**
+
+Declare your AI tool setup once. Sync everywhere. Work better together.
+
+---
 
 ## The Problem
 
-Claude Code's ecosystem has two powerful but disconnected components:
+Developers using AI-assisted tools face **configuration chaos**:
 
-**Plugins** provide specialized agents, skills, and commands:
-- `python-development` adds Python experts
-- `kubernetes-operations` adds k8s specialists
-- `database-design` adds schema architects
+### Multiple AI Tools, Multiple Configs
+- **Claude Desktop** → `~/Library/Application Support/Claude/mcp.json`
+- **Claude Code** (user) → `~/.config/claude/mcp.json`
+- **Claude Code** (project) → `./.mcp.json`
+- **GitHub Copilot CLI** → Various locations
+- **VSCode/IntelliJ Copilot** → Extension settings
 
-**MCP Servers** provide tools and integrations:
-- `python-repl` executes Python code
-- `kubectl` manages k8s clusters
-- `sqlite` queries databases
+### The Pain Points
+- ❌ Same MCP server configured in 3 different places, 3 different ways
+- ❌ Outdated configs from experiments lingering everywhere
+- ❌ Install `python-development` plugin → manually configure `python-repl` MCP separately
+- ❌ No way to know which MCPs enhance which plugins
+- ❌ Can't share team AI workflows in version control
+- ❌ Claude/Copilot don't know "use memory to persist discoveries"
 
-**But there's no connection between them.**
+**You've been experimenting with AI tools. Your config is a mess. Overture fixes it.**
 
-When you install `python-development`, there's no way for:
-- The plugin to declare it needs `python-repl` MCP server
-- Claude to know which MCP to use for plugin features
-- The system to validate MCP servers are available
-- Configuration to be project-aware (Java projects load Python MCPs unnecessarily)
+---
 
-## The Solution
+## The Solution: Three Pillars
 
-Overture bridges plugins and MCP servers through configuration-driven orchestration.
+### 1. 🔧 Multi-Platform MCP Configuration Manager
+
+**Single source of truth across all AI tools.**
+
+Declare MCP servers once in `~/.config/overture.yml`. Sync everywhere.
 
 ```yaml
-# .overture/config.yaml
-project:
-  name: my-api
-  type: python-backend
+# ~/.config/overture.yml - Your canonical AI config
+mcp:
+  github:
+    command: mcp-server-github
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    scope: global  # Available everywhere
 
-# Plugins to install
+  memory:
+    command: mcp-server-memory
+    scope: global
+```
+
+```bash
+overture sync
+→ Updates Claude Desktop config
+→ Updates Claude Code user config
+→ Updates Claude Code project .mcp.json (only unique MCPs)
+→ Updates Copilot configs (if installed)
+```
+
+**Smart deduplication:** Project configs reference global MCPs without redefining them.
+
+```yaml
+# my-project/.overture.yml
+mcp:
+  github:
+    scope: global  # Reference only, already configured globally
+
+  python-repl:
+    command: uvx
+    args: [mcp-server-python-repl]
+    scope: project  # Project-specific, added to .mcp.json
+```
+
+**Dotfiles integration:** Commit `~/.config/overture.yml` to your dotfiles repo. New machine? `overture sync` and you're ready.
+
+---
+
+### 2. 🔌 Plugin Lifecycle Manager
+
+**User global + project-specific plugins with smart precedence.**
+
+```yaml
+# ~/.config/overture.yml
 plugins:
   python-development:
     marketplace: claude-code-workflows
-    enabled: true
+    scope: global  # Available everywhere
+
+# my-project/.overture.yml
+plugins:
+  python-development:
+    scope: global  # Reference only, already installed
+
+  kubernetes-operations:
+    marketplace: claude-code-workflows
+    scope: project  # Install only when working on this project
+```
+
+```bash
+overture sync
+→ Skips python-development (already installed globally)
+→ Installs kubernetes-operations for this project only
+→ Updates CLAUDE.md: "Active plugins for this project: [...]"
+```
+
+**Team alignment:** Commit `.overture.yml` to project repos. New team members run `overture sync` and get the exact plugin setup.
+
+---
+
+### 3. 📝 AI Context Documentation Generator
+
+**Generate rich CLAUDE.md/AGENTS.md files with workflow orchestration.**
+
+Move beyond "here's what we found via grep" to **actionable AI guidance**.
+
+```yaml
+# .overture.yml
+documentation:
+  workflows:
+    - name: "TDD with AI assistance"
+      trigger: "When writing tests"
+      instructions: |
+        1. Use context7 MCP to look up testing library best practices
+        2. Use memory MCP to check previous test patterns in this project
+        3. Use python-repl MCP to validate test assertions
+        4. Store new patterns in memory for future reference
+
+    - name: "API implementation with research"
+      trigger: "When implementing API endpoints"
+      instructions: |
+        1. Use context7 to fetch latest FastAPI documentation
+        2. Use memory to retrieve project API design patterns
+        3. Use ruff MCP for linting as you code
+        4. Persist architectural decisions in memory
+
+  agent_mcp_mappings:
+    python-development:python-pro:
+      mcps:
+        memory: "Persist architectural decisions and patterns discovered"
+        context7: "Always look up latest library docs before implementing"
+        python-repl: "Validate complex logic before committing"
+```
+
+**Generated CLAUDE.md includes:**
+- Active plugins for this project
+- Global vs project MCPs
+- **Workflow instructions that orchestrate multiple MCPs together**
+- Agent/skill → MCP usage guidance
+
+**This is the magic:** Overture teaches Claude **how to use your tools together**, not just which tools exist.
+
+---
+
+## Quick Start
+
+### Current Version (v0.1 - Available Now)
+
+Overture v0.1 provides basic Claude Code project configuration:
+
+```bash
+# Install Overture
+npm install -g @overture/cli
+
+# Initialize your project
+cd my-project
+overture init --type python-backend
+
+# Edit .overture/config.yaml to add plugins and MCPs
+vim .overture/config.yaml
+
+# Sync configuration
+overture sync
+# → Installs plugins via Claude CLI
+# → Generates .mcp.json
+# → Generates CLAUDE.md
+```
+
+**What v0.1 includes:**
+- ✅ Project-level configuration (`.overture/config.yaml`)
+- ✅ Claude Code plugin installation
+- ✅ Project `.mcp.json` generation
+- ✅ Basic `CLAUDE.md` generation
+- ✅ Validation (`overture validate`)
+- ✅ MCP management (`overture mcp list`, `overture mcp enable`)
+
+**What v0.1 does NOT include yet:**
+- ❌ User global config (`~/.config/overture.yml`)
+- ❌ Multi-platform sync (only Claude Code currently)
+- ❌ Enhanced workflow documentation
+- ❌ Agent/skill → MCP mappings
+
+See [docs/PURPOSE.md](docs/PURPOSE.md) for the full vision and roadmap.
+
+---
+
+## Example: Python Backend Project
+
+```yaml
+# .overture/config.yaml
+version: "1.0"
+
+project:
+  name: my-fastapi-backend
+  type: python-backend
+
+plugins:
+  python-development:
+    marketplace: claude-code-workflows
     mcps: [python-repl, ruff, filesystem]
 
-  database-design:
+  backend-development:
     marketplace: claude-code-workflows
-    enabled: true
-    mcps: [sqlite, filesystem]
+    mcps: [filesystem, docker]
 
-# MCP server configurations
 mcp:
+  # Global MCP (reference only)
+  filesystem:
+    scope: global
+
+  # Project-specific MCPs
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
@@ -57,66 +231,17 @@ mcp:
     command: uvx
     args: [mcp-server-ruff]
     scope: project
-```
 
-```bash
-overture sync
-```
-
-**Overture:**
-1. Installs plugins via `claude plugin install <plugin>@<marketplace>`
-2. Generates **`.mcp.json`** with project-scoped MCP servers
-3. Generates **`CLAUDE.md`** with plugin↔MCP usage guidance
-
-## How It Works
-
-### 1. Initialize Project
-
-```bash
-overture init --type python-backend
-# Creates .overture/config.yaml with starter configuration
-```
-
-### 2. Configure Plugins and MCPs
-
-Edit `.overture/config.yaml` to declare your plugins and MCP servers:
-
-```yaml
-plugins:
-  python-development:
-    marketplace: claude-code-workflows
-    mcps: [python-repl, ruff]
-
-mcp:
-  python-repl:
-    command: uvx
-    args: [mcp-server-python-repl]
+  docker:
+    command: docker-mcp-server
     scope: project
 ```
 
-### 3. Sync Configuration
-
 ```bash
 overture sync
 ```
 
-This command:
-- Installs missing plugins: `claude plugin install python-development@claude-code-workflows`
-- Generates `.mcp.json` with project-scoped MCP servers
-- Generates `CLAUDE.md` with plugin↔MCP mappings
-
-### Other Commands
-
-```bash
-overture mcp list          # List all configured MCPs
-overture enable mcp postgres   # Enable a disabled MCP
-overture validate          # Validate configuration
-```
-
-## Generated Configuration
-
-### `.mcp.json` (Project-scoped MCP servers)
-
+**Generated `.mcp.json`:**
 ```json
 {
   "mcpServers": {
@@ -124,208 +249,213 @@ overture validate          # Validate configuration
       "command": "uvx",
       "args": ["mcp-server-python-repl"]
     },
-    "sqlite": {
+    "ruff": {
       "command": "uvx",
-      "args": ["mcp-server-sqlite", "--db-path", "./dev.db"]
+      "args": ["mcp-server-ruff"]
+    },
+    "docker": {
+      "command": "docker-mcp-server"
     }
   }
 }
 ```
 
-### `CLAUDE.md` (Usage guidance for Claude)
-
+**Generated `CLAUDE.md`** includes plugin→MCP mappings:
 ```markdown
 ## Active Plugins
+- python-development
+- backend-development
 
-- **python-development** (marketplace: claude-code-workflows)
-- **database-design** (marketplace: claude-code-workflows)
-
-## MCP Server Configuration
-
-### Global MCP Servers
-- filesystem
-- context7
-- memory
-
-### Project MCP Servers
-- **python-repl**
-- **ruff**
-- **sqlite**
+## MCP Servers
+### Global: filesystem
+### Project: python-repl, ruff, docker
 
 ## Plugin-to-MCP Mappings
-
-### python-development
-When using python-development, prefer these MCP servers:
-- `python-repl` MCP
-- `ruff` MCP
-- `filesystem` MCP
-
-### database-design
-When using database-design, prefer these MCP servers:
-- `sqlite` MCP
-- `filesystem` MCP
+When using python-development → use python-repl, ruff, filesystem
+When using backend-development → use filesystem, docker
 ```
 
-**Claude reads CLAUDE.md and knows which MCPs to use for each plugin!**
+---
 
-## Key Features
+## Commands
 
-### 🔗 Plugin-to-MCP Bridge
-- Declare which MCPs each plugin uses in configuration
-- Overture generates CLAUDE.md that tells Claude which tools to prefer
-- Consistent tool selection across conversations
+```bash
+# Initialize project
+overture init [--type <type>]
 
-### 🎯 Project-Scoped Configuration
-- Python projects load Python MCPs (python-repl, ruff)
-- Java projects load Java MCPs (maven, jvm-tools)
-- No unnecessary MCP servers in your project
+# Sync configuration (install plugins + generate configs)
+overture sync
 
-### 🌍 Global + Project Scopes
-- Global MCPs (filesystem, memory, context7) available everywhere
-- Project MCPs only loaded for specific projects
-- Reference global MCPs in config without redefining them
+# List MCP servers
+overture mcp list
 
-### 🤖 Automated Plugin Installation
-- `overture sync` installs missing plugins via Claude CLI
-- Ensures consistent environment across machines
-- Just commit `.overture/config.yaml` to version control
+# Enable a disabled MCP
+overture mcp enable <name>
 
-### 📝 Generated Documentation
-- CLAUDE.md guides Claude's MCP selection for each plugin
-- Human-readable, version-controlled guidance
-- Preserves custom edits in marked sections
+# Validate configuration
+overture validate
+```
 
-### ✅ Simple Validation
-- Schema validation for configuration
-- Checks MCP commands exist on PATH
-- Warns about undefined MCP references
+---
+
+## Roadmap
+
+### v0.1 - Foundation ✅ COMPLETE
+- [x] Project-level config for Claude Code
+- [x] Plugin installation via Claude CLI
+- [x] Basic .mcp.json generation
+- [x] Simple CLAUDE.md templates
+- [x] Validation engine
+- [x] 98%+ test coverage
+
+### v0.2 - Multi-Platform MCP Manager 🚧 NEXT
+- [ ] User global config (`~/.config/overture.yml`)
+- [ ] User/project precedence and deduplication
+- [ ] Multi-platform adapters:
+  - [ ] Claude Desktop
+  - [ ] Claude Code (user config)
+  - [ ] Copilot CLI
+  - [ ] VSCode Copilot
+  - [ ] IntelliJ Copilot
+- [ ] Config audit: `overture audit`
+- [ ] Config consolidation: `overture consolidate`
+
+### v0.3 - Enhanced Documentation 📋 PLANNED
+- [ ] Template system for workflow instructions
+- [ ] User-defined MCP orchestration patterns
+- [ ] Team best practices in config
+- [ ] AGENTS.md generation for Copilot
+- [ ] Workflow validation
+
+### v0.4 - Intelligent Mappings 🔬 RESEARCH
+- [ ] Plugin agent/skill metadata extraction
+- [ ] Agent capability registry
+- [ ] Automatic agent→MCP recommendations
+- [ ] Community-driven mapping database
+
+See [docs/PURPOSE.md](docs/PURPOSE.md) for detailed vision and phasing.
+
+---
 
 ## Configuration Structure
 
 ```
-project/
+# User global (dotfiles)
+~/.config/
+└── overture.yml              # Canonical user MCP config
+
+# Project
+my-project/
 ├── .overture/
-│   └── config.yaml           # Overture configuration
-├── .mcp.json                 # Generated MCP config
-├── CLAUDE.md                 # Generated guidance (preserved edits)
+│   └── config.yaml           # Project Overture config
+├── .mcp.json                 # Generated (Claude Code project)
+├── CLAUDE.md                 # Generated AI guidance
 └── src/
 ```
 
-Global configuration:
-```
-~/.config/overture/
-└── config.yaml               # Global MCP servers and defaults
-```
+---
 
-## Examples
-
-See [docs/examples.md](docs/examples.md) for complete examples:
-- Python FastAPI backend
-- Java Spring Boot application
-- React frontend
-- Nx monorepo
-
-## Configuration Schema
-
-See [docs/overture-schema.md](docs/overture-schema.md) for complete schema documentation.
-
-## Comparison
+## Why Overture?
 
 ### Without Overture
-
-**Manual Configuration:**
-```bash
-# Install plugin manually
-/plugin install python-development
-
-# Separately configure MCP servers in .mcp.json
-vim .mcp.json  # Add python-repl, ruff, etc.
-
-# No connection between plugins and MCPs
-# Duplicate config across similar projects
-# No guidance for Claude on which tools to use
-```
+**Configuration Hell:**
+- Install `python-development` plugin manually
+- Separately configure `python-repl` MCP in `.mcp.json`
+- Repeat for Claude Desktop, Copilot, etc.
+- Duplicate config across similar projects
+- No guidance for Claude on which tools to use together
+- Config drift across machines
 
 **Claude's perspective:**
 - ❌ Doesn't know which MCPs work best with which plugins
-- ❌ No guidance on tool selection
-- ❌ Must discover relationships through trial and error
+- ❌ No workflow orchestration guidance
+- ❌ Trial and error to discover tool combinations
 
 ### With Overture
-
-**Configuration-Driven:**
-```bash
-# Edit .overture/config.yaml once
-plugins:
-  python-development:
-    marketplace: claude-code-workflows
-    mcps: [python-repl, ruff]
-
-# Run sync
-overture sync
-# → Installs plugin via Claude CLI
-# → Generates .mcp.json
-# → Generates CLAUDE.md with usage guidance
-```
+**Configuration Harmony:**
+- Declare config ONCE in `~/.config/overture.yml`
+- `overture sync` updates ALL platforms automatically
+- Project configs reference globals (no duplication)
+- Commit `.overture.yml` to version control
+- Team members get consistent setup
 
 **Claude's perspective:**
-- ✅ Reads CLAUDE.md and knows which MCPs to use for each plugin
-- ✅ Has explicit guidance: "When using python-development → use python-repl"
-- ✅ Consistent tool selection based on project configuration
-- ✅ Better user experience with appropriate tool choices
+- ✅ Reads CLAUDE.md and knows which MCPs to use
+- ✅ Has workflow instructions: "context7 → memory → python-repl"
+- ✅ Better AI assistance through better guidance
 
-## Development Status
+**Overture turns AI tool chaos into AI tool harmony.**
 
-Overture is in active development:
-
-- [x] Architecture design
-- [x] Configuration schema
-- [x] Documentation
-- [ ] CLI implementation
-- [ ] Plugin registry
-- [ ] Configuration generator
-- [ ] Validation engine
-
-## Development Requirements
-
-To develop Overture, configure these MCP servers:
-
-- **sequentialthinking** — Complex problem-solving
-- **filesystem** — File operations
-- **context7** — Library documentation
-- **memory** — Cross-conversation context
-- **nx** — Monorepo management
-
-See `CLAUDE.md` for detailed MCP usage guidance.
-
-## Related Projects
-
-- [wshobson/agents](https://github.com/wshobson/agents) — Comprehensive Claude plugin marketplace
-- [obra/superpowers](https://github.com/obra/superpowers) — Claude skills library
-- [adestefa/ccmem](https://github.com/adestefa/ccmem) — Persistent memory MCP server
-
-See [docs/related-projects.md](docs/related-projects.md) for detailed analysis.
+---
 
 ## Documentation
 
 ### User Guides
-- **[User Guide](docs/user-guide.md)** - Complete guide to using Overture
+- **[Purpose & Vision](docs/PURPOSE.md)** - Detailed vision, scope, and roadmap
 - **[Configuration Schema](docs/overture-schema.md)** - Full configuration reference
-- **[Examples](docs/examples.md)** - Configuration examples for different project types
-- **[Plugin Builder How-To](docs/plugin-builder-how-to.md)** - Guide to building Overture plugins
+- **[Examples](docs/examples.md)** - Complete examples for different project types
 
 ### Project Documentation
-- **[Implementation Plan](docs/implementation-plan.md)** - Development roadmap and milestones
-- **[Related Projects](docs/related-projects.md)** - Analysis of similar tools in the ecosystem
+- **[Implementation Plan](docs/implementation-plan.md)** - Development milestones
+- **[Related Projects](docs/related-projects.md)** - Ecosystem analysis
 
 ### Design & Research
-- **[Architecture Research](docs/architecture.md)** - Deep-dive into Claude Code architecture
-- **[Vision Document](docs/vision.md)** - Long-term roadmap and future feature ideas
+- **[Architecture Research](docs/architecture.md)** - Claude Code architecture deep-dive
+
+---
+
+## What Overture Is
+
+- ✅ **Configuration orchestrator** — "Dotfiles for AI tool configs"
+- ✅ **Documentation generator** — Enhanced CLAUDE.md/AGENTS.md with workflows
+- ✅ **Infrastructure tool** — Plumbing that makes AI tools work together
+
+## What Overture Is NOT
+
+- ❌ **NOT an execution orchestrator** (like Claude Code Flow)
+- ❌ **NOT a runtime coordinator** (like Claude Squad)
+- ❌ **NOT a plugin marketplace** (uses existing marketplaces)
+- ❌ **NOT a plugin authoring framework**
+
+**Overture configures. Other tools execute.**
+
+---
+
+## Related Projects
+
+- [wshobson/agents](https://github.com/wshobson/agents) — Claude plugin marketplace
+- [ruvnet/claude-code-flow](https://github.com/ruvnet/claude-code-flow) — Multi-agent execution orchestrator
+- [smtg-ai/claude-squad](https://github.com/smtg-ai/claude-squad) — Multi-agent coordinator
+- [obra/superpowers](https://github.com/obra/superpowers) — Claude skills library
+- [adestefa/ccmem](https://github.com/adestefa/ccmem) — Persistent memory MCP
+
+See [docs/related-projects.md](docs/related-projects.md) for detailed ecosystem analysis.
+
+---
+
+## Contributing
+
+Contributions welcome!
+
+**Focus areas:**
+- v0.2: Multi-platform MCP sync adapters
+- v0.3: Workflow template system
+- v0.4: Plugin metadata extraction
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+
+---
 
 ## License
 
 MIT
 
-## Contributing
+---
 
-Contributions welcome! This project demonstrates the need for plugin-to-MCP orchestration in the Claude Code ecosystem.
+## Status
+
+**Current:** v0.1 - Foundation complete (98%+ test coverage)
+
+**Next:** v0.2 - Multi-Platform MCP Manager
+
+See [docs/PURPOSE.md](docs/PURPOSE.md) for detailed roadmap.

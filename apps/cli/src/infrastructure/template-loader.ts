@@ -30,6 +30,10 @@ export class TemplateLoader {
       // Simple YAML serialization (or use js-yaml)
       return new Handlebars.SafeString(JSON.stringify(context, null, 2));
     });
+
+    Handlebars.registerHelper('eq', (a, b) => {
+      return a === b;
+    });
   }
 }
 
