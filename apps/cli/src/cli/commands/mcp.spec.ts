@@ -1,9 +1,10 @@
 // Mock chalk using the manual mock file
 jest.mock('chalk');
 
-// Mock inquirer
+// Mock inquirer (inline mock for compatibility)
 jest.mock('inquirer', () => ({
   prompt: jest.fn(),
+  createPromptModule: jest.fn(),
 }));
 
 // Now safe to import

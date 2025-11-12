@@ -12,36 +12,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-// Mock chalk to support chaining (e.g., chalk.bold.cyan)
-jest.mock('chalk', () => {
-  // Create a chainable mock function that supports any combination of method calls
-  const createChainableMock = (): any => {
-    const mockFn = (str: string) => str;
+// Mock chalk using the manual mock file at __mocks__/chalk.ts
+jest.mock('chalk');
 
-    // All chalk methods that should support chaining
-    const methods = ['bold', 'green', 'red', 'yellow', 'gray', 'blue', 'cyan', 'dim', 'magenta'];
-
-    // Add each method as a property that returns another chainable mock
-    methods.forEach(method => {
-      Object.defineProperty(mockFn, method, {
-        get: () => createChainableMock(),
-        enumerable: true,
-        configurable: true
-      });
-    });
-
-    return mockFn;
-  };
-
-  const chalkMock = createChainableMock();
-
-  return {
-    default: chalkMock,
-    ...chalkMock,
-  };
-});
-
-// Mock inquirer and related modules to avoid TTY detection
+// Mock inquirer (inline mock for compatibility)
 jest.mock('inquirer', () => ({
   prompt: jest.fn(),
   createPromptModule: jest.fn(),
@@ -157,10 +131,8 @@ describe('CLI Integration Tests (WU-034)', () => {
       expect(result.exitCode).toBe(0);
       expect(result.output).toContain('User configuration created');
 
-      // Verify config file was created
-      const configPath = path.join(os.homedir(), '.config', 'overture', 'config.yaml');
-      // Note: In real implementation, we'd mock the config path or use a test home directory
-      // For now, we'll just verify the command succeeded
+      // Note: Config file is created at ~/.config/overture/config.yaml
+      // We don't verify the file directly to avoid modifying the test user's home directory
     });
 
     it('should display user config with user show', async () => {
