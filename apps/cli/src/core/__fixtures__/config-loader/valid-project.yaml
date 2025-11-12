@@ -1,0 +1,29 @@
+# Valid project configuration
+version: "2.0"
+
+mcp:
+  python-repl:
+    command: uvx
+    args: ["mcp-server-python-repl"]
+    env: {}
+    transport: stdio
+    scope: project
+    
+  ruff:
+    command: uvx
+    args: ["mcp-server-ruff"]
+    env: {}
+    transport: stdio
+    scope: project
+    
+  # Override user's github config with project-specific token
+  github:
+    command: mcp-server-github
+    args: []
+    env:
+      GITHUB_TOKEN: "${PROJECT_GITHUB_TOKEN}"
+    transport: stdio
+    scope: project
+
+sync:
+  mergeStrategy: replace

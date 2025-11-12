@@ -1,0 +1,119 @@
+/**
+ * GitHub Copilot CLI Adapter
+ *
+ * Adapter for GitHub Copilot CLI with MCP support.
+ * Only supports user-level configuration (no project-level).
+ *
+ * Config locations:
+ * - macOS/Linux: ~/.config/github-copilot/mcp.json
+ * - Windows: %USERPROFILE%\.config\github-copilot\mcp.json
+ *
+ * Note: GitHub Copilot CLI bundles a native GitHub MCP server.
+ * Consider excluding the "github" MCP when syncing to avoid duplication.
+ *
+ * @module adapters/copilot-cli-adapter
+ * @version 2.0
+ */
+
+import * as fs from 'fs';
+import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig } from './client-adapter.interface';
+import type { Platform, OvertureConfigV2 } from '../domain/config-v2.types';
+import { getCopilotCliPath } from '../core/path-resolver';
+
+/**
+ * GitHub Copilot CLI adapter implementation
+ */
+export class CopilotCliAdapter extends BaseClientAdapter {
+  readonly name = 'copilot-cli' as const;
+  readonly schemaRootKey = 'mcpServers' as const;
+
+  detectConfigPath(platform: Platform, projectRoot?: string): ConfigPathResult {
+    return getCopilotCliPath(platform);
+  }
+
+  readConfig(path: string): ClientMcpConfig {
+    if (!fs.existsSync(path)) {
+      return { mcpServers: {} };
+    }
+
+    try {
+      const content = fs.readFileSync(path, 'utf-8');
+      const parsed = JSON.parse(content);
+
+      // Ensure root key exists
+      if (!parsed.mcpServers) {
+        return { mcpServers: {} };
+      }
+
+      return parsed;
+    } catch (error) {
+      throw new Error(`Failed to read Copilot CLI config at ${path}: ${(error as Error).message}`);
+    }
+  }
+
+  writeConfig(path: string, config: ClientMcpConfig): void {
+    try {
+      // Ensure directory exists
+      const dir = path.substring(0, path.lastIndexOf('/'));
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      const content = JSON.stringify(config, null, 2);
+      fs.writeFileSync(path, content, 'utf-8');
+    } catch (error) {
+      throw new Error(`Failed to write Copilot CLI config to ${path}: ${(error as Error).message}`);
+    }
+  }
+
+  convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig {
+    const mcpServers: Record<string, any> = {};
+
+    for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
+      // Check if should sync
+      if (!this.shouldSyncMcp(mcpConfig, platform)) {
+        continue;
+      }
+
+      // Start with base config
+      let command = mcpConfig.command;
+      let args = [...mcpConfig.args];
+      let env = { ...mcpConfig.env };
+
+      // Apply platform overrides
+      if (mcpConfig.platforms?.commandOverrides?.[platform]) {
+        command = mcpConfig.platforms.commandOverrides[platform];
+      }
+      if (mcpConfig.platforms?.argsOverrides?.[platform]) {
+        args = [...mcpConfig.platforms.argsOverrides[platform]];
+      }
+
+      // Apply client-specific overrides
+      const clientOverride = mcpConfig.clients?.overrides?.[this.name];
+      if (clientOverride) {
+        if (clientOverride.command) command = clientOverride.command;
+        if (clientOverride.args) args = [...clientOverride.args];
+        if (clientOverride.env) env = { ...env, ...clientOverride.env };
+      }
+
+      // Copilot CLI native ${VAR} support (assumed)
+      mcpServers[name] = {
+        command,
+        args,
+        env: Object.keys(env).length > 0 ? env : undefined,
+      };
+    }
+
+    return { mcpServers };
+  }
+
+  supportsTransport(transport: 'stdio' | 'http' | 'sse'): boolean {
+    // Copilot CLI supports stdio (as of 2025-11)
+    return transport === 'stdio';
+  }
+
+  needsEnvVarExpansion(): boolean {
+    // Copilot CLI likely has native ${VAR} support
+    return false;
+  }
+}
