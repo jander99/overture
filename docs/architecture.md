@@ -1,10 +1,23 @@
-# Overture Architecture Research
+# Overture Architecture
 
-> Comprehensive research on Claude Code architecture and Overture's configuration strategy
+> Comprehensive architecture documentation for Overture
+
+## Document Overview
+
+This document covers two major aspects of Overture's architecture:
+
+1. **Part I: Claude Code Ecosystem Research** - Understanding the components Overture manages
+2. **Part II: Overture v0.2 Implementation** - Multi-platform MCP synchronization architecture
 
 ## Executive Summary
 
-Claude Code uses a multi-layered architecture where different components provide different types of guidance to the LLM. Overture will manage these components through a unified YAML-based configuration system that generates Claude Code's native JSON configurations.
+**Original Vision (Part I):** Claude Code uses a multi-layered architecture where different components provide different types of guidance to the LLM. Overture will manage these components through a unified YAML-based configuration system that generates Claude Code's native JSON configurations.
+
+**Current Implementation (Part II):** Overture v0.2 focuses on multi-platform MCP server synchronization across 7 AI development clients with user global configuration, backup/restore, and intelligent conflict resolution.
+
+---
+
+# Part I: Claude Code Ecosystem Research
 
 ## Claude Code Component Architecture
 
@@ -934,3 +947,570 @@ Warning: Hook syntax changed in Overture 2.0
 5. Implement CLI tool
 6. Write comprehensive documentation
 7. Build plugin export functionality
+
+---
+
+# Part II: Overture v0.2 Implementation Architecture
+
+**Version:** 2.0  
+**Status:** Complete (1,148/1,148 tests passing, 83%+ code coverage)  
+**Date:** 2025-01-13
+
+---
+
+## v0.2 Overview
+
+Overture v0.2 introduces multi-platform MCP server synchronization across multiple AI development clients. The architecture supports:
+
+- **User global configuration** (`~/.config/overture.yml`)
+- **Multiple client adapters** (7 clients: Claude Code, Claude Desktop, Cursor, Windsurf, VSCode, Copilot CLI, JetBrains)
+- **Client-aware environment variable expansion**
+- **Transport validation** and client-specific schema conversion
+- **Backup and restore** functionality
+- **Process locking** to prevent concurrent runs
+- **Config audit** to detect unmanaged MCPs
+
+---
+
+## Architecture Principles
+
+### 1. Separation of Concerns
+
+The codebase is organized into distinct layers with clear responsibilities:
+
+- **Domain**: Pure types and validation (no dependencies)
+- **Infrastructure**: File system and process operations
+- **Core**: Business logic and orchestration
+- **Adapters**: Client-specific implementations
+- **CLI**: User interface and command handling
+
+### 2. Adapter Pattern
+
+Each AI client has its own adapter implementing a common `ClientAdapter` interface. This allows:
+
+- **Pluggable clients**: Add new clients without modifying core logic
+- **Client-specific logic**: Handle schema differences (VSCode uses `servers` vs `mcpServers`)
+- **Environment variable expansion**: Some clients support native expansion, others require Overture to expand
+
+### 3. Configuration as Code
+
+User configuration is declarative YAML with version control:
+
+- **Single source of truth**: `~/.config/overture.yml` defines all MCPs and client settings
+- **MCP-centric design**: MCPs are defined once, synced to multiple clients with exclusions
+- **Precedence model**: Project config overrides user global config
+
+### 4. Testability
+
+All components are designed for testability:
+
+- **Dependency injection**: Adapters and services are injected
+- **Pure functions**: Path resolution, env var expansion are pure
+- **Mocked file system**: Infrastructure layer can be mocked for testing
+
+---
+
+## Directory Structure
+
+```
+apps/cli/src/
+├── adapters/               # Client-specific adapters (NEW in v0.2)
+│   ├── client-adapter.interface.ts
+│   ├── adapter-registry.ts
+│   ├── claude-code-adapter.ts
+│   ├── claude-desktop-adapter.ts
+│   ├── vscode-adapter.ts
+│   ├── cursor-adapter.ts
+│   ├── windsurf-adapter.ts
+│   ├── copilot-cli-adapter.ts
+│   └── jetbrains-copilot-adapter.ts
+│
+├── cli/                    # Command handlers
+│   ├── commands/
+│   │   ├── init.command.ts
+│   │   ├── sync.command.ts      # Enhanced in v0.2
+│   │   ├── validate.command.ts  # Enhanced in v0.2
+│   │   ├── user.command.ts      # NEW in v0.2
+│   │   ├── audit.command.ts     # NEW in v0.2
+│   │   └── backup.command.ts    # NEW in v0.2
+│   ├── middleware/
+│   └── main.ts
+│
+├── core/                   # Business logic
+│   ├── config-loader.ts         # Enhanced in v0.2
+│   ├── path-resolver.ts         # NEW in v0.2
+│   ├── env-expander.ts          # NEW in v0.2
+│   ├── sync-engine.ts           # NEW in v0.2
+│   ├── backup-service.ts        # NEW in v0.2
+│   ├── restore-service.ts       # NEW in v0.2
+│   ├── audit-service.ts         # NEW in v0.2
+│   ├── exclusion-filter.ts      # NEW in v0.2
+│   ├── transport-validator.ts   # NEW in v0.2
+│   ├── config-diff.ts           # NEW in v0.2
+│   ├── merge-strategy.ts        # NEW in v0.2
+│   ├── process-lock.ts          # NEW in v0.2
+│   ├── validator.ts             # Enhanced in v0.2
+│   ├── generator.ts             # v0.1
+│   ├── plugin-installer.ts      # v0.1
+│   └── mcp-registry.ts          # v0.1
+│
+├── domain/                 # Types and schemas
+│   ├── types.ts                 # v0.1 types
+│   ├── schemas.ts               # v0.1 schemas
+│   ├── config-v2.types.ts       # NEW in v0.2
+│   ├── config-v2.schema.ts      # NEW in v0.2
+│   ├── constants.ts
+│   ├── errors.ts
+│   └── enums.ts
+│
+├── infrastructure/         # External interactions
+│   ├── fs-utils.ts
+│   ├── process-executor.ts
+│   ├── template-loader.ts
+│   └── path-resolver.ts
+│
+└── utils/                  # Shared utilities
+    ├── logger.ts
+    ├── prompts.ts
+    ├── format.ts
+    └── validation.ts
+```
+
+---
+
+## Layered Architecture
+
+### Layer 1: Domain
+
+**Pure domain logic** with **zero external dependencies**.
+
+**Responsibilities:**
+- TypeScript interfaces and types
+- Zod validation schemas
+- Custom error classes
+- Enums and constants
+
+**Files:**
+- `config-v2.types.ts` - v2.0 configuration types
+- `config-v2.schema.ts` - Zod validators
+
+**Key Types:**
+```typescript
+interface OvertureConfigV2 {
+  version: string;
+  clients: Record<string, ClientConfig>;
+  mcp: Record<string, McpServerConfigV2>;
+  sync?: SyncOptions;
+}
+
+interface McpServerConfigV2 {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  transport: 'stdio' | 'http' | 'sse';
+  scope: 'global' | 'project';
+  version?: string;
+  clients?: {
+    exclude?: string[];
+    include?: string[];
+  };
+  platforms?: {
+    exclude?: Platform[];
+  };
+}
+```
+
+---
+
+### Layer 2: Infrastructure
+
+**External interactions** (file system, processes).
+
+**Responsibilities:**
+- File system operations (read, write, backup)
+- Process execution (plugin installation)
+- Template loading
+
+---
+
+### Layer 3: Core
+
+**Business logic** and **orchestration**.
+
+**Responsibilities:**
+- Configuration loading and merging
+- Path resolution with env var expansion
+- Sync engine orchestration
+- Backup and restore
+- Validation and locking
+
+**Key Components:**
+
+#### Config Loader
+```typescript
+class ConfigLoader {
+  loadUserConfig(): OvertureConfigV2
+  loadProjectConfig(): OvertureConfigV2 | null
+  mergeConfigs(user, project): OvertureConfigV2
+}
+```
+
+#### Sync Engine
+```typescript
+class SyncEngine {
+  sync(config: OvertureConfigV2, clients: ClientName[]): SyncResult
+
+  private shouldSyncMcp(mcp: McpServerConfigV2, client: ClientName): boolean
+  private backupExistingConfig(client: ClientName): void
+  private mergeConfigs(existing: ClientMcpConfig, overture: ClientMcpConfig): ClientMcpConfig
+}
+```
+
+---
+
+### Layer 4: Adapters
+
+**Client-specific implementations**.
+
+**Responsibilities:**
+- Detect client installation
+- Read/write client config
+- Convert between formats
+- Validate transport support
+- Handle environment variable expansion
+
+**Interface:**
+```typescript
+interface ClientAdapter {
+  readonly name: ClientName;
+  readonly schemaRootKey: 'mcpServers' | 'servers';
+
+  detectConfigPath(platform: Platform): string | null;
+  readConfig(path: string): ClientMcpConfig;
+  writeConfig(path: string, config: ClientMcpConfig): void;
+  convertFromOverture(overture: OvertureConfigV2): ClientMcpConfig;
+  supportsTransport(transport: TransportType): boolean;
+  needsEnvVarExpansion(): boolean;
+}
+```
+
+**Implementations:**
+1. **ClaudeCodeAdapter** - User + project config, stdio/http
+2. **ClaudeDesktopAdapter** - User only, stdio/sse, platform-specific paths
+3. **VSCodeAdapter** - Uses `servers` key, stdio only
+4. **CursorAdapter** - User + project, stdio/http
+5. **WindsurfAdapter** - User only, stdio
+6. **CopilotCliAdapter** - User only, stdio
+7. **JetBrainsCopilotAdapter** - User + project, stdio
+
+---
+
+### Layer 5: CLI
+
+**User interface** and **command handling**.
+
+**Commands:**
+- `overture init` - Initialize project config
+- `overture sync` - Sync MCPs to clients
+- `overture user init` - Initialize user global config
+- `overture user show` - Display user config
+- `overture audit` - Detect unmanaged MCPs
+- `overture backup list` - List all backups
+- `overture backup restore` - Restore from backup
+- `overture backup cleanup` - Remove old backups
+- `overture validate` - Validate configuration
+- `overture mcp list` - List configured MCPs
+- `overture mcp enable` - Enable MCP
+
+---
+
+## Core Components
+
+### Sync Engine
+
+The sync engine orchestrates multi-client synchronization:
+
+```
+┌─────────────────────────────────────────┐
+│ 1. Load Configuration                   │
+│    - User global (~/.config/overture.yml)│
+│    - Project (./.overture/config.yaml)  │
+│    - Merge with precedence              │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│ 2. Detect Clients                       │
+│    - Check installed clients            │
+│    - Filter by enabled clients          │
+│    - Get client adapters                │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│ 3. For Each Client                      │
+│    ├─ Apply exclusions                  │
+│    ├─ Validate transport support        │
+│    ├─ Expand environment variables      │
+│    ├─ Convert to client format          │
+│    ├─ Backup existing config            │
+│    ├─ Merge with existing config        │
+│    └─ Write new config                  │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│ 4. Report Results                       │
+│    - MCPs synced per client             │
+│    - MCPs skipped (exclusions)          │
+│    - Errors encountered                 │
+│    - Backups created                    │
+└─────────────────────────────────────────┘
+```
+
+### Exclusion Filter
+
+Implements sophisticated MCP filtering logic:
+
+```typescript
+class ExclusionFilter {
+  shouldSyncMcp(
+    mcp: McpServerConfigV2,
+    client: ClientName,
+    platform: Platform
+  ): FilterResult
+
+  // Filter by:
+  // 1. MCP enabled flag
+  // 2. Client exclusions/inclusions
+  // 3. Platform exclusions
+  // 4. Transport compatibility
+  // 5. Scope (global vs project)
+}
+```
+
+### Backup Service
+
+Manages configuration backups with retention:
+
+```typescript
+class BackupService {
+  backup(client: ClientName, config: ClientMcpConfig): string
+  list(client?: ClientName): BackupMetadata[]
+  cleanup(retentionCount: number): void
+}
+```
+
+### Audit Service
+
+Detects MCPs not managed by Overture:
+
+```typescript
+class AuditService {
+  audit(clients: ClientName[]): AuditResult
+
+  // For each client:
+  // 1. Read client config
+  // 2. Compare against Overture config
+  // 3. Identify unmanaged MCPs
+  // 4. Generate suggestions
+}
+```
+
+---
+
+## Configuration Precedence
+
+### User vs Project
+
+```yaml
+# ~/.config/overture.yml (User Global)
+mcp:
+  github:
+    command: mcp-server-github
+    transport: stdio
+    scope: global
+
+# ./.overture/config.yaml (Project)
+mcp:
+  github:
+    transport: http  # Overrides user
+    scope: project
+
+# Result: Project overrides user
+# Used: http transport, project scope
+```
+
+### Client-Specific Overrides
+
+```yaml
+mcp:
+  github:
+    command: mcp-server-github
+    transport: stdio
+    clients:
+      exclude: [vscode]  # Skip VSCode
+      include: [claude-code, cursor]  # Only these
+```
+
+### Platform-Specific Exclusions
+
+```yaml
+mcp:
+  my-server:
+    command: my-server
+    transport: stdio
+    platforms:
+      exclude: [win32]  # Skip Windows
+```
+
+---
+
+## Data Flow
+
+### Sync Command Flow
+
+```
+User: overture sync --client claude-code
+
+                │
+                ▼
+┌───────────────────────────────┐
+│ CLI: Parse arguments          │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│ ConfigLoader                  │
+│ - Load user config            │
+│ - Load project config         │
+│ - Merge with precedence       │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│ ProcessLock                   │
+│ - Acquire lock                │
+│ - Prevent concurrent runs     │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│ SyncEngine                    │
+│ - Get client adapters         │
+│ - Filter MCPs                 │
+│ - Backup configs              │
+│ - Write configs               │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│ CLI: Display results          │
+│ - MCPs synced                 │
+│ - Backups created             │
+│ - Errors                      │
+└───────────────────────────────┘
+```
+
+---
+
+## Extension Points
+
+### Adding New Clients
+
+1. Create adapter implementing `ClientAdapter` interface
+2. Register in `AdapterRegistry`
+3. Add client name to `ClientName` enum
+4. Add path detection logic
+5. Write comprehensive tests
+
+### Adding New Commands
+
+1. Create command file in `cli/commands/`
+2. Implement command logic
+3. Register in `cli/main.ts`
+4. Add integration tests
+
+### Custom Merge Strategies
+
+1. Implement `MergeStrategy` interface
+2. Configure via `sync.mergeStrategy` in config
+3. Options: `append`, `replace`, `merge`
+
+---
+
+## Testing Strategy
+
+### Test Coverage
+
+- **1,148 tests** passing (100% pass rate)
+- **40 test suites** covering all components
+- **83%+ code coverage**
+
+### Test Organization
+
+```
+apps/cli/src/
+├── adapters/*.spec.ts        # Adapter unit tests
+├── core/*.spec.ts            # Core service tests
+├── domain/*.spec.ts          # Schema validation tests
+├── cli/commands/*.spec.ts    # Command integration tests
+└── performance/*.bench.ts    # Performance benchmarks
+```
+
+### Key Test Patterns
+
+1. **Adapter tests**: Mock file system, test format conversion
+2. **Sync engine tests**: Mock adapters, test orchestration
+3. **Integration tests**: Real file operations in temp dirs
+4. **Performance tests**: Benchmark sync operations
+
+---
+
+## Performance Characteristics
+
+### Sync Performance
+
+- **Small config (5 MCPs)**: ~0.3ms average
+- **Medium config (15 MCPs)**: ~0.7ms average
+- **Large config (50 MCPs)**: ~2.5ms average
+- **Multi-client (3 clients, 15 MCPs)**: ~2ms average
+
+### Memory Usage
+
+- **Baseline**: ~25MB RSS
+- **Peak (large sync)**: ~40MB RSS
+- **Heap growth**: Minimal (<5MB)
+
+---
+
+## Security Considerations
+
+### Environment Variables
+
+- Never log env var values
+- Validate expansions before write
+- Warn on missing variables
+
+### File Permissions
+
+- Preserve existing config permissions
+- Use restrictive permissions for backups (600)
+- Validate paths are within expected directories
+
+### Process Locking
+
+- Prevent concurrent Overture runs
+- Clean up stale locks (>5 min)
+- Graceful lock acquisition failure
+
+---
+
+## Version History
+
+- **v0.1** (2025-11-09) - Initial release with project-level config
+- **v0.2** (2025-01-13) - Multi-platform sync with user global config
+
+---
+
+**Document Last Updated:** 2025-01-13

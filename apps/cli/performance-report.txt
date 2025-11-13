@@ -6,13 +6,13 @@
 
 Small Config Sync (5 MCPs):
   Target: < 1000ms
-  Average: 0.21ms
-  p50: 0.21ms
-  p95: 0.28ms
-  p99: 0.28ms
+  Average: 0.32ms
+  p50: 0.26ms
+  p95: 0.97ms
+  p99: 0.97ms
   Min: 0.13ms
-  Max: 0.28ms
-  StdDev: 0.05ms
+  Max: 0.97ms
+  StdDev: 0.24ms
   Heap: 0.03MB
   RSS: 0.04MB
   [32m✓ PASS[0m (10 iterations)
@@ -20,69 +20,69 @@ Small Config Sync (5 MCPs):
 
 Medium Config Sync (15 MCPs):
   Target: < 2000ms
-  Average: 0.66ms
-  p50: 0.21ms
-  p95: 4.23ms
-  p99: 4.23ms
-  Min: 0.14ms
-  Max: 4.23ms
-  StdDev: 1.20ms
-  Heap: 0.04MB
-  RSS: 0.04MB
+  Average: 0.26ms
+  p50: 0.22ms
+  p95: 0.72ms
+  p99: 0.72ms
+  Min: 0.15ms
+  Max: 0.72ms
+  StdDev: 0.16ms
+  Heap: -0.00MB
+  RSS: 0.01MB
   [32m✓ PASS[0m (10 iterations)
 
 
 Large Config Sync (50 MCPs):
   Target: < 5000ms
-  Average: 0.44ms
-  p50: 0.43ms
-  p95: 0.45ms
-  p99: 0.45ms
-  Min: 0.42ms
-  Max: 0.45ms
+  Average: 0.32ms
+  p50: 0.32ms
+  p95: 0.34ms
+  p99: 0.34ms
+  Min: 0.30ms
+  Max: 0.34ms
   StdDev: 0.01ms
   Heap: 0.10MB
-  RSS: 0.10MB
+  RSS: 0.00MB
   [32m✓ PASS[0m (5 iterations)
 
 
 Multi-Client Sync (5 clients, 10 MCPs):
   Target: < 3000ms
-  Average: 0.73ms
-  p50: 0.63ms
-  p95: 0.92ms
-  p99: 0.92ms
-  Min: 0.55ms
-  Max: 0.92ms
-  StdDev: 0.16ms
+  Average: 0.98ms
+  p50: 0.55ms
+  p95: 2.99ms
+  p99: 2.99ms
+  Min: 0.38ms
+  Max: 2.99ms
+  StdDev: 1.01ms
   Heap: 0.11MB
-  RSS: 0.13MB
+  RSS: 0.00MB
   [32m✓ PASS[0m (5 iterations)
 
 
 Incremental Update (1 MCP changed):
   Target: < 500ms
-  Average: 0.45ms
-  p50: 0.30ms
-  p95: 1.98ms
-  p99: 1.98ms
-  Min: 0.23ms
-  Max: 1.98ms
-  StdDev: 0.45ms
+  Average: 0.90ms
+  p50: 0.37ms
+  p95: 4.79ms
+  p99: 4.79ms
+  Min: 0.24ms
+  Max: 4.79ms
+  StdDev: 1.18ms
   Heap: 0.06MB
-  RSS: 0.07MB
+  RSS: 0.03MB
   [32m✓ PASS[0m (20 iterations)
 
 
 Config Loading (100 MCPs total):
   Target: < 100ms
-  Average: 0.01ms
-  p50: 0.01ms
-  p95: 0.02ms
-  p99: 0.07ms
+  Average: 0.03ms
+  p50: 0.02ms
+  p95: 0.07ms
+  p99: 0.43ms
   Min: 0.01ms
-  Max: 0.07ms
-  StdDev: 0.01ms
+  Max: 0.43ms
+  StdDev: 0.06ms
   Heap: 0.00MB
   RSS: 0.00MB
   [32m✓ PASS[0m (50 iterations)
@@ -90,69 +90,69 @@ Config Loading (100 MCPs total):
 
 Backup Creation (50 MCPs):
   Target: < 200ms
-  Average: 0.94ms
-  p50: 0.23ms
-  p95: 10.30ms
-  p99: 10.30ms
-  Min: 0.16ms
-  Max: 10.30ms
-  StdDev: 2.21ms
-  Heap: -0.39MB
-  RSS: 0.10MB
+  Average: 0.79ms
+  p50: 0.49ms
+  p95: 5.53ms
+  p99: 5.53ms
+  Min: 0.37ms
+  Max: 5.53ms
+  StdDev: 1.12ms
+  Heap: 0.12MB
+  RSS: 0.12MB
   [32m✓ PASS[0m (20 iterations)
 
 
 Transport Validation (50 MCPs, 7 clients):
   Target: < 500ms
-  Average: 0.94ms
+  Average: 0.85ms
   p50: 0.44ms
-  p95: 3.73ms
-  p99: 5.73ms
-  Min: 0.19ms
-  Max: 5.73ms
-  StdDev: 1.23ms
-  Heap: 0.22MB
-  RSS: 0.18MB
+  p95: 2.37ms
+  p99: 9.19ms
+  Min: 0.17ms
+  Max: 9.19ms
+  StdDev: 1.62ms
+  Heap: -0.10MB
+  RSS: 0.28MB
   [32m✓ PASS[0m (30 iterations)
 
 
 Exclusion Filtering (50 MCPs):
   Target: < 100ms
-  Average: 0.14ms
-  p50: 0.13ms
-  p95: 0.24ms
-  p99: 0.92ms
-  Min: 0.07ms
-  Max: 0.92ms
-  StdDev: 0.12ms
-  Heap: 0.04MB
-  RSS: 0.04MB
+  Average: 0.15ms
+  p50: 0.09ms
+  p95: 0.18ms
+  p99: 3.09ms
+  Min: 0.05ms
+  Max: 3.09ms
+  StdDev: 0.42ms
+  Heap: 0.05MB
+  RSS: 0.00MB
   [32m✓ PASS[0m (50 iterations)
 
 
 Concurrent Sync Lock Failure:
   Target: < 100ms
-  Average: 0.05ms
-  p50: 0.04ms
-  p95: 0.22ms
-  p99: 0.22ms
-  Min: 0.03ms
-  Max: 0.22ms
-  StdDev: 0.04ms
-  Heap: 0.00MB
-  RSS: 0.01MB
+  Average: 0.02ms
+  p50: 0.02ms
+  p95: 0.07ms
+  p99: 0.07ms
+  Min: 0.02ms
+  Max: 0.07ms
+  StdDev: 0.01ms
+  Heap: 0.01MB
+  RSS: 0.00MB
   [32m✓ PASS[0m (20 iterations)
 
 
 Memory Usage (100 MCPs):
   Target: < 100ms
-  Average: 0.29ms
-  p50: 0.30ms
-  p95: 0.30ms
-  p99: 0.30ms
-  Min: 0.26ms
-  Max: 0.30ms
-  StdDev: 0.02ms
+  Average: 0.58ms
+  p50: 0.38ms
+  p95: 0.94ms
+  p99: 0.94ms
+  Min: 0.30ms
+  Max: 0.94ms
+  StdDev: 0.29ms
   Heap: 0.14MB
   RSS: 0.00MB
   [32m✓ PASS[0m (5 iterations)
@@ -163,6 +163,6 @@ Memory Usage (100 MCPs):
 
 Passed: 11/11 scenarios
 Performance Grade: A
-Timestamp: 2025-11-13T04:03:34.620Z
+Timestamp: 2025-11-13T13:55:28.022Z
 
 ============================================================
