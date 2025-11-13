@@ -1,0 +1,96 @@
+# Large configuration with many MCPs
+version: "2.0"
+
+clients:
+  claude-code:
+    enabled: true
+  claude-desktop:
+    enabled: true
+  vscode:
+    enabled: true
+  cursor:
+    enabled: true
+
+mcp:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem"]
+    env: {}
+    transport: stdio
+    scope: global
+    
+  github:
+    command: mcp-server-github
+    args: []
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    transport: stdio
+    scope: global
+    
+  memory:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-memory"]
+    env: {}
+    transport: stdio
+    scope: global
+    
+  brave-search:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-brave-search"]
+    env:
+      BRAVE_API_KEY: "${BRAVE_API_KEY}"
+    transport: stdio
+    scope: global
+    
+  puppeteer:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-puppeteer"]
+    env: {}
+    transport: stdio
+    scope: global
+    
+  postgres:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-postgres"]
+    env:
+      POSTGRES_URL: "${POSTGRES_URL}"
+    transport: stdio
+    scope: global
+    
+  slack:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-slack"]
+    env:
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN}"
+    transport: stdio
+    scope: global
+    
+  google-drive:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-gdrive"]
+    env:
+      GOOGLE_CREDENTIALS: "${GOOGLE_CREDENTIALS}"
+    transport: stdio
+    scope: global
+    
+  sequential-thinking:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    env: {}
+    transport: stdio
+    scope: global
+    
+  everart:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-everart"]
+    env:
+      EVERART_API_KEY: "${EVERART_API_KEY}"
+    transport: stdio
+    scope: global
+
+sync:
+  backup: true
+  backupDir: "~/.config/overture/backups"
+  backupRetention: 20
+  mergeStrategy: append
+  autoDetectClients: true

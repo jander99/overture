@@ -1,3 +1,12 @@
+// Mock chalk first (before any imports that use it)
+jest.mock('chalk');
+
+// Mock inquirer (inline mock for compatibility)
+jest.mock('inquirer', () => ({
+  prompt: jest.fn(),
+  createPromptModule: jest.fn(),
+}));
+
 import * as path from 'path';
 import { Command } from 'commander';
 import { createInitCommand } from './init';

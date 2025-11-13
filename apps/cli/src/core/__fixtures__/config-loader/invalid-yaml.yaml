@@ -1,0 +1,9 @@
+# Invalid YAML syntax
+version: "2.0"
+mcp:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem"]
+    env: {}
+    transport: stdio
+  invalid: [unclosed bracket

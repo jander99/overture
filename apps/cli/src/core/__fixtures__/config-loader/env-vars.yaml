@@ -1,0 +1,22 @@
+# Configuration with environment variables
+version: "2.0"
+
+mcp:
+  github:
+    command: mcp-server-github
+    args: []
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      DEBUG: "true"
+    transport: stdio
+    scope: global
+    
+  custom:
+    command: "${CUSTOM_COMMAND:-default-command}"
+    args: ["${ARG1:-default-arg}"]
+    env:
+      VAR1: "${VAR1}"
+      VAR2: "${VAR2:-default-value}"
+      VAR3: "${VAR3:-empty}"
+    transport: stdio
+    scope: global

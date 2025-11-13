@@ -1,0 +1,31 @@
+# YAML with anchors, aliases, and comments
+version: "2.0"
+
+# Default environment for all servers
+x-default-env: &default-env
+  DEBUG: "false"
+  LOG_LEVEL: "info"
+
+# Common npx command
+x-npx-command: &npx-command
+  command: npx
+  args: ["-y"]
+
+mcp:
+  filesystem:
+    <<: *npx-command
+    args: ["-y", "@modelcontextprotocol/server-filesystem"]
+    env:
+      <<: *default-env
+      FS_ROOT: "/home/user"
+    transport: stdio
+    scope: global
+    
+  github:
+    <<: *npx-command
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      <<: *default-env
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    transport: stdio
+    scope: global

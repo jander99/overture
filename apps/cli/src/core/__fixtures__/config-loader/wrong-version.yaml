@@ -1,0 +1,10 @@
+# Wrong version format
+version: "1.0.0"
+
+mcp:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem"]
+    env: {}
+    transport: stdio
+    scope: global

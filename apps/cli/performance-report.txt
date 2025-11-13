@@ -1,0 +1,168 @@
+
+============================================================
+  OVERTURE PERFORMANCE BENCHMARK RESULTS
+============================================================
+
+
+Small Config Sync (5 MCPs):
+  Target: < 1000ms
+  Average: 0.21ms
+  p50: 0.21ms
+  p95: 0.28ms
+  p99: 0.28ms
+  Min: 0.13ms
+  Max: 0.28ms
+  StdDev: 0.05ms
+  Heap: 0.03MB
+  RSS: 0.04MB
+  [32m✓ PASS[0m (10 iterations)
+
+
+Medium Config Sync (15 MCPs):
+  Target: < 2000ms
+  Average: 0.66ms
+  p50: 0.21ms
+  p95: 4.23ms
+  p99: 4.23ms
+  Min: 0.14ms
+  Max: 4.23ms
+  StdDev: 1.20ms
+  Heap: 0.04MB
+  RSS: 0.04MB
+  [32m✓ PASS[0m (10 iterations)
+
+
+Large Config Sync (50 MCPs):
+  Target: < 5000ms
+  Average: 0.44ms
+  p50: 0.43ms
+  p95: 0.45ms
+  p99: 0.45ms
+  Min: 0.42ms
+  Max: 0.45ms
+  StdDev: 0.01ms
+  Heap: 0.10MB
+  RSS: 0.10MB
+  [32m✓ PASS[0m (5 iterations)
+
+
+Multi-Client Sync (5 clients, 10 MCPs):
+  Target: < 3000ms
+  Average: 0.73ms
+  p50: 0.63ms
+  p95: 0.92ms
+  p99: 0.92ms
+  Min: 0.55ms
+  Max: 0.92ms
+  StdDev: 0.16ms
+  Heap: 0.11MB
+  RSS: 0.13MB
+  [32m✓ PASS[0m (5 iterations)
+
+
+Incremental Update (1 MCP changed):
+  Target: < 500ms
+  Average: 0.45ms
+  p50: 0.30ms
+  p95: 1.98ms
+  p99: 1.98ms
+  Min: 0.23ms
+  Max: 1.98ms
+  StdDev: 0.45ms
+  Heap: 0.06MB
+  RSS: 0.07MB
+  [32m✓ PASS[0m (20 iterations)
+
+
+Config Loading (100 MCPs total):
+  Target: < 100ms
+  Average: 0.01ms
+  p50: 0.01ms
+  p95: 0.02ms
+  p99: 0.07ms
+  Min: 0.01ms
+  Max: 0.07ms
+  StdDev: 0.01ms
+  Heap: 0.00MB
+  RSS: 0.00MB
+  [32m✓ PASS[0m (50 iterations)
+
+
+Backup Creation (50 MCPs):
+  Target: < 200ms
+  Average: 0.94ms
+  p50: 0.23ms
+  p95: 10.30ms
+  p99: 10.30ms
+  Min: 0.16ms
+  Max: 10.30ms
+  StdDev: 2.21ms
+  Heap: -0.39MB
+  RSS: 0.10MB
+  [32m✓ PASS[0m (20 iterations)
+
+
+Transport Validation (50 MCPs, 7 clients):
+  Target: < 500ms
+  Average: 0.94ms
+  p50: 0.44ms
+  p95: 3.73ms
+  p99: 5.73ms
+  Min: 0.19ms
+  Max: 5.73ms
+  StdDev: 1.23ms
+  Heap: 0.22MB
+  RSS: 0.18MB
+  [32m✓ PASS[0m (30 iterations)
+
+
+Exclusion Filtering (50 MCPs):
+  Target: < 100ms
+  Average: 0.14ms
+  p50: 0.13ms
+  p95: 0.24ms
+  p99: 0.92ms
+  Min: 0.07ms
+  Max: 0.92ms
+  StdDev: 0.12ms
+  Heap: 0.04MB
+  RSS: 0.04MB
+  [32m✓ PASS[0m (50 iterations)
+
+
+Concurrent Sync Lock Failure:
+  Target: < 100ms
+  Average: 0.05ms
+  p50: 0.04ms
+  p95: 0.22ms
+  p99: 0.22ms
+  Min: 0.03ms
+  Max: 0.22ms
+  StdDev: 0.04ms
+  Heap: 0.00MB
+  RSS: 0.01MB
+  [32m✓ PASS[0m (20 iterations)
+
+
+Memory Usage (100 MCPs):
+  Target: < 100ms
+  Average: 0.29ms
+  p50: 0.30ms
+  p95: 0.30ms
+  p99: 0.30ms
+  Min: 0.26ms
+  Max: 0.30ms
+  StdDev: 0.02ms
+  Heap: 0.14MB
+  RSS: 0.00MB
+  [32m✓ PASS[0m (5 iterations)
+
+============================================================
+  SUMMARY
+============================================================
+
+Passed: 11/11 scenarios
+Performance Grade: A
+Timestamp: 2025-11-13T04:03:34.620Z
+
+============================================================

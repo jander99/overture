@@ -1,0 +1,9 @@
+# Missing required transport field
+version: "2.0"
+
+mcp:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem"]
+    env: {}
+    scope: global
