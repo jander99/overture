@@ -36,12 +36,23 @@ cat dist/claude-code-mcp.json
 overture sync
 ```
 
-### In Progress - v0.2.0 (Multi-Platform MCP Manager)
+## [0.2.0] - 2025-01-13
 
-**Status:** 39/59 work units complete (66%)
-**Tests:** 802 passing, 26 test suites
+### Multi-Platform MCP Manager - COMPLETE
 
-#### Completed (2025-11-11)
+**Status:** ✅ COMPLETE
+**Tests:** 1,148 passing, 40 test suites, 83%+ code coverage
+
+Overture v0.2 delivers comprehensive multi-platform MCP configuration management with:
+- User global configuration (`~/.config/overture.yml`)
+- Project/user config merging with proper precedence
+- 7 platform adapters (Claude Code, Claude Desktop, Cursor, Windsurf, VSCode, Copilot CLI, JetBrains)
+- Multi-client sync engine with backup/restore
+- Config audit for detecting unmanaged MCPs
+- Transport validation and platform filtering
+- Process locking for safe concurrent operations
+
+#### Implementation Details
 
 **Phase 2: Client Adapters (16 WUs, 653 tests)**
 
@@ -83,20 +94,27 @@ Features:
 - Process locking preventing concurrent syncs
 - Graceful error handling with detailed results per client
 
-#### Next Steps
+**Phase 4: Commands & CLI Integration (Complete)**
 
-**Phase 4: Commands & Validation (9 WUs)**
-- User config commands (add, remove, edit)
-- Audit command for detecting unmanaged MCPs
-- Backup/restore commands
-- Enhanced sync command with multi-client support
-- Validation utilities and error reporting
+Added:
+- `overture user init` - Interactive user global config setup
+- `overture user show` - Display user config in YAML or JSON
+- `overture audit` - Detect unmanaged MCPs across clients
+- `overture backup list` - List all backups
+- `overture backup restore` - Restore from backup
+- `overture backup cleanup` - Remove old backups
+- Enhanced `overture sync` with multi-client support, dry-run, client filtering
 
-**Phase 5: Testing & Polish (11 WUs)**
-- E2E test suite
-- Performance benchmarks
-- Documentation updates
-- Migration guide from v0.1
+**Phase 5: Testing & Documentation (Complete)**
+
+Achieved:
+- ✅ 1,148 tests passing (100% pass rate)
+- ✅ 40 test suites covering all components
+- ✅ 83%+ code coverage (statements: 83.03%, functions: 86.7%, branches: 69.18%)
+- ✅ Comprehensive integration tests
+- ✅ Performance benchmarks (11 scenarios, A-grade performance)
+- ✅ Documentation updates (README, CLAUDE.md, PURPOSE.md, CHANGELOG)
+- ✅ Migration guide from v0.1 (docs/migration-v0.1-to-v0.2.md)
 
 ## [0.1.0] - 2025-11-09
 

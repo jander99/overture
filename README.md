@@ -157,13 +157,16 @@ documentation:
 
 ## Quick Start
 
-### Current Version (v0.1 - Available Now)
+### Current Version (v0.2 - Available Now)
 
-Overture v0.1 provides basic Claude Code project configuration:
+Overture v0.2 provides comprehensive multi-platform MCP configuration management:
 
 ```bash
 # Install Overture
 npm install -g @overture/cli
+
+# Initialize user global config (optional)
+overture user init
 
 # Initialize your project
 cd my-project
@@ -172,26 +175,28 @@ overture init --type python-backend
 # Edit .overture/config.yaml to add plugins and MCPs
 vim .overture/config.yaml
 
-# Sync configuration
+# Sync configuration across all AI tools
 overture sync
 # → Installs plugins via Claude CLI
-# → Generates .mcp.json
+# → Generates/updates configs for all detected clients
+# → Creates backups before changes
 # → Generates CLAUDE.md
 ```
 
-**What v0.1 includes:**
+**What v0.2 includes:**
+- ✅ User global configuration (`~/.config/overture.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
-- ✅ Claude Code plugin installation
-- ✅ Project `.mcp.json` generation
-- ✅ Basic `CLAUDE.md` generation
+- ✅ Multi-platform sync (7 clients supported)
+- ✅ Config audit and consolidation
+- ✅ Backup/restore system
+- ✅ Plugin installation and management
 - ✅ Validation (`overture validate`)
-- ✅ MCP management (`overture mcp list`, `overture mcp enable`)
+- ✅ **1,148 tests passing (100%), 83%+ code coverage**
 
-**What v0.1 does NOT include yet:**
-- ❌ User global config (`~/.config/overture.yml`)
-- ❌ Multi-platform sync (only Claude Code currently)
-- ❌ Enhanced workflow documentation
+**What v0.2 does NOT include yet:**
+- ❌ Enhanced workflow documentation templates
 - ❌ Agent/skill → MCP mappings
+- ❌ AGENTS.md generation for Copilot
 
 See [docs/PURPOSE.md](docs/PURPOSE.md) for the full vision and roadmap.
 
@@ -308,17 +313,21 @@ overture validate
 - [x] Validation engine
 - [x] 98%+ test coverage
 
-### v0.2 - Multi-Platform MCP Manager 🚧 NEXT
-- [ ] User global config (`~/.config/overture.yml`)
-- [ ] User/project precedence and deduplication
-- [ ] Multi-platform adapters:
-  - [ ] Claude Desktop
-  - [ ] Claude Code (user config)
-  - [ ] Copilot CLI
-  - [ ] VSCode Copilot
-  - [ ] IntelliJ Copilot
-- [ ] Config audit: `overture audit`
-- [ ] Config consolidation: `overture consolidate`
+### v0.2 - Multi-Platform MCP Manager ✅ COMPLETE
+- [x] User global config (`~/.config/overture.yml`)
+- [x] User/project precedence and deduplication
+- [x] Multi-platform adapters:
+  - [x] Claude Desktop
+  - [x] Claude Code (user + project config)
+  - [x] Cursor IDE
+  - [x] Windsurf IDE
+  - [x] VSCode Copilot
+  - [x] Copilot CLI
+  - [x] JetBrains Copilot
+- [x] Config audit: `overture audit`
+- [x] Backup/restore: `overture backup`
+- [x] Multi-client sync engine
+- [x] **Test Status:** 1,148/1,148 passing (100%)
 
 ### v0.3 - Enhanced Documentation 📋 PLANNED
 - [ ] Template system for workflow instructions
@@ -454,8 +463,8 @@ MIT
 
 ## Status
 
-**Current:** v0.1 - Foundation complete (98%+ test coverage)
+**Current:** v0.2 - Multi-Platform MCP Manager complete (1,148/1,148 tests passing, 83%+ code coverage)
 
-**Next:** v0.2 - Multi-Platform MCP Manager
+**Next:** v0.3 - Enhanced Documentation (workflow templates, AGENTS.md generation)
 
 See [docs/PURPOSE.md](docs/PURPOSE.md) for detailed roadmap.

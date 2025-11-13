@@ -18,16 +18,20 @@
 - Managed section stays up-to-date as configuration changes
 
 **Blockers:**
-- Requires v0.2 feature: User global config support (`~/.config/overture.yml`)
-- Global MCPs (sequentialthinking, filesystem, etc.) need to be referenced from global config
-- Current v0.1 only supports project-scoped MCPs
+- ~~Requires v0.2 feature: User global config support (`~/.config/overture.yml`)~~ ✅ RESOLVED (v0.2 complete)
+- ~~Global MCPs (sequentialthinking, filesystem, etc.) need to be referenced from global config~~ ✅ AVAILABLE
+- ~~Current v0.1 only supports project-scoped MCPs~~ ✅ FIXED in v0.2
 
-**Workaround:**
-- Manually maintain the Overture managed section until v0.2 is complete
-- Section includes implementation status, MCP servers, bootstrapping note
-- Pattern is demonstrated correctly even if not auto-generated
+**Status:** Ready to implement! v0.2 is complete with user global config support.
 
-**Priority:** Medium (after v0.2 is implemented)
+**Next Steps:**
+1. Create `~/.config/overture.yml` with global MCPs (sequentialthinking, filesystem, context7, memory, nx)
+2. Create `.overture/config.yaml` in the Overture project root
+3. Configure project to reference global MCPs
+4. Run `overture sync` to auto-generate the managed section in CLAUDE.md
+5. Remove manual managed section maintenance
+
+**Priority:** High (v0.2 is now complete, blocker is removed)
 
 **Related:**
 - docs/PURPOSE.md - Phase roadmap
