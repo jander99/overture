@@ -101,9 +101,32 @@ export function createMcpCommand(): Command {
           }
 
           // Determine which clients receive this MCP
-          const syncsTo = adapters
-            .filter((adapter) => shouldIncludeMcp(mcpConfig, adapter, platform).included)
-            .map((a) => a.name);
+          let syncsTo: string[] = [];
+
+          if (adapters.length > 0) {
+            // Use installed adapters to determine sync targets
+            syncsTo = adapters
+              .filter((adapter) => shouldIncludeMcp(mcpConfig, adapter, platform).included)
+              .map((a) => a.name);
+          } else {
+            // Fallback: use enabled clients from config when no adapters are installed
+            const enabledClients: string[] = [];
+            if (projectConfig?.clients) {
+              for (const [clientName, clientConfig] of Object.entries(projectConfig.clients)) {
+                if ((clientConfig as any).enabled !== false) {
+                  enabledClients.push(clientName);
+                }
+              }
+            }
+            if (userConfig?.clients && enabledClients.length === 0) {
+              for (const [clientName, clientConfig] of Object.entries(userConfig.clients)) {
+                if ((clientConfig as any).enabled !== false) {
+                  enabledClients.push(clientName);
+                }
+              }
+            }
+            syncsTo = enabledClients;
+          }
 
           // Apply client filter
           if (options.client && !syncsTo.includes(options.client)) {

@@ -281,9 +281,10 @@ describe('CLI Command: audit', () => {
       // Act & Assert
       await expect(async () => {
         await command.parseAsync(['node', 'overture']);
-      }).rejects.toThrow('process.exit: 1');
+      }).resolves.not.toThrow();
 
-      expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('No installed'));
+      expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('No installed'));
+      expect(Logger.success).toHaveBeenCalledWith(expect.stringContaining('No unmanaged'));
     });
 
     it('should handle audit service errors gracefully', async () => {
@@ -377,9 +378,10 @@ describe('CLI Command: audit', () => {
       // Act & Assert
       await expect(async () => {
         await command.parseAsync(['node', 'overture', '--client', 'claude-code']);
-      }).rejects.toThrow('process.exit: 1');
+      }).resolves.not.toThrow();
 
-      expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('not installed'));
+      expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('not installed'));
+      expect(Logger.success).toHaveBeenCalledWith(expect.stringContaining('No unmanaged'));
     });
   });
 });

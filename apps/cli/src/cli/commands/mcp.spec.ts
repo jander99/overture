@@ -390,11 +390,11 @@ describe('CLI Command: mcp', () => {
       (loadUserConfig as jest.Mock).mockReturnValue(mockUserConfig);
       (loadProjectConfig as jest.Mock).mockReturnValue(null);
 
-      // Mock shouldIncludeMcp to exclude all
-      (shouldIncludeMcp as jest.Mock).mockReturnValue({ included: false, reason: 'Excluded' });
+      // Mock shouldIncludeMcp to exclude all MCPs
+      (shouldIncludeMcp as jest.Mock).mockReturnValue({ included: false, reason: 'Excluded by filter' });
 
-      // Act
-      await command.parseAsync(['node', 'overture', 'list', '--client', 'nonexistent']);
+      // Act - use valid client but filter out all MCPs
+      await command.parseAsync(['node', 'overture', 'list', '--client', 'claude-code']);
 
       // Assert
       expect(Logger.warn).toHaveBeenCalledWith('No MCP servers match the specified filters');

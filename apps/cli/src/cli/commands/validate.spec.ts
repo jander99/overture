@@ -226,6 +226,9 @@ describe('validate command', () => {
     it('should warn about unsupported transports', async () => {
       const config: OvertureConfigV2 = {
         version: '2.0',
+        sync: {
+          enabledClients: ['claude-code'],
+        },
         mcp: {
           'http-server': {
             command: 'npx',
@@ -239,6 +242,7 @@ describe('validate command', () => {
 
       mockLoadConfig.mockReturnValue(config);
       mockAdapterRegistry.getInstalledAdapters.mockReturnValue([mockClientAdapter]);
+      mockAdapterRegistry.get.mockReturnValue(mockClientAdapter);
       mockGetTransportWarnings.mockReturnValue([
         {
           mcpName: 'http-server',

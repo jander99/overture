@@ -75,8 +75,9 @@ async function auditSingleClient(
 
   // Check if client is installed
   if (!adapter.isInstalled(platform as any)) {
-    Logger.error(`Client '${clientName}' is not installed on this system`);
-    process.exit(1);
+    Logger.warn(`Client '${clientName}' is not installed on this system`);
+    Logger.success(`No unmanaged MCPs found (client not installed)`);
+    return;
   }
 
   Logger.info(`Auditing client: ${clientName}...\n`);
@@ -114,9 +115,10 @@ async function auditAllInstalledClients(
   const installedAdapters = adapterRegistry.getInstalledAdapters(platform as any);
 
   if (installedAdapters.length === 0) {
-    Logger.error('No installed AI clients detected');
+    Logger.warn('No installed AI clients detected');
     Logger.info('Overture supports: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
-    process.exit(1);
+    Logger.success('No unmanaged MCPs found (no clients installed)');
+    return;
   }
 
   Logger.info(`Auditing ${installedAdapters.length} installed client(s)...\n`);
