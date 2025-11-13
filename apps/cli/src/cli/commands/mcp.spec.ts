@@ -130,6 +130,17 @@ describe('CLI Command: mcp', () => {
     // Mock shouldIncludeMcp to return included by default
     (shouldIncludeMcp as jest.Mock).mockReturnValue({ included: true });
 
+    // Mock getInstalledAdapters to return mock adapters
+    jest.spyOn(adapterRegistry, 'getInstalledAdapters').mockReturnValue([
+      { name: 'claude-code', schemaRootKey: 'mcpServers' } as any,
+      { name: 'claude-desktop', schemaRootKey: 'mcpServers' } as any,
+      { name: 'vscode', schemaRootKey: 'servers' } as any,
+      { name: 'cursor', schemaRootKey: 'mcpServers' } as any,
+      { name: 'windsurf', schemaRootKey: 'mcpServers' } as any,
+      { name: 'copilot-cli', schemaRootKey: 'mcpServers' } as any,
+      { name: 'jetbrains-copilot', schemaRootKey: 'mcpServers' } as any,
+    ]);
+
     // Mock process.exit to prevent test termination
     mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
       throw new Error(`process.exit: ${code}`);
@@ -494,9 +505,13 @@ describe('CLI Command: mcp', () => {
       (loadUserConfig as jest.Mock).mockReturnValue(mockUserConfig);
       (loadProjectConfig as jest.Mock).mockReturnValue(mockProjectConfig);
 
-      (shouldIncludeMcp as jest.Mock).mockImplementation((config, adapter) => {
+      (shouldIncludeMcp as jest.Mock).mockImplementation((mcpConfig, adapter) => {
         // Only include filesystem for claude-code
-        if (adapter.name === 'claude-code' && config.command.includes('filesystem')) {
+        // Check if this is the filesystem MCP by looking at command and args
+        const isFilesystem =
+          mcpConfig.command === 'npx' &&
+          mcpConfig.args?.some((arg: string) => arg.includes('filesystem'));
+        if (adapter.name === 'claude-code' && isFilesystem) {
           return { included: true };
         }
         return { included: false, reason: 'Excluded' };

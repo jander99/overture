@@ -1,40 +1,38 @@
 /**
  * Jest mock for chalk library
- * Provides recursive chainable color/style methods that return plain text
- * Supports unlimited chaining (e.g., chalk.bold.cyan.dim.green('text'))
+ * Simple passthrough mock that supports chaining
+ * All color/style methods return the input string unchanged
  */
 
-const createChainableMock = (): any => {
-  // Base function that returns the input string unchanged
-  const mockFn = (str: string) => str;
+// Create a simple passthrough function
+const passThroughFn = (str?: string | number) => String(str || '');
 
-  // All chalk methods that should support chaining
-  const methods = [
-    'bold',
-    'blue',
-    'yellow',
-    'magenta',
-    'green',
-    'red',
-    'gray',
-    'cyan',
-    'dim',
-    'bgBlue',
-    'bgGreen',
-    'bgRed',
-  ];
+// Color and style methods
+const methods = [
+  'reset', 'bold', 'dim', 'italic', 'underline', 'inverse', 'hidden', 'strikethrough',
+  'visible', 'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+  'gray', 'grey', 'blackBright', 'redBright', 'greenBright', 'yellowBright',
+  'blueBright', 'magentaBright', 'cyanBright', 'whiteBright', 'bgBlack', 'bgRed',
+  'bgGreen', 'bgYellow', 'bgBlue', 'bgMagenta', 'bgCyan', 'bgWhite', 'bgGray',
+  'bgGrey', 'bgBlackBright', 'bgRedBright', 'bgGreenBright', 'bgYellowBright',
+  'bgBlueBright', 'bgMagentaBright', 'bgCyanBright', 'bgWhiteBright',
+];
 
-  // Add each method as a property getter that returns another chainable mock
-  // This enables recursive chaining to any depth
-  methods.forEach((method) => {
-    Object.defineProperty(mockFn, method, {
-      get: () => createChainableMock(),
-      enumerable: true,
-      configurable: true,
-    });
+// Create the main chalk function
+const chalk: any = (str?: string | number) => String(str || '');
+
+// Add all methods to chalk, where each method is a function that can also be chained
+methods.forEach((method) => {
+  // Create a function for this method
+  const methodFn: any = (str?: string | number) => String(str || '');
+
+  // Add all methods to this function too (for chaining like chalk.blue.bold())
+  methods.forEach((m) => {
+    methodFn[m] = passThroughFn;
   });
 
-  return mockFn;
-};
+  // Assign to chalk
+  chalk[method] = methodFn;
+});
 
-export default createChainableMock();
+export default chalk;

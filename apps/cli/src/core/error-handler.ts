@@ -20,6 +20,7 @@ import {
   PluginError,
   McpError,
 } from '../domain/errors';
+import { ConfigLoadError, ConfigValidationError } from './config-loader';
 
 /**
  * Exit codes for different error categories
@@ -197,6 +198,25 @@ export class ErrorHandler {
         message: error.message,
         details: this.getErrorDetails(error),
         exitCode: error.exitCode,
+        stack: verbose && error.stack ? error.stack : undefined,
+      };
+    }
+
+    // Handle config loader errors
+    if (error instanceof ConfigLoadError) {
+      return {
+        message: error.message,
+        details: error.path ? `Configuration path: ${error.path}` : undefined,
+        exitCode: ExitCode.CONFIG_ERROR,
+        stack: verbose && error.stack ? error.stack : undefined,
+      };
+    }
+
+    if (error instanceof ConfigValidationError) {
+      return {
+        message: error.message,
+        details: error.path ? `Configuration file: ${error.path}` : undefined,
+        exitCode: ExitCode.VALIDATION_ERROR,
         stack: verbose && error.stack ? error.stack : undefined,
       };
     }

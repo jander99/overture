@@ -81,7 +81,7 @@ describe('validate command', () => {
       if (error instanceof ConfigValidationError) {
         exitCode = 3;
       } else if (error instanceof ConfigLoadError) {
-        exitCode = 1;
+        exitCode = 2;
       } else {
         exitCode = 1;
       }

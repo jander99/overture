@@ -176,12 +176,15 @@ describe('CLI Integration Tests (WU-034)', () => {
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -234,12 +237,15 @@ sync:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -274,12 +280,15 @@ clients:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -325,6 +334,8 @@ mcp:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   http-server:
     command: npx
@@ -341,8 +352,9 @@ clients:
 
       const result = await runCommand(['validate']);
 
-      // Should warn about transport compatibility
-      expect(result.output).toMatch(/(warning|transport|http)/i);
+      // Claude Code supports all transports, so config is valid (no warning)
+      expect(result.exitCode).toBe(0);
+      expect(result.output).toMatch(/(valid|warning|transport)/i);
     });
   });
 
@@ -357,18 +369,22 @@ clients:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
   python-repl:
     command: uvx
     args: ["mcp-server-python-repl"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -456,12 +472,15 @@ clients:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -495,12 +514,15 @@ sync:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
@@ -530,12 +552,15 @@ sync:
         `
 version: "2.0"
 
+plugins: {}
+
 mcp:
   filesystem:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
+    scope: project
 
 clients:
   claude-code:
