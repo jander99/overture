@@ -41,7 +41,7 @@ overture sync
 ### Multi-Platform MCP Manager - COMPLETE
 
 **Status:** ✅ COMPLETE
-**Tests:** 1,148 passing, 40 test suites, 83%+ code coverage
+**Tests:** 873 passing, 32 test suites, 83%+ code coverage
 
 Overture v0.2 delivers comprehensive multi-platform MCP configuration management with:
 - User global configuration (`~/.config/overture.yml`)
@@ -108,15 +108,15 @@ Added:
 **Phase 5: Testing & Documentation (Complete)**
 
 Achieved:
-- ✅ 1,148 tests passing (100% pass rate)
-- ✅ 40 test suites covering all components
+- ✅ 873 tests passing (100% pass rate)
+- ✅ 32 test suites covering all components
 - ✅ 83%+ code coverage (statements: 83.03%, functions: 86.7%, branches: 69.18%)
 - ✅ Comprehensive integration tests
 - ✅ Performance benchmarks (11 scenarios, A-grade performance)
 - ✅ Documentation updates (README, CLAUDE.md, PURPOSE.md, CHANGELOG)
 - ✅ Migration guide from v0.1 (docs/migration-v0.1-to-v0.2.md)
 
-## [0.1.0] - 2025-11-09
+## [0.1.0] - 2024-11-09
 
 ### Added
 

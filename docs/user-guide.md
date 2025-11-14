@@ -734,17 +734,14 @@ mcp:
 - `ruff` - Python linting and formatting
 
 **JavaScript/TypeScript:**
-- `node` - Node.js runtime tools
-- `npm` - NPM package management
-- `playwright` - Browser automation testing
+- Check https://github.com/modelcontextprotocol/servers for available Node.js MCPs
 
 **Databases:**
-- `sqlite` - SQLite database queries
-- `postgres` - PostgreSQL database access
+- `sqlite` - SQLite database queries (via mcp-server-sqlite)
+- `postgres` - PostgreSQL database access (via mcp-server-postgres)
 
 **DevOps:**
-- `docker` - Docker container management
-- `kubernetes` - Kubernetes cluster management
+- Check https://github.com/modelcontextprotocol/servers for Docker/K8s MCPs
 
 **Version Control:**
 - `github` - GitHub API access
@@ -1050,25 +1047,15 @@ mcp:
     args: [mcp-server-ruff]
     scope: project
 
-  # JavaScript tools
-  node:
-    command: node-mcp-server
-    scope: project
-
-  npm:
-    command: npm-mcp-server
-    scope: project
-
   # Database
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
     scope: project
 
-  # DevOps
-  docker:
-    command: docker-mcp-server
-    scope: project
+  # Note: JavaScript/Node and Docker MCP servers would be configured here
+  # when available. Check https://github.com/modelcontextprotocol/servers
+  # for the latest list of official MCP servers.
 ```
 
 **What you get:**

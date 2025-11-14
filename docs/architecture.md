@@ -15,6 +15,8 @@ This document covers two major aspects of Overture's architecture:
 
 **Current Implementation (Part II):** Overture v0.2 focuses on multi-platform MCP server synchronization across 7 AI development clients with user global configuration, backup/restore, and intelligent conflict resolution.
 
+**Important Note:** Part I describes the *vision* for future versions (v0.3+) with enhanced plugin/skill/agent orchestration. Part II describes the *current implementation* (v0.2) which is a multi-platform MCP synchronization tool. The two parts represent different stages of the project roadmap.
+
 ---
 
 # Part I: Claude Code Ecosystem Research
@@ -952,8 +954,8 @@ Warning: Hook syntax changed in Overture 2.0
 
 # Part II: Overture v0.2 Implementation Architecture
 
-**Version:** 2.0  
-**Status:** Complete (1,148/1,148 tests passing, 83%+ code coverage)  
+**Version:** 2.0
+**Status:** Complete (873/873 tests passing, 83%+ code coverage)
 **Date:** 2025-01-13
 
 ---
@@ -1443,8 +1445,8 @@ User: overture sync --client claude-code
 
 ### Test Coverage
 
-- **1,148 tests** passing (100% pass rate)
-- **40 test suites** covering all components
+- **873 tests** passing (100% pass rate)
+- **32 test suites** covering all components
 - **83%+ code coverage**
 
 ### Test Organization

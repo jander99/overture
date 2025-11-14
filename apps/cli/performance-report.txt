@@ -6,13 +6,13 @@
 
 Small Config Sync (5 MCPs):
   Target: < 1000ms
-  Average: 0.17ms
-  p50: 0.15ms
-  p95: 0.25ms
-  p99: 0.25ms
-  Min: 0.11ms
-  Max: 0.25ms
-  StdDev: 0.05ms
+  Average: 0.20ms
+  p50: 0.18ms
+  p95: 0.30ms
+  p99: 0.30ms
+  Min: 0.13ms
+  Max: 0.30ms
+  StdDev: 0.06ms
   Heap: 0.03MB
   RSS: 0.03MB
   [32m✓ PASS[0m (10 iterations)
@@ -21,7 +21,7 @@ Small Config Sync (5 MCPs):
 Medium Config Sync (15 MCPs):
   Target: < 2000ms
   Average: 0.19ms
-  p50: 0.20ms
+  p50: 0.19ms
   p95: 0.24ms
   p99: 0.24ms
   Min: 0.15ms
@@ -34,13 +34,13 @@ Medium Config Sync (15 MCPs):
 
 Large Config Sync (50 MCPs):
   Target: < 5000ms
-  Average: 0.43ms
-  p50: 0.43ms
-  p95: 0.47ms
-  p99: 0.47ms
+  Average: 0.44ms
+  p50: 0.44ms
+  p95: 0.50ms
+  p99: 0.50ms
   Min: 0.39ms
-  Max: 0.47ms
-  StdDev: 0.03ms
+  Max: 0.50ms
+  StdDev: 0.04ms
   Heap: 0.10MB
   RSS: 0.10MB
   [32m✓ PASS[0m (5 iterations)
@@ -48,13 +48,13 @@ Large Config Sync (50 MCPs):
 
 Multi-Client Sync (5 clients, 10 MCPs):
   Target: < 3000ms
-  Average: 0.51ms
-  p50: 0.52ms
-  p95: 0.59ms
-  p99: 0.59ms
-  Min: 0.44ms
-  Max: 0.59ms
-  StdDev: 0.06ms
+  Average: 0.33ms
+  p50: 0.34ms
+  p95: 0.36ms
+  p99: 0.36ms
+  Min: 0.29ms
+  Max: 0.36ms
+  StdDev: 0.03ms
   Heap: 0.11MB
   RSS: 0.10MB
   [32m✓ PASS[0m (5 iterations)
@@ -62,13 +62,13 @@ Multi-Client Sync (5 clients, 10 MCPs):
 
 Incremental Update (1 MCP changed):
   Target: < 500ms
-  Average: 0.42ms
-  p50: 0.28ms
-  p95: 2.66ms
-  p99: 2.66ms
+  Average: 0.36ms
+  p50: 0.30ms
+  p95: 1.12ms
+  p99: 1.12ms
   Min: 0.20ms
-  Max: 2.66ms
-  StdDev: 0.52ms
+  Max: 1.12ms
+  StdDev: 0.19ms
   Heap: 0.06MB
   RSS: 0.06MB
   [32m✓ PASS[0m (20 iterations)
@@ -77,11 +77,11 @@ Incremental Update (1 MCP changed):
 Config Loading (100 MCPs total):
   Target: < 100ms
   Average: 0.02ms
-  p50: 0.02ms
-  p95: 0.03ms
-  p99: 0.07ms
+  p50: 0.01ms
+  p95: 0.05ms
+  p99: 0.10ms
   Min: 0.01ms
-  Max: 0.07ms
+  Max: 0.10ms
   StdDev: 0.01ms
   Heap: 0.00MB
   RSS: 0.00MB
@@ -90,69 +90,69 @@ Config Loading (100 MCPs total):
 
 Backup Creation (50 MCPs):
   Target: < 200ms
-  Average: 0.71ms
-  p50: 0.35ms
-  p95: 6.04ms
-  p99: 6.04ms
-  Min: 0.17ms
-  Max: 6.04ms
-  StdDev: 1.29ms
-  Heap: -0.39MB
-  RSS: 0.14MB
+  Average: 0.66ms
+  p50: 0.27ms
+  p95: 5.93ms
+  p99: 5.93ms
+  Min: 0.15ms
+  Max: 5.93ms
+  StdDev: 1.27ms
+  Heap: -0.38MB
+  RSS: 0.11MB
   [32m✓ PASS[0m (20 iterations)
 
 
 Transport Validation (50 MCPs, 7 clients):
   Target: < 500ms
-  Average: 0.83ms
-  p50: 0.41ms
-  p95: 3.79ms
-  p99: 7.63ms
-  Min: 0.25ms
-  Max: 7.63ms
-  StdDev: 1.42ms
-  Heap: 0.24MB
-  RSS: 0.16MB
+  Average: 0.57ms
+  p50: 0.45ms
+  p95: 1.20ms
+  p99: 2.74ms
+  Min: 0.21ms
+  Max: 2.74ms
+  StdDev: 0.46ms
+  Heap: 0.22MB
+  RSS: 0.17MB
   [32m✓ PASS[0m (30 iterations)
 
 
 Exclusion Filtering (50 MCPs):
   Target: < 100ms
-  Average: 0.15ms
-  p50: 0.13ms
-  p95: 0.21ms
-  p99: 1.01ms
-  Min: 0.08ms
-  Max: 1.01ms
-  StdDev: 0.13ms
-  Heap: 0.05MB
+  Average: 0.25ms
+  p50: 0.12ms
+  p95: 0.28ms
+  p99: 6.29ms
+  Min: 0.09ms
+  Max: 6.29ms
+  StdDev: 0.86ms
+  Heap: 0.04MB
   RSS: 0.05MB
   [32m✓ PASS[0m (50 iterations)
 
 
 Concurrent Sync Lock Failure:
   Target: < 100ms
-  Average: 0.05ms
-  p50: 0.04ms
-  p95: 0.13ms
-  p99: 0.13ms
+  Average: 0.04ms
+  p50: 0.03ms
+  p95: 0.09ms
+  p99: 0.09ms
   Min: 0.02ms
-  Max: 0.13ms
-  StdDev: 0.03ms
-  Heap: 0.01MB
+  Max: 0.09ms
+  StdDev: 0.02ms
+  Heap: 0.00MB
   RSS: 0.01MB
   [32m✓ PASS[0m (20 iterations)
 
 
 Memory Usage (100 MCPs):
   Target: < 100ms
-  Average: 0.29ms
-  p50: 0.28ms
-  p95: 0.32ms
-  p99: 0.32ms
-  Min: 0.27ms
-  Max: 0.32ms
-  StdDev: 0.02ms
+  Average: 0.52ms
+  p50: 0.31ms
+  p95: 1.38ms
+  p99: 1.38ms
+  Min: 0.28ms
+  Max: 1.38ms
+  StdDev: 0.43ms
   Heap: 0.14MB
   RSS: 0.00MB
   [32m✓ PASS[0m (5 iterations)
@@ -163,6 +163,6 @@ Memory Usage (100 MCPs):
 
 Passed: 11/11 scenarios
 Performance Grade: A
-Timestamp: 2025-11-14T00:55:08.297Z
+Timestamp: 2025-11-14T16:23:42.137Z
 
 ============================================================

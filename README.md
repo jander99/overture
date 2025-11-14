@@ -191,7 +191,7 @@ overture sync
 - ✅ Backup/restore system
 - ✅ Plugin installation and management
 - ✅ Validation (`overture validate`)
-- ✅ **1,148 tests passing (100%), 83%+ code coverage**
+- ✅ **873 tests passing (100%), 83%+ code coverage**
 
 **What v0.2 does NOT include yet:**
 - ❌ Enhanced workflow documentation templates
@@ -327,7 +327,7 @@ overture validate
 - [x] Config audit: `overture audit`
 - [x] Backup/restore: `overture backup`
 - [x] Multi-client sync engine
-- [x] **Test Status:** 1,148/1,148 passing (100%)
+- [x] **Test Status:** 873/873 passing (100%)
 
 ### v0.3 - Enhanced Documentation 📋 PLANNED
 - [ ] Template system for workflow instructions
@@ -447,11 +447,10 @@ See [docs/related-projects.md](docs/related-projects.md) for detailed ecosystem 
 Contributions welcome!
 
 **Focus areas:**
-- v0.2: Multi-platform MCP sync adapters
 - v0.3: Workflow template system
 - v0.4: Plugin metadata extraction
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+- Documentation improvements
+- Bug fixes and feature requests
 
 ---
 
@@ -463,7 +462,7 @@ MIT
 
 ## Status
 
-**Current:** v0.2 - Multi-Platform MCP Manager complete (1,148/1,148 tests passing, 83%+ code coverage)
+**Current:** v0.2 - Multi-Platform MCP Manager complete (873/873 tests passing, 83%+ code coverage)
 
 **Next:** v0.3 - Enhanced Documentation (workflow templates, AGENTS.md generation)
 

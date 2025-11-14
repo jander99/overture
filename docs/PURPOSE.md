@@ -38,7 +38,7 @@ Project-generated `CLAUDE.md` files are minimal:
 
 **Overture v0.2 is a comprehensive multi-platform MCP configuration orchestrator.**
 
-Currently implemented (1,148/1,148 tests passing, 83%+ coverage):
+Currently implemented (873/873 tests passing, 83%+ coverage):
 - ✅ User global config (`~/.config/overture.yml`)
 - ✅ Project-level config (`.overture/config.yaml`)
 - ✅ User/project config merging with proper precedence
@@ -266,7 +266,7 @@ This creates a learning loop where each library researched enriches the project 
 - [x] Transport validation and filtering
 - [x] Platform-specific path resolution
 
-**Status:** ✅ COMPLETE (1,148/1,148 tests passing, 83%+ code coverage)
+**Status:** ✅ COMPLETE (873/873 tests passing, 83%+ code coverage)
 
 **Goal:** Eliminate MCP configuration duplication across platforms. ✅ ACHIEVED
 

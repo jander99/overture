@@ -17,7 +17,7 @@ mcp:
   nx-mcp:
     command: npx
     args: [nx, mcp]
-    type: stdio
+    transport: stdio
     scope: project
     enabled: true
     description: "Nx workspace management and build orchestration"
