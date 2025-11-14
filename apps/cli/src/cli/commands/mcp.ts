@@ -1,6 +1,7 @@
 import * as path from 'path';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 import { Command } from 'commander';
-import { ConfigManager } from '../../core/config-manager';
 import { loadUserConfig, loadProjectConfig } from '../../core/config-loader';
 import { shouldIncludeMcp } from '../../core/exclusion-filter';
 import { adapterRegistry } from '../../adapters/adapter-registry';
@@ -172,7 +173,8 @@ export function createMcpCommand(): Command {
     .action(async (name: string) => {
       try {
         const projectDir = process.cwd();
-        const config = await ConfigManager.loadProjectConfig(projectDir);
+        const configPath = path.join(projectDir, CONFIG_PATH);
+        const config = loadProjectConfig(projectDir);
 
         if (!config) {
           Logger.error('No configuration found');
@@ -193,10 +195,12 @@ export function createMcpCommand(): Command {
         config.mcp[name].enabled = true;
 
         // Save updated configuration
-        await ConfigManager.saveConfig(
-          config,
-          path.join(projectDir, CONFIG_PATH)
-        );
+        const yamlContent = yaml.dump(config, {
+          indent: 2,
+          lineWidth: 100,
+          noRefs: true,
+        });
+        fs.writeFileSync(configPath, yamlContent, 'utf-8');
 
         Logger.success(`Enabled MCP server: ${name}`);
 

@@ -10,17 +10,19 @@ This directory contains the core engine components that coordinate configuration
 
 ```
 core/
-├── config-loader.ts           # Configuration loading with precedence
-├── path-resolver.ts           # Cross-platform path resolution
-├── env-expander.ts            # Environment variable expansion
-├── sync-engine.ts             # Main sync orchestrator
+├── audit-service.ts           # Audit MCP configurations across clients
 ├── backup-service.ts          # Backup and restore operations
-├── merge-strategy.ts          # Config merge logic
+├── client-env-service.ts      # Environment variable expansion for clients
+├── config-diff.ts             # Configuration diff generation
+├── config-loader.ts           # Configuration loading with precedence
+├── env-expander.ts            # Environment variable expansion
+├── error-handler.ts           # Centralized error handling
+├── exclusion-filter.ts        # MCP filtering by client/platform/transport
+├── path-resolver.ts           # Cross-platform path resolution
 ├── process-lock.ts            # Process locking to prevent concurrent runs
-├── validator.ts               # Configuration validation
-├── generator.ts               # CLAUDE.md generation
-├── plugin-installer.ts        # Plugin installation
-└── mcp-registry.ts            # MCP server registry
+├── restore-service.ts         # Configuration restore operations
+├── sync-engine.ts             # Main multi-client sync orchestrator
+└── transport-validator.ts     # Transport compatibility validation
 ```
 
 ## Responsibilities
@@ -41,4 +43,4 @@ Core modules depend on:
 
 ## Version
 
-**Overture v0.1+ (expanded in v0.2)**
+**Overture v0.2** - Multi-client MCP configuration orchestrator

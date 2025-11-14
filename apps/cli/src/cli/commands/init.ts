@@ -1,64 +1,111 @@
 import * as path from 'path';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 import { Command } from 'commander';
-import { ConfigManager } from '../../core/config-manager';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
-import { PROJECT_TYPES, CONFIG_PATH } from '../../domain/constants';
-import { FsUtils } from '../../infrastructure/fs-utils';
+import { CONFIG_PATH } from '../../domain/constants';
+import type { OvertureConfigV2 } from '../../domain/config-v2.types';
 
 /**
  * Creates the 'init' command for initializing Overture configuration.
  *
- * Usage: overture init [--type <project-type>] [--force]
+ * Usage: overture init [--force]
  *
  * Initializes a new .overture/config.yaml file with sensible defaults
- * based on the project type (if specified).
+ * for v0.2 multi-client MCP configuration.
  */
 export function createInitCommand(): Command {
   const command = new Command('init');
 
   command
     .description('Initialize .overture/config.yaml with defaults')
-    .option('-t, --type <project-type>', 'Project type (e.g., python-backend, node-api)')
     .option('-f, --force', 'Overwrite existing configuration')
     .action(async (options) => {
       try {
         const projectDir = process.cwd();
         const configPath = path.join(projectDir, CONFIG_PATH);
+        const overtureDir = path.dirname(configPath);
 
         // Check if config already exists
-        if (await FsUtils.exists(configPath) && !options.force) {
+        if (fs.existsSync(configPath) && !options.force) {
           Logger.error('Configuration already exists');
           Logger.info(`Use --force to overwrite or edit ${CONFIG_PATH}`);
           process.exit(1);
         }
 
-        // Prompt for project type if not provided
-        let projectType = options.type;
-        if (!projectType) {
-          projectType = await Prompts.select(
-            'Select project type:',
-            PROJECT_TYPES.map((type) => ({ name: type, value: type }))
-          );
-        }
+        // Prompt for project info
+        const projectName = path.basename(projectDir);
 
-        // Validate project type
-        if (!PROJECT_TYPES.includes(projectType as any)) {
-          Logger.error(`Invalid project type: ${projectType}`);
-          Logger.info(`Valid types: ${PROJECT_TYPES.join(', ')}`);
-          process.exit(1);
-        }
-
-        // Initialize config
         Logger.info('Initializing Overture configuration...');
-        await ConfigManager.initializeConfig(projectDir, projectType);
+
+        // Create basic v0.2 config
+        const config: OvertureConfigV2 = {
+          version: '2.0',
+          project: {
+            name: projectName,
+          },
+          mcp: {
+            // Example MCP server (commented out)
+            // 'example-mcp': {
+            //   transport: 'stdio',
+            //   command: 'npx',
+            //   args: ['-y', 'example-mcp-server'],
+            //   enabled: true,
+            // },
+          },
+          clients: {
+            'claude-code': {
+              enabled: true,
+            },
+          },
+        };
+
+        // Ensure .overture directory exists
+        if (!fs.existsSync(overtureDir)) {
+          fs.mkdirSync(overtureDir, { recursive: true });
+        }
+
+        // Write YAML configuration
+        const yamlContent = yaml.dump(config, {
+          indent: 2,
+          lineWidth: 100,
+          noRefs: true,
+          quotingType: '"',
+          forceQuotes: false,
+        });
+
+        // Add helpful comments
+        const configWithComments = `# Overture Configuration (v0.2)
+# Multi-client MCP configuration orchestrator
+#
+# This file defines MCP servers and client configurations for your project.
+# MCP servers configured here will be synced to enabled clients.
+#
+# Supported clients:
+#   - claude-code (Claude Code CLI)
+#   - claude-desktop (Claude Desktop App)
+#   - vscode (VS Code with Continue/Cody)
+#   - cursor (Cursor IDE)
+#   - windsurf (Windsurf IDE)
+#   - copilot-cli (GitHub Copilot CLI)
+#   - jetbrains-copilot (JetBrains IDEs with Copilot)
+#
+# Run 'overture sync' to apply configuration to clients
+
+${yamlContent}`;
+
+        fs.writeFileSync(configPath, configWithComments, 'utf-8');
 
         Logger.success('Configuration created!');
-        Logger.info(`Edit ${CONFIG_PATH} to add plugins and MCP servers`);
-        Logger.info('Run \`overture sync\` to generate .mcp.json and CLAUDE.md');
+        Logger.info(`Location: ${configPath}`);
+        Logger.nl();
+        Logger.info('Next steps:');
+        Logger.info('  1. Edit .overture/config.yaml to add MCP servers');
+        Logger.info('  2. Run \`overture sync\` to generate client configurations');
       } catch (error) {
         Logger.error(`Failed to initialize configuration: ${(error as Error).message}`);
-        process.exit((error as any).exitCode || 1);
+        process.exit(1);
       }
     });
 

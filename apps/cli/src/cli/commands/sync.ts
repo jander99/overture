@@ -1,28 +1,30 @@
 import { Command } from 'commander';
-import { ConfigManager } from '../../core/config-manager';
-import { PluginInstaller } from '../../core/plugin-installer';
-import { Generator } from '../../core/generator';
+import { syncClients } from '../../core/sync-engine';
 import { Logger } from '../../utils/logger';
+import { ErrorHandler } from '../../core/error-handler';
+import type { ClientName } from '../../domain/config-v2.types';
 
 /**
- * Creates the 'sync' command for synchronizing plugins and generating configuration.
+ * Creates the 'sync' command for synchronizing MCP configurations to clients.
  *
  * Usage: overture sync [options]
  *
  * Performs the following operations:
- * 1. Reads .overture/config.yaml
- * 2. Installs/updates configured plugins via `claude plugin install`
- * 3. Generates .mcp.json with project-scoped MCP servers
- * 4. Generates CLAUDE.md with plugin-to-MCP mappings
+ * 1. Loads user and project configurations
+ * 2. Merges configs with proper precedence
+ * 3. Filters MCPs by client, platform, and transport
+ * 4. Backs up existing client configs
+ * 5. Generates client-specific MCP configurations
+ * 6. Writes configs to each client's config directory
  */
 export function createSyncCommand(): Command {
   const command = new Command('sync');
 
   command
-    .description('Install plugins and generate .mcp.json and CLAUDE.md')
-    .option('--skip-plugins', 'Skip plugin installation')
+    .description('Sync MCP configuration to AI clients')
     .option('--dry-run', 'Preview changes without writing files')
     .option('--client <name>', 'Sync only for specific client (e.g., claude-code, claude-desktop)')
+    .option('--scope <scope>', 'Sync only global or project MCPs (global|project)')
     .option('--force', 'Force sync even if validation warnings exist')
     .action(async (options) => {
       try {
@@ -36,64 +38,85 @@ export function createSyncCommand(): Command {
           Logger.info(`Syncing for client: ${options.client}`);
         }
 
-        // Load configuration
-        Logger.info('Loading configuration...');
-        const projectConfig = await ConfigManager.loadProjectConfig();
-        const globalConfig = await ConfigManager.loadGlobalConfig();
-        const config = ConfigManager.mergeConfigs(globalConfig, projectConfig);
+        // Show scope filter if specified
+        if (options.scope) {
+          Logger.info(`Syncing ${options.scope} MCPs only`);
+        }
 
-        // Install plugins
-        if (!options.skipPlugins && !options.dryRun) {
-          const plugins = config.plugins || {};
-          const pluginsToInstall = Object.entries(plugins)
-            .filter(([_, plugin]) => plugin.enabled !== false)
-            .map(([name, plugin]) => ({
-              name,
-              marketplace: plugin.marketplace,
-            }));
+        // Build sync options
+        const syncOptions = {
+          dryRun: options.dryRun || false,
+          force: options.force || false,
+          clients: options.client ? [options.client as ClientName] : undefined,
+          scope: options.scope as 'global' | 'project' | undefined,
+          projectRoot: process.cwd(),
+        };
 
-          if (pluginsToInstall.length > 0) {
-            Logger.info(`Installing ${pluginsToInstall.length} plugin(s)...`);
-            const results = await PluginInstaller.installPlugins(
-              pluginsToInstall
-            );
+        // Run sync
+        Logger.info('Syncing MCP configurations...');
+        const result = await syncClients(syncOptions);
 
-            // Report results
-            const failed = results.filter((r) => !r.success);
-            if (failed.length > 0) {
-              Logger.warn(`${failed.length} plugin(s) failed to install`);
-              failed.forEach((r) => {
-                Logger.error(`  ${r.pluginName}: ${r.message}`);
+        // Display results
+        Logger.nl();
+        if (result.success) {
+          Logger.success('Sync complete!');
+        } else {
+          Logger.error('Sync completed with errors');
+        }
+
+        // Show per-client results
+        if (result.results.length > 0) {
+          Logger.nl();
+          Logger.info('Client sync results:');
+          for (const clientResult of result.results) {
+            const status = clientResult.success ? '✓' : '✗';
+            const statusColor = clientResult.success ? 'green' : 'red';
+
+            Logger.info(`  ${status} ${clientResult.client}:`);
+
+            if (clientResult.success) {
+              Logger.info(`      Config: ${clientResult.configPath}`);
+              if (clientResult.backupPath) {
+                Logger.info(`      Backup: ${clientResult.backupPath}`);
+              }
+            } else if (clientResult.error) {
+              Logger.error(`      Error: ${clientResult.error}`);
+            }
+
+            // Show warnings
+            if (clientResult.warnings.length > 0) {
+              clientResult.warnings.forEach((warning) => {
+                Logger.warn(`      ${warning}`);
               });
             }
-          } else {
-            Logger.info('No plugins configured');
           }
-        } else if (options.skipPlugins) {
-          Logger.info('Skipping plugin installation');
-        } else if (options.dryRun) {
-          Logger.info('Would install plugins (skipped in dry-run mode)');
         }
 
-        // Generate files
-        if (!options.dryRun) {
-          Logger.info('Generating configuration files...');
-          const result = await Generator.generateFiles(config);
-
+        // Show global warnings
+        if (result.warnings.length > 0) {
           Logger.nl();
-          Logger.success('Sync complete!');
-          Logger.info('Files generated:');
-          result.filesWritten.forEach((file) => {
-            Logger.info(`  - ${file}`);
+          Logger.warn('Warnings:');
+          result.warnings.forEach((warning) => {
+            Logger.warn(`  - ${warning}`);
           });
-        } else {
-          Logger.info('Would generate configuration files (dry-run mode)');
+        }
+
+        // Show global errors
+        if (result.errors.length > 0) {
           Logger.nl();
-          Logger.success('Dry-run complete - no changes made');
+          Logger.error('Errors:');
+          result.errors.forEach((error) => {
+            Logger.error(`  - ${error}`);
+          });
+        }
+
+        // Exit with appropriate code
+        if (!result.success) {
+          process.exit(1);
         }
       } catch (error) {
-        Logger.error(`Sync failed: ${(error as Error).message}`);
-        process.exit((error as any).exitCode || 1);
+        ErrorHandler.handleCommandError(error, 'sync');
+        process.exit(1);
       }
     });
 
