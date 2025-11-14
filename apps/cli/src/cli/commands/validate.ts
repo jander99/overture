@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import { loadConfig, ConfigLoadError, ConfigValidationError } from '../../core/config-loader';
-import { getTransportWarnings, getTransportValidationSummary } from '../../core/transport-validator';
+import { getTransportWarnings, getTransportValidationSummary, type TransportWarning } from '../../core/transport-validator';
 import { adapterRegistry } from '../../adapters/adapter-registry';
 import { ErrorHandler } from '../../core/error-handler';
 import { Logger } from '../../utils/logger';
-import type { OvertureConfigV2, Platform, ClientName } from '../../domain/config-v2.types';
+import type { Platform, ClientName } from '../../domain/config-v2.types';
 
 /**
  * Valid platform names
@@ -225,7 +225,7 @@ export function createValidateCommand(): Command {
         }
 
         // Transport validation - determine which clients to validate
-        const clientsToValidate: string[] = [];
+        const clientsToValidate: ClientName[] = [];
         if (options.client) {
           // Validate specific client
           clientsToValidate.push(options.client);
@@ -236,13 +236,13 @@ export function createValidateCommand(): Command {
           // Fallback: extract enabled clients from clients section
           for (const [clientName, clientConfig] of Object.entries(config.clients)) {
             if ((clientConfig as any).enabled !== false) {
-              clientsToValidate.push(clientName as any);
+              clientsToValidate.push(clientName as ClientName);
             }
           }
         }
 
         // Run transport validation for each client
-        const allWarnings: typeof import('../../core/transport-validator').TransportWarning[] = [];
+        const allWarnings: TransportWarning[] = [];
         for (const clientName of clientsToValidate) {
           const adapter = adapterRegistry.get(clientName);
           if (adapter) {
