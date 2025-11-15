@@ -290,24 +290,6 @@ This creates a learning loop where each library researched enriches the project 
 
 **Goal:** Automatic client detection with intelligent fallback behavior. ✅ ACHIEVED
 
-### Phase 3: Enhanced Documentation (v0.3)
-- [ ] Template system for workflows
-- [ ] User-defined MCP usage patterns
-- [ ] Team best practices in config
-- [ ] AGENTS.md generation for Copilot
-- [ ] Workflow validation and linting
-
-**Goal:** Generate rich, actionable AI guidance beyond basic project info.
-
-### Phase 4: Intelligent Mappings (v0.4 - Research Phase)
-- [ ] Plugin agent/skill metadata extraction
-- [ ] Agent capability registry
-- [ ] Automatic agent→MCP recommendations
-- [ ] Community-driven mapping database
-- [ ] ML-based usage pattern analysis (ambitious)
-
-**Goal:** Automatically suggest optimal MCP configurations for plugins.
-
 ## Technical Decisions
 
 ### CLAUDE.md Injection Pattern

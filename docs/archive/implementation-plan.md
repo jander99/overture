@@ -1,5 +1,8 @@
 # Overture CLI - TypeScript Implementation Plan
 
+> ⚠️ **HISTORICAL DOCUMENT - v0.1 IMPLEMENTATION PLAN**
+> This was the original implementation plan for Overture v0.1. The features described here have been implemented, though the actual implementation may differ from this plan.
+
 ## Overview
 
 This document provides a comprehensive, step-by-step plan for implementing the Overture CLI tool using TypeScript, following best practices for enterprise-grade CLI development.

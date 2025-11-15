@@ -197,13 +197,6 @@ overture sync
 - ✅ Validation (`overture validate`)
 - ✅ **911 tests passing (100%), 83%+ code coverage**
 
-**What v0.2 does NOT include yet:**
-- ❌ Enhanced workflow documentation templates
-- ❌ Agent/skill → MCP mappings
-- ❌ AGENTS.md generation for Copilot
-
-See [docs/PURPOSE.md](docs/PURPOSE.md) for the full vision and roadmap.
-
 ---
 
 ## Example: Python Backend Project
@@ -375,21 +368,6 @@ overture mcp enable <name>
   - [x] "Warn but allow" approach (generate configs even if client not detected)
 - [x] 911 tests passing (100%), 83%+ code coverage
 
-### v0.3 - Enhanced Documentation 📋 PLANNED
-- [ ] Template system for workflow instructions
-- [ ] User-defined MCP orchestration patterns
-- [ ] Team best practices in config
-- [ ] AGENTS.md generation for Copilot
-- [ ] Workflow validation
-
-### v0.4 - Intelligent Mappings 🔬 RESEARCH
-- [ ] Plugin agent/skill metadata extraction
-- [ ] Agent capability registry
-- [ ] Automatic agent→MCP recommendations
-- [ ] Community-driven mapping database
-
-See [docs/PURPOSE.md](docs/PURPOSE.md) for detailed vision and phasing.
-
 ---
 
 ## Configuration Structure
@@ -493,10 +471,9 @@ See [docs/related-projects.md](docs/related-projects.md) for detailed ecosystem 
 Contributions welcome!
 
 **Focus areas:**
-- v0.3: Workflow template system
-- v0.4: Plugin metadata extraction
 - Documentation improvements
 - Bug fixes and feature requests
+- Feature enhancements
 
 ---
 
@@ -509,7 +486,3 @@ MIT
 ## Status
 
 **Current:** v0.2.5 - Intelligent Client Detection complete (911/911 tests passing, 83%+ code coverage)
-
-**Next:** v0.3 - Enhanced Documentation (workflow templates, AGENTS.md generation)
-
-See [docs/PURPOSE.md](docs/PURPOSE.md) for detailed roadmap.

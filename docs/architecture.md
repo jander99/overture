@@ -21,6 +21,8 @@ This document covers two major aspects of Overture's architecture:
 
 # Part I: Claude Code Ecosystem Research
 
+> ⚠️ **ARCHIVED VISION (Pre-v0.2)**: This section describes the original research and vision for Overture's full feature set. Many of these concepts represent future exploration, not the current implementation. See Part II for the actual v0.2+ architecture.
+
 ## Claude Code Component Architecture
 
 ### 1. Hooks (Event-Driven Automation)
@@ -903,26 +905,6 @@ Warning: Hook syntax changed in Overture 2.0
   Run 'overture migrate' to auto-update
 ```
 
-## Implementation Priorities
-
-### Phase 1: Core Generation
-- [ ] YAML parsers for config files
-- [ ] Claude Code JSON generators
-- [ ] Variable substitution engine
-- [ ] Basic validation
-
-### Phase 2: Enhanced Features
-- [ ] Environment-specific configs
-- [ ] Configuration inheritance
-- [ ] Import from existing Claude Code configs
-- [ ] Watch mode for development
-
-### Phase 3: Advanced Features
-- [ ] Plugin export
-- [ ] Advanced validation (semantic checks)
-- [ ] Migration tooling
-- [ ] Team collaboration features
-
 ## Key Insights
 
 1. **Claude Code uses layered guidance**: Persistent (CLAUDE.md) → Invocable (commands/skills/agents) → Capabilities (tools/MCP) → Automation (hooks)
@@ -938,16 +920,6 @@ Warning: Hook syntax changed in Overture 2.0
 6. **Plugins package everything**: Distribution unit for teams
 
 7. **Overture's value proposition**: Cleaner YAML configs, validation, templating, environment support, single source of truth
-
-## Next Steps
-
-1. Design detailed configuration schemas (JSON Schema)
-2. Build proof-of-concept generator
-3. Create sample configurations for common workflows
-4. Build validation engine
-5. Implement CLI tool
-6. Write comprehensive documentation
-7. Build plugin export functionality
 
 ---
 
