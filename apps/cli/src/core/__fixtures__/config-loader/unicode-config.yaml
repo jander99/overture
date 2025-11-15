@@ -9,7 +9,6 @@ mcp:
       MESSAGE: "Hello 世界 🌍"
       PATH_WITH_UNICODE: "/home/user/フォルダ/data"
     transport: stdio
-    scope: global
     metadata:
       description: "Server supporting internationalization"
       tags: ["i18n", "unicode", "国際化"]

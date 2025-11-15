@@ -6,4 +6,3 @@ mcp:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
-    scope: global

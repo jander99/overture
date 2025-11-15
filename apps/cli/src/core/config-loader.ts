@@ -44,6 +44,71 @@ export class ConfigValidationError extends Error {
 }
 
 /**
+ * Format YAML parse error with line number information
+ *
+ * Extracts line/column info from js-yaml YAMLException and formats it nicely.
+ *
+ * @param error - YAML parse error from js-yaml
+ * @param configPath - Path to configuration file
+ * @returns Formatted error message with line numbers
+ */
+function formatYamlParseError(error: Error, configPath: string): string {
+  // Check if error is from js-yaml (has mark property with line/column)
+  const yamlError = error as any;
+  if (yamlError.mark && typeof yamlError.mark.line === 'number') {
+    const line = yamlError.mark.line + 1; // js-yaml uses 0-indexed lines
+    const column = yamlError.mark.column + 1; // js-yaml uses 0-indexed columns
+
+    return `YAML parse error at line ${line}, column ${column}:\n  ${error.message}`;
+  }
+
+  return `YAML parse error: ${error.message}`;
+}
+
+/**
+ * Check for deprecated fields in configuration
+ *
+ * Provides helpful error messages for common migration issues.
+ *
+ * @param parsed - Parsed YAML configuration object
+ * @param configPath - Path to configuration file
+ * @throws {ConfigValidationError} If deprecated fields are found
+ */
+function checkForDeprecatedFields(parsed: unknown, configPath: string): void {
+  if (!parsed || typeof parsed !== 'object') {
+    return;
+  }
+
+  const config = parsed as Record<string, unknown>;
+
+  // Check for deprecated 'scope' field in MCP configurations
+  if ('mcp' in config && config.mcp && typeof config.mcp === 'object') {
+    const mcp = config.mcp as Record<string, unknown>;
+
+    for (const [mcpName, mcpConfig] of Object.entries(mcp)) {
+      if (mcpConfig && typeof mcpConfig === 'object' && 'scope' in mcpConfig) {
+        throw new ConfigValidationError(
+          `Deprecated 'scope' field found in configuration`,
+          configPath,
+          [
+            {
+              code: 'deprecated_field',
+              path: ['mcp', mcpName, 'scope'],
+              message: `The 'scope' field has been removed in Overture v2.0`,
+              suggestion:
+                `Remove the 'scope' field from mcp.${mcpName}. ` +
+                `Scope is now implicit based on file location:\n` +
+                `  - MCPs in ~/.config/overture.yml are global\n` +
+                `  - MCPs in .overture/config.yaml are project-scoped`,
+            },
+          ]
+        );
+      }
+    }
+  }
+}
+
+/**
  * Load user global configuration
  *
  * Reads and validates configuration from ~/.config/overture.yml
@@ -73,6 +138,9 @@ export function loadUserConfig(): OvertureConfig {
     // Parse YAML
     const parsed = yaml.load(fileContent);
 
+    // Check for deprecated fields (provides helpful migration errors)
+    checkForDeprecatedFields(parsed, configPath);
+
     // Validate with Zod
     const result = OvertureConfigSchema.safeParse(parsed);
 
@@ -90,7 +158,12 @@ export function loadUserConfig(): OvertureConfig {
       throw error;
     }
 
-    throw new ConfigLoadError(`Failed to load user config: ${(error as Error).message}`, configPath, error as Error);
+    // Check if this is a YAML parse error and format it with line numbers
+    const errorMessage = (error as Error).name === 'YAMLException'
+      ? formatYamlParseError(error as Error, configPath)
+      : `Failed to load user config: ${(error as Error).message}`;
+
+    throw new ConfigLoadError(errorMessage, configPath, error as Error);
   }
 }
 
@@ -127,6 +200,9 @@ export function loadProjectConfig(projectRoot?: string): OvertureConfig | null {
     // Parse YAML
     const parsed = yaml.load(fileContent);
 
+    // Check for deprecated fields (provides helpful migration errors)
+    checkForDeprecatedFields(parsed, configPath);
+
     // Validate with Zod
     const result = OvertureConfigSchema.safeParse(parsed);
 
@@ -144,11 +220,12 @@ export function loadProjectConfig(projectRoot?: string): OvertureConfig | null {
       throw error;
     }
 
-    throw new ConfigLoadError(
-      `Failed to load project config: ${(error as Error).message}`,
-      configPath,
-      error as Error
-    );
+    // Check if this is a YAML parse error and format it with line numbers
+    const errorMessage = (error as Error).name === 'YAMLException'
+      ? formatYamlParseError(error as Error, configPath)
+      : `Failed to load project config: ${(error as Error).message}`;
+
+    throw new ConfigLoadError(errorMessage, configPath, error as Error);
   }
 }
 

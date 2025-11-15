@@ -15,14 +15,11 @@ mcp:
     command: uvx
     args:
       - mcp-server-python-repl
-    scope: project
     enabled: true
   ruff:
     command: uvx
     args:
       - mcp-server-ruff
-    scope: project
     enabled: true
   filesystem:
-    scope: global
     enabled: true

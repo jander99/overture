@@ -7,4 +7,3 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: global

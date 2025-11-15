@@ -1,31 +1,23 @@
 # YAML with anchors, aliases, and comments
 version: "2.0"
 
-# Default environment for all servers
-x-default-env: &default-env
-  DEBUG: "false"
-  LOG_LEVEL: "info"
-
-# Common npx command
-x-npx-command: &npx-command
-  command: npx
-  args: ["-y"]
-
 mcp:
-  filesystem:
-    <<: *npx-command
+  # MCP server with YAML anchor definition
+  filesystem: &filesystem-server
+    command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env:
-      <<: *default-env
+      DEBUG: "false"
+      LOG_LEVEL: "info"
       FS_ROOT: "/home/user"
     transport: stdio
-    scope: global
-    
+
+  # MCP server using YAML alias (reference to filesystem)
   github:
-    <<: *npx-command
+    <<: *filesystem-server
     args: ["-y", "@modelcontextprotocol/server-github"]
     env:
-      <<: *default-env
+      DEBUG: "false"
+      LOG_LEVEL: "info"
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     transport: stdio
-    scope: global

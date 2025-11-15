@@ -247,6 +247,37 @@ mcp:
       const config = loadProjectConfig('/custom/project');
       expect(config).not.toBeNull();
     });
+
+    it('should throw helpful error for deprecated scope field', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(`
+version: "2.0"
+mcp:
+  github:
+    command: mcp-server-github
+    args: []
+    env: {}
+    transport: stdio
+    scope: global
+`);
+
+      expect(() => loadProjectConfig()).toThrow(ConfigValidationError);
+      expect(() => loadProjectConfig()).toThrow(/Deprecated 'scope' field found/);
+
+      try {
+        loadProjectConfig();
+        fail('Should have thrown ConfigValidationError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigValidationError);
+        const validationError = error as ConfigValidationError;
+        expect(validationError.validationErrors).toHaveLength(1);
+        expect(validationError.validationErrors[0]).toMatchObject({
+          code: 'deprecated_field',
+          path: ['mcp', 'github', 'scope'],
+          message: expect.stringContaining('removed in Overture v2.0'),
+        });
+      }
+    });
   });
 
   describe('mergeConfigs', () => {

@@ -147,7 +147,6 @@ export function createUserCommand(): Command {
               args: defaults.args!,
               env: defaults.env!,
               transport: defaults.transport!,
-              scope: defaults.scope!,
             };
           }
         }
@@ -344,7 +343,6 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
         console.log(chalk.gray(`    args: [${mcp.args.join(', ')}]`));
       }
       console.log(chalk.gray(`    transport: ${mcp.transport}`));
-      console.log(chalk.gray(`    scope: ${mcp.scope}`));
 
       if (mcp.version) {
         console.log(chalk.gray(`    version: ${mcp.version}`));

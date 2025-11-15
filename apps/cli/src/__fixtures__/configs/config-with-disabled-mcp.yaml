@@ -5,9 +5,7 @@ plugins: {}
 mcp:
   enabled-mcp:
     command: test-command
-    scope: project
     enabled: true
   disabled-mcp:
     command: disabled-command
-    scope: project
     enabled: false

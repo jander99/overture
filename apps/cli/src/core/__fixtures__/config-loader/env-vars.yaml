@@ -9,7 +9,6 @@ mcp:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
       DEBUG: "true"
     transport: stdio
-    scope: global
     
   custom:
     command: "${CUSTOM_COMMAND:-default-command}"
@@ -19,4 +18,3 @@ mcp:
       VAR2: "${VAR2:-default-value}"
       VAR3: "${VAR3:-empty}"
     transport: stdio
-    scope: global

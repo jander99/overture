@@ -293,36 +293,47 @@ describe('ConfigLoader Integration Tests', () => {
       expect(config.mcp).toHaveProperty('everart');
     });
 
-    it('should throw on invalid YAML syntax', () => {
+    it('should throw on invalid YAML syntax with line numbers', () => {
       const configPath = path.join(tempDir, 'overture.yml');
       fs.copyFileSync(path.join(fixturesDir, 'invalid-yaml.yaml'), configPath);
 
       setMockPaths(configPath, path.join(tempDir, '.overture', 'config.yaml'));
 
       expect(() => loadUserConfig()).toThrow(ConfigLoadError);
-      expect(() => loadUserConfig()).toThrow(/Failed to load user config/);
+      expect(() => loadUserConfig()).toThrow(/YAML parse error/);
+
+      // Verify the error contains line/column information
+      try {
+        loadUserConfig();
+        fail('Should have thrown ConfigLoadError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigLoadError);
+        const loadError = error as ConfigLoadError;
+        // Error message should contain line number information
+        expect(loadError.message).toMatch(/line \d+/);
+      }
     });
 
-    it('should allow extra fields not in schema', () => {
+    it('should reject extra fields not in schema (strict mode)', () => {
       const configPath = path.join(tempDir, 'overture.yml');
       const configContent = `
 version: "2.0"
-extraField: "should be allowed"
+extraField: "should be rejected"
 mcp:
   filesystem:
     command: npx
     args: []
     env: {}
     transport: stdio
-    customField: "also allowed"
+    customField: "also rejected"
 `;
       fs.writeFileSync(configPath, configContent, 'utf-8');
 
       setMockPaths(configPath, path.join(tempDir, '.overture', 'config.yaml'));
 
-      // Should not throw - Zod schemas should allow extra fields
-      const config = loadUserConfig();
-      expect(config.version).toBe('2.0');
+      // Should throw - Zod schemas with .strict() reject extra fields
+      expect(() => loadUserConfig()).toThrow(ConfigValidationError);
+      expect(() => loadUserConfig()).toThrow(/Invalid user configuration/);
     });
   });
 

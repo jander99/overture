@@ -77,6 +77,8 @@ export const McpServerConfigSchema = z.object({
   env: z.record(z.string(), EnvVarPatternSchema).default({}),
   transport: TransportTypeSchema, // REQUIRED in v2.0
   version: z.string().optional(), // Optional, defaults to "latest"
+  enabled: z.boolean().optional(), // Allow disabling MCPs
+  description: z.string().optional(), // Human-readable description
   clients: z
     .object({
       exclude: z.array(ClientNameSchema).optional(),
@@ -113,7 +115,7 @@ export const McpServerConfigSchema = z.object({
     })
     .strict()
     .optional(),
-});
+}).strict(); // Reject unknown fields like 'scope'
 
 /**
  * Client Configuration Schema
@@ -123,7 +125,7 @@ export const ClientConfigSchema = z.object({
   configPath: z.union([z.string(), z.record(PlatformSchema, z.string())]).optional(),
   maxServers: z.number().int().positive().optional(),
   settings: z.record(z.string(), z.unknown()).optional(),
-});
+}).strict();
 
 /**
  * Sync Options Schema
@@ -135,7 +137,29 @@ export const SyncOptionsSchema = z.object({
   mergeStrategy: MergeStrategySchema.default('append'),
   autoDetectClients: z.boolean().default(true),
   enabledClients: z.array(ClientNameSchema).optional(),
-});
+}).strict();
+
+/**
+ * Project Configuration Schema
+ *
+ * Metadata about the project using Overture.
+ */
+export const ProjectConfigSchema = z.object({
+  name: z.string().min(1, 'Project name is required'),
+  type: z.string().optional(),
+  description: z.string().optional(),
+}).strict();
+
+/**
+ * Plugin Configuration Schema
+ *
+ * Configuration for Claude Code plugins.
+ */
+export const PluginConfigSchema = z.object({
+  marketplace: z.string().min(1, 'Marketplace name is required'),
+  enabled: z.boolean().default(true),
+  mcps: z.array(z.string()).default([]),
+}).strict();
 
 /**
  * Main Overture v2.0 Configuration Schema
@@ -144,10 +168,12 @@ export const SyncOptionsSchema = z.object({
  */
 export const OvertureConfigSchema = z.object({
   version: z.string().regex(/^\d+\.\d+$/, 'Version must be in format "X.Y"'),
+  project: ProjectConfigSchema.optional(),
+  plugins: z.record(z.string(), PluginConfigSchema).optional(),
   clients: z.record(z.string(), ClientConfigSchema).optional(),
   mcp: z.record(z.string(), McpServerConfigSchema),
   sync: SyncOptionsSchema.optional(),
-});
+}).strict(); // Reject unknown fields at top level
 
 /**
  * Client MCP Server Definition Schema

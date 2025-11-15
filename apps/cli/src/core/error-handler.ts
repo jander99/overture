@@ -21,6 +21,8 @@ import {
   McpError,
 } from '../domain/errors';
 import { ConfigLoadError, ConfigValidationError } from './config-loader';
+import { parseZodErrors, formatErrors } from './validation-formatter';
+import type { ZodIssue } from 'zod';
 
 /**
  * Exit codes for different error categories
@@ -213,9 +215,14 @@ export class ErrorHandler {
     }
 
     if (error instanceof ConfigValidationError) {
+      // Format validation errors with helpful suggestions
+      const zodIssues = error.validationErrors as ZodIssue[];
+      const validationErrors = parseZodErrors(zodIssues);
+      const formattedErrors = formatErrors(validationErrors, 'Configuration Validation Errors');
+
       return {
-        message: error.message,
-        details: error.path ? `Configuration file: ${error.path}` : undefined,
+        message: `Configuration validation failed`,
+        details: `File: ${error.path}\n${formattedErrors}`,
         exitCode: ExitCode.VALIDATION_ERROR,
         stack: verbose && error.stack ? error.stack : undefined,
       };

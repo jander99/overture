@@ -13,4 +13,3 @@ mcp:
       # Multiple $ without braces
       BAD_VAR3: "$VAR1$VAR2"
     transport: stdio
-    scope: global

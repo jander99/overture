@@ -15,7 +15,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user"]
     env: {}
     transport: stdio
-    scope: global
     
   github:
     command: mcp-server-github
@@ -23,14 +22,12 @@ mcp:
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     transport: stdio
-    scope: global
     
   memory:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-memory"]
     env: {}
     transport: stdio
-    scope: global
     clients:
       exclude: [copilot-cli]
 

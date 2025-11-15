@@ -239,6 +239,10 @@ export interface SyncOptions {
  * This is the main configuration file for Overture v2.0.
  * Location: ~/.config/overture.yml
  *
+ * Note: Scope is implicit based on file location.
+ * - MCPs in ~/.config/overture.yml are global (synced to ~/.config/claude/mcp.json)
+ * - MCPs in .overture/config.yaml are project-scoped (synced to .mcp.json)
+ *
  * @example
  * ```yaml
  * version: "2.0"
@@ -258,7 +262,6 @@ export interface SyncOptions {
  *     env:
  *       GITHUB_TOKEN: "${GITHUB_TOKEN}"
  *     transport: stdio
- *     scope: global
  *
  * sync:
  *   backup: true
