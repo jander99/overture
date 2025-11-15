@@ -9,7 +9,7 @@
  */
 
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
-import type { OvertureConfigV2, ClientName, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, ClientName, Platform } from '../domain/config.types';
 
 /**
  * Audit service for detecting unmanaged MCPs
@@ -37,7 +37,7 @@ export class AuditService {
    * // => ['filesystem', 'slack']
    * ```
    */
-  auditClient(adapter: ClientAdapter, overtureConfig: OvertureConfigV2, platform: Platform): string[] {
+  auditClient(adapter: ClientAdapter, overtureConfig: OvertureConfig, platform: Platform): string[] {
     // Detect config path
     const configPath = adapter.detectConfigPath(platform);
 
@@ -102,7 +102,7 @@ export class AuditService {
    */
   auditAllClients(
     adapters: ClientAdapter[],
-    overtureConfig: OvertureConfigV2,
+    overtureConfig: OvertureConfig,
     platform: Platform
   ): Partial<Record<ClientName, string[]>> {
     const result: Partial<Record<ClientName, string[]>> = {};

@@ -13,7 +13,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { ClientName } from '../domain/config-v2.types';
+import type { ClientName } from '../domain/config.types';
 import { getBackupDir } from './path-resolver';
 
 /**

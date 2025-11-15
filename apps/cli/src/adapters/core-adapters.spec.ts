@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import { ClaudeCodeAdapter } from './claude-code-adapter';
 import { ClaudeDesktopAdapter } from './claude-desktop-adapter';
 import { VSCodeAdapter } from './vscode-adapter';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -82,7 +82,7 @@ describe('ClaudeCodeAdapter', () => {
   });
 
   it('should convert Overture config correctly', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         github: {
@@ -90,7 +90,6 @@ describe('ClaudeCodeAdapter', () => {
           args: [],
           env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -112,7 +111,7 @@ describe('ClaudeCodeAdapter', () => {
   });
 
   it('should apply platform overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         python: {
@@ -120,7 +119,6 @@ describe('ClaudeCodeAdapter', () => {
           args: ['-m', 'mcp_server'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: {
               win32: 'python.exe',
@@ -135,7 +133,7 @@ describe('ClaudeCodeAdapter', () => {
   });
 
   it('should apply client overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -143,7 +141,6 @@ describe('ClaudeCodeAdapter', () => {
           args: ['base-arg'],
           env: { BASE: 'value' },
           transport: 'stdio',
-          scope: 'global',
           clients: {
             overrides: {
               'claude-code': {
@@ -164,7 +161,7 @@ describe('ClaudeCodeAdapter', () => {
   });
 
   it('should filter excluded MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         included: {
@@ -172,14 +169,12 @@ describe('ClaudeCodeAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         excluded: {
           command: 'test',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },
@@ -218,7 +213,7 @@ describe('ClaudeDesktopAdapter', () => {
   });
 
   it('should filter http transport MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         stdio: {
@@ -226,14 +221,12 @@ describe('ClaudeDesktopAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         http: {
           command: 'test',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       },
     };
@@ -283,7 +276,7 @@ describe('VSCodeAdapter', () => {
   });
 
   it('should convert with "type" field instead of "transport"', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         github: {
@@ -291,7 +284,6 @@ describe('VSCodeAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -315,7 +307,7 @@ describe('VSCodeAdapter', () => {
     // Mock process.env
     process.env.GITHUB_TOKEN = 'test-token-123';
 
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         github: {
@@ -323,7 +315,6 @@ describe('VSCodeAdapter', () => {
           args: [],
           env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -335,7 +326,7 @@ describe('VSCodeAdapter', () => {
   });
 
   it('should filter sse transport MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         stdio: {
@@ -343,14 +334,12 @@ describe('VSCodeAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         sse: {
           command: 'test',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       },
     };

@@ -234,10 +234,10 @@ Skill instructions and expertise...
    - Accept arguments
    - Dynamically discovered
 
-**Scope Levels:**
-- User-global: `~/.claude/.mcp.json`
-- Project: `.claude/.mcp.json`
-- Managed: `managed-mcp.json` (enterprise control)
+**Scope Levels (Implicit):**
+- User-global: MCPs in `~/.config/overture/config.yaml` → synced to `~/.config/claude/mcp.json`
+- Project: MCPs in `.overture/config.yaml` → synced to `.mcp.json`
+- Scope is determined by file location, no explicit `scope` field needed
 
 ## How Components Interact
 
@@ -477,7 +477,6 @@ LLM Response Generation
 
 ```yaml
 version: "1.0"
-scope: project  # user-global | project | project-local
 
 # Include other files
 includes:
@@ -1110,7 +1109,6 @@ interface McpServerConfigV2 {
   args: string[];
   env: Record<string, string>;
   transport: 'stdio' | 'http' | 'sse';
-  scope: 'global' | 'project';
   version?: string;
   clients?: {
     exclude?: string[];
@@ -1119,6 +1117,7 @@ interface McpServerConfigV2 {
   platforms?: {
     exclude?: Platform[];
   };
+  // Note: Scope is implicit based on file location
 }
 ```
 
@@ -1287,7 +1286,6 @@ class ExclusionFilter {
   // 2. Client exclusions/inclusions
   // 3. Platform exclusions
   // 4. Transport compatibility
-  // 5. Scope (global vs project)
 }
 ```
 
@@ -1331,16 +1329,14 @@ mcp:
   github:
     command: mcp-server-github
     transport: stdio
-    scope: global
 
 # ./.overture/config.yaml (Project)
 mcp:
   github:
     transport: http  # Overrides user
-    scope: project
 
 # Result: Project overrides user
-# Used: http transport, project scope
+# Used: http transport (project location)
 ```
 
 ### Client-Specific Overrides

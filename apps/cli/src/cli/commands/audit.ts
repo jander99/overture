@@ -15,7 +15,7 @@ import { loadConfig } from '../../core/config-loader';
 import { adapterRegistry } from '../../adapters/adapter-registry';
 import { getPlatform } from '../../core/path-resolver';
 import { Logger } from '../../utils/logger';
-import type { ClientName } from '../../domain/config-v2.types';
+import type { ClientName } from '../../domain/config.types';
 import { ErrorHandler } from '../../core/error-handler';
 
 /**

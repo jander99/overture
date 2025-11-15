@@ -9,7 +9,7 @@
  */
 
 import type { ClientAdapter } from './client-adapter.interface';
-import type { ClientName, Platform } from '../domain/config-v2.types';
+import type { ClientName, Platform } from '../domain/config.types';
 import { getPlatform } from '../core/path-resolver';
 
 /**

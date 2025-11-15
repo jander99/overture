@@ -11,7 +11,7 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -84,7 +84,7 @@ describe('CursorAdapter', () => {
   });
 
   it('should convert Overture config correctly', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         github: {
@@ -92,7 +92,6 @@ describe('CursorAdapter', () => {
           args: [],
           env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -114,7 +113,7 @@ describe('CursorAdapter', () => {
   });
 
   it('should apply platform overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         python: {
@@ -122,7 +121,6 @@ describe('CursorAdapter', () => {
           args: ['-m', 'mcp_server'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: {
               win32: 'python.exe',
@@ -137,7 +135,7 @@ describe('CursorAdapter', () => {
   });
 
   it('should apply client overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -145,7 +143,6 @@ describe('CursorAdapter', () => {
           args: ['base-arg'],
           env: { BASE: 'value' },
           transport: 'stdio',
-          scope: 'global',
           clients: {
             overrides: {
               cursor: {
@@ -166,7 +163,7 @@ describe('CursorAdapter', () => {
   });
 
   it('should filter excluded MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         included: {
@@ -174,14 +171,12 @@ describe('CursorAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         excluded: {
           command: 'test',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['cursor'],
           },
@@ -195,7 +190,7 @@ describe('CursorAdapter', () => {
   });
 
   it('should filter sse transport MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         stdio: {
@@ -203,14 +198,12 @@ describe('CursorAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         sse: {
           command: 'test',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       },
     };
@@ -250,7 +243,7 @@ describe('WindsurfAdapter', () => {
   });
 
   it('should filter http transport MCPs', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         stdio: {
@@ -258,14 +251,12 @@ describe('WindsurfAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         http: {
           command: 'test',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       },
     };
@@ -276,7 +267,7 @@ describe('WindsurfAdapter', () => {
   });
 
   it('should convert Overture config correctly', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         python: {
@@ -284,7 +275,6 @@ describe('WindsurfAdapter', () => {
           args: ['mcp-server-python'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -324,7 +314,7 @@ describe('CopilotCliAdapter', () => {
   });
 
   it('should filter excluded MCPs (e.g., github)', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         filesystem: {
@@ -332,14 +322,12 @@ describe('CopilotCliAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         github: {
           command: 'mcp-server-github',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['copilot-cli'], // Bundled in Copilot CLI
           },
@@ -353,7 +341,7 @@ describe('CopilotCliAdapter', () => {
   });
 
   it('should convert Overture config correctly', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         filesystem: {
@@ -361,7 +349,6 @@ describe('CopilotCliAdapter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -406,7 +393,7 @@ describe('JetBrainsCopilotAdapter', () => {
     // Mock process.env
     process.env.GITHUB_TOKEN = 'test-token-456';
 
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         github: {
@@ -414,7 +401,6 @@ describe('JetBrainsCopilotAdapter', () => {
           args: [],
           env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -426,7 +412,7 @@ describe('JetBrainsCopilotAdapter', () => {
   });
 
   it('should convert Overture config correctly', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         python: {
@@ -434,7 +420,6 @@ describe('JetBrainsCopilotAdapter', () => {
           args: ['mcp-server-python'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -445,7 +430,7 @@ describe('JetBrainsCopilotAdapter', () => {
   });
 
   it('should apply client overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -453,7 +438,6 @@ describe('JetBrainsCopilotAdapter', () => {
           args: ['base-arg'],
           env: { BASE: 'value' },
           transport: 'stdio',
-          scope: 'global',
           clients: {
             overrides: {
               'jetbrains-copilot': {

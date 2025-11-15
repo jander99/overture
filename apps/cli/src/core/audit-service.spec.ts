@@ -8,7 +8,7 @@
 
 import { AuditService } from './audit-service';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
-import type { OvertureConfigV2, ClientName, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, ClientName, Platform } from '../domain/config.types';
 
 describe('AuditService', () => {
   let auditService: AuditService;
@@ -31,7 +31,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -59,7 +59,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -67,14 +67,12 @@ describe('AuditService', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
           filesystem: {
             command: 'npx',
             args: ['@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -103,7 +101,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -111,7 +109,6 @@ describe('AuditService', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -138,7 +135,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -176,7 +173,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -201,7 +198,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -229,7 +226,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -266,7 +263,7 @@ describe('AuditService', () => {
         isInstalled: jest.fn(),
       };
 
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -312,7 +309,7 @@ describe('AuditService', () => {
       };
 
       const adapters = [mockAdapter1, mockAdapter2];
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -359,7 +356,7 @@ describe('AuditService', () => {
       };
 
       const adapters = [mockAdapter1, mockAdapter2];
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           managed: {
@@ -367,7 +364,6 @@ describe('AuditService', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -395,7 +391,7 @@ describe('AuditService', () => {
       };
 
       const adapters = [mockAdapter];
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };

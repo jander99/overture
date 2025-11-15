@@ -184,7 +184,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -245,7 +244,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -294,7 +292,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -348,7 +345,6 @@ mcp:
     args: ["-y", "mcp-http-server"]
     env: {}
     transport: http
-    scope: global
 
 clients:
   claude-code:
@@ -383,14 +379,12 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
   python-repl:
     command: uvx
     args: ["mcp-server-python-repl"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -486,7 +480,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -528,7 +521,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:
@@ -566,7 +558,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem"]
     env: {}
     transport: stdio
-    scope: project
 
 clients:
   claude-code:

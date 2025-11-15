@@ -98,7 +98,6 @@ describe('ConfigLoader Integration Tests', () => {
         const merged = mergeConfigs(userConfig, projectConfig);
 
         expect(merged).toEqual(userConfig);
-        expect(merged.mcp.filesystem.scope).toBe('global');
       });
     });
 
@@ -149,7 +148,6 @@ describe('ConfigLoader Integration Tests', () => {
 
         // Verify: github MCP should use project's env var (PROJECT_GITHUB_TOKEN)
         expect(config.mcp.github.env.GITHUB_TOKEN).toBe('${PROJECT_GITHUB_TOKEN}');
-        expect(config.mcp.github.scope).toBe('project'); // overridden
       });
 
       it('should merge sync options with project taking precedence', () => {
@@ -316,7 +314,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
     customField: "also allowed"
 `;
       fs.writeFileSync(configPath, configContent, 'utf-8');
@@ -504,7 +501,6 @@ mcp:
       NESTED_VAR: "\${TOP_VAR}"
       CONFIG_JSON: '{"nested": {"deep": {"value": "test"}}}'
     transport: stdio
-    scope: global
     clients:
       exclude: [copilot-cli]
       overrides:
@@ -568,7 +564,6 @@ mcp:
       const config = loadUserConfig();
 
       expect(config.mcp.minimal.command).toBe('npx');
-      expect(config.mcp.minimal.scope).toBe('global'); // default value
     });
 
     it('should handle very long file paths in config', () => {
@@ -583,7 +578,6 @@ mcp:
     env:
       LONG_PATH: "${longPath}"
     transport: stdio
-    scope: global
 `;
       fs.writeFileSync(configPath, configWithLongPath, 'utf-8');
 
@@ -605,19 +599,16 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
   server_with_underscores:
     command: npx
     args: []
     env: {}
     transport: stdio
-    scope: global
   "server.with.dots":
     command: npx
     args: []
     env: {}
     transport: stdio
-    scope: global
 `;
       fs.writeFileSync(configPath, specialCharsConfig, 'utf-8');
 
@@ -647,14 +638,12 @@ mcp:
     env:
       BASE_VAR: "base"
     transport: stdio
-    scope: global
   shared-server:
     command: shared-cmd
     args: ["user-arg"]
     env:
       SHARED_VAR: "user-value"
     transport: stdio
-    scope: global
 sync:
   backup: true
   backupRetention: 5
@@ -671,14 +660,12 @@ mcp:
     env:
       PROJECT_VAR: "project"
     transport: stdio
-    scope: project
   shared-server:
     command: shared-cmd-override
     args: ["project-arg"]
     env:
       SHARED_VAR: "project-value"
     transport: http
-    scope: project
 sync:
   backupRetention: 20
 `;
@@ -698,13 +685,11 @@ sync:
 
       // Base server unchanged
       expect(config.mcp['base-server'].command).toBe('base-cmd');
-      expect(config.mcp['base-server'].scope).toBe('global');
 
       // Shared server should use project values
       expect(config.mcp['shared-server'].command).toBe('shared-cmd-override');
       expect(config.mcp['shared-server'].transport).toBe('http');
       expect(config.mcp['shared-server'].env.SHARED_VAR).toBe('project-value');
-      expect(config.mcp['shared-server'].scope).toBe('project');
 
       // Sync options should be merged
       expect(config.sync?.backup).toBe(true); // from user

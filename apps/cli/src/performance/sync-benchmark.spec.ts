@@ -24,7 +24,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { syncClients, syncClient } from '../core/sync-engine';
-import type { OvertureConfigV2, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, Platform } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 import * as configLoader from '../core/config-loader';
 import * as adapterRegistry from '../adapters/adapter-registry';
@@ -251,8 +251,8 @@ function createMockAdapter(
 /**
  * Generate config with N MCPs
  */
-function generateConfig(mcpCount: number): OvertureConfigV2 {
-  const mcp: OvertureConfigV2['mcp'] = {};
+function generateConfig(mcpCount: number): OvertureConfig {
+  const mcp: OvertureConfig['mcp'] = {};
 
   for (let i = 0; i < mcpCount; i++) {
     mcp[`mcp-${i}`] = {
@@ -260,7 +260,6 @@ function generateConfig(mcpCount: number): OvertureConfigV2 {
       args: [`--arg${i}`],
       env: { [`VAR${i}`]: `value${i}` },
       transport: 'stdio',
-      scope: i % 2 === 0 ? 'global' : 'project',
     };
   }
 

@@ -14,7 +14,7 @@ import {
   cleanupOldBackups,
   getLatestBackup,
 } from './backup-service';
-import type { ClientName } from '../domain/config-v2.types';
+import type { ClientName } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');

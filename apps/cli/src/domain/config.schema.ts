@@ -4,7 +4,7 @@
  * These schemas validate the structure and constraints of Overture configuration files.
  * They provide runtime validation and type inference for user and project configs.
  *
- * @module domain/config-v2.schema
+ * @module domain/config.schema
  * @version 2.0
  */
 
@@ -22,6 +22,7 @@ export const TransportTypeSchema = z.enum(['stdio', 'http', 'sse']);
 
 /**
  * Scope schema
+ * @deprecated Scope is now implicit based on config file location (user vs project)
  */
 export const ScopeSchema = z.enum(['global', 'project']);
 
@@ -62,7 +63,6 @@ const McpServerOverrideSchema = z.object({
   args: z.array(z.string()).optional(),
   env: z.record(z.string(), EnvVarPatternSchema).optional(),
   transport: TransportTypeSchema.optional(),
-  scope: ScopeSchema.optional(),
   version: z.string().optional(),
 });
 
@@ -71,12 +71,11 @@ const McpServerOverrideSchema = z.object({
  *
  * Validates MCP server definitions with required transport field.
  */
-export const McpServerConfigV2Schema = z.object({
+export const McpServerConfigSchema = z.object({
   command: z.string().min(1, 'Command is required'),
   args: z.array(z.string()).default([]),
   env: z.record(z.string(), EnvVarPatternSchema).default({}),
   transport: TransportTypeSchema, // REQUIRED in v2.0
-  scope: ScopeSchema.default('global'),
   version: z.string().optional(), // Optional, defaults to "latest"
   clients: z
     .object({
@@ -143,10 +142,10 @@ export const SyncOptionsSchema = z.object({
  *
  * Validates the complete user or project configuration file.
  */
-export const OvertureConfigV2Schema = z.object({
+export const OvertureConfigSchema = z.object({
   version: z.string().regex(/^\d+\.\d+$/, 'Version must be in format "X.Y"'),
   clients: z.record(z.string(), ClientConfigSchema).optional(),
-  mcp: z.record(z.string(), McpServerConfigV2Schema),
+  mcp: z.record(z.string(), McpServerConfigSchema),
   sync: SyncOptionsSchema.optional(),
 });
 
@@ -256,10 +255,10 @@ export type TransportType = z.infer<typeof TransportTypeSchema>;
 export type Scope = z.infer<typeof ScopeSchema>;
 export type ClientName = z.infer<typeof ClientNameSchema>;
 export type MergeStrategy = z.infer<typeof MergeStrategySchema>;
-export type McpServerConfigV2 = z.infer<typeof McpServerConfigV2Schema>;
+export type McpServerConfig = z.infer<typeof McpServerConfigSchema>;
 export type ClientConfig = z.infer<typeof ClientConfigSchema>;
 export type SyncOptions = z.infer<typeof SyncOptionsSchema>;
-export type OvertureConfigV2 = z.infer<typeof OvertureConfigV2Schema>;
+export type OvertureConfig = z.infer<typeof OvertureConfigSchema>;
 export type ClientMcpServerDef = z.infer<typeof ClientMcpServerDefSchema>;
 export type ClientMcpConfig = z.infer<typeof ClientMcpConfigSchema>;
 export type ClientSyncResult = z.infer<typeof ClientSyncResultSchema>;

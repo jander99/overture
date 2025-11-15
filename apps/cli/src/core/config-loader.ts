@@ -10,8 +10,8 @@
 
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import { OvertureConfigV2Schema, type OvertureConfigV2 } from '../domain/config-v2.schema';
-import { getUserConfigPath, getProjectConfigPath } from './path-resolver';
+import { OvertureConfigSchema, type OvertureConfig } from '../domain/config.schema';
+import { getUserConfigPath, getProjectConfigPath, findProjectRoot } from './path-resolver';
 
 /**
  * Configuration load error
@@ -58,7 +58,7 @@ export class ConfigValidationError extends Error {
  * console.log(userConfig.mcp); // All user-level MCP servers
  * ```
  */
-export function loadUserConfig(): OvertureConfigV2 {
+export function loadUserConfig(): OvertureConfig {
   const configPath = getUserConfigPath();
 
   // Check if file exists
@@ -74,7 +74,7 @@ export function loadUserConfig(): OvertureConfigV2 {
     const parsed = yaml.load(fileContent);
 
     // Validate with Zod
-    const result = OvertureConfigV2Schema.safeParse(parsed);
+    const result = OvertureConfigSchema.safeParse(parsed);
 
     if (!result.success) {
       throw new ConfigValidationError(
@@ -112,7 +112,7 @@ export function loadUserConfig(): OvertureConfigV2 {
  * }
  * ```
  */
-export function loadProjectConfig(projectRoot?: string): OvertureConfigV2 | null {
+export function loadProjectConfig(projectRoot?: string): OvertureConfig | null {
   const configPath = getProjectConfigPath(projectRoot);
 
   // Check if file exists (project config is optional)
@@ -128,7 +128,7 @@ export function loadProjectConfig(projectRoot?: string): OvertureConfigV2 | null
     const parsed = yaml.load(fileContent);
 
     // Validate with Zod
-    const result = OvertureConfigV2Schema.safeParse(parsed);
+    const result = OvertureConfigSchema.safeParse(parsed);
 
     if (!result.success) {
       throw new ConfigValidationError(
@@ -172,7 +172,7 @@ export function loadProjectConfig(projectRoot?: string): OvertureConfigV2 | null
  * const merged = mergeConfigs(user, project);
  * ```
  */
-export function mergeConfigs(userConfig: OvertureConfigV2, projectConfig: OvertureConfigV2 | null): OvertureConfigV2 {
+export function mergeConfigs(userConfig: OvertureConfig, projectConfig: OvertureConfig | null): OvertureConfig {
   // If no project config, return user config as-is
   if (!projectConfig) {
     return userConfig;
@@ -200,37 +200,45 @@ export function mergeConfigs(userConfig: OvertureConfigV2, projectConfig: Overtu
     version: projectConfig.version || userConfig.version,
     clients: Object.keys(mergedClients).length > 0 ? mergedClients : undefined,
     mcp: mergedMcp,
-    sync: Object.keys(mergedSync).length > 0 ? (mergedSync as OvertureConfigV2['sync']) : undefined,
+    sync: Object.keys(mergedSync).length > 0 ? (mergedSync as OvertureConfig['sync']) : undefined,
   };
 }
 
 /**
- * Load and merge configuration
+ * Load and merge configuration with automatic project detection
  *
- * Convenience function that loads both user and project configs and merges them.
- * User config is optional - if it doesn't exist, only project config is used.
- * At least one config (user or project) must exist.
+ * Context-aware configuration loading:
+ * - If run in a project directory (has .overture/config.yaml in cwd or ancestors):
+ *   Loads user config + project config and merges them
+ * - If run outside any project:
+ *   Loads only user config
  *
- * @param projectRoot - Project root directory (optional)
- * @returns Merged configuration
+ * @param projectRoot - Project root directory (optional, auto-detected if not provided)
+ * @returns Merged configuration (user + project if in project, otherwise just user)
  * @throws {ConfigLoadError} If no configuration is found
  * @throws {ConfigValidationError} If either config is invalid
  *
  * @example
  * ```typescript
- * try {
- *   const config = loadConfig();
- *   console.log(config.mcp); // All MCP servers (user + project)
- * } catch (error) {
- *   if (error instanceof ConfigLoadError) {
- *     console.error('Config not found:', error.path);
- *   }
- * }
+ * // Inside a project directory
+ * const config = loadConfig();
+ * // Returns: merged user + project config
+ *
+ * // Outside any project
+ * const config = loadConfig();
+ * // Returns: user config only
+ *
+ * // Force specific project root
+ * const config = loadConfig('/path/to/project');
+ * // Returns: merged config for that project
  * ```
  */
-export function loadConfig(projectRoot?: string): OvertureConfigV2 {
+export function loadConfig(projectRoot?: string): OvertureConfig {
+  // Auto-detect project root if not provided
+  const detectedProjectRoot = projectRoot || findProjectRoot();
+
   // Try to load user config (optional)
-  let userConfig: OvertureConfigV2 | null = null;
+  let userConfig: OvertureConfig | null = null;
   try {
     userConfig = loadUserConfig();
   } catch (error) {
@@ -240,14 +248,17 @@ export function loadConfig(projectRoot?: string): OvertureConfigV2 {
     }
   }
 
-  // Try to load project config (optional)
-  const projectConfig = loadProjectConfig(projectRoot);
+  // Try to load project config (only if we detected a project)
+  let projectConfig: OvertureConfig | null = null;
+  if (detectedProjectRoot) {
+    projectConfig = loadProjectConfig(detectedProjectRoot);
+  }
 
   // At least one config must exist
   if (!userConfig && !projectConfig) {
     throw new ConfigLoadError(
       'No configuration found. Run "overture user init" to create user config or "overture init" for project config.',
-      projectRoot || process.cwd()
+      detectedProjectRoot || process.cwd()
     );
   }
 
@@ -259,7 +270,7 @@ export function loadConfig(projectRoot?: string): OvertureConfigV2 {
     return projectConfig;
   }
 
-  // Both exist, merge them
+  // Both exist, merge them (project context)
   return mergeConfigs(userConfig, projectConfig);
 }
 

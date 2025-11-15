@@ -11,7 +11,7 @@ import {
   restoreLatestBackup,
 } from '../../core/restore-service';
 import { adapterRegistry } from '../../adapters/adapter-registry';
-import type { ClientName } from '../../domain/config-v2.types';
+import type { ClientName } from '../../domain/config.types';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
 import { getPlatform } from '../../core/path-resolver';

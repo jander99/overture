@@ -13,25 +13,32 @@ Overture bridges Claude Code plugins and MCP servers by:
 
 Defines user-level preferences and globally available MCP servers.
 
+**Note:** MCPs defined in this file are automatically treated as global scope (synced to `~/.config/claude/mcp.json`).
+
 ```yaml
 version: "1.0"
 
-# Global MCP servers (configured in ~/.config/claude/mcp.json)
+# Global MCP servers (synced to ~/.config/claude/mcp.json)
 mcp:
   sequentialthinking:
-    scope: global
+    command: npx
+    args: [-y, @modelcontextprotocol/server-sequential-thinking]
 
   filesystem:
-    scope: global
+    command: npx
+    args: [-y, @modelcontextprotocol/server-filesystem, /home/user]
 
   memory:
-    scope: global
+    command: npx
+    args: [-y, @modelcontextprotocol/server-memory]
 
   context7:
-    scope: global
+    command: npx
+    args: [-y, @context7/server]
 
   nx:
-    scope: global
+    command: npx
+    args: [nx-mcp]
 
 # Default plugins for new projects
 default_plugins:
@@ -42,6 +49,8 @@ default_plugins:
 ### Project Configuration: `<project>/.overture/config.yaml`
 
 Declares which plugins to install and which MCP servers to configure.
+
+**Note:** MCPs defined in this file are automatically treated as project scope (synced to `.mcp.json`).
 
 ```yaml
 version: "1.0"
@@ -68,44 +77,33 @@ plugins:
     enabled: true
     mcps: [sqlite, filesystem]
 
-# MCP server configurations
+# MCP server configurations (synced to .mcp.json)
 mcp:
-  # Global MCPs (reference only, configured in ~/.config/claude/mcp.json)
-  filesystem:
-    scope: global
-
-  # Project-scoped MCPs (will be added to .mcp.json)
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   docker:
     command: docker-mcp-server
-    scope: project
 
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
 
   github:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 
   postgres:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
     env:
       POSTGRES_URL: "${DATABASE_URL}"
-    scope: project
     enabled: false  # Disabled by default, enable with: overture enable mcp postgres
 ```
 
@@ -130,9 +128,12 @@ mcp_server_name:
   env: map<string, string>    # Environment variables (optional)
 
   # Metadata
-  scope: global | project     # Where this MCP is configured
   enabled: boolean            # Whether server is active (default: true)
 ```
+
+**Note:** Scope is implicit based on file location:
+- MCPs in `~/.config/overture/config.yaml` are global (synced to `~/.config/claude/mcp.json`)
+- MCPs in `.overture/config.yaml` are project-scoped (synced to `.mcp.json`)
 
 ## Generated CLAUDE.md Structure
 
@@ -208,11 +209,13 @@ interface PluginConfig {
 }
 
 interface McpServerConfig {
-  command?: string;         // Not needed for global scope references
+  command: string;
   args?: string[];
   env?: Record<string, string>;
-  scope: 'global' | 'project';
   enabled?: boolean;        // default: true
+  // Note: Scope is implicit based on file location
+  //  - ~/.config/overture/config.yaml → global
+  //  - .overture/config.yaml → project
 }
 ```
 

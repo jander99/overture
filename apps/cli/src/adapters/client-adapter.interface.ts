@@ -8,7 +8,7 @@
  * @version 2.0
  */
 
-import type { Platform, ClientName, TransportType, OvertureConfigV2 } from '../domain/config-v2.types';
+import type { Platform, ClientName, TransportType, OvertureConfig } from '../domain/config.types';
 
 /**
  * Client MCP configuration format
@@ -113,7 +113,7 @@ export interface ClientAdapter {
    * @param platform - Target platform
    * @returns Client-specific config ready to write
    */
-  convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig;
+  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig;
 
   /**
    * Check if client supports a transport type
@@ -171,7 +171,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
   abstract detectConfigPath(platform: Platform, projectRoot?: string): ConfigPathResult;
   abstract readConfig(path: string): ClientMcpConfig;
   abstract writeConfig(path: string, config: ClientMcpConfig): void;
-  abstract convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig;
+  abstract convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig;
   abstract supportsTransport(transport: TransportType): boolean;
   abstract needsEnvVarExpansion(): boolean;
 
@@ -191,7 +191,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
    * @returns True if MCP should be included for this client
    */
   protected shouldSyncMcp(
-    mcpConfig: OvertureConfigV2['mcp'][string],
+    mcpConfig: OvertureConfig['mcp'][string],
     platform: Platform
   ): boolean {
     // Check platform exclusions

@@ -17,7 +17,7 @@
 
 import * as fs from 'fs';
 import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig } from './client-adapter.interface';
-import type { Platform, OvertureConfigV2 } from '../domain/config-v2.types';
+import type { Platform, OvertureConfig } from '../domain/config.types';
 import { getCopilotCliPath } from '../core/path-resolver';
 
 /**
@@ -66,7 +66,7 @@ export class CopilotCliAdapter extends BaseClientAdapter {
     }
   }
 
-  convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig {
+  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
     const mcpServers: Record<string, any> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {

@@ -5,7 +5,7 @@ import { Command } from 'commander';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
 import { CONFIG_PATH } from '../../domain/constants';
-import type { OvertureConfigV2 } from '../../domain/config-v2.types';
+import type { OvertureConfig } from '../../domain/config.types';
 
 /**
  * Creates the 'init' command for initializing Overture configuration.
@@ -40,7 +40,7 @@ export function createInitCommand(): Command {
         Logger.info('Initializing Overture configuration...');
 
         // Create basic v0.2 config
-        const config: OvertureConfigV2 = {
+        const config: OvertureConfig = {
           version: '2.0',
           project: {
             name: projectName,

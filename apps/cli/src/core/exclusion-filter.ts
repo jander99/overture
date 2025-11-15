@@ -11,7 +11,7 @@
  * @version 2.0
  */
 
-import type { Platform, OvertureConfigV2 } from '../domain/config-v2.types';
+import type { Platform, OvertureConfig } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 
 /**
@@ -28,19 +28,17 @@ export interface FilterResult {
  * @param mcps - MCP configurations from Overture config
  * @param client - Target client adapter
  * @param platform - Target platform
- * @param scope - Filter by scope ('global' or 'project')
  * @returns Filtered MCP configurations
  */
 export function filterMcpsForClient(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
-  platform: Platform,
-  scope?: 'global' | 'project'
-): OvertureConfigV2['mcp'] {
-  const filtered: OvertureConfigV2['mcp'] = {};
+  platform: Platform
+): OvertureConfig['mcp'] {
+  const filtered: OvertureConfig['mcp'] = {};
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
-    const result = shouldIncludeMcp(mcpConfig, client, platform, scope);
+    const result = shouldIncludeMcp(mcpConfig, client, platform);
     if (result.included) {
       filtered[name] = mcpConfig;
     }
@@ -55,20 +53,13 @@ export function filterMcpsForClient(
  * @param mcpConfig - MCP configuration
  * @param client - Target client adapter
  * @param platform - Target platform
- * @param scopeFilter - Optional scope filter
  * @returns Filter result with reason
  */
 export function shouldIncludeMcp(
-  mcpConfig: OvertureConfigV2['mcp'][string],
+  mcpConfig: OvertureConfig['mcp'][string],
   client: ClientAdapter,
-  platform: Platform,
-  scopeFilter?: 'global' | 'project'
+  platform: Platform
 ): FilterResult {
-  // Check scope filter (if specified)
-  if (scopeFilter && mcpConfig.scope !== scopeFilter) {
-    return { included: false, reason: `Scope mismatch: expected ${scopeFilter}, got ${mcpConfig.scope}` };
-  }
-
   // Check platform exclusions
   if (mcpConfig.platforms?.exclude?.includes(platform)) {
     return { included: false, reason: `Platform ${platform} is excluded` };
@@ -101,7 +92,7 @@ export function shouldIncludeMcp(
  * @returns Array of excluded MCP names with reasons
  */
 export function getExcludedMcps(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
   platform: Platform
 ): Array<{ name: string; reason: string }> {
@@ -132,11 +123,10 @@ export interface FilterSummary {
   excludedByPlatform: number;
   excludedByClient: number;
   excludedByTransport: number;
-  excludedByScope: number;
 }
 
 export function getFilterSummary(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
   platform: Platform
 ): FilterSummary {
@@ -147,7 +137,6 @@ export function getFilterSummary(
     excludedByPlatform: 0,
     excludedByClient: 0,
     excludedByTransport: 0,
-    excludedByScope: 0,
   };
 
   for (const [, mcpConfig] of Object.entries(mcps)) {
@@ -164,8 +153,6 @@ export function getFilterSummary(
         summary.excludedByClient++;
       } else if (result.reason?.includes('Transport')) {
         summary.excludedByTransport++;
-      } else if (result.reason?.includes('Scope')) {
-        summary.excludedByScope++;
       }
     }
   }
@@ -190,7 +177,7 @@ export interface ValidationResult {
 
 export function validateRequiredMcps(
   requiredMcps: string[],
-  availableMcps: OvertureConfigV2['mcp'],
+  availableMcps: OvertureConfig['mcp'],
   client: ClientAdapter,
   platform: Platform
 ): ValidationResult {

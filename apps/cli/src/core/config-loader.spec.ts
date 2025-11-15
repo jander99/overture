@@ -17,7 +17,7 @@ import {
   ConfigLoadError,
   ConfigValidationError,
 } from './config-loader';
-import type { OvertureConfigV2 } from '../domain/config-v2.schema';
+import type { OvertureConfig } from '../domain/config.schema';
 
 // Mock fs module
 jest.mock('fs');
@@ -31,14 +31,19 @@ const mockOs = os as jest.Mocked<typeof os>;
 jest.mock('./path-resolver', () => ({
   getUserConfigPath: jest.fn(() => '/home/testuser/.config/overture.yml'),
   getProjectConfigPath: jest.fn(() => '/mock/project/.overture/config.yaml'),
+  findProjectRoot: jest.fn(() => null),
 }));
+
+import * as pathResolver from './path-resolver';
+const mockFindProjectRoot = pathResolver.findProjectRoot as jest.Mock;
 
 describe('Config Loader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFindProjectRoot.mockReturnValue(null);
   });
 
-  const validUserConfig: OvertureConfigV2 = {
+  const validUserConfig: OvertureConfig = {
     version: '2.0',
     clients: {
       'claude-code': {
@@ -51,7 +56,6 @@ describe('Config Loader', () => {
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
       },
     },
     sync: {
@@ -63,7 +67,7 @@ describe('Config Loader', () => {
     },
   };
 
-  const validProjectConfig: OvertureConfigV2 = {
+  const validProjectConfig: OvertureConfig = {
     version: '2.0',
     mcp: {
       filesystem: {
@@ -71,7 +75,6 @@ describe('Config Loader', () => {
         args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
         env: {},
         transport: 'stdio',
-        scope: 'project',
       },
       github: {
         command: 'mcp-server-github-custom',
@@ -80,7 +83,6 @@ describe('Config Loader', () => {
           GITHUB_TOKEN: '${GITHUB_TOKEN}',
         },
         transport: 'http',
-        scope: 'project',
       },
     },
   };
@@ -99,7 +101,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
 sync:
   backup: true
   backupDir: ~/.config/overture/backups
@@ -162,7 +163,6 @@ mcp:
     command: mcp-server-github
     args: []
     env: {}
-    scope: global
 `);
 
       expect(() => loadUserConfig()).toThrow(ConfigValidationError);
@@ -178,7 +178,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
     version: "1.2.3"
 `);
 
@@ -198,7 +197,6 @@ mcp:
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
     env: {}
     transport: stdio
-    scope: project
 `);
 
       const config = loadProjectConfig();
@@ -244,7 +242,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: project
 `);
 
       const config = loadProjectConfig('/custom/project');
@@ -271,7 +268,7 @@ mcp:
     });
 
     it('should preserve user MCPs not in project config', () => {
-      const userWithExtra: OvertureConfigV2 = {
+      const userWithExtra: OvertureConfig = {
         ...validUserConfig,
         mcp: {
           ...validUserConfig.mcp,
@@ -280,7 +277,6 @@ mcp:
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -296,7 +292,7 @@ mcp:
     });
 
     it('should merge client settings with project overriding user', () => {
-      const projectWithClients: OvertureConfigV2 = {
+      const projectWithClients: OvertureConfig = {
         ...validProjectConfig,
         clients: {
           'claude-code': {
@@ -315,7 +311,7 @@ mcp:
     });
 
     it('should merge sync options with project overriding user', () => {
-      const projectWithSync: OvertureConfigV2 = {
+      const projectWithSync: OvertureConfig = {
         ...validProjectConfig,
         sync: {
           backup: false,
@@ -334,7 +330,7 @@ mcp:
     });
 
     it('should use project version if present', () => {
-      const projectWithVersion: OvertureConfigV2 = {
+      const projectWithVersion: OvertureConfig = {
         ...validProjectConfig,
         version: '2.1',
       };
@@ -344,7 +340,7 @@ mcp:
     });
 
     it('should handle empty project config', () => {
-      const emptyProject: OvertureConfigV2 = {
+      const emptyProject: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -359,6 +355,9 @@ mcp:
 
   describe('loadConfig', () => {
     it('should load and merge both configs', () => {
+      // Mock project detection to return a project root
+      mockFindProjectRoot.mockReturnValue('/mock/project');
+
       // Mock user config
       mockFs.existsSync.mockImplementation((path) => {
         return path.includes('overture.yml') || path.includes('config.yaml');
@@ -374,7 +373,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
 `;
         } else {
           return `
@@ -385,7 +383,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: project
 `;
         }
       });
@@ -409,7 +406,6 @@ mcp:
     args: []
     env: {}
     transport: stdio
-    scope: global
 `);
 
       const config = loadConfig();

@@ -13,7 +13,7 @@ import {
   hasTransportIssues,
   formatTransportWarnings,
 } from './transport-validator';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 
 // Mock client adapter
@@ -73,27 +73,24 @@ describe('Transport Validator', () => {
     it('should validate all MCPs', () => {
       const adapter = createMockAdapter('claude-code', ['stdio', 'http']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         'http-server': {
           command: 'server',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         'sse-server': {
           command: 'sse',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       };
 
@@ -117,27 +114,24 @@ describe('Transport Validator', () => {
     it('should return warnings for unsupported transports', () => {
       const adapter = createMockAdapter('claude-code', ['stdio']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         'http-server': {
           command: 'server',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         'sse-server': {
           command: 'sse',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       };
 
@@ -159,13 +153,12 @@ describe('Transport Validator', () => {
     it('should return empty array if all transports supported', () => {
       const adapter = createMockAdapter('claude-code', ['stdio', 'http', 'sse']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       };
 
@@ -179,27 +172,24 @@ describe('Transport Validator', () => {
     it('should filter out unsupported transports', () => {
       const adapter = createMockAdapter('claude-code', ['stdio', 'http']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         'http-server': {
           command: 'server',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         'sse-server': {
           command: 'sse',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       };
 
@@ -212,13 +202,12 @@ describe('Transport Validator', () => {
     it('should return empty object if no supported transports', () => {
       const adapter = createMockAdapter('claude-code', ['stdio']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         'http-server': {
           command: 'server',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       };
 
@@ -230,27 +219,24 @@ describe('Transport Validator', () => {
     it('should return all MCPs if all transports supported', () => {
       const adapter = createMockAdapter('claude-desktop', ['stdio', 'http', 'sse']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         stdio: {
           command: 'cmd1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         http: {
           command: 'cmd2',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         sse: {
           command: 'cmd3',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       };
 
@@ -264,41 +250,36 @@ describe('Transport Validator', () => {
     it('should provide accurate summary', () => {
       const adapter = createMockAdapter('claude-code', ['stdio', 'http']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         stdio1: {
           command: 'cmd1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         stdio2: {
           command: 'cmd2',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         http1: {
           command: 'cmd3',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         sse1: {
           command: 'cmd4',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
         sse2: {
           command: 'cmd5',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
       };
 
@@ -327,13 +308,12 @@ describe('Transport Validator', () => {
     it('should return true if unsupported transports exist', () => {
       const adapter = createMockAdapter('claude-code', ['stdio']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         http: {
           command: 'cmd',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       };
 
@@ -343,20 +323,18 @@ describe('Transport Validator', () => {
     it('should return false if all transports supported', () => {
       const adapter = createMockAdapter('claude-code', ['stdio', 'http']);
 
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         stdio: {
           command: 'cmd1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         http: {
           command: 'cmd2',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       };
 

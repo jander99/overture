@@ -16,7 +16,7 @@ import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
 import { AdapterRegistry } from './adapter-registry';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -58,7 +58,7 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle convertFromOverture with all override branches', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         withPlatformCommand: {
@@ -66,7 +66,6 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
           args: ['base-arg'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: {
               darwin: 'darwin-cmd',
@@ -78,7 +77,6 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             argsOverrides: {
               darwin: ['darwin-arg1', 'darwin-arg2'],
@@ -90,7 +88,6 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val' },
           transport: 'stdio',
-          scope: 'global',
           clients: {
             overrides: {
               'claude-desktop': {
@@ -113,7 +110,7 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
   });
 
   it('should omit env when empty after overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -121,7 +118,6 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       },
     };
@@ -157,7 +153,7 @@ describe('CopilotCliAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle all override branches', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -165,7 +161,6 @@ describe('CopilotCliAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: { linux: 'linux-cmd' },
             argsOverrides: { linux: ['linux-arg'] },
@@ -216,7 +211,7 @@ describe('WindsurfAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle all override branches', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -224,7 +219,6 @@ describe('WindsurfAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: { linux: 'linux-cmd' },
             argsOverrides: { linux: ['linux-arg'] },
@@ -280,7 +274,7 @@ describe('JetBrainsCopilotAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle all override branches with env expansion', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -288,7 +282,6 @@ describe('JetBrainsCopilotAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val', TOKEN: '${TEST_TOKEN}' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: { linux: 'linux-cmd' },
             argsOverrides: { linux: ['linux-arg'] },
@@ -345,7 +338,7 @@ describe('VSCodeAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle all override branches with env expansion', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -353,7 +346,6 @@ describe('VSCodeAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val', KEY: '${API_KEY}' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: { linux: 'linux-cmd' },
             argsOverrides: { linux: ['linux-arg'] },
@@ -407,7 +399,7 @@ describe('CursorAdapter - Complete Branch Coverage', () => {
   });
 
   it('should handle all override branches', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -415,7 +407,6 @@ describe('CursorAdapter - Complete Branch Coverage', () => {
           args: ['base'],
           env: { BASE: 'val' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             commandOverrides: { linux: 'linux-cmd' },
             argsOverrides: { linux: ['linux-arg'] },

@@ -15,7 +15,7 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -231,7 +231,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should omit env object when empty', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -239,7 +239,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -250,7 +249,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should include env object when not empty', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -258,7 +257,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: { KEY: 'value' },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -269,7 +267,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should apply args overrides correctly', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -277,7 +275,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: ['original'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               argsOverrides: {
                 linux: ['override1', 'override2'],
@@ -293,7 +290,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should merge client override env with base env', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -301,7 +298,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: { BASE: 'base-value', SHARED: 'original' },
             transport: 'stdio',
-            scope: 'global',
             clients: {
               overrides: {
                 'claude-code': {
@@ -323,7 +319,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should handle transport override in client config', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -331,7 +327,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               overrides: {
                 vscode: {
@@ -349,7 +344,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('should handle empty mcp config object', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -392,7 +387,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('VSCodeAdapter should expand environment variables', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -403,7 +398,6 @@ describe('Adapter Error Handling - All Adapters', () => {
               GITHUB_TOKEN: '${GITHUB_TOKEN}',
             },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -415,7 +409,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('JetBrainsCopilotAdapter should expand environment variables', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           test: {
@@ -425,7 +419,6 @@ describe('Adapter Error Handling - All Adapters', () => {
               TEST_VAR: '${TEST_VAR}',
             },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -438,7 +431,7 @@ describe('Adapter Error Handling - All Adapters', () => {
 
   describe('Transport filtering', () => {
     it('ClaudeDesktopAdapter should filter out http transport', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           httpOnly: {
@@ -446,7 +439,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -457,7 +449,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('ClaudeDesktopAdapter should filter out sse transport', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           sseOnly: {
@@ -465,7 +457,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'sse',
-            scope: 'global',
           },
         },
       };
@@ -476,7 +467,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('WindsurfAdapter should filter out non-stdio transports', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           stdio: {
@@ -484,21 +475,18 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
           http: {
             command: 'test',
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
           sse: {
             command: 'test',
             args: [],
             env: {},
             transport: 'sse',
-            scope: 'global',
           },
         },
       };
@@ -511,7 +499,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('CopilotCliAdapter should filter out non-stdio transports', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           http: {
@@ -519,7 +507,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -530,7 +517,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('JetBrainsCopilotAdapter should filter out non-stdio transports', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           sse: {
@@ -538,7 +525,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'sse',
-            scope: 'global',
           },
         },
       };
@@ -549,7 +535,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('VSCodeAdapter should filter out sse transport', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           sse: {
@@ -557,7 +543,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'sse',
-            scope: 'global',
           },
         },
       };
@@ -568,7 +553,7 @@ describe('Adapter Error Handling - All Adapters', () => {
     });
 
     it('CursorAdapter should filter out sse transport', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           sse: {
@@ -576,7 +561,6 @@ describe('Adapter Error Handling - All Adapters', () => {
             args: [],
             env: {},
             transport: 'sse',
-            scope: 'global',
           },
         },
       };

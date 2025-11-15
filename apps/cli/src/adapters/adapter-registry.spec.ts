@@ -6,7 +6,7 @@
 
 import { AdapterRegistry } from './adapter-registry';
 import type { ClientAdapter, ConfigPathResult, ClientMcpConfig } from './client-adapter.interface';
-import type { Platform, ClientName, TransportType, OvertureConfigV2 } from '../domain/config-v2.types';
+import type { Platform, ClientName, TransportType, OvertureConfig } from '../domain/config.types';
 
 // Mock adapter for testing
 class MockAdapter implements ClientAdapter {
@@ -29,7 +29,7 @@ class MockAdapter implements ClientAdapter {
     // Mock implementation
   }
 
-  convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig {
+  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
     return { [this.schemaRootKey]: {} };
   }
 

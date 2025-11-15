@@ -6,9 +6,9 @@ import { Command } from 'commander';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
 import { getUserConfigPath } from '../../core/path-resolver';
-import { OvertureConfigV2Schema } from '../../domain/config-v2.schema';
+import { OvertureConfigSchema } from '../../domain/config.schema';
 import { loadUserConfig, hasUserConfig, ConfigLoadError } from '../../core/config-loader';
-import type { OvertureConfigV2 } from '../../domain/config-v2.types';
+import type { OvertureConfig } from '../../domain/config.types';
 
 /**
  * Common MCP servers available for global configuration
@@ -27,55 +27,48 @@ const COMMON_MCP_SERVERS: Array<{ name: string; value: string; checked?: boolean
 /**
  * MCP server configurations with sensible defaults
  */
-const MCP_SERVER_DEFAULTS: Record<string, Partial<OvertureConfigV2['mcp'][string]>> = {
+const MCP_SERVER_DEFAULTS: Record<string, Partial<OvertureConfig['mcp'][string]>> = {
   filesystem: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-filesystem', '/home'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   memory: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-memory'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   sequentialthinking: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-sequential-thinking'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   context7: {
     command: 'npx',
     args: ['-y', '@context7/mcp-server'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   nx: {
     command: 'npx',
     args: ['-y', '@nx/mcp-server'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   github: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
     env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
     transport: 'stdio',
-    scope: 'global',
   },
   sqlite: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-sqlite'],
     env: {},
     transport: 'stdio',
-    scope: 'global',
   },
   postgres: {
     command: 'npx',
@@ -84,7 +77,6 @@ const MCP_SERVER_DEFAULTS: Record<string, Partial<OvertureConfigV2['mcp'][string
       POSTGRES_CONNECTION_STRING: '${POSTGRES_CONNECTION_STRING}',
     },
     transport: 'stdio',
-    scope: 'global',
   },
 };
 
@@ -146,7 +138,7 @@ export function createUserCommand(): Command {
         }
 
         // Build MCP configuration
-        const mcpConfig: OvertureConfigV2['mcp'] = {};
+        const mcpConfig: OvertureConfig['mcp'] = {};
         for (const mcpName of selectedMcps) {
           const defaults = MCP_SERVER_DEFAULTS[mcpName];
           if (defaults) {
@@ -161,7 +153,7 @@ export function createUserCommand(): Command {
         }
 
         // Build user configuration
-        const userConfig: OvertureConfigV2 = {
+        const userConfig: OvertureConfig = {
           version: '2.0',
           mcp: mcpConfig,
           clients: {
@@ -183,7 +175,7 @@ export function createUserCommand(): Command {
         };
 
         // Validate configuration
-        const validationResult = OvertureConfigV2Schema.safeParse(userConfig);
+        const validationResult = OvertureConfigSchema.safeParse(userConfig);
         if (!validationResult.success) {
           Logger.error('Configuration validation failed');
           Logger.error(validationResult.error.message);
@@ -300,7 +292,7 @@ export function createUserCommand(): Command {
  * @param configPath - Path to config file
  * @param format - Output format (yaml or json)
  */
-function displayUserConfig(config: OvertureConfigV2, configPath: string, format: OutputFormat): void {
+function displayUserConfig(config: OvertureConfig, configPath: string, format: OutputFormat): void {
   // Header
   Logger.nl();
   console.log(chalk.bold.cyan('User Global Configuration'));

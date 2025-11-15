@@ -31,7 +31,7 @@ import { adapterRegistry } from '../../adapters/adapter-registry';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
 import * as PathResolver from '../../core/path-resolver';
-import type { ClientName } from '../../domain/config-v2.types';
+import type { ClientName } from '../../domain/config.types';
 import type { BackupMetadata } from '../../core/backup-service';
 import type { RestoreResult } from '../../core/restore-service';
 

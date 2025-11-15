@@ -9,7 +9,7 @@
  * - Optional version field (defaults to "latest")
  * - Client-specific overrides and platform exclusions
  *
- * @module domain/config-v2.types
+ * @module domain/config.types
  * @version 2.0
  */
 
@@ -63,13 +63,12 @@ export type MergeStrategy = 'append' | 'replace';
  *     env:
  *       GITHUB_TOKEN: "${GITHUB_TOKEN}"
  *     transport: stdio
- *     scope: global
  *     version: "1.0.0"
  *     clients:
  *       exclude: [copilot-cli]  # Copilot CLI bundles this by default
  * ```
  */
-export interface McpServerConfigV2 {
+export interface McpServerConfig {
   /**
    * Executable command to launch the MCP server
    * @example "npx", "uvx", "mcp-server-github"
@@ -96,13 +95,6 @@ export interface McpServerConfigV2 {
    * - sse: Server-Sent Events (not all clients support)
    */
   transport: TransportType;
-
-  /**
-   * Configuration scope
-   * - global: Sync to all clients (default for user config)
-   * - project: Sync to project clients only (default for project config)
-   */
-  scope: Scope;
 
   /**
    * MCP server version (optional, defaults to "latest")
@@ -132,7 +124,7 @@ export interface McpServerConfigV2 {
      * Client-specific configuration overrides
      * @example { "vscode": { "transport": "http" } }
      */
-    overrides?: Record<ClientName, Partial<McpServerConfigV2>>;
+    overrides?: Record<ClientName, Partial<McpServerConfig>>;
   };
 
   /**
@@ -273,7 +265,7 @@ export interface SyncOptions {
  *   mergeStrategy: append
  * ```
  */
-export interface OvertureConfigV2 {
+export interface OvertureConfig {
   /**
    * Configuration schema version
    * @example "2.0"
@@ -288,9 +280,9 @@ export interface OvertureConfigV2 {
 
   /**
    * MCP server definitions
-   * Key: MCP server name, Value: McpServerConfigV2
+   * Key: MCP server name, Value: McpServerConfig
    */
-  mcp: Record<string, McpServerConfigV2>;
+  mcp: Record<string, McpServerConfig>;
 
   /**
    * Synchronization options
@@ -317,7 +309,7 @@ export interface ClientMcpConfig {
 /**
  * Client-specific MCP server definition
  *
- * Minimal fields required by clients (after conversion from OvertureConfigV2).
+ * Minimal fields required by clients (after conversion from OvertureConfig).
  */
 export interface ClientMcpServerDef {
   /**

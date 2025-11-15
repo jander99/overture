@@ -7,7 +7,7 @@
  */
 
 import { syncClients, syncClient } from './sync-engine';
-import type { OvertureConfigV2, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, Platform } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 import * as configLoader from './config-loader';
 import * as adapterRegistry from '../adapters/adapter-registry';
@@ -53,7 +53,7 @@ const createMockAdapter = (
 describe('Sync Engine', () => {
   const platform: Platform = 'linux';
 
-  const testUserConfig: OvertureConfigV2 = {
+  const testUserConfig: OvertureConfig = {
     version: '2.0',
     mcp: {
       github: {
@@ -61,14 +61,12 @@ describe('Sync Engine', () => {
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
       },
       filesystem: {
         command: 'fs',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
       },
     },
   };
@@ -227,49 +225,8 @@ describe('Sync Engine', () => {
       expect(result.results[0].diff.hasChanges).toBe(true);
     });
 
-    it('should filter MCPs by scope', async () => {
-      const configWithScopes: OvertureConfigV2 = {
-        version: '2.0',
-        mcp: {
-          global: {
-            command: 'g',
-            args: [],
-            env: {},
-            transport: 'stdio',
-            scope: 'global',
-          },
-          project: {
-            command: 'p',
-            args: [],
-            env: {},
-            transport: 'stdio',
-            scope: 'project',
-          },
-        },
-      };
-
-      mockConfigLoader.loadUserConfig.mockResolvedValue(configWithScopes);
-      mockConfigLoader.mergeConfigs.mockReturnValue(configWithScopes);
-
-      const adapter = createMockAdapter('claude-code');
-      adapter.readConfig.mockResolvedValue(null);
-
-      mockGetAdapterForClient.mockReturnValue(adapter);
-
-      await syncClients({
-        clients: ['claude-code'],
-        scope: 'global',
-        platform,
-      });
-
-      expect(adapter.writeConfig).toHaveBeenCalled();
-      const writtenConfig = adapter.writeConfig.mock.calls[0][1];
-      expect(writtenConfig.mcpServers.global).toBeDefined();
-      expect(writtenConfig.mcpServers.project).toBeUndefined();
-    });
-
     it('should warn about transport issues', async () => {
-      const configWithHttp: OvertureConfigV2 = {
+      const configWithHttp: OvertureConfig = {
         version: '2.0',
         mcp: {
           http: {
@@ -277,7 +234,6 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -301,7 +257,7 @@ describe('Sync Engine', () => {
     });
 
     it('should force sync with transport warnings if --force used', async () => {
-      const configWithHttp: OvertureConfigV2 = {
+      const configWithHttp: OvertureConfig = {
         version: '2.0',
         mcp: {
           http: {
@@ -309,7 +265,6 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -334,7 +289,7 @@ describe('Sync Engine', () => {
     });
 
     it('should merge user and project configs', async () => {
-      const userConfig: OvertureConfigV2 = {
+      const userConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           global: {
@@ -342,12 +297,11 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
 
-      const projectConfig: OvertureConfigV2 = {
+      const projectConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           project: {
@@ -355,12 +309,11 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'project',
           },
         },
       };
 
-      const merged: OvertureConfigV2 = {
+      const merged: OvertureConfig = {
         version: '2.0',
         mcp: {
           global: userConfig.mcp.global,
@@ -469,7 +422,7 @@ describe('Sync Engine', () => {
     });
 
     it('should filter by client platform exclusions', async () => {
-      const configWithExclusions: OvertureConfigV2 = {
+      const configWithExclusions: OvertureConfig = {
         version: '2.0',
         mcp: {
           linux_only: {
@@ -477,7 +430,6 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               exclude: ['darwin', 'win32'],
             },
@@ -503,7 +455,7 @@ describe('Sync Engine', () => {
     });
 
     it('should filter by client include/exclude rules', async () => {
-      const configWithClientRules: OvertureConfigV2 = {
+      const configWithClientRules: OvertureConfig = {
         version: '2.0',
         mcp: {
           vscode_only: {
@@ -511,7 +463,6 @@ describe('Sync Engine', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               include: ['vscode'],
             },
@@ -565,7 +516,7 @@ describe('Sync Engine', () => {
 
   describe('Environment variable expansion', () => {
     it('should expand env vars for clients that need it', async () => {
-      const configWithEnvVars: OvertureConfigV2 = {
+      const configWithEnvVars: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -573,7 +524,6 @@ describe('Sync Engine', () => {
             args: ['${USER}'],
             env: { TOKEN: '${GITHUB_TOKEN}' },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };

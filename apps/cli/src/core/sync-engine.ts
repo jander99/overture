@@ -20,7 +20,7 @@
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { OvertureConfigV2, ClientName, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, ClientName, Platform } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 import type { ClientMcpConfig } from '../adapters/client-adapter.interface';
 import { getAdapterForClient } from '../adapters/adapter-registry';
@@ -31,6 +31,7 @@ import { expandEnvVarsInClientConfig } from './client-env-service';
 import { backupClientConfig } from './backup-service';
 import { generateDiff } from './config-diff';
 import { acquireLock, releaseLock } from './process-lock';
+import { findProjectRoot } from './path-resolver';
 
 /**
  * Sync options
@@ -38,13 +39,11 @@ import { acquireLock, releaseLock } from './process-lock';
 export interface SyncOptions {
   /** Clients to sync (default: all installed) */
   clients?: ClientName[];
-  /** Scope to sync (default: both) */
-  scope?: 'global' | 'project';
   /** Dry run - show what would change without writing */
   dryRun?: boolean;
   /** Force sync even with transport warnings */
   force?: boolean;
-  /** Project root directory (for project-scoped sync) */
+  /** Project root directory (optional, auto-detected if not provided) */
   projectRoot?: string;
   /** Platform override (defaults to current platform) */
   platform?: Platform;
@@ -117,7 +116,7 @@ function ensureDistDirectory(): void {
  */
 async function syncToClient(
   client: ClientAdapter,
-  overtureConfig: OvertureConfigV2,
+  overtureConfig: OvertureConfig,
   options: SyncOptions
 ): Promise<ClientSyncResult> {
   const platform = options.platform || getCurrentPlatform();
@@ -148,11 +147,15 @@ async function syncToClient(
       };
     }
 
+    // Determine which config path to use based on project context
+    // If we're in a project and client supports project configs, use project path
+    // Otherwise use user path
+    const inProject = !!options.projectRoot;
     const configPath =
       typeof configPathResult === 'string'
         ? configPathResult
-        : options.scope === 'project'
-        ? configPathResult.project || ''
+        : inProject && configPathResult.project
+        ? configPathResult.project
         : configPathResult.user;
 
     if (!configPath) {
@@ -186,8 +189,7 @@ async function syncToClient(
     const filteredMcps = filterMcpsForClient(
       overtureConfig.mcp,
       client,
-      platform,
-      options.scope
+      platform
     );
 
     // Read existing config (if exists)
@@ -199,7 +201,7 @@ async function syncToClient(
     }
 
     // Convert Overture config to client format
-    const filteredOvertureConfig: OvertureConfigV2 = {
+    const filteredOvertureConfig: OvertureConfig = {
       ...overtureConfig,
       mcp: filteredMcps,
     };
@@ -270,8 +272,10 @@ async function syncToClient(
  *
  * @example
  * ```typescript
- * // Sync to all installed clients
+ * // Sync to all installed clients (context-aware)
  * const result = await syncClients();
+ * // If in project dir → syncs to project-level configs
+ * // If outside project → syncs to user-level configs
  *
  * // Sync only to Claude Code
  * const result = await syncClients({ clients: ['claude-code'] });
@@ -279,9 +283,8 @@ async function syncToClient(
  * // Dry run to see what would change
  * const result = await syncClients({ dryRun: true });
  *
- * // Sync project-scoped MCPs only
+ * // Force specific project root
  * const result = await syncClients({
- *   scope: 'project',
  *   projectRoot: '/path/to/project'
  * });
  * ```
@@ -292,14 +295,23 @@ export async function syncClients(options: SyncOptions = {}): Promise<SyncResult
   let lockAcquired = false;
 
   try {
+    // Auto-detect project root if not provided
+    const detectedProjectRoot = options.projectRoot || findProjectRoot();
+
     // Load configurations
     const userConfig = await loadUserConfig();
-    const projectConfig = options.projectRoot
-      ? await loadProjectConfig(options.projectRoot)
+    const projectConfig = detectedProjectRoot
+      ? await loadProjectConfig(detectedProjectRoot)
       : null;
 
     // Merge configs (project overrides user)
     const overtureConfig = mergeConfigs(userConfig, projectConfig);
+
+    // Pass detected project root to all sync operations
+    const syncOptionsWithProject: SyncOptions = {
+      ...options,
+      projectRoot: detectedProjectRoot || undefined,
+    };
 
     // Determine which clients to sync
     const targetClients = options.clients || [
@@ -348,7 +360,7 @@ export async function syncClients(options: SyncOptions = {}): Promise<SyncResult
     // Sync to each client
     const results: ClientSyncResult[] = [];
     for (const client of clients) {
-      const result = await syncToClient(client, overtureConfig, options);
+      const result = await syncToClient(client, overtureConfig, syncOptionsWithProject);
       results.push(result);
 
       // Collect warnings and errors

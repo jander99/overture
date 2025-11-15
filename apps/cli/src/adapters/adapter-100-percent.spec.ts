@@ -16,7 +16,7 @@ import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
 import { AdapterRegistry, adapterRegistry } from './adapter-registry';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -231,7 +231,7 @@ describe('Comprehensive Branch Coverage', () => {
     const testCases: Array<{
       name: string;
       adapter: any;
-      config: OvertureConfigV2;
+      config: OvertureConfig;
     }> = [
       {
         name: 'ClaudeCodeAdapter with platform commandOverride',
@@ -244,7 +244,6 @@ describe('Comprehensive Branch Coverage', () => {
               args: [],
               env: {},
               transport: 'stdio',
-              scope: 'global',
               platforms: {
                 commandOverrides: { linux: 'overridden' },
               },
@@ -263,7 +262,6 @@ describe('Comprehensive Branch Coverage', () => {
               args: ['original'],
               env: {},
               transport: 'stdio',
-              scope: 'global',
               platforms: {
                 argsOverrides: { linux: ['overridden'] },
               },
@@ -282,7 +280,6 @@ describe('Comprehensive Branch Coverage', () => {
               args: [],
               env: {},
               transport: 'stdio',
-              scope: 'global',
               clients: {
                 overrides: {
                   'claude-code': {
@@ -305,7 +302,6 @@ describe('Comprehensive Branch Coverage', () => {
               args: ['original'],
               env: {},
               transport: 'stdio',
-              scope: 'global',
               clients: {
                 overrides: {
                   'claude-code': {
@@ -328,7 +324,6 @@ describe('Comprehensive Branch Coverage', () => {
               args: [],
               env: { ORIGINAL: 'val' },
               transport: 'stdio',
-              scope: 'global',
               clients: {
                 overrides: {
                   'claude-code': {

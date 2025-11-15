@@ -14,7 +14,7 @@ import { adapterRegistry } from '../../adapters/adapter-registry';
 import { Logger } from '../../utils/logger';
 import { getPlatform } from '../../core/path-resolver';
 import type { ClientAdapter } from '../../adapters/client-adapter.interface';
-import type { OvertureConfigV2 } from '../../domain/config-v2.types';
+import type { OvertureConfig } from '../../domain/config.types';
 
 // Mock dependencies
 jest.mock('../../core/audit-service');
@@ -56,7 +56,7 @@ describe('CLI Command: audit', () => {
   describe('Successful audit', () => {
     it('should audit all installed clients when no --client flag', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -64,7 +64,6 @@ describe('CLI Command: audit', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -126,7 +125,7 @@ describe('CLI Command: audit', () => {
 
     it('should audit specific client when --client flag provided', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -166,7 +165,7 @@ describe('CLI Command: audit', () => {
 
     it('should report when no unmanaged MCPs found', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -174,7 +173,6 @@ describe('CLI Command: audit', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -204,7 +202,7 @@ describe('CLI Command: audit', () => {
 
     it('should display suggestions section', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -270,7 +268,7 @@ describe('CLI Command: audit', () => {
 
     it('should error when no installed clients found', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -289,7 +287,7 @@ describe('CLI Command: audit', () => {
 
     it('should handle audit service errors gracefully', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -324,7 +322,7 @@ describe('CLI Command: audit', () => {
   describe('Client filtering', () => {
     it('should only audit installed clients', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };
@@ -355,7 +353,7 @@ describe('CLI Command: audit', () => {
 
     it('should verify specific client is installed before auditing', async () => {
       // Arrange
-      const mockConfig: OvertureConfigV2 = {
+      const mockConfig: OvertureConfig = {
         version: '2.0',
         mcp: {},
       };

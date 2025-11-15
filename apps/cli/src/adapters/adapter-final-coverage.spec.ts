@@ -15,7 +15,7 @@ import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
 import { AdapterRegistry, getAdapterForClient } from './adapter-registry';
-import type { OvertureConfigV2 } from '../domain/config-v2.types';
+import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
 jest.mock('fs');
@@ -171,7 +171,7 @@ describe('Uncovered Line Coverage', () => {
 
   describe('CursorAdapter - All branches', () => {
     it('should handle all code paths in convertFromOverture', () => {
-      const overtureConfig: OvertureConfigV2 = {
+      const overtureConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           full: {
@@ -179,7 +179,6 @@ describe('Uncovered Line Coverage', () => {
             args: ['base'],
             env: { KEY: 'val' },
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               commandOverrides: { linux: 'new-cmd' },
               argsOverrides: { linux: ['new-arg'] },
@@ -199,7 +198,6 @@ describe('Uncovered Line Coverage', () => {
             args: [],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -277,7 +275,7 @@ describe('Edge Cases for Complete Coverage', () => {
   });
 
   it('should handle empty platform overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -285,7 +283,6 @@ describe('Edge Cases for Complete Coverage', () => {
           args: ['arg'],
           env: { KEY: 'val' },
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             // Empty overrides
           },
@@ -300,7 +297,7 @@ describe('Edge Cases for Complete Coverage', () => {
   });
 
   it('should handle empty client overrides', () => {
-    const overtureConfig: OvertureConfigV2 = {
+    const overtureConfig: OvertureConfig = {
       version: '2.0',
       mcp: {
         test: {
@@ -308,7 +305,6 @@ describe('Edge Cases for Complete Coverage', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             overrides: {
               vscode: {

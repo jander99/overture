@@ -38,40 +38,33 @@ plugins:
 mcp:
   # Global MCPs (reference only)
   filesystem:
-    scope: global
 
   # Project MCPs
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   docker:
     command: docker-mcp-server
-    scope: project
 
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
 
   github:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 
   postgres:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
     env:
       POSTGRES_URL: "${DATABASE_URL}"
-    scope: project
     enabled: false
 ```
 
@@ -181,22 +174,18 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   maven:
     command: mcp-server-maven
-    scope: project
 
   kubernetes:
     command: kubectl-mcp-server
-    scope: project
 
   postgres:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
     env:
       POSTGRES_URL: "${DATABASE_URL}"
-    scope: project
 ```
 
 ### Generated `CLAUDE.md`
@@ -278,19 +267,15 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   node:
     command: node-mcp-server
-    scope: project
 
   npm:
     command: npm-mcp-server
-    scope: project
 
   playwright:
     command: playwright-mcp-server
-    scope: project
     enabled: false
 ```
 
@@ -360,16 +345,13 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   nx:
-    scope: global  # Configured in ~/.config/claude/mcp.json
 
   github:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 ```
 
 ### Generated `CLAUDE.md`

@@ -46,11 +46,9 @@ mcp:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: global  # Available everywhere
 
   memory:
     command: mcp-server-memory
-    scope: global
 ```
 
 ```bash
@@ -67,12 +65,10 @@ overture sync
 # my-project/.overture.yml
 mcp:
   github:
-    scope: global  # Reference only, already configured globally
 
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project  # Project-specific, added to .mcp.json
 ```
 
 **Dotfiles integration:** Commit `~/.config/overture.yml` to your dotfiles repo. New machine? `overture sync` and you're ready.
@@ -88,16 +84,13 @@ mcp:
 plugins:
   python-development:
     marketplace: claude-code-workflows
-    scope: global  # Available everywhere
 
 # my-project/.overture.yml
 plugins:
   python-development:
-    scope: global  # Reference only, already installed
 
   kubernetes-operations:
     marketplace: claude-code-workflows
-    scope: project  # Install only when working on this project
 ```
 
 ```bash
@@ -224,22 +217,18 @@ plugins:
 mcp:
   # Global MCP (reference only)
   filesystem:
-    scope: global
 
   # Project-specific MCPs
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   docker:
     command: docker-mcp-server
-    scope: project
 ```
 
 ```bash

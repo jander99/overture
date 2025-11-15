@@ -11,7 +11,7 @@ import {
   getFilterSummary,
   validateRequiredMcps,
 } from './exclusion-filter';
-import type { OvertureConfigV2, Platform } from '../domain/config-v2.types';
+import type { OvertureConfig, Platform } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 
 // Mock client adapter
@@ -37,12 +37,11 @@ describe('Exclusion Filter', () => {
     const adapter = createMockAdapter('claude-code');
 
     it('should include MCP with no restrictions', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
       };
 
       const result = shouldIncludeMcp(mcpConfig, adapter, platform);
@@ -52,12 +51,11 @@ describe('Exclusion Filter', () => {
     });
 
     it('should exclude MCP for excluded platform', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
         platforms: {
           exclude: ['linux'],
         },
@@ -70,12 +68,11 @@ describe('Exclusion Filter', () => {
     });
 
     it('should exclude MCP for excluded client', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
         clients: {
           exclude: ['claude-code'],
         },
@@ -88,12 +85,11 @@ describe('Exclusion Filter', () => {
     });
 
     it('should include MCP if client is in include list', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
         clients: {
           include: ['claude-code', 'vscode'],
         },
@@ -105,12 +101,11 @@ describe('Exclusion Filter', () => {
     });
 
     it('should exclude MCP if client not in include list', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
         clients: {
           include: ['vscode', 'cursor'],
         },
@@ -123,12 +118,11 @@ describe('Exclusion Filter', () => {
     });
 
     it('should exclude MCP if transport not supported', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
+      const mcpConfig: OvertureConfig['mcp']['test'] = {
         command: 'test',
         args: [],
         env: {},
         transport: 'http',
-        scope: 'global',
       };
 
       const result = shouldIncludeMcp(mcpConfig, adapter, platform);
@@ -136,50 +130,30 @@ describe('Exclusion Filter', () => {
       expect(result.included).toBe(false);
       expect(result.reason).toContain('Transport http not supported');
     });
-
-    it('should filter by scope when specified', () => {
-      const mcpConfig: OvertureConfigV2['mcp']['test'] = {
-        command: 'test',
-        args: [],
-        env: {},
-        transport: 'stdio',
-        scope: 'global',
-      };
-
-      const resultGlobal = shouldIncludeMcp(mcpConfig, adapter, platform, 'global');
-      expect(resultGlobal.included).toBe(true);
-
-      const resultProject = shouldIncludeMcp(mcpConfig, adapter, platform, 'project');
-      expect(resultProject.included).toBe(false);
-      expect(resultProject.reason).toContain('Scope mismatch');
-    });
   });
 
   describe('filterMcpsForClient', () => {
     const adapter = createMockAdapter('claude-code', ['stdio', 'http']);
 
     it('should filter MCPs correctly', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         included1: {
           command: 'test1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         included2: {
           command: 'test2',
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
         excluded: {
           command: 'test3',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },
@@ -191,46 +165,19 @@ describe('Exclusion Filter', () => {
       expect(Object.keys(filtered)).toEqual(['included1', 'included2']);
     });
 
-    it('should filter by scope', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
-        global: {
-          command: 'test1',
-          args: [],
-          env: {},
-          transport: 'stdio',
-          scope: 'global',
-        },
-        project: {
-          command: 'test2',
-          args: [],
-          env: {},
-          transport: 'stdio',
-          scope: 'project',
-        },
-      };
-
-      const globalFiltered = filterMcpsForClient(mcps, adapter, platform, 'global');
-      expect(Object.keys(globalFiltered)).toEqual(['global']);
-
-      const projectFiltered = filterMcpsForClient(mcps, adapter, platform, 'project');
-      expect(Object.keys(projectFiltered)).toEqual(['project']);
-    });
-
     it('should return empty object if all MCPs excluded', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         excluded1: {
           command: 'test1',
           args: [],
           env: {},
           transport: 'sse',
-          scope: 'global',
         },
         excluded2: {
           command: 'test2',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },
@@ -247,13 +194,12 @@ describe('Exclusion Filter', () => {
     const adapter = createMockAdapter('claude-code');
 
     it('should return excluded MCPs with reasons', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         platformExcluded: {
           command: 'test1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             exclude: ['linux'],
           },
@@ -263,7 +209,6 @@ describe('Exclusion Filter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },
@@ -273,7 +218,6 @@ describe('Exclusion Filter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       };
 
@@ -291,13 +235,12 @@ describe('Exclusion Filter', () => {
     });
 
     it('should return empty array if no exclusions', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         included: {
           command: 'test',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       };
 
@@ -311,27 +254,24 @@ describe('Exclusion Filter', () => {
     const adapter = createMockAdapter('claude-code');
 
     it('should provide accurate summary', () => {
-      const mcps: OvertureConfigV2['mcp'] = {
+      const mcps: OvertureConfig['mcp'] = {
         included1: {
           command: 'test1',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         included2: {
           command: 'test2',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         platformExcluded: {
           command: 'test3',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           platforms: {
             exclude: ['linux'],
           },
@@ -341,7 +281,6 @@ describe('Exclusion Filter', () => {
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },
@@ -351,7 +290,6 @@ describe('Exclusion Filter', () => {
           args: [],
           env: {},
           transport: 'http',
-          scope: 'global',
         },
       };
 
@@ -370,20 +308,18 @@ describe('Exclusion Filter', () => {
     const adapter = createMockAdapter('claude-code');
 
     it('should validate all required MCPs are available', () => {
-      const availableMcps: OvertureConfigV2['mcp'] = {
+      const availableMcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
         filesystem: {
           command: 'fs',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       };
 
@@ -400,13 +336,12 @@ describe('Exclusion Filter', () => {
     });
 
     it('should detect missing MCPs', () => {
-      const availableMcps: OvertureConfigV2['mcp'] = {
+      const availableMcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
         },
       };
 
@@ -422,13 +357,12 @@ describe('Exclusion Filter', () => {
     });
 
     it('should detect excluded MCPs', () => {
-      const availableMcps: OvertureConfigV2['mcp'] = {
+      const availableMcps: OvertureConfig['mcp'] = {
         github: {
           command: 'gh',
           args: [],
           env: {},
           transport: 'stdio',
-          scope: 'global',
           clients: {
             exclude: ['claude-code'],
           },

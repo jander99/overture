@@ -4,7 +4,7 @@ import { getTransportWarnings, getTransportValidationSummary, type TransportWarn
 import { adapterRegistry } from '../../adapters/adapter-registry';
 import { ErrorHandler } from '../../core/error-handler';
 import { Logger } from '../../utils/logger';
-import type { Platform, ClientName } from '../../domain/config-v2.types';
+import type { Platform, ClientName } from '../../domain/config.types';
 
 /**
  * Valid platform names

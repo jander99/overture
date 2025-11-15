@@ -11,7 +11,8 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import type { Platform, ClientName } from '../domain/config-v2.types';
+import * as fs from 'fs';
+import type { Platform, ClientName } from '../domain/config.types';
 
 /**
  * Get the current platform
@@ -355,6 +356,82 @@ export function getLockFilePath(): string {
   }
 
   return path.join(os.homedir(), '.config', 'overture', 'overture.lock');
+}
+
+/**
+ * Find the nearest .overture directory by walking up from startDir
+ *
+ * Searches from the starting directory upward through parent directories
+ * until .overture/config.yaml is found or filesystem root is reached.
+ *
+ * @param startDir - Directory to start searching from (defaults to cwd)
+ * @returns Project root directory (containing .overture/) or null if not found
+ *
+ * @example
+ * ```typescript
+ * // Current directory: /home/user/projects/my-app/src
+ * // Project structure:
+ * //   /home/user/projects/my-app/.overture/config.yaml
+ * findProjectRoot()
+ * // Returns: '/home/user/projects/my-app'
+ *
+ * // Current directory: /home/user
+ * findProjectRoot()
+ * // Returns: null (no .overture/ found)
+ * ```
+ */
+export function findProjectRoot(startDir?: string): string | null {
+  let currentDir = path.resolve(startDir || process.cwd());
+  const root = path.parse(currentDir).root;
+
+  while (currentDir !== root) {
+    const configPath = path.join(currentDir, '.overture', 'config.yaml');
+
+    // Check if .overture/config.yaml exists at this level
+    if (fs.existsSync(configPath)) {
+      return currentDir;
+    }
+
+    // Move up one directory
+    const parentDir = path.dirname(currentDir);
+
+    // Prevent infinite loop if dirname returns same path
+    if (parentDir === currentDir) {
+      break;
+    }
+
+    currentDir = parentDir;
+  }
+
+  // Check root directory as last resort
+  const rootConfigPath = path.join(root, '.overture', 'config.yaml');
+  if (fs.existsSync(rootConfigPath)) {
+    return root;
+  }
+
+  return null;
+}
+
+/**
+ * Check if currently in an Overture project directory
+ *
+ * Determines if the current working directory (or ancestor) contains
+ * a .overture/config.yaml file.
+ *
+ * @param startDir - Directory to check from (defaults to cwd)
+ * @returns True if in a project directory
+ *
+ * @example
+ * ```typescript
+ * // In project directory
+ * isInProject() // => true
+ *
+ * // Outside project
+ * isInProject() // => false
+ * ```
+ */
+export function isInProject(startDir?: string): boolean {
+  return findProjectRoot(startDir) !== null;
 }
 
 /**

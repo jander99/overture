@@ -160,7 +160,6 @@ mcp:
   mcp-server-name:
     command: command-to-run
     args: [arg1, arg2]
-    scope: project
 ```
 
 ### Adding Plugins
@@ -190,13 +189,10 @@ These are configured in your global Claude settings (`~/.config/claude/mcp.json`
 ```yaml
 mcp:
   filesystem:
-    scope: global
 
   memory:
-    scope: global
 ```
 
-You just reference them by setting `scope: global`. No need to specify commands.
 
 #### Project MCP Servers
 
@@ -207,12 +203,10 @@ mcp:
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
 ```
 
 - `command`: The executable to run
@@ -231,7 +225,6 @@ mcp:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 ```
 
 Overture will substitute `${GITHUB_TOKEN}` with the actual value from your environment.
@@ -251,7 +244,6 @@ mcp:
   postgres:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
-    scope: project
     enabled: false  # MCP won't be configured
 ```
 
@@ -443,17 +435,14 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 ```
 
 #### Step 2: Add Database Support
@@ -475,7 +464,6 @@ mcp:
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
 ```
 
 #### Step 3: Sync Configuration
@@ -509,7 +497,6 @@ mcp:
     args: [run, -i, --rm, mcp-postgres]
     env:
       POSTGRES_URL: "${DATABASE_URL}"
-    scope: project
     enabled: false
 ```
 
@@ -549,7 +536,6 @@ mcp:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 ```
 
 #### Step 3: Set Your GitHub Token
@@ -646,7 +632,6 @@ mcp:
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
   # ... more Python MCPs
 ```
 
@@ -666,7 +651,6 @@ plugins:
 mcp:
   node:
     command: node-mcp-server
-    scope: project
   # ... more JavaScript MCPs
 ```
 
@@ -723,7 +707,6 @@ mcp:
     command: string              # Executable command (required for project scope)
     args: string[]              # Command arguments (optional)
     env: map<string, string>    # Environment variables (optional)
-    scope: global | project     # Where configured (required)
     enabled: boolean            # Enable/disable (default: true)
 ```
 
@@ -930,7 +913,6 @@ Common schema errors:
    ```yaml
    mcp:
      python-repl:
-       scope: project  # Must be 'global' or 'project'
    ```
 
 3. **YAML syntax error:**
@@ -976,12 +958,10 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 ```
 
 **What you get:**
@@ -1034,24 +1014,20 @@ plugins:
 mcp:
   # Global tools
   filesystem:
-    scope: global
 
   # Python tools
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   # Database
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
 
   # Note: JavaScript/Node and Docker MCP servers would be configured here
   # when available. Check https://github.com/modelcontextprotocol/servers
@@ -1095,16 +1071,13 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   nx:
-    scope: global
 
   github:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 ```
 
 **What you get:**
@@ -1138,23 +1111,19 @@ plugins:
 
 mcp:
   filesystem:
-    scope: global
 
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   # Development database (always enabled)
   sqlite:
     command: uvx
     args: [mcp-server-sqlite, --db-path, ./dev.db]
-    scope: project
     enabled: true
 
   # Production database (enable when needed)
@@ -1163,7 +1132,6 @@ mcp:
     args: [run, -i, --rm, mcp-postgres]
     env:
       POSTGRES_URL: "${DATABASE_URL}"
-    scope: project
     enabled: false
 ```
 

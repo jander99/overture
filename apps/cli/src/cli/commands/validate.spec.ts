@@ -28,7 +28,7 @@ import * as transportValidator from '../../core/transport-validator';
 import * as adapterRegistryModule from '../../adapters/adapter-registry';
 import * as pathResolver from '../../core/path-resolver';
 import * as errorHandlerModule from '../../core/error-handler';
-import type { OvertureConfigV2, ClientName, Platform } from '../../domain/config-v2.types';
+import type { OvertureConfig, ClientName, Platform } from '../../domain/config.types';
 import type { ClientAdapter } from '../../adapters/client-adapter.interface';
 
 // Mock dependencies
@@ -153,7 +153,7 @@ describe('validate command', () => {
 
   describe('valid configuration', () => {
     it('should validate a correct v2.0 config', async () => {
-      const validConfig: OvertureConfigV2 = {
+      const validConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -161,7 +161,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -184,7 +183,7 @@ describe('validate command', () => {
     });
 
     it('should validate config with multiple MCPs', async () => {
-      const validConfig: OvertureConfigV2 = {
+      const validConfig: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -192,14 +191,12 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
           memory: {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-memory'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -224,7 +221,7 @@ describe('validate command', () => {
 
   describe('transport compatibility validation', () => {
     it('should warn about unsupported transports', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         sync: {
           enabledClients: ['claude-code'],
@@ -235,7 +232,6 @@ describe('validate command', () => {
             args: ['-y', 'http-mcp-server'],
             env: {},
             transport: 'http',
-            scope: 'global',
           },
         },
       };
@@ -276,7 +272,7 @@ describe('validate command', () => {
     });
 
     it('should validate for specific client', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -284,7 +280,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -311,7 +306,7 @@ describe('validate command', () => {
 
   describe('platform validation', () => {
     it('should reject invalid platform in exclusion list', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -319,7 +314,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               exclude: ['invalid-platform' as Platform],
             },
@@ -345,7 +339,7 @@ describe('validate command', () => {
     });
 
     it('should accept valid platform values', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -353,7 +347,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               exclude: ['win32'],
             },
@@ -379,7 +372,7 @@ describe('validate command', () => {
     });
 
     it('should validate platform commandOverrides', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -387,7 +380,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             platforms: {
               commandOverrides: {
                 'invalid-platform': 'some-command',
@@ -417,7 +409,7 @@ describe('validate command', () => {
 
   describe('client name validation', () => {
     it('should reject invalid client in exclusion list', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -425,7 +417,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               exclude: ['invalid-client' as ClientName],
             },
@@ -451,7 +442,7 @@ describe('validate command', () => {
     });
 
     it('should accept valid client names', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -459,7 +450,6 @@ describe('validate command', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               exclude: ['vscode', 'cursor'],
             },
@@ -485,7 +475,7 @@ describe('validate command', () => {
     });
 
     it('should validate client names in overrides', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -493,7 +483,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               overrides: {
                 'invalid-client': {
@@ -525,7 +514,7 @@ describe('validate command', () => {
 
   describe('environment variable syntax validation', () => {
     it('should accept valid env var syntax', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -536,7 +525,6 @@ describe('validate command', () => {
               API_KEY: '${API_KEY:-default_value}',
             },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -559,7 +547,7 @@ describe('validate command', () => {
     });
 
     it('should reject invalid env var syntax', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -569,7 +557,6 @@ describe('validate command', () => {
               GITHUB_TOKEN: '${GITHUB_TOKEN',
             },
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -592,7 +579,7 @@ describe('validate command', () => {
     });
 
     it('should validate env vars in client overrides', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           github: {
@@ -600,7 +587,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
             clients: {
               overrides: {
                 'claude-code': {
@@ -634,7 +620,7 @@ describe('validate command', () => {
 
   describe('required fields validation', () => {
     it('should reject missing command', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -642,7 +628,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -672,7 +657,6 @@ describe('validate command', () => {
             command: 'npx',
             args: [],
             env: {},
-            scope: 'global',
             // transport missing
           },
         },
@@ -698,7 +682,7 @@ describe('validate command', () => {
 
   describe('duplicate MCP names', () => {
     it('should detect duplicate MCP names (case-insensitive)', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -706,14 +690,12 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
           FileSystem: {
             command: 'npx',
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
       };
@@ -773,7 +755,7 @@ describe('validate command', () => {
 
   describe('sync options validation', () => {
     it('should validate enabledClients in sync options', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -781,7 +763,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
         sync: {
@@ -807,7 +788,7 @@ describe('validate command', () => {
     });
 
     it('should accept valid enabledClients', async () => {
-      const config: OvertureConfigV2 = {
+      const config: OvertureConfig = {
         version: '2.0',
         mcp: {
           filesystem: {
@@ -815,7 +796,6 @@ describe('validate command', () => {
             args: [],
             env: {},
             transport: 'stdio',
-            scope: 'global',
           },
         },
         sync: {

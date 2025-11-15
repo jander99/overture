@@ -8,7 +8,7 @@
  * @version 2.0
  */
 
-import type { OvertureConfigV2, TransportType } from '../domain/config-v2.types';
+import type { OvertureConfig, TransportType } from '../domain/config.types';
 import type { ClientAdapter } from '../adapters/client-adapter.interface';
 
 /**
@@ -70,7 +70,7 @@ export function validateMcpTransport(
  * @returns Array of validation results
  */
 export function validateAllTransports(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter
 ): TransportValidation[] {
   const results: TransportValidation[] = [];
@@ -90,7 +90,7 @@ export function validateAllTransports(
  * @returns Array of warnings for unsupported transports
  */
 export function getTransportWarnings(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter
 ): TransportWarning[] {
   const warnings: TransportWarning[] = [];
@@ -117,10 +117,10 @@ export function getTransportWarnings(
  * @returns Filtered MCP configurations
  */
 export function filterByTransport(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter
-): OvertureConfigV2['mcp'] {
-  const filtered: OvertureConfigV2['mcp'] = {};
+): OvertureConfig['mcp'] {
+  const filtered: OvertureConfig['mcp'] = {};
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
     if (client.supportsTransport(mcpConfig.transport)) {
@@ -139,7 +139,7 @@ export function filterByTransport(
  * @returns Validation summary
  */
 export function getTransportValidationSummary(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter
 ): TransportValidationSummary {
   const validations = validateAllTransports(mcps, client);
@@ -161,7 +161,7 @@ export function getTransportValidationSummary(
  * @returns True if any MCPs have unsupported transports
  */
 export function hasTransportIssues(
-  mcps: OvertureConfigV2['mcp'],
+  mcps: OvertureConfig['mcp'],
   client: ClientAdapter
 ): boolean {
   return getTransportWarnings(mcps, client).length > 0;

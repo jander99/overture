@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
-import type { OvertureConfigV2 } from '../../domain/config-v2.types';
+import type { OvertureConfig } from '../../domain/config.types';
 
 // Mock all dependencies BEFORE importing createUserCommand
 jest.mock('fs');
@@ -199,7 +199,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -226,7 +226,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -457,7 +457,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -505,7 +505,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -519,7 +519,6 @@ describe('CLI Command: user', () => {
       expect(filesystemConfig).toBeDefined();
       expect(filesystemConfig?.command).toBe('npx');
       expect(filesystemConfig?.transport).toBe('stdio');
-      expect(filesystemConfig?.scope).toBe('global');
     });
 
     it('should configure github MCP with environment variable', async () => {
@@ -532,7 +531,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -559,7 +558,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -586,7 +585,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -597,7 +596,6 @@ describe('CLI Command: user', () => {
 
       // Assert
       Object.values(capturedConfig?.mcp || {}).forEach((mcp) => {
-        expect(mcp.scope).toBe('global');
       });
     });
   });
@@ -669,7 +667,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
@@ -693,7 +691,7 @@ describe('CLI Command: user', () => {
       (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
       (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
 
-      let capturedConfig: OvertureConfigV2 | null = null;
+      let capturedConfig: OvertureConfig | null = null;
       (yaml.dump as jest.Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';

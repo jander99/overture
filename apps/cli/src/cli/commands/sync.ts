@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { syncClients } from '../../core/sync-engine';
 import { Logger } from '../../utils/logger';
 import { ErrorHandler } from '../../core/error-handler';
-import type { ClientName } from '../../domain/config-v2.types';
+import type { ClientName } from '../../domain/config.types';
 
 /**
  * Creates the 'sync' command for synchronizing MCP configurations to clients.
@@ -24,7 +24,6 @@ export function createSyncCommand(): Command {
     .description('Sync MCP configuration to AI clients')
     .option('--dry-run', 'Preview changes without writing files')
     .option('--client <name>', 'Sync only for specific client (e.g., claude-code, claude-desktop)')
-    .option('--scope <scope>', 'Sync only global or project MCPs (global|project)')
     .option('--force', 'Force sync even if validation warnings exist')
     .action(async (options) => {
       try {
@@ -38,18 +37,11 @@ export function createSyncCommand(): Command {
           Logger.info(`Syncing for client: ${options.client}`);
         }
 
-        // Show scope filter if specified
-        if (options.scope) {
-          Logger.info(`Syncing ${options.scope} MCPs only`);
-        }
-
-        // Build sync options
+        // Build sync options (projectRoot auto-detected by sync engine)
         const syncOptions = {
           dryRun: options.dryRun || false,
           force: options.force || false,
           clients: options.client ? [options.client as ClientName] : undefined,
-          scope: options.scope as 'global' | 'project' | undefined,
-          projectRoot: process.cwd(),
         };
 
         // Run sync

@@ -7,7 +7,7 @@
  */
 
 import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig } from './client-adapter.interface';
-import type { Platform, ClientName, TransportType, OvertureConfigV2 } from '../domain/config-v2.types';
+import type { Platform, ClientName, TransportType, OvertureConfig } from '../domain/config.types';
 
 // Test implementation of BaseClientAdapter
 class TestAdapter extends BaseClientAdapter {
@@ -28,7 +28,7 @@ class TestAdapter extends BaseClientAdapter {
     // Mock implementation
   }
 
-  convertFromOverture(overtureConfig: OvertureConfigV2, platform: Platform): ClientMcpConfig {
+  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
     return { mcpServers: {} };
   }
 
@@ -41,7 +41,7 @@ class TestAdapter extends BaseClientAdapter {
   }
 
   // Expose protected method for testing
-  public testShouldSyncMcp(mcpConfig: OvertureConfigV2['mcp'][string], platform: Platform): boolean {
+  public testShouldSyncMcp(mcpConfig: OvertureConfig['mcp'][string], platform: Platform): boolean {
     return this.shouldSyncMcp(mcpConfig, platform);
   }
 }
@@ -67,12 +67,11 @@ describe('BaseClientAdapter', () => {
   });
 
   describe('shouldSyncMcp', () => {
-    const baseMcpConfig: OvertureConfigV2['mcp'][string] = {
+    const baseMcpConfig: OvertureConfig['mcp'][string] = {
       command: 'test-server',
       args: [],
       env: {},
       transport: 'stdio',
-      scope: 'global',
     };
 
     it('should return true for basic config', () => {
@@ -250,12 +249,11 @@ describe('BaseClientAdapter', () => {
 
   describe('Real-world scenarios', () => {
     it('should correctly filter GitHub MCP for Copilot CLI', () => {
-      const githubMcp: OvertureConfigV2['mcp'][string] = {
+      const githubMcp: OvertureConfig['mcp'][string] = {
         command: 'mcp-server-github',
         args: [],
         env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
         transport: 'stdio',
-        scope: 'global',
         clients: {
           exclude: ['copilot-cli'], // Copilot CLI bundles GitHub MCP
         },
@@ -270,12 +268,11 @@ describe('BaseClientAdapter', () => {
     });
 
     it('should respect platform-specific MCP (e.g., WSL-only)', () => {
-      const wslMcp: OvertureConfigV2['mcp'][string] = {
+      const wslMcp: OvertureConfig['mcp'][string] = {
         command: 'wsl-tool',
         args: [],
         env: {},
         transport: 'stdio',
-        scope: 'global',
         platforms: {
           exclude: ['darwin', 'win32'],
         },
@@ -288,12 +285,11 @@ describe('BaseClientAdapter', () => {
     });
 
     it('should handle HTTP-only MCP for clients that support it', () => {
-      const httpMcp: OvertureConfigV2['mcp'][string] = {
+      const httpMcp: OvertureConfig['mcp'][string] = {
         command: 'http-server',
         args: [],
         env: {},
         transport: 'http',
-        scope: 'global',
       };
 
       // TestAdapter supports HTTP

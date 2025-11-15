@@ -9,7 +9,7 @@
  */
 
 import * as fs from 'fs';
-import type { ClientName } from '../domain/config-v2.types';
+import type { ClientName } from '../domain/config.types';
 import { getBackup, type BackupMetadata } from './backup-service';
 
 /**

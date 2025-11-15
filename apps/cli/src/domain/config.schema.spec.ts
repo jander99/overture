@@ -1,7 +1,7 @@
 /**
  * Zod Schema Tests for Overture v2.0 Configuration
  *
- * @module domain/config-v2.schema.spec
+ * @module domain/config.schema.spec
  */
 
 import {
@@ -10,15 +10,15 @@ import {
   ScopeSchema,
   ClientNameSchema,
   MergeStrategySchema,
-  McpServerConfigV2Schema,
+  McpServerConfigSchema,
   ClientConfigSchema,
   SyncOptionsSchema,
-  OvertureConfigV2Schema,
+  OvertureConfigSchema,
   ClientMcpServerDefSchema,
   ClientSyncResultSchema,
   SyncResultSchema,
   ValidationResultSchema,
-} from './config-v2.schema';
+} from './config.schema';
 
 describe('Zod Schema Validators', () => {
   describe('PlatformSchema', () => {
@@ -90,27 +90,25 @@ describe('Zod Schema Validators', () => {
     });
   });
 
-  describe('McpServerConfigV2Schema', () => {
+  describe('McpServerConfigSchema', () => {
     const validMcpConfig = {
       command: 'mcp-server-github',
       args: [],
       env: {},
       transport: 'stdio' as const,
-      scope: 'global' as const,
     };
 
     it('should accept valid minimal MCP config', () => {
-      const result = McpServerConfigV2Schema.parse(validMcpConfig);
+      const result = McpServerConfigSchema.parse(validMcpConfig);
       expect(result.command).toBe('mcp-server-github');
       expect(result.transport).toBe('stdio');
-      expect(result.scope).toBe('global');
     });
 
     it('should require transport field', () => {
       const invalid = { ...validMcpConfig };
       delete (invalid as any).transport;
 
-      expect(() => McpServerConfigV2Schema.parse(invalid)).toThrow();
+      expect(() => McpServerConfigSchema.parse(invalid)).toThrow();
     });
 
     it('should accept optional version field', () => {
@@ -119,7 +117,7 @@ describe('Zod Schema Validators', () => {
         version: '1.2.3',
       };
 
-      const result = McpServerConfigV2Schema.parse(withVersion);
+      const result = McpServerConfigSchema.parse(withVersion);
       expect(result.version).toBe('1.2.3');
     });
 
@@ -129,7 +127,7 @@ describe('Zod Schema Validators', () => {
         args: ['-y', '@modelcontextprotocol/server-filesystem'],
       };
 
-      const result = McpServerConfigV2Schema.parse(withArgs);
+      const result = McpServerConfigSchema.parse(withArgs);
       expect(result.args).toEqual(['-y', '@modelcontextprotocol/server-filesystem']);
     });
 
@@ -142,7 +140,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withEnv);
+      const result = McpServerConfigSchema.parse(withEnv);
       expect(result.env.GITHUB_TOKEN).toBe('${GITHUB_TOKEN}');
       expect(result.env.API_URL).toBe('${API_URL:-https://api.github.com}');
     });
@@ -155,7 +153,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      expect(() => McpServerConfigV2Schema.parse(invalidEnv)).toThrow();
+      expect(() => McpServerConfigSchema.parse(invalidEnv)).toThrow();
     });
 
     it('should accept client exclusions', () => {
@@ -166,7 +164,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withExclusions);
+      const result = McpServerConfigSchema.parse(withExclusions);
       expect(result.clients?.exclude).toEqual(['copilot-cli', 'windsurf']);
     });
 
@@ -178,7 +176,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withInclusions);
+      const result = McpServerConfigSchema.parse(withInclusions);
       expect(result.clients?.include).toEqual(['claude-code', 'cursor']);
     });
 
@@ -191,7 +189,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      expect(() => McpServerConfigV2Schema.parse(withBoth)).toThrow();
+      expect(() => McpServerConfigSchema.parse(withBoth)).toThrow();
     });
 
     it('should accept client overrides', () => {
@@ -211,7 +209,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withOverrides);
+      const result = McpServerConfigSchema.parse(withOverrides);
       expect(result.clients?.overrides?.vscode?.transport).toBe('http');
       expect(result.clients?.overrides?.cursor?.env?.CUSTOM_TOKEN).toBe('${CURSOR_TOKEN}');
     });
@@ -224,7 +222,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withPlatformExclusions);
+      const result = McpServerConfigSchema.parse(withPlatformExclusions);
       expect(result.platforms?.exclude).toEqual(['win32']);
     });
 
@@ -239,7 +237,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withCommandOverrides);
+      const result = McpServerConfigSchema.parse(withCommandOverrides);
       expect(result.platforms?.commandOverrides?.win32).toBe('python.exe');
     });
 
@@ -253,7 +251,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withArgsOverrides);
+      const result = McpServerConfigSchema.parse(withArgsOverrides);
       expect(result.platforms?.argsOverrides?.win32).toEqual(['-m', 'mcp_server']);
     });
 
@@ -267,7 +265,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = McpServerConfigV2Schema.parse(withMetadata);
+      const result = McpServerConfigSchema.parse(withMetadata);
       expect(result.metadata?.description).toBe('GitHub MCP server');
       expect(result.metadata?.tags).toEqual(['git', 'github', 'vcs']);
     });
@@ -280,7 +278,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      expect(() => McpServerConfigV2Schema.parse(withInvalidUrl)).toThrow();
+      expect(() => McpServerConfigSchema.parse(withInvalidUrl)).toThrow();
     });
 
     it('should apply default values', () => {
@@ -289,10 +287,9 @@ describe('Zod Schema Validators', () => {
         transport: 'stdio' as const,
       };
 
-      const result = McpServerConfigV2Schema.parse(minimal);
+      const result = McpServerConfigSchema.parse(minimal);
       expect(result.args).toEqual([]);
       expect(result.env).toEqual({});
-      expect(result.scope).toBe('global');
     });
 
     it('should require command to be non-empty', () => {
@@ -301,7 +298,7 @@ describe('Zod Schema Validators', () => {
         command: '',
       };
 
-      expect(() => McpServerConfigV2Schema.parse(emptyCommand)).toThrow();
+      expect(() => McpServerConfigSchema.parse(emptyCommand)).toThrow();
     });
   });
 
@@ -410,7 +407,7 @@ describe('Zod Schema Validators', () => {
     });
   });
 
-  describe('OvertureConfigV2Schema', () => {
+  describe('OvertureConfigSchema', () => {
     const validConfig = {
       version: '2.0',
       mcp: {
@@ -419,13 +416,12 @@ describe('Zod Schema Validators', () => {
           args: [],
           env: {},
           transport: 'stdio' as const,
-          scope: 'global' as const,
         },
       },
     };
 
     it('should accept valid minimal config', () => {
-      const result = OvertureConfigV2Schema.parse(validConfig);
+      const result = OvertureConfigSchema.parse(validConfig);
       expect(result.version).toBe('2.0');
       expect(result.mcp.github).toBeDefined();
     });
@@ -434,7 +430,7 @@ describe('Zod Schema Validators', () => {
       const invalid = { ...validConfig };
       delete (invalid as any).version;
 
-      expect(() => OvertureConfigV2Schema.parse(invalid)).toThrow();
+      expect(() => OvertureConfigSchema.parse(invalid)).toThrow();
     });
 
     it('should validate version format', () => {
@@ -443,18 +439,18 @@ describe('Zod Schema Validators', () => {
         version: 'v2.0',
       };
 
-      expect(() => OvertureConfigV2Schema.parse(invalidVersion)).toThrow();
+      expect(() => OvertureConfigSchema.parse(invalidVersion)).toThrow();
     });
 
     it('should accept valid version formats', () => {
-      expect(OvertureConfigV2Schema.parse({ ...validConfig, version: '2.0' })).toBeDefined();
-      expect(OvertureConfigV2Schema.parse({ ...validConfig, version: '10.99' })).toBeDefined();
+      expect(OvertureConfigSchema.parse({ ...validConfig, version: '2.0' })).toBeDefined();
+      expect(OvertureConfigSchema.parse({ ...validConfig, version: '10.99' })).toBeDefined();
     });
 
     it('should require mcp field', () => {
       const invalid = { version: '2.0' };
 
-      expect(() => OvertureConfigV2Schema.parse(invalid)).toThrow();
+      expect(() => OvertureConfigSchema.parse(invalid)).toThrow();
     });
 
     it('should accept clients config', () => {
@@ -470,7 +466,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = OvertureConfigV2Schema.parse(withClients);
+      const result = OvertureConfigSchema.parse(withClients);
       expect(result.clients?.['claude-code']?.enabled).toBe(true);
       expect(result.clients?.['vscode']?.enabled).toBe(false);
     });
@@ -484,7 +480,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = OvertureConfigV2Schema.parse(withSync);
+      const result = OvertureConfigSchema.parse(withSync);
       expect(result.sync?.backup).toBe(true);
       expect(result.sync?.backupRetention).toBe(5);
     });
@@ -511,7 +507,6 @@ describe('Zod Schema Validators', () => {
               GITHUB_TOKEN: '${GITHUB_TOKEN}',
             },
             transport: 'stdio' as const,
-            scope: 'global' as const,
             version: '1.0.0',
             clients: {
               exclude: ['copilot-cli'],
@@ -522,7 +517,6 @@ describe('Zod Schema Validators', () => {
             args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
             env: {},
             transport: 'stdio' as const,
-            scope: 'project' as const,
           },
         },
         sync: {
@@ -534,7 +528,7 @@ describe('Zod Schema Validators', () => {
         },
       };
 
-      const result = OvertureConfigV2Schema.parse(realWorldConfig);
+      const result = OvertureConfigSchema.parse(realWorldConfig);
       expect(result.version).toBe('2.0');
       expect(result.mcp.github.clients?.exclude).toContain('copilot-cli');
       expect(result.sync?.backup).toBe(true);
