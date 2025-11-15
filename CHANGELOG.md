@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2025-01-15
+
+### Added
+
+**Binary Detection Service** - Automatically detects installed AI clients
+- Detects CLI binaries in PATH (using which/where commands)
+- Detects GUI application bundles via filesystem checks
+- Extracts version information via --version flags
+- Validates config file JSON integrity
+- 5-second timeout per detection to prevent hangs
+
+**Doctor Command** - System diagnostics and health check
+- `overture doctor` shows all installed clients with versions
+- Validates config file locations and JSON validity
+- Checks MCP server command availability
+- Supports `--json` and `--verbose` flags
+- Provides installation recommendations for missing clients
+
+**Enhanced Sync Output** - Better visibility into detection results
+- Shows detection status for each client (found/not-found)
+- Displays binary/app bundle paths and version information
+- Shows config file validity status
+- "Warn but allow" approach - generates configs even if client not detected
+
+**Configuration Options**
+- `skipBinaryDetection` flag for CI/CD environments
+- Allows config generation without installed clients
+
+### Changed
+
+**Client Adapters Enhanced with Detection**
+- All 7 client adapters now implement detection methods:
+  - `getBinaryNames()` - CLI binaries to check
+  - `getAppBundlePaths()` - Platform-specific app paths
+  - `requiresBinary()` - Required vs optional detection
+- Centralized detection logic prevents code duplication across adapters
+
+**Sync Engine**
+- Integrated binary detection into sync workflow
+- Populates `binaryDetection` field in sync results
+- Generates configs for all clients (detected or not)
+- Warnings logged for undetected clients
+
+### Technical
+
+**Testing**
+- Added 17 new tests (10 binary-detector + 7 doctor command)
+- Test count: 911 passing (100%), 83%+ code coverage
+- Comprehensive integration tests for detection service
+- Doctor command structure tests
+
+**Architecture**
+- Platform-aware detection (darwin/linux/win32)
+- Graceful degradation with timeout protection
+- Hybrid approach: adapters declare, BinaryDetector detects
+- No code duplication across client implementations
+
+### Documentation
+
+- Updated README.md with v0.2.5 features and doctor command
+- Created migration guide (docs/migration-v0.2-to-v0.2.5.md)
+- Enhanced Commands section with diagnostics and options
+- Added v0.2.5 to roadmap
+
+### Files Added
+
+- `apps/cli/src/core/binary-detector.ts` - Binary detection service
+- `apps/cli/src/core/binary-detector.spec.ts` - Detection tests
+- `apps/cli/src/cli/commands/doctor.ts` - Diagnostics command
+- `apps/cli/src/cli/commands/doctor.spec.ts` - Command tests
+- `docs/migration-v0.2-to-v0.2.5.md` - Migration guide
+- `docs/v0.2.5-implementation-plan.md` - Implementation plan
+
+### Files Modified
+
+- All 7 client adapters with override methods
+- `apps/cli/src/core/sync-engine.ts` - Detection integration
+- `apps/cli/src/cli/commands/sync.ts` - Enhanced output
+- `apps/cli/src/domain/config.types.ts` - Detection types
+- `apps/cli/src/domain/config.schema.ts` - Schema updates
+
 ## [0.2.1] - 2025-01-11
 
 ### Enhanced

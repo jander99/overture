@@ -36,13 +36,16 @@ Project-generated `CLAUDE.md` files are minimal:
 
 ## What Overture Is (Current Implementation)
 
-**Overture v0.2 is a comprehensive multi-platform MCP configuration orchestrator.**
+**Overture v0.2.5 is a comprehensive multi-platform MCP configuration orchestrator with intelligent client detection.**
 
-Currently implemented (873/873 tests passing, 83%+ coverage):
+Currently implemented (911/911 tests passing, 83%+ coverage):
 - ✅ User global config (`~/.config/overture.yml`)
 - ✅ Project-level config (`.overture/config.yaml`)
 - ✅ User/project config merging with proper precedence
 - ✅ Multi-platform sync for 7 AI development clients
+- ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, validates configs
+- ✅ **System diagnostics** - `overture doctor` command for health checks and troubleshooting
+- ✅ **Version extraction** - Captures client versions via --version flags
 - ✅ Backup/restore system with retention policy
 - ✅ Config audit to detect unmanaged MCPs
 - ✅ Install Claude Code plugins via `claude plugin install`
@@ -52,9 +55,9 @@ Currently implemented (873/873 tests passing, 83%+ coverage):
 - ✅ Transport validation and platform filtering
 - ✅ Process locking for safe concurrent operations
 
-**Scope:** 7 AI clients (Claude Code, Claude Desktop, Cursor, Windsurf, VSCode, Copilot CLI, JetBrains), user global + project configs, multi-platform sync.
+**Scope:** 7 AI clients (Claude Code, Claude Desktop, Cursor, Windsurf, VSCode, Copilot CLI, JetBrains), user global + project configs, multi-platform sync, intelligent detection.
 
-**Value:** Single source of truth for MCP configuration across all AI development tools, eliminating duplication and drift.
+**Value:** Single source of truth for MCP configuration across all AI development tools, eliminating duplication and drift. Automatic detection ensures configs are generated appropriately for installed clients.
 
 ## What Overture Should Be (Intended Vision)
 
@@ -269,6 +272,23 @@ This creates a learning loop where each library researched enriches the project 
 **Status:** ✅ COMPLETE (873/873 tests passing, 83%+ code coverage)
 
 **Goal:** Eliminate MCP configuration duplication across platforms. ✅ ACHIEVED
+
+### Phase 2.5: Intelligent Client Detection (v0.2.5)
+- [x] Binary detection service (CLI binaries + GUI applications)
+- [x] Version extraction via --version flags
+- [x] Config file JSON validation
+- [x] Doctor command for system diagnostics
+  - [x] Show installed clients and versions
+  - [x] Validate config files
+  - [x] Check MCP command availability
+  - [x] JSON output mode
+- [x] Enhanced sync output with detection results
+- [x] "Warn but allow" approach (generate configs even if client not detected)
+- [x] skipBinaryDetection flag for CI/CD environments
+
+**Status:** ✅ COMPLETE (911/911 tests passing, 83%+ code coverage)
+
+**Goal:** Automatic client detection with intelligent fallback behavior. ✅ ACHIEVED
 
 ### Phase 3: Enhanced Documentation (v0.3)
 - [ ] Template system for workflows

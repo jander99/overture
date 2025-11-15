@@ -29,12 +29,19 @@ When you work with Claude Code, you might install plugins like `python-developme
 
 ### The Solution
 
-Overture acts as an orchestration layer that:
+Overture acts as a multi-platform configuration orchestrator that:
 
-1. **Connects plugins to their recommended tools** - You declare which MCP servers each plugin should use
-2. **Generates project-specific configuration** - Creates `.mcp.json` with only the tools your project needs
-3. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer for each plugin
-4. **Validates your setup** - Checks that required tools are available
+1. **Detects installed AI clients** - Automatically finds Claude Code, Claude Desktop, VSCode, Cursor, and other tools
+2. **Connects plugins to their tools** - Declares which MCP servers each plugin should use
+3. **Generates configs for all platforms** - Syncs to all detected clients (Claude Desktop, Claude Code, VSCode, etc.)
+4. **Validates your setup** - Checks that required tools and clients are available
+5. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer
+
+**New in v0.2.5:**
+- **Intelligent client detection** - Knows what's installed and where
+- **System diagnostics** - `overture doctor` command shows health status
+- **Version tracking** - Captures client versions automatically
+- **"Warn but allow"** - Generates configs even if clients not detected (install later)
 
 ### How It Works
 
@@ -73,6 +80,36 @@ overture --version
 You should see the current version number displayed.
 
 ## Getting Started
+
+### 0. Check Your System (Recommended)
+
+Before configuring Overture, check which AI clients are installed:
+
+```bash
+overture doctor
+```
+
+This shows:
+- Which AI clients are installed (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
+- Client versions and locations
+- Config file validity
+- Available MCP commands
+
+**Example output:**
+```
+✓ claude-code (v2.1.0) - /usr/local/bin/claude
+  Config: ~/.config/claude/mcp.json (valid)
+
+✗ claude-desktop - not installed
+  → Install Claude Desktop: https://claude.com/download
+
+✓ vscode - /usr/bin/code
+  Config: ~/.vscode/mcp.json (valid)
+```
+
+Use `overture doctor --verbose` for detailed warnings, or `overture doctor --json` for machine-readable output.
+
+**Why this matters**: Knowing what's installed helps you understand which clients will receive configurations when you run `overture sync`.
 
 ### 1. Initialize Your Project
 
@@ -282,37 +319,118 @@ overture init --type frontend-react
 - Uses project-specific templates if `--type` is specified
 - Won't overwrite existing configuration
 
+### `overture doctor`
+
+Check system for installed AI clients and MCP servers.
+
+```bash
+overture doctor [--json] [--verbose]
+```
+
+**Options:**
+- `--json`: Output results as JSON for automation
+- `--verbose`: Show detailed warnings and recommendations
+
+**Examples:**
+```bash
+# Basic diagnostics
+overture doctor
+
+# Verbose output with detailed warnings
+overture doctor --verbose
+
+# JSON output for CI/CD
+overture doctor --json
+```
+
+**What it shows:**
+1. **Installed AI clients** - Which clients are detected (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
+2. **Version information** - Client versions extracted from --version flags
+3. **Config file locations** - Where each client's MCP config is located
+4. **Config validity** - Whether config files are valid JSON
+5. **MCP command availability** - Which MCP server commands are in PATH
+6. **Installation recommendations** - Guidance for missing clients or tools
+
+**Example output:**
+```
+✓ claude-code (v2.1.0) - /usr/local/bin/claude
+  Config: ~/.config/claude/mcp.json (valid)
+
+✗ claude-desktop - not installed
+  → Install Claude Desktop: https://claude.com/download
+
+MCP Servers:
+✓ github - gh (found)
+⚠ python-repl - uvx (not found)
+  → Install uv: https://docs.astral.sh/uv/
+
+Summary:
+  Clients detected: 1 / 7
+  MCP commands available: 1 / 2
+```
+
+**When to use:**
+- **Before initial setup** - See what's already installed
+- **Troubleshooting** - Diagnose why sync isn't working
+- **Team onboarding** - New members check requirements
+- **CI/CD validation** - Verify environment before deployment
+
 ### `overture sync`
 
 Synchronize your configuration by installing plugins and generating files.
 
 ```bash
+overture sync [--dry-run] [--client <name>] [--force]
+```
+
+**Options:**
+- `--dry-run`: Preview changes without writing files (writes to dist/ for inspection)
+- `--client <name>`: Sync only to specific client (e.g., claude-code, vscode)
+- `--force`: Force sync even with validation warnings
+
+**Examples:**
+```bash
+# Standard sync to all detected clients
 overture sync
+
+# Preview changes before applying
+overture sync --dry-run
+
+# Sync only to Claude Code
+overture sync --client claude-code
+
+# Force sync with warnings
+overture sync --force
 ```
 
 **What it does:**
-1. Reads `.overture/config.yaml`
-2. Installs enabled plugins via `claude plugin install`
-3. Generates `.mcp.json` with project-scoped MCP servers
-4. Generates or updates `CLAUDE.md` with plugin-to-MCP mappings
-5. Preserves custom sections in existing `CLAUDE.md`
+1. Detects installed AI clients (Claude Code, Claude Desktop, VSCode, etc.)
+2. Reads `.overture/config.yaml`
+3. Installs enabled plugins via `claude plugin install`
+4. Generates configs for all detected clients
+5. Creates backups before writing
+6. Generates or updates `CLAUDE.md` with plugin-to-MCP mappings
+7. Preserves custom sections in existing `CLAUDE.md`
 
 **When to run:**
 - After editing `.overture/config.yaml`
 - After cloning a repository with Overture configuration
 - When switching branches that have different configurations
+- After installing a new AI client
 
-**Example output:**
+**Example output (v0.2.5):**
 ```
-Syncing Overture configuration...
+Syncing MCP configurations...
 
-Installing plugins:
-✓ python-development@claude-code-workflows
-✓ database-design@claude-code-workflows
+Client sync results:
+  ✓ claude-code:
+      Detected (v2.1.0): /usr/local/bin/claude
+      Config: ~/.config/claude/mcp.json (valid)
+      Backup: ~/.config/overture/backups/claude-code/mcp.json.20250115-123456
 
-Generating configuration:
-✓ .mcp.json (3 MCP servers)
-✓ CLAUDE.md (2 plugins, 3 MCPs)
+  ✗ claude-desktop:
+      Not detected (config will still be generated)
+      Config: ~/Library/Application Support/Claude/mcp.json
 
 Sync complete!
 ```

@@ -1,6 +1,6 @@
-# Overture v2.0 Configuration Examples
+# Overture Configuration Examples
 
-This document provides comprehensive examples for Overture v2.0 configuration files.
+This document provides comprehensive configuration examples for Overture v0.2.5.
 
 ## Table of Contents
 
@@ -12,6 +12,7 @@ This document provides comprehensive examples for Overture v2.0 configuration fi
 6. [Multi-Language Monorepo](#6-multi-language-monorepo)
 7. [Environment Variable Patterns](#7-environment-variable-patterns)
 8. [Advanced Client Overrides](#8-advanced-client-overrides)
+9. [CI/CD Configuration](#9-cicd-configuration)
 
 ---
 
@@ -22,14 +23,12 @@ The simplest possible Overture configuration with a single MCP server.
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   filesystem:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-    transport: "stdio"
-    scope: "project"
 ```
 
 **What it does:**
@@ -60,7 +59,7 @@ A comprehensive user-level configuration with global MCPs and client settings.
 **File:** `~/.config/overture.yml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 # Client-specific settings
 clients:
@@ -160,7 +159,7 @@ A project-specific configuration for Python development with testing and linting
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # Python REPL for code execution
@@ -224,7 +223,7 @@ Configuration demonstrating platform-specific command and argument overrides.
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # PostgreSQL database access with platform-specific psql paths
@@ -294,7 +293,7 @@ Configuration demonstrating client inclusion/exclusion patterns.
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # HTTP transport - not supported by all clients
@@ -372,7 +371,7 @@ A comprehensive configuration for a large monorepo with multiple languages and t
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # ============================================================================
@@ -556,7 +555,7 @@ Examples of environment variable expansion patterns.
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # Simple expansion (required variable)
@@ -639,7 +638,7 @@ Complex client-specific override patterns.
 **File:** `.overture/config.yaml`
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   # Different database per client
@@ -745,12 +744,95 @@ mcp:
 
 ---
 
+## 9. CI/CD Configuration
+
+Configuration for continuous integration environments where binary detection should be skipped.
+
+**File:** `.overture/config.yaml`
+
+```yaml
+version: "1.0"
+
+# Skip binary detection in CI/CD environments
+skipBinaryDetection: true
+
+mcp:
+  github:
+    command: "gh"
+    args: ["mcp"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+
+  filesystem:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+```
+
+**GitHub Actions Workflow:**
+
+```yaml
+name: Generate MCP Configs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Overture
+        run: npm install -g @overture/cli
+
+      - name: Generate configs (dry-run)
+        run: overture sync --dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate generated configs
+        run: |
+          cat dist/claude-code-mcp.json
+          cat dist/claude-desktop-mcp.json
+```
+
+**What it does:**
+- `skipBinaryDetection: true` - Prevents Overture from checking for installed AI clients
+- Generates configs for all clients regardless of whether they're installed
+- Useful in CI/CD where clients aren't installed but config validation is needed
+- `--dry-run` outputs configs to `dist/` for inspection without modifying system files
+
+**GitLab CI Example:**
+
+```yaml
+validate-mcp-config:
+  stage: test
+  image: node:20
+  script:
+    - npm install -g @overture/cli
+    - overture sync --dry-run
+    - overture validate
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+```
+
+---
+
 ## Configuration Templates by Project Type
 
 ### Web Frontend (React/Vue/Angular)
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   filesystem:
@@ -782,7 +864,7 @@ mcp:
 ### Backend API (Python FastAPI/Django)
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   python-repl:
@@ -818,7 +900,7 @@ mcp:
 ### Full-Stack Monorepo (Nx/Turborepo)
 
 ```yaml
-version: "2.0"
+version: "1.0"
 
 mcp:
   filesystem:
@@ -972,7 +1054,8 @@ mcp:
 
 ## Additional Resources
 
-- [Overture Schema Documentation](./overture-schema.md)
-- [v2.0 Architecture](./v0.2-architecture.md)
-- [v2.0 Implementation Plan](./v0.2-implementation-plan.md)
-- [MCP Server Directory](https://github.com/modelcontextprotocol/servers)
+- [Configuration Schema](./overture-schema.md) - Schema definitions and TypeScript interfaces
+- [User Guide](./user-guide.md) - Complete guide to using Overture
+- [Quick Start](./QUICKSTART.md) - Get started in 5 minutes
+- [Examples](./examples.md) - Real-world usage examples
+- [MCP Server Directory](https://github.com/modelcontextprotocol/servers) - Official MCP servers

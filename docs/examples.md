@@ -451,3 +451,420 @@ When working on Overture itself, remember:
 - ✅ Has explicit guidance: "When using python-development → use python-repl"
 - ✅ Understands the relationship between plugins and tools
 - ✅ Provides better user experience with appropriate tool selection
+
+---
+
+## Example 5: Using Doctor for Troubleshooting
+
+### Scenario
+
+You're experiencing issues with MCP synchronization and want to diagnose the problem.
+
+### Step 1: Run Doctor Command
+
+```bash
+overture doctor --verbose
+```
+
+### Sample Output
+
+```
+Checking client installations...
+
+✓ claude-code (v2.1.0) - /usr/local/bin/claude
+  Config: /home/user/.config/claude/mcp.json (valid)
+
+⚠ vscode - /usr/bin/code
+  Config: /home/user/.vscode/mcp.json (invalid)
+  Warning: Config file has JSON syntax error at line 15
+
+✗ cursor - not installed
+  → Install Cursor: https://cursor.com
+
+✗ claude-desktop - not installed
+  → Install Claude Desktop: https://claude.com/download
+
+Checking MCP servers...
+
+✓ github - gh (found)
+✓ python-repl - uvx (found)
+⚠ custom-tool - /usr/local/bin/custom-tool (not found)
+  → Ensure custom-tool is installed and available in PATH
+
+Summary:
+  Clients detected: 2 / 7
+  Clients missing:  5
+  Configs valid:    1
+  Configs invalid:  1
+  MCP commands available: 2 / 3
+  MCP commands missing:   1
+```
+
+### Step 2: Diagnose Issues
+
+From the output, we can see:
+
+1. **VSCode config is invalid** - JSON syntax error
+2. **Custom-tool not found** - Not in PATH
+3. **Cursor and Claude Desktop not installed** - Expected if you don't use them
+
+### Step 3: Fix VSCode Config
+
+```bash
+# Option 1: Backup and regenerate
+mv ~/.vscode/mcp.json ~/.vscode/mcp.json.backup
+overture sync --client vscode
+
+# Option 2: Fix manually
+# Edit ~/.vscode/mcp.json and fix JSON syntax
+```
+
+### Step 4: Fix Custom Tool PATH
+
+```bash
+# Add to PATH
+export PATH="/usr/local/bin:$PATH"
+
+# Or install the tool
+npm install -g custom-tool
+
+# Verify
+which custom-tool
+```
+
+### Step 5: Verify Fixes
+
+```bash
+overture doctor
+
+# Should now show:
+# ✓ vscode - /usr/bin/code
+#   Config: /home/user/.vscode/mcp.json (valid)
+# ✓ custom-tool - /usr/local/bin/custom-tool (found)
+```
+
+### JSON Output for Automation
+
+```bash
+overture doctor --json > doctor-report.json
+```
+
+**`doctor-report.json`:**
+```json
+{
+  "clients": [
+    {
+      "client": "claude-code",
+      "status": "found",
+      "binaryPath": "/usr/local/bin/claude",
+      "version": "2.1.0",
+      "configPath": "/home/user/.config/claude/mcp.json",
+      "configValid": true,
+      "warnings": []
+    },
+    {
+      "client": "vscode",
+      "status": "found",
+      "binaryPath": "/usr/bin/code",
+      "configPath": "/home/user/.vscode/mcp.json",
+      "configValid": false,
+      "warnings": [
+        "Config file exists but is invalid JSON"
+      ]
+    }
+  ],
+  "mcpServers": [
+    {
+      "name": "github",
+      "command": "gh",
+      "available": true
+    },
+    {
+      "name": "custom-tool",
+      "command": "/usr/local/bin/custom-tool",
+      "available": false
+    }
+  ],
+  "summary": {
+    "clientsDetected": 2,
+    "clientsMissing": 5,
+    "configsValid": 1,
+    "configsInvalid": 1,
+    "mcpCommandsAvailable": 2,
+    "mcpCommandsMissing": 1
+  }
+}
+```
+
+### Use Cases for Doctor
+
+**Before Initial Setup:**
+```bash
+# Check what's already installed
+overture doctor
+```
+
+**After Installation Issues:**
+```bash
+# Diagnose why sync isn't working
+overture doctor --verbose
+```
+
+**In CI/CD:**
+```bash
+# Verify environment before deployment
+overture doctor --json | jq '.summary.configsValid'
+```
+
+**Team Onboarding:**
+```bash
+# New team member checks what they need
+overture doctor
+# Shows clear list of missing clients and tools
+```
+
+---
+
+## Example 6: CI/CD Configuration Generation
+
+### Scenario
+
+You want to generate MCP configs in GitHub Actions without installing AI clients in your CI environment.
+
+### `.overture/config.yaml` for CI
+
+```yaml
+version: "1.0"
+
+project:
+  name: my-api
+  type: python-backend
+
+# Skip binary detection in CI environments
+skipBinaryDetection: true
+
+mcp:
+  github:
+    command: gh
+    args: [mcp]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+
+  filesystem:
+    command: npx
+    args: [-y, mcp-server-filesystem]
+
+  python-repl:
+    command: uvx
+    args: [mcp-server-python-repl]
+
+  ruff:
+    command: uvx
+    args: [mcp-server-ruff]
+```
+
+### GitHub Actions Workflow
+
+**`.github/workflows/generate-configs.yml`:**
+
+```yaml
+name: Generate MCP Configs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.overture/config.yaml'
+  pull_request:
+    paths:
+      - '.overture/config.yaml'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Overture
+        run: npm install -g @overture/cli
+
+      - name: Verify Overture installation
+        run: overture --version
+
+      - name: Generate configs (dry-run)
+        run: |
+          overture sync --dry-run
+          echo "Generated configs:"
+          ls -la dist/
+
+      - name: Validate generated configs
+        run: |
+          # Check if configs are valid JSON
+          for file in dist/*.json; do
+            echo "Validating $file"
+            jq empty "$file" || exit 1
+          done
+
+      - name: Upload generated configs
+        uses: actions/upload-artifact@v3
+        with:
+          name: mcp-configs
+          path: dist/
+          retention-days: 30
+
+      - name: Comment on PR with config summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('dist').filter(f => f.endsWith('.json'));
+
+            const comment = `## 🔧 Generated MCP Configs\n\n` +
+              `Total configs: ${files.length}\n\n` +
+              `Files:\n${files.map(f => `- \`${f}\``).join('\n')}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+```
+
+### Docker Container Build
+
+**`Dockerfile`:**
+
+```dockerfile
+FROM node:18-alpine
+
+# Install Overture
+RUN npm install -g @overture/cli
+
+# Copy configuration
+COPY .overture/config.yaml /app/.overture/config.yaml
+WORKDIR /app
+
+# Generate configs
+RUN overture sync --dry-run
+
+# Configs are now in /app/dist/
+# Copy to final destination or use in application
+```
+
+### Pre-commit Hook for Config Validation
+
+**`.git/hooks/pre-commit`:**
+
+```bash
+#!/bin/bash
+
+# Validate Overture config before committing
+if [ -f .overture/config.yaml ]; then
+  echo "Validating Overture configuration..."
+
+  if ! overture validate; then
+    echo "❌ Overture config validation failed"
+    exit 1
+  fi
+
+  echo "✅ Overture config valid"
+fi
+
+exit 0
+```
+
+Make executable:
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+### Benefits of CI/CD Integration
+
+1. **Consistent Configs** - Same configs generated in all environments
+2. **Early Validation** - Catch config errors before deployment
+3. **Documentation** - PR comments show what configs changed
+4. **Reproducibility** - Anyone can regenerate exact same configs
+5. **No Manual Steps** - Fully automated config generation
+
+### Advanced: Multi-Environment Configs
+
+**`.overture/config.dev.yaml`:**
+```yaml
+version: "1.0"
+skipBinaryDetection: true
+
+mcp:
+  github:
+    command: gh
+    args: [mcp]
+    env:
+      GITHUB_TOKEN: "${GITHUB_DEV_TOKEN}"
+```
+
+**`.overture/config.prod.yaml`:**
+```yaml
+version: "1.0"
+skipBinaryDetection: true
+
+mcp:
+  github:
+    command: gh
+    args: [mcp]
+    env:
+      GITHUB_TOKEN: "${GITHUB_PROD_TOKEN}"
+```
+
+**GitHub Actions:**
+```yaml
+- name: Generate dev configs
+  run: overture sync --config .overture/config.dev.yaml --dry-run
+
+- name: Generate prod configs
+  run: overture sync --config .overture/config.prod.yaml --dry-run
+```
+
+### Testing Config Changes
+
+```yaml
+- name: Test config changes
+  run: |
+    # Generate configs
+    overture sync --dry-run
+
+    # Compare with previous version
+    git fetch origin main
+    git show origin/main:dist/claude-code-mcp.json > old-config.json
+
+    # Show diff
+    diff -u old-config.json dist/claude-code-mcp.json || true
+
+    # Validate no breaking changes
+    # (Add custom validation logic here)
+```
+
+---
+
+## Summary
+
+These examples demonstrate:
+
+1. **Example 1-4** - Project-type specific configurations
+2. **Example 5** - System diagnostics and troubleshooting with `overture doctor`
+3. **Example 6** - CI/CD integration for automated config generation
+
+**Key Takeaways:**
+
+- Use `overture doctor` to diagnose client detection and config validity issues
+- Set `skipBinaryDetection: true` for CI/CD environments where clients aren't installed
+- Integrate Overture into your CI/CD pipelines for consistent config generation
+- Leverage JSON output mode for automation and programmatic checks
+- Use dry-run mode to preview configs before applying them
