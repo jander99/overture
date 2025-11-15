@@ -23,7 +23,7 @@ This project is in **active development** with architecture and documentation co
 - [x] **CLI Implementation** — Command-line interface (overture init, sync, validate, mcp list/enable)
 - [x] **Configuration Generator** — Generates .mcp.json and CLAUDE.md from config
 - [x] **Validation Engine** — Validates MCP availability and configuration
-- [x] **Test Suite** — Comprehensive Jest tests with 83%+ code coverage (873 tests passing)
+- [x] **Test Suite** — Comprehensive Jest tests with 83%+ code coverage (911 tests passing)
 - [ ] **Plugin Registry** — Mapping of plugins to recommended MCPs (future - v0.4)
 - [ ] **E2E Tests** — End-to-end testing in apps/cli-e2e/
 
