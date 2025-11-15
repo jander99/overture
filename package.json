@@ -6,12 +6,12 @@
   "private": true,
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@nx/esbuild": "22.0.2",
-    "@nx/eslint": "22.0.2",
-    "@nx/eslint-plugin": "22.0.2",
-    "@nx/jest": "22.0.2",
-    "@nx/js": "22.0.2",
-    "@nx/node": "22.0.2",
+    "@nx/esbuild": "22.0.3",
+    "@nx/eslint": "22.0.3",
+    "@nx/eslint-plugin": "22.0.3",
+    "@nx/jest": "22.0.3",
+    "@nx/js": "22.0.3",
+    "@nx/node": "22.0.3",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
@@ -27,7 +27,7 @@
     "jest-environment-node": "^30.0.2",
     "jest-util": "^30.0.2",
     "memfs": "^4.50.0",
-    "nx": "22.0.2",
+    "nx": "22.0.3",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
@@ -47,7 +47,10 @@
     "execa": "^5.1.1",
     "handlebars": "^4.7.8",
     "inquirer": "^8.2.6",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^4.1.1",
     "zod": "^4.1.12"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.1"
   }
 }
