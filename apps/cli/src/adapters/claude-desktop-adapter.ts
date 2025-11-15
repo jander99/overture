@@ -116,4 +116,28 @@ export class ClaudeDesktopAdapter extends BaseClientAdapter {
     // Assuming same as Claude Code for now
     return false;
   }
+
+  override getBinaryNames(): string[] {
+    // Claude Desktop is a GUI-only application
+    return [];
+  }
+
+  override getAppBundlePaths(platform: Platform): string[] {
+    switch (platform) {
+      case 'darwin':
+        return ['/Applications/Claude.app'];
+      case 'win32':
+        return [
+          'C:\\Program Files\\Claude\\Claude.exe',
+          'C:\\Program Files (x86)\\Claude\\Claude.exe',
+        ];
+      case 'linux':
+        return ['/opt/Claude', '/usr/share/applications/claude.desktop'];
+    }
+  }
+
+  override requiresBinary(): boolean {
+    // App bundle is sufficient
+    return false;
+  }
 }

@@ -62,12 +62,31 @@ export function createSyncCommand(): Command {
           Logger.info('Client sync results:');
           for (const clientResult of result.results) {
             const status = clientResult.success ? '✓' : '✗';
-            const statusColor = clientResult.success ? 'green' : 'red';
 
             Logger.info(`  ${status} ${clientResult.client}:`);
 
+            // Show binary detection status
+            if (clientResult.binaryDetection) {
+              const detection = clientResult.binaryDetection;
+              if (detection.status === 'found') {
+                const versionStr = detection.version ? ` (v${detection.version})` : '';
+                const pathStr = detection.binaryPath || detection.appBundlePath;
+                Logger.success(`      Detected${versionStr}: ${pathStr}`);
+
+                // Show config validity
+                if (detection.configPath) {
+                  const validStr = detection.configValid ? 'valid' : 'invalid';
+                  Logger.info(`      Config: ${detection.configPath} (${validStr})`);
+                }
+              } else if (detection.status === 'not-found') {
+                Logger.warn(`      Not detected (config will still be generated)`);
+              }
+            }
+
             if (clientResult.success) {
-              Logger.info(`      Config: ${clientResult.configPath}`);
+              if (!clientResult.binaryDetection || clientResult.binaryDetection.status !== 'found') {
+                Logger.info(`      Config: ${clientResult.configPath}`);
+              }
               if (clientResult.backupPath) {
                 Logger.info(`      Backup: ${clientResult.backupPath}`);
               }

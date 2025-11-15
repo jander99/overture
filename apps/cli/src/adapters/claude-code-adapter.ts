@@ -119,4 +119,18 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
     // Claude Code has native ${VAR} support
     return false;
   }
+
+  override getBinaryNames(): string[] {
+    return ['claude'];
+  }
+
+  override getAppBundlePaths(_platform: Platform): string[] {
+    // Claude Code is a CLI-only client
+    return [];
+  }
+
+  override requiresBinary(): boolean {
+    // Claude Code requires the CLI binary
+    return true;
+  }
 }

@@ -47,6 +47,9 @@ const createMockAdapter = (
   })),
   supportsTransport: jest.fn((t) => supportedTransports.includes(t)),
   needsEnvVarExpansion: jest.fn(() => false),
+  getBinaryNames: jest.fn(() => [name]),
+  getAppBundlePaths: jest.fn(() => []),
+  requiresBinary: jest.fn(() => installed),
   isInstalled: jest.fn(() => installed),
 });
 

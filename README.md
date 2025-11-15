@@ -150,13 +150,20 @@ documentation:
 
 ## Quick Start
 
-### Current Version (v0.2 - Available Now)
+### Current Version (v0.2.5 - Available Now)
 
-Overture v0.2 provides comprehensive multi-platform MCP configuration management:
+Overture v0.2.5 provides comprehensive multi-platform MCP configuration management with intelligent client detection:
 
 ```bash
 # Install Overture
 npm install -g @overture/cli
+
+# Check which AI clients are installed
+overture doctor
+# → Detects installed clients (Claude Code, Claude Desktop, VSCode, etc.)
+# → Shows version information
+# → Validates existing config files
+# → Lists available MCP commands
 
 # Initialize user global config (optional)
 overture user init
@@ -170,21 +177,25 @@ vim .overture/config.yaml
 
 # Sync configuration across all AI tools
 overture sync
+# → Detects installed clients automatically
 # → Installs plugins via Claude CLI
 # → Generates/updates configs for all detected clients
 # → Creates backups before changes
 # → Generates CLAUDE.md
+# → Warns but continues if client not detected (you can install later)
 ```
 
-**What v0.2 includes:**
+**What v0.2.5 includes:**
 - ✅ User global configuration (`~/.config/overture.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
 - ✅ Multi-platform sync (7 clients supported)
+- ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, and validates configs
+- ✅ **Diagnostics command** (`overture doctor`) - Comprehensive system diagnostics
 - ✅ Config audit and consolidation
 - ✅ Backup/restore system
 - ✅ Plugin installation and management
 - ✅ Validation (`overture validate`)
-- ✅ **873 tests passing (100%), 83%+ code coverage**
+- ✅ **911 tests passing (100%), 83%+ code coverage**
 
 **What v0.2 does NOT include yet:**
 - ❌ Enhanced workflow documentation templates
@@ -273,21 +284,52 @@ When using backend-development → use filesystem, docker
 
 ## Commands
 
+### System Diagnostics
+
+```bash
+# Check which AI clients are installed
+overture doctor
+# Shows:
+# - Installed clients (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
+# - Version information for each client
+# - Config file locations and validity
+# - Available MCP server commands
+
+# Options:
+overture doctor --json          # Output as JSON
+overture doctor --verbose       # Show detailed warnings
+```
+
+### Configuration Management
+
 ```bash
 # Initialize project
 overture init [--type <type>]
 
 # Sync configuration (install plugins + generate configs)
 overture sync
+# - Automatically detects installed AI clients
+# - Generates configs only for detected clients
+# - Warns if client not found but continues (install later)
+# - Shows binary detection results for each client
 
+# Options:
+overture sync --dry-run         # Preview changes without writing
+overture sync --client <name>   # Sync only specific client
+overture sync --force           # Force sync even with warnings
+
+# Validate configuration
+overture validate
+```
+
+### MCP Management
+
+```bash
 # List MCP servers
 overture mcp list
 
 # Enable a disabled MCP
 overture mcp enable <name>
-
-# Validate configuration
-overture validate
 ```
 
 ---
@@ -316,7 +358,22 @@ overture validate
 - [x] Config audit: `overture audit`
 - [x] Backup/restore: `overture backup`
 - [x] Multi-client sync engine
-- [x] **Test Status:** 873/873 passing (100%)
+
+### v0.2.5 - Intelligent Client Detection ✅ COMPLETE
+- [x] Binary detection service
+  - [x] Detect CLI binaries in PATH
+  - [x] Detect GUI application bundles
+  - [x] Extract version information
+  - [x] Validate config file JSON
+- [x] `overture doctor` diagnostics command
+  - [x] Show installed clients and versions
+  - [x] Validate config files
+  - [x] Check MCP command availability
+  - [x] JSON output mode
+- [x] Enhanced sync output
+  - [x] Show detection results per client
+  - [x] "Warn but allow" approach (generate configs even if client not detected)
+- [x] 911 tests passing (100%), 83%+ code coverage
 
 ### v0.3 - Enhanced Documentation 📋 PLANNED
 - [ ] Template system for workflow instructions
@@ -451,7 +508,7 @@ MIT
 
 ## Status
 
-**Current:** v0.2 - Multi-Platform MCP Manager complete (873/873 tests passing, 83%+ code coverage)
+**Current:** v0.2.5 - Intelligent Client Detection complete (911/911 tests passing, 83%+ code coverage)
 
 **Next:** v0.3 - Enhanced Documentation (workflow templates, AGENTS.md generation)
 

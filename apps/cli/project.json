@@ -15,11 +15,12 @@
         "bundle": false,
         "main": "{projectRoot}/src/main.ts",
         "tsConfig": "{projectRoot}/tsconfig.app.json",
+        "skipTypeCheck": true,
         "assets": [
           {
             "input": "{projectRoot}/src/assets",
             "glob": "**/*",
-            "output": "apps/cli/src/assets"
+            "output": "assets"
           }
         ],
         "esbuildOptions": {

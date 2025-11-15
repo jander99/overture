@@ -116,4 +116,18 @@ export class CopilotCliAdapter extends BaseClientAdapter {
     // Copilot CLI likely has native ${VAR} support
     return false;
   }
+
+  override getBinaryNames(): string[] {
+    return ['copilot'];
+  }
+
+  override getAppBundlePaths(_platform: Platform): string[] {
+    // Copilot CLI is a CLI-only tool
+    return [];
+  }
+
+  override requiresBinary(): boolean {
+    // Copilot CLI requires the binary
+    return true;
+  }
 }

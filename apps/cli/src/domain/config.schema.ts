@@ -137,6 +137,7 @@ export const SyncOptionsSchema = z.object({
   mergeStrategy: MergeStrategySchema.default('append'),
   autoDetectClients: z.boolean().default(true),
   enabledClients: z.array(ClientNameSchema).optional(),
+  skipBinaryDetection: z.boolean().default(false),
 }).strict();
 
 /**

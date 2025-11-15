@@ -32,6 +32,8 @@ import { backupClientConfig } from './backup-service';
 import { generateDiff } from './config-diff';
 import { acquireLock, releaseLock } from './process-lock';
 import { findProjectRoot } from './path-resolver';
+import { BinaryDetector } from './binary-detector';
+import type { BinaryDetectionResult } from '../domain/config.types';
 
 /**
  * Sync options
@@ -47,6 +49,8 @@ export interface SyncOptions {
   projectRoot?: string;
   /** Platform override (defaults to current platform) */
   platform?: Platform;
+  /** Skip binary detection for clients */
+  skipBinaryDetection?: boolean;
 }
 
 /**
@@ -58,6 +62,7 @@ export interface ClientSyncResult {
   configPath: string;
   diff?: any;
   backupPath?: string;
+  binaryDetection?: BinaryDetectionResult;
   warnings: string[];
   error?: string;
 }
@@ -121,14 +126,49 @@ async function syncToClient(
 ): Promise<ClientSyncResult> {
   const platform = options.platform || getCurrentPlatform();
   const warnings: string[] = [];
+  let binaryDetection: BinaryDetectionResult | undefined;
 
   try {
-    // Check if client is installed
+    // Binary detection (if not skipped)
+    const skipDetection =
+      options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
+
+    if (!skipDetection) {
+      const detector = new BinaryDetector();
+      binaryDetection = await detector.detectClient(client, platform);
+
+      // Add version info to warnings if detected
+      if (binaryDetection.status === 'found' && binaryDetection.version) {
+        warnings.push(
+          `${client.name} detected: ${binaryDetection.version}${binaryDetection.binaryPath ? ` at ${binaryDetection.binaryPath}` : ''}`
+        );
+      }
+
+      // Add detection warnings
+      if (binaryDetection.warnings.length > 0) {
+        warnings.push(...binaryDetection.warnings);
+      }
+
+      // If binary not found, add warning but continue (warn but allow)
+      if (binaryDetection.status === 'not-found') {
+        warnings.push(
+          `${client.name} binary/application not detected on system. Generating config anyway.`
+        );
+      }
+    } else {
+      binaryDetection = {
+        status: 'skipped',
+        warnings: [],
+      };
+    }
+
+    // Check if client is installed (config path check)
     if (!client.isInstalled(platform)) {
       return {
         client: client.name,
         success: false,
         configPath: '',
+        binaryDetection,
         warnings: [],
         error: `Client ${client.name} is not installed`,
       };
@@ -142,6 +182,7 @@ async function syncToClient(
         client: client.name,
         success: false,
         configPath: '',
+        binaryDetection,
         warnings: [],
         error: `Could not determine config path for ${client.name}`,
       };
@@ -163,6 +204,7 @@ async function syncToClient(
         client: client.name,
         success: false,
         configPath: '',
+        binaryDetection,
         warnings: [],
         error: `Could not determine config path for ${client.name}`,
       };
@@ -179,6 +221,7 @@ async function syncToClient(
           client: client.name,
           success: false,
           configPath,
+          binaryDetection,
           warnings,
           error: `Transport issues detected. Use --force to sync anyway.`,
         };
@@ -226,6 +269,7 @@ async function syncToClient(
         success: true,
         configPath: dryRunPath, // Return dist/ path to show user where file was written
         diff,
+        binaryDetection,
         warnings,
       };
     }
@@ -249,6 +293,7 @@ async function syncToClient(
       configPath,
       diff,
       backupPath,
+      binaryDetection,
       warnings,
     };
   } catch (error) {
@@ -256,6 +301,7 @@ async function syncToClient(
       client: client.name,
       success: false,
       configPath: '',
+      binaryDetection,
       warnings,
       error: (error as Error).message,
     };

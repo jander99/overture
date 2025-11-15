@@ -134,4 +134,18 @@ export class VSCodeAdapter extends BaseClientAdapter {
     // (no native ${VAR} support in mcp.json)
     return true;
   }
+
+  override getBinaryNames(): string[] {
+    return ['code'];
+  }
+
+  override getAppBundlePaths(_platform: Platform): string[] {
+    // VS Code is accessed via CLI binary
+    return [];
+  }
+
+  override requiresBinary(): boolean {
+    // VS Code requires the CLI binary
+    return true;
+  }
 }

@@ -6,6 +6,7 @@ import { createMcpCommand } from './commands/mcp';
 import { createUserCommand } from './commands/user';
 import { createAuditCommand } from './commands/audit';
 import { createBackupCommand } from './commands/backup';
+import { createDoctorCommand } from './commands/doctor';
 
 /**
  * Creates and configures the Overture CLI program.
@@ -14,6 +15,7 @@ import { createBackupCommand } from './commands/backup';
  * - init: Initialize .overture/config.yaml
  * - sync: Install plugins and generate configuration files
  * - validate: Validate configuration and MCP availability
+ * - doctor: Check system for installed clients and MCP servers
  * - mcp: Manage MCP servers (list, enable)
  * - user: Manage user global configuration
  * - audit: Audit MCP configurations across clients
@@ -33,6 +35,7 @@ export function createProgram(): Command {
   program.addCommand(createInitCommand());
   program.addCommand(createSyncCommand());
   program.addCommand(createValidateCommand());
+  program.addCommand(createDoctorCommand());
   program.addCommand(createMcpCommand());
   program.addCommand(createUserCommand());
   program.addCommand(createAuditCommand());

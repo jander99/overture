@@ -130,4 +130,20 @@ export class JetBrainsCopilotAdapter extends BaseClientAdapter {
     // (similar to VS Code, no native ${VAR} support assumed)
     return true;
   }
+
+  override getBinaryNames(): string[] {
+    // Check for any JetBrains IDE binary
+    // TODO: Research - should we check all or let user specify?
+    return ['idea', 'pycharm', 'webstorm', 'phpstorm', 'goland', 'rider'];
+  }
+
+  override getAppBundlePaths(_platform: Platform): string[] {
+    // JetBrains IDEs are accessed via binaries
+    return [];
+  }
+
+  override requiresBinary(): boolean {
+    // JetBrains Copilot requires an IDE binary
+    return true;
+  }
 }

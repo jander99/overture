@@ -112,4 +112,24 @@ export class WindsurfAdapter extends BaseClientAdapter {
     // Windsurf likely has native ${VAR} support
     return false;
   }
+
+  override getBinaryNames(): string[] {
+    return ['windsurf'];
+  }
+
+  override getAppBundlePaths(platform: Platform): string[] {
+    switch (platform) {
+      case 'darwin':
+        return ['/Applications/Windsurf.app'];
+      case 'win32':
+        return ['C:\\Program Files\\Windsurf\\Windsurf.exe'];
+      case 'linux':
+        return ['/opt/Windsurf'];
+    }
+  }
+
+  override requiresBinary(): boolean {
+    // Either binary or app bundle is sufficient
+    return false;
+  }
 }

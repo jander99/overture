@@ -122,4 +122,18 @@ export class CursorAdapter extends BaseClientAdapter {
     // Cursor likely has native ${VAR} support (similar to Claude Code)
     return false;
   }
+
+  override getBinaryNames(): string[] {
+    return ['cursor'];
+  }
+
+  override getAppBundlePaths(_platform: Platform): string[] {
+    // Cursor is accessed via CLI binary
+    return [];
+  }
+
+  override requiresBinary(): boolean {
+    // Cursor requires the CLI binary
+    return true;
+  }
 }

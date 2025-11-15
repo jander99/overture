@@ -157,6 +157,58 @@ export interface ClientAdapter {
    * @returns True if client appears to be installed
    */
   isInstalled(platform: Platform): boolean;
+
+  /**
+   * Get CLI binary names to detect for this client
+   *
+   * Returns array of binary names that should be checked in PATH.
+   * Empty array for GUI-only clients.
+   *
+   * @returns Array of binary names
+   *
+   * @example
+   * ```typescript
+   * claudeCode.getBinaryNames() // => ['claude']
+   * vscode.getBinaryNames() // => ['code']
+   * claudeDesktop.getBinaryNames() // => [] (GUI-only)
+   * ```
+   */
+  getBinaryNames(): string[];
+
+  /**
+   * Get application bundle paths to check for this client
+   *
+   * Returns platform-specific paths to application bundles.
+   * Empty array for CLI-only clients.
+   *
+   * @param platform - Target platform
+   * @returns Array of app bundle paths to check
+   *
+   * @example
+   * ```typescript
+   * claudeDesktop.getAppBundlePaths('darwin') // => ['/Applications/Claude.app']
+   * claudeDesktop.getAppBundlePaths('win32') // => ['C:\\Program Files\\Claude\\Claude.exe']
+   * claudeCode.getAppBundlePaths('darwin') // => [] (CLI-only)
+   * ```
+   */
+  getAppBundlePaths(platform: Platform): string[];
+
+  /**
+   * Check if this client requires a binary to function
+   *
+   * - true: Client requires CLI binary (e.g., claude-code)
+   * - false: Client can work with just app bundle (e.g., claude-desktop)
+   *
+   * @returns True if binary is required
+   *
+   * @example
+   * ```typescript
+   * claudeCode.requiresBinary() // => true (CLI-only)
+   * claudeDesktop.requiresBinary() // => false (app bundle sufficient)
+   * windsurf.requiresBinary() // => false (either binary OR app bundle)
+   * ```
+   */
+  requiresBinary(): boolean;
 }
 
 /**
@@ -181,6 +233,27 @@ export abstract class BaseClientAdapter implements ClientAdapter {
   isInstalled(platform: Platform): boolean {
     const path = this.detectConfigPath(platform);
     return path !== null;
+  }
+
+  /**
+   * Default implementation: No binary names (subclasses should override)
+   */
+  getBinaryNames(): string[] {
+    return [];
+  }
+
+  /**
+   * Default implementation: No app bundle paths (subclasses should override)
+   */
+  getAppBundlePaths(_platform: Platform): string[] {
+    return [];
+  }
+
+  /**
+   * Default implementation: Binary not required (subclasses should override)
+   */
+  requiresBinary(): boolean {
+    return false;
   }
 
   /**

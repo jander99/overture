@@ -50,6 +50,71 @@ export type ClientName =
 export type MergeStrategy = 'append' | 'replace';
 
 /**
+ * Binary detection status for AI development clients
+ * - found: Binary/app bundle was detected on the system
+ * - not-found: Binary/app bundle was not detected
+ * - skipped: Detection was skipped (skipBinaryDetection enabled)
+ */
+export type BinaryDetectionStatus = 'found' | 'not-found' | 'skipped';
+
+/**
+ * Binary Detection Result
+ *
+ * Result of detecting an AI development client binary or application bundle.
+ *
+ * @example
+ * ```typescript
+ * {
+ *   status: 'found',
+ *   binaryPath: '/usr/local/bin/claude',
+ *   version: '2.1.0',
+ *   warnings: []
+ * }
+ * ```
+ */
+export interface BinaryDetectionResult {
+  /**
+   * Detection status
+   */
+  status: BinaryDetectionStatus;
+
+  /**
+   * Path to the binary (for CLI clients)
+   * @example "/usr/local/bin/claude"
+   */
+  binaryPath?: string;
+
+  /**
+   * Detected version string
+   * @example "2.1.0", "v0.42.0"
+   */
+  version?: string;
+
+  /**
+   * Path to the application bundle (for GUI clients)
+   * @example "/Applications/Claude.app"
+   */
+  appBundlePath?: string;
+
+  /**
+   * Config file path that was validated
+   * @example "/Users/user/.config/claude/mcp.json"
+   */
+  configPath?: string;
+
+  /**
+   * Whether config file is valid JSON
+   */
+  configValid?: boolean;
+
+  /**
+   * Warnings or additional information
+   * @example ["Binary found but version detection failed"]
+   */
+  warnings: string[];
+}
+
+/**
  * MCP Server Configuration (v2.0)
  *
  * Defines how to launch an MCP server and which clients should use it.
@@ -231,6 +296,13 @@ export interface SyncOptions {
    * Specific clients to sync (empty = all enabled clients)
    */
   enabledClients?: ClientName[];
+
+  /**
+   * Skip binary detection for clients
+   * If true, Overture will not check if client binaries are installed
+   * @default false
+   */
+  skipBinaryDetection?: boolean;
 }
 
 /**
@@ -398,6 +470,11 @@ export interface ClientSyncResult {
    * Backup file path (if created)
    */
   backupPath?: string;
+
+  /**
+   * Binary detection result for this client
+   */
+  binaryDetection?: BinaryDetectionResult;
 
   /**
    * Error if sync failed
