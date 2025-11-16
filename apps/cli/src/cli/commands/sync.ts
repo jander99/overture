@@ -25,6 +25,7 @@ export function createSyncCommand(): Command {
     .option('--dry-run', 'Preview changes without writing files')
     .option('--client <name>', 'Sync only for specific client (e.g., claude-code, claude-desktop)')
     .option('--force', 'Force sync even if validation warnings exist')
+    .option('--skip-plugins', 'Skip plugin installation, only sync MCPs')
     .action(async (options) => {
       try {
         // Show dry-run indicator
@@ -41,6 +42,7 @@ export function createSyncCommand(): Command {
         const syncOptions = {
           dryRun: options.dryRun || false,
           force: options.force || false,
+          skipPlugins: options.skipPlugins || false,
           clients: options.client ? [options.client as ClientName] : undefined,
         };
 

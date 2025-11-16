@@ -1,0 +1,23 @@
+{
+  "plugins": {
+    "known-plugin": {
+      "marketplace": "claude-code-workflows",
+      "enabled": true,
+      "installedAt": "2025-01-15T10:00:00Z"
+    },
+    "custom-plugin": {
+      "marketplace": "custom-org/custom-marketplace",
+      "enabled": true,
+      "installedAt": "2025-01-15T11:00:00Z"
+    },
+    "local-plugin": {
+      "marketplace": "./local-dev-marketplace",
+      "enabled": true,
+      "installedAt": "2025-01-15T12:00:00Z"
+    }
+  },
+  "marketplaces": [
+    "anthropics/claude-code-workflows",
+    "custom-org/custom-marketplace"
+  ]
+}

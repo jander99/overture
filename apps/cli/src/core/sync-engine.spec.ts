@@ -13,6 +13,15 @@ import * as configLoader from './config-loader';
 import * as adapterRegistry from '../adapters/adapter-registry';
 import * as processLock from './process-lock';
 import * as backupService from './backup-service';
+import { PluginDetector } from './plugin-detector';
+import { PluginInstaller } from './plugin-installer';
+import {
+  buildInstalledPlugin,
+  buildUserConfig,
+  buildProjectConfig,
+  buildPluginConfig,
+  buildInstallationResult,
+} from './__tests__/mock-builders';
 
 // Mock modules
 jest.mock('./config-loader');
@@ -21,6 +30,8 @@ jest.mock('../adapters/adapter-registry', () => ({
 }));
 jest.mock('./process-lock');
 jest.mock('./backup-service');
+jest.mock('./plugin-detector');
+jest.mock('./plugin-installer');
 
 const mockConfigLoader = configLoader as jest.Mocked<typeof configLoader>;
 const mockProcessLock = processLock as jest.Mocked<typeof processLock>;
@@ -547,6 +558,414 @@ describe('Sync Engine', () => {
 
       expect(adapter.writeConfig).toHaveBeenCalled();
       // Env vars should be expanded by expandEnvVarsInClientConfig
+    });
+  });
+
+  describe('Plugin Sync Integration', () => {
+    let mockDetector: jest.Mocked<PluginDetector>;
+    let mockInstaller: jest.Mocked<PluginInstaller>;
+
+    beforeEach(() => {
+      // Reset mocks
+      jest.clearAllMocks();
+
+      // Mock PluginDetector
+      mockDetector = new PluginDetector() as jest.Mocked<PluginDetector>;
+      mockDetector.detectInstalledPlugins = jest.fn();
+      mockDetector.isPluginInstalled = jest.fn();
+
+      // Mock PluginInstaller
+      mockInstaller = new PluginInstaller() as jest.Mocked<PluginInstaller>;
+      mockInstaller.installPlugin = jest.fn();
+      mockInstaller.installPlugins = jest.fn();
+      mockInstaller.ensureMarketplace = jest.fn();
+      mockInstaller.checkClaudeBinary = jest.fn();
+
+      // Set up constructor mocks
+      (PluginDetector as jest.MockedClass<typeof PluginDetector>).mockImplementation(
+        () => mockDetector
+      );
+      (PluginInstaller as jest.MockedClass<typeof PluginInstaller>).mockImplementation(
+        () => mockInstaller
+      );
+    });
+
+    it('should sync plugins before MCP sync', async () => {
+      // Arrange: User config with plugins
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows', true, [
+          'python-repl',
+        ]),
+        'backend-development': buildPluginConfig('claude-code-workflows', true, ['docker']),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      // Mock: 1 plugin already installed, 1 missing
+      mockDetector.detectInstalledPlugins.mockResolvedValue([
+        buildInstalledPlugin({
+          name: 'python-development',
+          marketplace: 'claude-code-workflows',
+        }),
+      ]);
+
+      mockInstaller.installPlugin.mockResolvedValue(
+        buildInstallationResult({ success: true })
+      );
+
+      // Mock client adapter
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      const result = await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Plugin sync happened
+      expect(mockDetector.detectInstalledPlugins).toHaveBeenCalled();
+      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+        'backend-development',
+        'claude-code-workflows',
+        expect.any(Object)
+      );
+
+      // Assert: MCP sync still happened
+      expect(adapter.writeConfig).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+    });
+
+    it('should read plugins from user global config only', async () => {
+      // Arrange: User config with plugins
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      const projectConfig = buildProjectConfig('test-project', 'python-backend', {});
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(projectConfig);
+      mockConfigLoader.mergeConfigs.mockReturnValue({
+        ...userConfig,
+        project: projectConfig.project,
+      });
+
+      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+      mockInstaller.installPlugin.mockResolvedValue(
+        buildInstallationResult({ success: true })
+      );
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Plugin installation called for user config plugins
+      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+        'python-development',
+        'claude-code-workflows',
+        expect.any(Object)
+      );
+    });
+
+    it('should warn if plugins found in project config', async () => {
+      // Arrange: Project config with plugins (incorrect)
+      const userConfig = buildUserConfig({});
+      const projectConfig = buildProjectConfig('test-project', 'python-backend', {
+        'python-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(projectConfig);
+      mockConfigLoader.mergeConfigs.mockReturnValue({
+        ...userConfig,
+        project: projectConfig.project,
+        plugins: projectConfig.plugins,
+      });
+
+      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Spy on console.warn
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Act
+      const result = await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Warning displayed
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Plugin configuration found in project config')
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('should skip already-installed plugins', async () => {
+      // Arrange: All plugins already installed
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows'),
+        'backend-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      // Mock: All plugins already installed
+      mockDetector.detectInstalledPlugins.mockResolvedValue([
+        buildInstalledPlugin({
+          name: 'python-development',
+          marketplace: 'claude-code-workflows',
+        }),
+        buildInstalledPlugin({
+          name: 'backend-development',
+          marketplace: 'claude-code-workflows',
+        }),
+      ]);
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: No installations attempted
+      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+    });
+
+    it('should show progress indicators during installation', async () => {
+      // Arrange
+      const userConfig = buildUserConfig({
+        'plugin-a': buildPluginConfig('claude-code-workflows'),
+        'plugin-b': buildPluginConfig('claude-code-workflows'),
+        'plugin-c': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+      mockInstaller.installPlugin.mockResolvedValue(
+        buildInstallationResult({ success: true })
+      );
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Spy on console.log
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Progress messages logged
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Syncing plugins'));
+
+      logSpy.mockRestore();
+    });
+
+    it('should show summary after plugin installation', async () => {
+      // Arrange
+      const userConfig = buildUserConfig({
+        'plugin-success': buildPluginConfig('claude-code-workflows'),
+        'plugin-failure': buildPluginConfig('unknown-marketplace'),
+        'plugin-skip': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      // Mock: 1 already installed, 1 will succeed, 1 will fail
+      mockDetector.detectInstalledPlugins.mockResolvedValue([
+        buildInstalledPlugin({ name: 'plugin-skip', marketplace: 'claude-code-workflows' }),
+      ]);
+
+      mockInstaller.installPlugin.mockImplementation(
+        async (name: string, marketplace: string) => {
+          if (name === 'plugin-success') {
+            return buildInstallationResult({ success: true, plugin: name, marketplace });
+          } else {
+            return buildInstallationResult({
+              success: false,
+              plugin: name,
+              marketplace,
+              error: 'Marketplace not found',
+            });
+          }
+        }
+      );
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Spy on console.log
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Summary logged (1 installed, 1 skipped, 1 failed)
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('installed'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('skipped'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('failed'));
+
+      logSpy.mockRestore();
+    });
+
+    it('should continue with MCP sync after plugin sync', async () => {
+      // Arrange
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+      mockInstaller.installPlugin.mockResolvedValue(
+        buildInstallationResult({ success: true })
+      );
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: Both plugin and MCP sync happened
+      expect(mockInstaller.installPlugin).toHaveBeenCalled();
+      expect(adapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should support --skip-plugins flag', async () => {
+      // Arrange
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+        skipPlugins: true, // Skip plugin installation
+      });
+
+      // Assert: Plugin sync skipped
+      expect(mockDetector.detectInstalledPlugins).not.toHaveBeenCalled();
+      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+
+      // Assert: MCP sync still happened
+      expect(adapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should support --dry-run for plugins', async () => {
+      // Arrange
+      const userConfig = buildUserConfig({
+        'python-development': buildPluginConfig('claude-code-workflows'),
+      });
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+      mockInstaller.installPlugin.mockResolvedValue(
+        buildInstallationResult({
+          success: true,
+          output: '[DRY RUN] Would install: python-development@claude-code-workflows',
+        })
+      );
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Spy on console.log
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Act
+      await syncClients({
+        clients: ['claude-code'],
+        platform,
+        dryRun: true,
+      });
+
+      // Assert: Dry-run messages logged
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('DRY RUN'));
+      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+        'python-development',
+        'claude-code-workflows',
+        expect.objectContaining({ dryRun: true })
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it('should handle empty plugins section gracefully', async () => {
+      // Arrange: No plugins in config
+      const userConfig = buildUserConfig({});
+
+      mockConfigLoader.loadUserConfig.mockResolvedValue(userConfig);
+      mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
+      mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
+
+      const adapter = createMockAdapter('claude-code');
+      adapter.readConfig.mockResolvedValue(null);
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Act
+      const result = await syncClients({
+        clients: ['claude-code'],
+        platform,
+      });
+
+      // Assert: No plugin operations, MCP sync still works
+      expect(mockDetector.detectInstalledPlugins).not.toHaveBeenCalled();
+      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+      expect(adapter.writeConfig).toHaveBeenCalled();
+      expect(result.success).toBe(true);
     });
   });
 });

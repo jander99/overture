@@ -3,6 +3,7 @@ import { createInitCommand } from './commands/init';
 import { createSyncCommand } from './commands/sync';
 import { createValidateCommand } from './commands/validate';
 import { createMcpCommand } from './commands/mcp';
+import { createPluginCommand } from './commands/plugin';
 import { createUserCommand } from './commands/user';
 import { createAuditCommand } from './commands/audit';
 import { createBackupCommand } from './commands/backup';
@@ -37,6 +38,7 @@ export function createProgram(): Command {
   program.addCommand(createValidateCommand());
   program.addCommand(createDoctorCommand());
   program.addCommand(createMcpCommand());
+  program.addCommand(createPluginCommand());
   program.addCommand(createUserCommand());
   program.addCommand(createAuditCommand());
   program.addCommand(createBackupCommand());

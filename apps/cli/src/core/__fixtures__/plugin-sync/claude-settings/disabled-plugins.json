@@ -1,0 +1,17 @@
+{
+  "plugins": {
+    "python-development": {
+      "marketplace": "claude-code-workflows",
+      "enabled": false,
+      "installedAt": "2025-01-15T10:00:00Z"
+    },
+    "backend-development": {
+      "marketplace": "claude-code-workflows",
+      "enabled": false,
+      "installedAt": "2025-01-14T15:30:00Z"
+    }
+  },
+  "marketplaces": [
+    "anthropics/claude-code-workflows"
+  ]
+}

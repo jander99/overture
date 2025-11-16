@@ -34,6 +34,10 @@ import { acquireLock, releaseLock } from './process-lock';
 import { findProjectRoot } from './path-resolver';
 import { BinaryDetector } from './binary-detector';
 import type { BinaryDetectionResult } from '../domain/config.types';
+import { PluginDetector } from './plugin-detector';
+import { PluginInstaller } from './plugin-installer';
+import type { InstalledPlugin } from './plugin-detector';
+import type { InstallationResult } from './plugin-installer';
 
 /**
  * Sync options
@@ -51,6 +55,8 @@ export interface SyncOptions {
   platform?: Platform;
   /** Skip binary detection for clients */
   skipBinaryDetection?: boolean;
+  /** Skip plugin installation (default: false) */
+  skipPlugins?: boolean;
 }
 
 /**
@@ -75,6 +81,16 @@ export interface SyncResult {
   results: ClientSyncResult[];
   warnings: string[];
   errors: string[];
+}
+
+/**
+ * Plugin sync result
+ */
+export interface PluginSyncResult {
+  installed: number;
+  skipped: number;
+  failed: number;
+  results: InstallationResult[];
 }
 
 /**
@@ -309,6 +325,141 @@ async function syncToClient(
 }
 
 /**
+ * Sync plugins from user config
+ *
+ * Installs missing plugins declared in user global config.
+ * Reads from ~/.config/overture/config.yaml only (plugins are global in Claude Code).
+ * Warns if plugins found in project config.
+ *
+ * @param userConfig - User global configuration
+ * @param projectConfig - Project configuration (for warning detection)
+ * @param options - Sync options
+ * @returns Plugin sync result
+ */
+async function syncPlugins(
+  userConfig: OvertureConfig | null,
+  projectConfig: OvertureConfig | null,
+  options: SyncOptions
+): Promise<PluginSyncResult> {
+  const dryRun = options.dryRun ?? false;
+
+  // Warn if plugins found in project config
+  if (
+    projectConfig?.plugins &&
+    Object.keys(projectConfig.plugins).length > 0
+  ) {
+    const pluginNames = Object.keys(projectConfig.plugins).join(', ');
+    console.warn('⚠️  Warning: Plugin configuration found in project config');
+    console.warn('    Plugins found:', pluginNames);
+    console.warn('    Claude Code plugins are installed globally');
+    console.warn('    Move to ~/.config/overture/config.yaml');
+  }
+
+  // Get plugins from user config only
+  const configuredPlugins = userConfig?.plugins || {};
+  const pluginNames = Object.keys(configuredPlugins);
+
+  // No plugins configured - skip
+  if (pluginNames.length === 0) {
+    return {
+      installed: 0,
+      skipped: 0,
+      failed: 0,
+      results: [],
+    };
+  }
+
+  // Detect installed plugins
+  const detector = new PluginDetector();
+  const installedPlugins = await detector.detectInstalledPlugins();
+
+  // Build set of installed plugin keys (name@marketplace)
+  const installedSet = new Set(
+    installedPlugins.map((p) => `${p.name}@${p.marketplace}`)
+  );
+
+  // Calculate missing plugins
+  const missingPlugins: Array<{ name: string; marketplace: string }> = [];
+  const skippedPlugins: string[] = [];
+
+  for (const name of pluginNames) {
+    const config = configuredPlugins[name];
+    const key = `${name}@${config.marketplace}`;
+
+    if (installedSet.has(key)) {
+      skippedPlugins.push(key);
+    } else {
+      missingPlugins.push({ name, marketplace: config.marketplace });
+    }
+  }
+
+  // Show sync status
+  if (dryRun) {
+    console.log('\n🔍 DRY RUN: Syncing plugins from user config...');
+  } else {
+    console.log('\n🔍 Syncing plugins from user config...');
+  }
+
+  console.log(
+    `📋 Found ${pluginNames.length} plugins in config, ${installedPlugins.length} already installed`
+  );
+
+  // No missing plugins - skip
+  if (missingPlugins.length === 0) {
+    console.log('✅ All plugins already installed\n');
+    return {
+      installed: 0,
+      skipped: skippedPlugins.length,
+      failed: 0,
+      results: [],
+    };
+  }
+
+  // Install missing plugins
+  console.log(`\n Installing ${missingPlugins.length} missing plugins:`);
+
+  const installer = new PluginInstaller();
+  const results: InstallationResult[] = [];
+
+  for (const { name, marketplace } of missingPlugins) {
+    const result = await installer.installPlugin(name, marketplace, {
+      dryRun,
+    });
+    results.push(result);
+  }
+
+  // Calculate summary
+  const installed = results.filter((r) => r.success).length;
+  const failed = results.filter((r) => !r.success).length;
+
+  // Show summary
+  console.log(
+    `\n📦 Plugin sync: ${installed} installed, ${skippedPlugins.length} skipped, ${failed} failed\n`
+  );
+
+  // Show failures if any
+  if (failed > 0) {
+    console.log('⚠️  Failed installations:');
+    results
+      .filter((r) => !r.success)
+      .forEach((r) => {
+        console.log(`   • ${r.plugin}@${r.marketplace}`);
+        if (r.error) {
+          console.log(`     Error: ${r.error}`);
+        }
+      });
+    console.log('');
+  }
+
+  return {
+    installed,
+    skipped: skippedPlugins.length,
+    failed,
+    results,
+  };
+}
+
+/**
  * Sync MCP configuration to multiple clients
  *
  * Main entry point for the sync engine. Orchestrates the entire sync workflow.
@@ -358,6 +509,17 @@ export async function syncClients(options: SyncOptions = {}): Promise<SyncResult
       ...options,
       projectRoot: detectedProjectRoot || undefined,
     };
+
+    // 1. Sync plugins first (before MCP sync)
+    if (!options.skipPlugins) {
+      try {
+        await syncPlugins(userConfig, projectConfig, syncOptionsWithProject);
+      } catch (error) {
+        // Log plugin sync errors but don't fail the entire sync
+        console.warn(`⚠️  Plugin sync failed: ${(error as Error).message}`);
+        warnings.push(`Plugin sync failed: ${(error as Error).message}`);
+      }
+    }
 
     // Determine which clients to sync
     const targetClients = options.clients || [

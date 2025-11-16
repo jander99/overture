@@ -1,0 +1,9 @@
+{
+  "plugins": {
+    "invalid-plugin": "this-should-be-an-object",
+    "another-bad-plugin": null,
+    "partial-plugin": {
+      "marketplace": "test-marketplace"
+    }
+  }
+}
