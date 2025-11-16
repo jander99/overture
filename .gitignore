@@ -46,3 +46,7 @@ workspace-data
 
 test-output
 performance-report.txt
+
+# Generated MCP configuration files
+.mcp.json
+.cursor/
