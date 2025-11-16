@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+
+// Wrapper script that runs the built Overture CLI
+require('../../../dist/apps/cli/main.js');

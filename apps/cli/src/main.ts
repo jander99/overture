@@ -3,6 +3,7 @@
 import { createProgram } from './cli';
 import { Logger } from './utils/logger';
 import { OvertureError } from './domain/errors';
+import { initializeAdapters } from './adapters';
 
 /**
  * Main entry point for the Overture CLI.
@@ -13,6 +14,9 @@ import { OvertureError } from './domain/errors';
  */
 async function main(): Promise<void> {
   try {
+    // Initialize client adapters before creating the CLI
+    initializeAdapters();
+
     const program = createProgram();
     await program.parseAsync(process.argv);
   } catch (error) {
