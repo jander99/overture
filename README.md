@@ -296,8 +296,14 @@ overture doctor --verbose       # Show detailed warnings
 ### Configuration Management
 
 ```bash
-# Initialize project
+# Initialize project configuration
 overture init [--type <type>]
+
+# Initialize user global configuration
+overture user init
+
+# Show user global configuration
+overture user show [--json]
 
 # Sync configuration (install plugins + generate configs)
 overture sync
@@ -305,6 +311,7 @@ overture sync
 # - Generates configs only for detected clients
 # - Warns if client not found but continues (install later)
 # - Shows binary detection results for each client
+# - Preserves manually-added MCPs
 
 # Options:
 overture sync --dry-run         # Preview changes without writing
@@ -318,11 +325,43 @@ overture validate
 ### MCP Management
 
 ```bash
-# List MCP servers
+# List all MCP servers (Overture-managed + manually-added)
 overture mcp list
+# Options:
+overture mcp list --source manual      # Show only manually-added MCPs
+overture mcp list --source overture    # Show only Overture-managed MCPs
+overture mcp list --scope global       # Show only global MCPs
+overture mcp list --scope project      # Show only project MCPs
+overture mcp list --client <name>      # Filter by client
 
 # Enable a disabled MCP
 overture mcp enable <name>
+
+# Audit for unmanaged MCPs in client configs
+overture audit [--client <name>]
+```
+
+### Plugin Management
+
+```bash
+# List installed Claude Code plugins
+overture plugin list [--json]
+
+# Export installed plugins to user config
+overture plugin export [--dry-run]
+```
+
+### Backup Management
+
+```bash
+# List all backups
+overture backup list [--client <name>]
+
+# Restore a backup
+overture backup restore <client> [timestamp]
+
+# Clean up old backups (keep last 10 per client)
+overture backup cleanup [--dry-run]
 ```
 
 ---

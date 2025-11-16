@@ -184,22 +184,14 @@ export function buildUserConfig(
 /**
  * Build project config
  *
- * @param projectName - Project name
- * @param projectType - Project type
  * @param plugins - Plugin configurations (will trigger warning)
  * @returns Project config
  */
 export function buildProjectConfig(
-  projectName: string = 'test-project',
-  projectType: string = 'typescript-tooling',
   plugins: Record<string, PluginConfig> = {}
 ): OvertureConfig {
   return {
     version: '2.0',
-    project: {
-      name: projectName,
-      type: projectType
-    },
     plugins,
     mcp: {}
   };

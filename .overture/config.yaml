@@ -5,12 +5,6 @@ project:
   type: typescript-tooling
   description: "Configuration orchestrator and documentation generator for AI-assisted development ecosystem"
 
-# Claude Code plugins used for Overture development
-plugins: {}
-  # Core development workflow plugins would go here
-  # Currently relying on built-in Claude Code capabilities
-  # Future: python-development, typescript-development, etc.
-
 # MCP server configurations
 mcp:
   # Project-scoped: Nx workspace management (this is the only Nx project)

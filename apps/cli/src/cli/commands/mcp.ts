@@ -9,6 +9,7 @@ import { getPlatform } from '../../core/path-resolver';
 import { Logger } from '../../utils/logger';
 import { Prompts } from '../../utils/prompts';
 import { CONFIG_PATH } from '../../domain/constants';
+import { detectClientMcps, compareMcpConfigs } from '../../core/mcp-detector';
 
 /**
  * Creates the 'mcp' command group for managing MCP servers.
@@ -28,8 +29,9 @@ export function createMcpCommand(): Command {
     .description('Show all configured MCPs and their status')
     .option('--scope <scope>', 'Filter by scope (global, project)')
     .option('--client <client>', 'Filter by client name')
-    .action(async (options: { scope?: string; client?: string }) => {
-      // Load both configs
+    .option('--source <source>', 'Filter by source (overture, manual, all)', 'all')
+    .action(async (options: { scope?: string; client?: string; source?: string }) => {
+      // Load Overture configs
       let userConfig = null;
       let projectConfig = null;
 
@@ -43,11 +45,6 @@ export function createMcpCommand(): Command {
         projectConfig = await loadProjectConfig(process.cwd());
       } catch (error) {
         // Project config not found or invalid - continue
-      }
-
-      if (!userConfig && !projectConfig) {
-        Logger.error('No configuration found');
-        process.exit(2);
       }
 
       try {
@@ -69,64 +66,89 @@ export function createMcpCommand(): Command {
           }
         }
 
-        // Track which MCPs are in which configs
+        // Get Overture MCPs
         const userMcps = userConfig?.mcp || {};
         const projectMcps = projectConfig?.mcp || {};
+        const allOvertureMcps = { ...userMcps, ...projectMcps };
 
-        // Get all MCP names (merged)
-        const allMcpNames = new Set([...Object.keys(userMcps), ...Object.keys(projectMcps)]);
+        // Detect MCPs from client configs (Claude Code native)
+        const clientMcps = detectClientMcps(process.cwd());
 
-        if (allMcpNames.size === 0) {
+        // Compare to categorize
+        const detection = compareMcpConfigs(allOvertureMcps, clientMcps);
+
+        if (detection.all.length === 0) {
           Logger.warn('No MCP servers configured');
           return;
         }
 
-        // Get platform and clients for filtering
+        // Get platform and adapters for sync info
         const platform = getPlatform();
         const adapters = adapterRegistry.getInstalledAdapters();
 
         // Build MCP list with metadata
-        const mcpList = [];
-        for (const name of Array.from(allMcpNames).sort()) {
-          // Determine scope
-          const inUser = name in userMcps;
-          const inProject = name in projectMcps;
-          const scope = inUser && inProject ? 'both' : inUser ? 'global' : 'project';
+        interface McpListEntry {
+          name: string;
+          scope: string;
+          transport: string;
+          source: string;
+          command: string;
+          syncsTo: string;
+        }
 
-          // Get MCP config (project overrides user)
-          const mcpConfig = projectMcps[name] || userMcps[name];
+        const mcpList: McpListEntry[] = [];
+
+        // Process each detected MCP
+        for (const mcp of detection.all) {
+          // Determine scope for Overture-managed MCPs
+          let scope = 'n/a';
+          if (mcp.source === 'overture') {
+            const inUser = mcp.name in userMcps;
+            const inProject = mcp.name in projectMcps;
+            scope = inUser && inProject ? 'both' : inUser ? 'global' : 'project';
+          }
 
           // Apply scope filter
-          if (options.scope && scope !== options.scope && scope !== 'both') {
+          if (options.scope && scope !== options.scope && scope !== 'both' && scope !== 'n/a') {
             continue;
           }
 
-          // Determine which clients receive this MCP
-          let syncsTo: string[] = [];
+          // Apply source filter
+          if (options.source && options.source !== 'all' && mcp.source !== options.source) {
+            continue;
+          }
 
-          if (adapters.length > 0) {
-            // Use installed adapters to determine sync targets
-            syncsTo = adapters
-              .filter((adapter) => shouldIncludeMcp(mcpConfig, adapter, platform).included)
-              .map((a) => a.name);
+          // Determine which clients would receive this MCP (for Overture-managed only)
+          let syncsTo: string[] = [];
+          if (mcp.source === 'overture') {
+            const mcpConfig = projectMcps[mcp.name] || userMcps[mcp.name];
+
+            if (adapters.length > 0) {
+              syncsTo = adapters
+                .filter((adapter) => shouldIncludeMcp(mcpConfig, adapter, platform).included)
+                .map((a) => a.name);
+            } else {
+              // Fallback: use enabled clients from config
+              const enabledClients: string[] = [];
+              if (projectConfig?.clients) {
+                for (const [clientName, clientConfig] of Object.entries(projectConfig.clients)) {
+                  if ((clientConfig as any).enabled !== false) {
+                    enabledClients.push(clientName);
+                  }
+                }
+              }
+              if (userConfig?.clients && enabledClients.length === 0) {
+                for (const [clientName, clientConfig] of Object.entries(userConfig.clients)) {
+                  if ((clientConfig as any).enabled !== false) {
+                    enabledClients.push(clientName);
+                  }
+                }
+              }
+              syncsTo = enabledClients;
+            }
           } else {
-            // Fallback: use enabled clients from config when no adapters are installed
-            const enabledClients: string[] = [];
-            if (projectConfig?.clients) {
-              for (const [clientName, clientConfig] of Object.entries(projectConfig.clients)) {
-                if ((clientConfig as any).enabled !== false) {
-                  enabledClients.push(clientName);
-                }
-              }
-            }
-            if (userConfig?.clients && enabledClients.length === 0) {
-              for (const [clientName, clientConfig] of Object.entries(userConfig.clients)) {
-                if ((clientConfig as any).enabled !== false) {
-                  enabledClients.push(clientName);
-                }
-              }
-            }
-            syncsTo = enabledClients;
+            // Manual MCPs - show where detected from
+            syncsTo = [mcp.detectedFrom];
           }
 
           // Apply client filter
@@ -135,9 +157,11 @@ export function createMcpCommand(): Command {
           }
 
           mcpList.push({
-            name,
+            name: mcp.name,
             scope,
-            transport: mcpConfig.transport,
+            transport: mcp.transport || 'stdio',
+            source: mcp.source,
+            command: mcp.command,
             syncsTo: syncsTo.join(', ') || 'none',
           });
         }
@@ -147,18 +171,32 @@ export function createMcpCommand(): Command {
           return;
         }
 
+        // Sort by name
+        mcpList.sort((a, b) => a.name.localeCompare(b.name));
+
         // Display table
-        Logger.info('Configured MCP servers:');
+        Logger.info('MCP Servers:');
         Logger.nl();
-        Logger.info('NAME | SCOPE | TRANSPORT | SYNCS TO');
-        Logger.info('─'.repeat(60));
+        Logger.info('NAME | SCOPE | TRANSPORT | SOURCE | COMMAND');
+        Logger.info('─'.repeat(80));
 
         mcpList.forEach((mcp) => {
-          Logger.info(`${mcp.name} | ${mcp.scope} | ${mcp.transport} | ${mcp.syncsTo}`);
+          const sourceIcon = mcp.source === 'overture' ? '🎛️' : '✋';
+          const source = `${sourceIcon} ${mcp.source}`;
+          Logger.info(
+            `${mcp.name} | ${mcp.scope} | ${mcp.transport} | ${source} | ${mcp.command}`
+          );
         });
 
         Logger.nl();
-        Logger.info(`Total: ${mcpList.length} MCP${mcpList.length === 1 ? '' : 's'}`);
+        const overtureCount = mcpList.filter((m) => m.source === 'overture').length;
+        const manualCount = mcpList.filter((m) => m.source === 'manual').length;
+        Logger.info(
+          `Total: ${mcpList.length} MCP${mcpList.length === 1 ? '' : 's'} ` +
+          `(${overtureCount} Overture-managed, ${manualCount} manually-added)`
+        );
+        Logger.nl();
+        Logger.info('Legend: 🎛️ = Overture-managed, ✋ = Manually-added');
       } catch (error) {
         Logger.error(`Failed to list MCP servers: ${(error as Error).message}`);
         process.exit(1);

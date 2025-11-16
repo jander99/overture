@@ -257,6 +257,31 @@ export interface ClientConfig {
 }
 
 /**
+ * Plugin Configuration
+ *
+ * Configuration for a Claude Code plugin.
+ */
+export interface PluginConfig {
+  /**
+   * Plugin marketplace identifier
+   * @example "claude-code-workflows"
+   */
+  marketplace: string;
+
+  /**
+   * Whether the plugin is enabled
+   * @default true
+   */
+  enabled: boolean;
+
+  /**
+   * MCP servers associated with this plugin
+   * @example ["python-repl", "ruff"]
+   */
+  mcps?: string[];
+}
+
+/**
  * Sync Options
  *
  * Global synchronization settings.
@@ -303,6 +328,12 @@ export interface SyncOptions {
    * @default false
    */
   skipBinaryDetection?: boolean;
+
+  /**
+   * Skip plugin installation during sync
+   * @default false
+   */
+  skipPlugins?: boolean;
 }
 
 /**
@@ -351,7 +382,13 @@ export interface OvertureConfig {
    * Client-specific configurations
    * Key: ClientName, Value: ClientConfig
    */
-  clients?: Record<ClientName, ClientConfig>;
+  clients?: Partial<Record<ClientName, ClientConfig>>;
+
+  /**
+   * Plugin configurations
+   * Key: Plugin name, Value: PluginConfig
+   */
+  plugins?: Record<string, PluginConfig>;
 
   /**
    * MCP server definitions

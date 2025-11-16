@@ -213,7 +213,7 @@ export class PluginExporter {
 
       try {
         const content = await fs.readFile(configPath, 'utf-8');
-        existingConfig = yaml.load(content, { schema: yaml.SAFE_SCHEMA }) as OvertureConfig;
+        existingConfig = yaml.load(content) as OvertureConfig;
       } catch (error) {
         const err = error as NodeJS.ErrnoException;
         if (err.code === 'ENOENT') {
@@ -319,7 +319,7 @@ export class PluginExporter {
 
     try {
       const content = await fs.readFile(configPath, 'utf-8');
-      const config = yaml.load(content, { schema: yaml.SAFE_SCHEMA }) as OvertureConfig;
+      const config = yaml.load(content) as OvertureConfig;
 
       if (config.plugins) {
         configPlugins = new Set(Object.keys(config.plugins));

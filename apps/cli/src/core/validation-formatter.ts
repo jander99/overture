@@ -38,48 +38,51 @@ export interface ValidationSummary {
 /**
  * Format a JSON path from Zod issue
  */
-function formatPath(path: (string | number)[]): string {
+function formatPath(path: PropertyKey[]): string {
   if (path.length === 0) return 'config';
-  return path.join('.');
+  return path.map(p => String(p)).join('.');
 }
 
 /**
  * Generate a suggestion based on error type and path
  */
 function generateSuggestion(issue: ZodIssue): string | undefined {
-  const path = formatPath(issue.path);
-
   switch (issue.code) {
     case 'invalid_type':
-      if (issue.expected === 'string' && issue.received === 'undefined') {
+      if (issue.expected === 'string' && 'received' in issue && (issue as any).received === 'undefined') {
         return `Add missing field to configuration`;
       }
       if (issue.expected === 'array') {
         return `Change to array format: []`;
       }
-      return `Change type from ${issue.received} to ${issue.expected}`;
-
-    case 'invalid_enum_value':
-      const validOptions = 'options' in issue ? issue.options : [];
-      return `Use one of: ${validOptions.join(', ')}`;
+      const received = 'received' in issue ? (issue as any).received : 'unknown';
+      return `Change type from ${received} to ${issue.expected}`;
 
     case 'too_small':
-      if (issue.type === 'string' && 'minimum' in issue && issue.minimum === 1) {
+      if ('minimum' in issue && issue.minimum === 1) {
         return `Provide a non-empty value`;
       }
       return undefined;
 
     case 'unrecognized_keys':
-      const keys = 'keys' in issue ? issue.keys : [];
-      if (keys.includes('scope')) {
-        return `Remove deprecated 'scope' field (scope is now implicit based on file location)`;
+      if ('keys' in issue) {
+        const keys = issue.keys as string[];
+        if (keys.includes('scope')) {
+          return `Remove deprecated 'scope' field (scope is now implicit based on file location)`;
+        }
+        return `Remove unknown ${keys.length === 1 ? 'field' : 'fields'}: ${keys.join(', ')}`;
       }
-      return `Remove unknown ${keys.length === 1 ? 'field' : 'fields'}: ${keys.join(', ')}`;
+      return undefined;
 
     case 'custom':
       return undefined;
 
     default:
+      // Handle enum-related errors
+      if ('options' in issue) {
+        const validOptions = (issue as any).options || [];
+        return `Use one of: ${validOptions.join(', ')}`;
+      }
       return undefined;
   }
 }
@@ -95,10 +98,6 @@ function categorizeIssue(issue: ZodIssue): ValidationError['type'] {
       }
       return 'invalid_type';
 
-    case 'invalid_enum_value':
-    case 'invalid_literal':
-      return 'invalid_enum';
-
     case 'unrecognized_keys':
       return 'unrecognized_keys';
 
@@ -106,6 +105,10 @@ function categorizeIssue(issue: ZodIssue): ValidationError['type'] {
       return 'custom';
 
     default:
+      // Handle enum-related errors by checking for 'options' property
+      if ('options' in issue || 'expected' in issue) {
+        return 'invalid_enum';
+      }
       return 'other';
   }
 }

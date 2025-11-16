@@ -12,7 +12,6 @@ import type {
   InstallationResult,
   InstallationOptions,
 } from '../domain/plugin.types';
-import { PluginError } from '../domain/errors';
 import { ProcessExecutor } from '../infrastructure/process-executor';
 import { BinaryDetector } from './binary-detector';
 import { MarketplaceRegistry } from '../domain/marketplace-registry';

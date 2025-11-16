@@ -34,10 +34,7 @@ export function createPluginExportCommand(): Command {
         if (options.all) {
           // Export all mode
           Logger.info('Exporting all installed plugins...');
-          await exporter.exportPlugins({
-            interactive: false,
-            exportAll: true,
-          });
+          await exporter.exportAllPlugins();
         } else if (options.plugin && options.plugin.length > 0) {
           // Non-interactive mode with explicit plugin list
           Logger.info(`Exporting ${options.plugin.length} plugin(s)...`);

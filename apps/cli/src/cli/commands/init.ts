@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { Logger } from '../../utils/logger';
-import { Prompts } from '../../utils/prompts';
 import { CONFIG_PATH } from '../../domain/constants';
 import type { OvertureConfig } from '../../domain/config.types';
 
@@ -34,24 +33,18 @@ export function createInitCommand(): Command {
           process.exit(1);
         }
 
-        // Prompt for project info
-        const projectName = path.basename(projectDir);
-
         Logger.info('Initializing Overture configuration...');
 
         // Create basic v0.2 config
         const config: OvertureConfig = {
           version: '2.0',
-          project: {
-            name: projectName,
-          },
           mcp: {
             // Example MCP server (commented out)
             // 'example-mcp': {
             //   transport: 'stdio',
             //   command: 'npx',
             //   args: ['-y', 'example-mcp-server'],
-            //   enabled: true,
+            //   env: {},
             // },
           },
           clients: {

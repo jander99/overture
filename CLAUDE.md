@@ -20,7 +20,7 @@ This project is in **active development** with architecture and documentation co
 - [x] **Configuration Schema** — YAML configuration format designed (see docs/overture-schema.md)
 - [x] **Documentation** — Complete examples and schema documentation
 - [x] **Nx Workspace** — Monorepo structure initialized
-- [x] **CLI Implementation** — Command-line interface (overture init, sync, validate, mcp list/enable)
+- [x] **CLI Implementation** — Complete CLI with 9 commands (init, sync, validate, doctor, mcp, plugin, user, audit, backup)
 - [x] **Configuration Generator** — Generates .mcp.json and CLAUDE.md from config
 - [x] **Validation Engine** — Validates MCP availability and configuration
 - [x] **Test Suite** — Comprehensive Jest tests with 83%+ code coverage (911 tests passing)

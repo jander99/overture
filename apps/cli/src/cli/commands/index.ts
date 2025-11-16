@@ -6,6 +6,7 @@
 export { createInitCommand } from './init';
 export { createSyncCommand } from './sync';
 export { createValidateCommand } from './validate';
+export { createDoctorCommand } from './doctor';
 export { createMcpCommand } from './mcp';
 export { createPluginCommand } from './plugin';
 export { createUserCommand } from './user';

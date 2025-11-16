@@ -36,8 +36,8 @@ import { BinaryDetector } from './binary-detector';
 import type { BinaryDetectionResult } from '../domain/config.types';
 import { PluginDetector } from './plugin-detector';
 import { PluginInstaller } from './plugin-installer';
-import type { InstalledPlugin } from './plugin-detector';
-import type { InstallationResult } from './plugin-installer';
+import type { InstallationResult } from '../domain/plugin.types';
+import { getUnmanagedMcps } from './mcp-detector';
 
 /**
  * Sync options
@@ -268,6 +268,29 @@ async function syncToClient(
 
     // Apply environment variable expansion if client needs it
     newConfig = expandEnvVarsInClientConfig(newConfig, client);
+
+    // Preserve manually-added MCPs (not in Overture config)
+    if (oldConfig) {
+      const oldMcps = oldConfig[client.schemaRootKey] || {};
+      const unmanagedMcps = getUnmanagedMcps(oldMcps, filteredMcps);
+
+      if (Object.keys(unmanagedMcps).length > 0) {
+        // Merge: Overture-managed MCPs + preserved manually-added MCPs
+        newConfig[client.schemaRootKey] = {
+          ...unmanagedMcps,          // Manually-added MCPs first (will be overridden if conflict)
+          ...newConfig[client.schemaRootKey],  // Overture-managed MCPs (take precedence)
+        };
+
+        // Warn user about preserved MCPs
+        const unmanagedNames = Object.keys(unmanagedMcps);
+        warnings.push(
+          `Preserving ${unmanagedNames.length} manually-added MCP${unmanagedNames.length === 1 ? '' : 's'}: ${unmanagedNames.join(', ')}`
+        );
+        warnings.push(
+          `💡 Tip: Add these to .overture/config.yaml to manage with Overture`
+        );
+      }
+    }
 
     // Generate diff
     const diff = oldConfig
