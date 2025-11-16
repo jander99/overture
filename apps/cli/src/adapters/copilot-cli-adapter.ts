@@ -5,8 +5,9 @@
  * Only supports user-level configuration (no project-level).
  *
  * Config locations:
- * - macOS/Linux: ~/.config/github-copilot/mcp.json
- * - Windows: %USERPROFILE%\.config\github-copilot\mcp.json
+ * - Default: ~/.copilot/mcp-config.json
+ * - With XDG_CONFIG_HOME: $XDG_CONFIG_HOME/.copilot/mcp-config.json
+ * - Windows: %USERPROFILE%\.copilot\mcp-config.json
  *
  * Note: GitHub Copilot CLI bundles a native GitHub MCP server.
  * Consider excluding the "github" MCP when syncing to avoid duplication.
@@ -96,10 +97,12 @@ export class CopilotCliAdapter extends BaseClientAdapter {
         if (clientOverride.env) env = { ...env, ...clientOverride.env };
       }
 
-      // Copilot CLI native ${VAR} support (assumed)
+      // Copilot CLI requires 'type' and 'tools' fields
       mcpServers[name] = {
+        type: 'local', // stdio transport = 'local' type in Copilot
         command,
         args,
+        tools: ['*'], // Enable all tools from the MCP server
         env: Object.keys(env).length > 0 ? env : undefined,
       };
     }

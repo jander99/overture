@@ -250,22 +250,19 @@ describe('Path Resolver', () => {
   });
 
   describe('getCursorGlobalPath', () => {
-    it('should return correct path for macOS', () => {
+    it('should return .cursor/mcp.json for macOS', () => {
       const result = getCursorGlobalPath('darwin');
-      expect(result).toBe(
-        path.join(mockHomeDir, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'mcp.json')
-      );
+      expect(result).toBe(path.join(mockHomeDir, '.cursor', 'mcp.json'));
     });
 
-    it('should return correct path for Linux', () => {
+    it('should return .cursor/mcp.json for Linux', () => {
       const result = getCursorGlobalPath('linux');
-      expect(result).toBe(path.join(mockHomeDir, '.config', 'Cursor', 'User', 'globalStorage', 'mcp.json'));
+      expect(result).toBe(path.join(mockHomeDir, '.cursor', 'mcp.json'));
     });
 
-    it('should return correct path for Windows', () => {
-      process.env.APPDATA = 'C:\\Users\\testuser\\AppData\\Roaming';
+    it('should return .cursor/mcp.json for Windows', () => {
       const result = getCursorGlobalPath('win32');
-      expect(result).toBe(path.join('C:\\Users\\testuser\\AppData\\Roaming', 'Cursor', 'User', 'globalStorage', 'mcp.json'));
+      expect(result).toBe(path.join(mockHomeDir, '.cursor', 'mcp.json'));
     });
   });
 
@@ -290,19 +287,26 @@ describe('Path Resolver', () => {
   });
 
   describe('getCopilotCliPath', () => {
-    it('should return XDG path for Linux', () => {
+    it('should return .copilot/mcp-config.json for Linux', () => {
       const result = getCopilotCliPath('linux');
-      expect(result).toBe(path.join(mockHomeDir, '.config', 'github-copilot', 'mcp.json'));
+      expect(result).toBe(path.join(mockHomeDir, '.copilot', 'mcp-config.json'));
     });
 
-    it('should return XDG path for macOS', () => {
+    it('should return .copilot/mcp-config.json for macOS', () => {
       const result = getCopilotCliPath('darwin');
-      expect(result).toBe(path.join(mockHomeDir, '.config', 'github-copilot', 'mcp.json'));
+      expect(result).toBe(path.join(mockHomeDir, '.copilot', 'mcp-config.json'));
     });
 
-    it('should return .config path for Windows', () => {
+    it('should return .copilot/mcp-config.json for Windows', () => {
       const result = getCopilotCliPath('win32');
-      expect(result).toBe(path.join(mockHomeDir, '.config', 'github-copilot', 'mcp.json'));
+      expect(result).toBe(path.join(mockHomeDir, '.copilot', 'mcp-config.json'));
+    });
+
+    it('should respect XDG_CONFIG_HOME on Linux', () => {
+      process.env.XDG_CONFIG_HOME = '/custom/config';
+      const result = getCopilotCliPath('linux');
+      expect(result).toBe(path.join('/custom/config', '.copilot', 'mcp-config.json'));
+      delete process.env.XDG_CONFIG_HOME;
     });
   });
 

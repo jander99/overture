@@ -208,20 +208,14 @@ export function getVSCodeWorkspacePath(workspaceRoot?: string): string {
  */
 export function getCursorGlobalPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
+  const homeDir = os.homedir();
 
+  // Cursor uses ~/.cursor/mcp.json for global configuration on all platforms
   switch (targetPlatform) {
     case 'darwin':
-      return path.join(os.homedir(), 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'mcp.json');
     case 'linux':
-      return path.join(getXdgConfigHome(), 'Cursor', 'User', 'globalStorage', 'mcp.json');
     case 'win32':
-      return path.join(
-        process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
-        'Cursor',
-        'User',
-        'globalStorage',
-        'mcp.json'
-      );
+      return path.join(homeDir, '.cursor', 'mcp.json');
     default:
       throw new Error(`Unsupported platform: ${targetPlatform}`);
   }
@@ -267,13 +261,20 @@ export function getWindsurfPath(platform?: Platform): string {
  */
 export function getCopilotCliPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
+  const homeDir = os.homedir();
 
+  // Copilot CLI uses ~/.copilot/mcp-config.json by default
+  // or $XDG_CONFIG_HOME/.copilot/mcp-config.json if XDG_CONFIG_HOME is set
   switch (targetPlatform) {
     case 'darwin':
     case 'linux':
-      return path.join(getXdgConfigHome(), 'github-copilot', 'mcp.json');
+      // On Linux/macOS, when XDG_CONFIG_HOME is not set, use ~/.copilot directly
+      // When XDG_CONFIG_HOME is set, use $XDG_CONFIG_HOME/.copilot
+      const configBase = process.env.XDG_CONFIG_HOME || homeDir;
+      return path.join(configBase, '.copilot', 'mcp-config.json');
     case 'win32':
-      return path.join(os.homedir(), '.config', 'github-copilot', 'mcp.json');
+      // On Windows, always use %USERPROFILE%\.copilot
+      return path.join(homeDir, '.copilot', 'mcp-config.json');
     default:
       throw new Error(`Unsupported platform: ${targetPlatform}`);
   }
