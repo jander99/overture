@@ -15,6 +15,7 @@ import * as processLock from './process-lock';
 import * as backupService from './backup-service';
 import { PluginDetector } from './plugin-detector';
 import { PluginInstaller } from './plugin-installer';
+import { BinaryDetector } from './binary-detector';
 import {
   buildInstalledPlugin,
   buildUserConfig,
@@ -32,6 +33,7 @@ jest.mock('./process-lock');
 jest.mock('./backup-service');
 jest.mock('./plugin-detector');
 jest.mock('./plugin-installer');
+jest.mock('./binary-detector');
 
 const mockConfigLoader = configLoader as jest.Mocked<typeof configLoader>;
 const mockProcessLock = processLock as jest.Mocked<typeof processLock>;
@@ -85,6 +87,8 @@ describe('Sync Engine', () => {
     },
   };
 
+  let mockDefaultBinaryDetector: jest.Mocked<BinaryDetector>;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -95,6 +99,18 @@ describe('Sync Engine', () => {
     mockProcessLock.acquireLock.mockResolvedValue(true);
     mockProcessLock.releaseLock.mockReturnValue();
     mockBackupService.backupClientConfig.mockReturnValue('/backup/path.json');
+
+    // Mock BinaryDetector to return 'found' by default for existing tests
+    mockDefaultBinaryDetector = new BinaryDetector() as jest.Mocked<BinaryDetector>;
+    mockDefaultBinaryDetector.detectClient = jest.fn().mockResolvedValue({
+      status: 'found',
+      version: '1.0.0',
+      warnings: [],
+    });
+
+    (BinaryDetector as jest.MockedClass<typeof BinaryDetector>).mockImplementation(
+      () => mockDefaultBinaryDetector
+    );
   });
 
   describe('syncClients', () => {
@@ -558,6 +574,278 @@ describe('Sync Engine', () => {
 
       expect(adapter.writeConfig).toHaveBeenCalled();
       // Env vars should be expanded by expandEnvVarsInClientConfig
+    });
+  });
+
+  describe('skipUndetected option', () => {
+    let mockBinaryDetector: jest.Mocked<BinaryDetector>;
+
+    beforeEach(() => {
+      // Reset existing mocks
+      jest.clearAllMocks();
+
+      // Mock BinaryDetector
+      mockBinaryDetector = new BinaryDetector() as jest.Mocked<BinaryDetector>;
+      mockBinaryDetector.detectClient = jest.fn();
+
+      // Set up constructor mock
+      (BinaryDetector as jest.MockedClass<typeof BinaryDetector>).mockImplementation(
+        () => mockBinaryDetector
+      );
+    });
+
+    it('should skip clients not detected when skipUndetected is true', async () => {
+      const adapter = createMockAdapter('vscode', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Mock binary detection to return 'not-found'
+      mockBinaryDetector.detectClient.mockResolvedValue({
+        status: 'not-found',
+        warnings: ['vscode binary not found'],
+      });
+
+      const result = await syncClients({
+        clients: ['vscode'],
+        platform,
+        skipUndetected: true, // Skip clients not detected
+      });
+
+      // Assert: Client was skipped
+      expect(result.results[0].success).toBe(true); // Not a failure
+      expect(result.results[0].configPath).toBe(''); // No config written
+      expect(result.results[0].error).toBe('Skipped - client not detected on system');
+      expect(result.results[0].binaryDetection?.status).toBe('not-found');
+
+      // Assert: Config was NOT written
+      expect(adapter.writeConfig).not.toHaveBeenCalled();
+    });
+
+    it('should generate config for undetected clients when skipUndetected is false', async () => {
+      const adapter = createMockAdapter('vscode', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Mock binary detection to return 'not-found'
+      mockBinaryDetector.detectClient.mockResolvedValue({
+        status: 'not-found',
+        warnings: ['vscode binary not found'],
+      });
+
+      const result = await syncClients({
+        clients: ['vscode'],
+        platform,
+        skipUndetected: false, // Generate config anyway
+      });
+
+      // Assert: Client sync succeeded
+      expect(result.results[0].success).toBe(true);
+      expect(result.results[0].configPath).toBeTruthy();
+      expect(result.results[0].error).toBeUndefined();
+
+      // Assert: Warning added about binary not detected
+      expect(result.results[0].warnings).toContain(
+        'vscode binary/application not detected on system. Generating config anyway.'
+      );
+
+      // Assert: Config WAS written
+      expect(adapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should use default skipUndetected behavior when not specified', async () => {
+      const adapter = createMockAdapter('vscode', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Mock binary detection to return 'not-found'
+      mockBinaryDetector.detectClient.mockResolvedValue({
+        status: 'not-found',
+        warnings: [],
+      });
+
+      const result = await syncClients({
+        clients: ['vscode'],
+        platform,
+        // skipUndetected not specified - undefined means no skip (same as false)
+      });
+
+      // Assert: Client sync succeeded (default behavior is to NOT skip)
+      expect(result.results[0].success).toBe(true);
+      expect(result.results[0].configPath).toBeTruthy();
+      expect(result.results[0].error).toBeUndefined();
+
+      // Assert: Warning added about binary not detected
+      expect(result.results[0].warnings).toContain(
+        'vscode binary/application not detected on system. Generating config anyway.'
+      );
+
+      // Assert: Config WAS written
+      expect(adapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should generate config for detected clients regardless of skipUndetected', async () => {
+      const adapter = createMockAdapter('claude-code', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      // Mock binary detection to return 'found'
+      mockBinaryDetector.detectClient.mockResolvedValue({
+        status: 'found',
+        version: '1.0.0',
+        binaryPath: '/usr/local/bin/claude',
+        warnings: [],
+      });
+
+      const result = await syncClients({
+        clients: ['claude-code'],
+        platform,
+        skipUndetected: true, // Should not affect detected clients
+      });
+
+      // Assert: Client sync succeeded
+      expect(result.results[0].success).toBe(true);
+      expect(result.results[0].configPath).toBeTruthy();
+      expect(result.results[0].error).toBeUndefined();
+
+      // Assert: Version info added to warnings
+      expect(result.results[0].warnings.some((w) => w.includes('1.0.0'))).toBe(true);
+
+      // Assert: Config WAS written
+      expect(adapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should skip binary detection when skipBinaryDetection is true', async () => {
+      const adapter = createMockAdapter('vscode', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      const result = await syncClients({
+        clients: ['vscode'],
+        platform,
+        skipBinaryDetection: true, // Skip detection entirely
+        skipUndetected: true,
+      });
+
+      // Assert: Binary detection was skipped
+      expect(mockBinaryDetector.detectClient).not.toHaveBeenCalled();
+      expect(result.results[0].binaryDetection?.status).toBe('skipped');
+
+      // Assert: Config WAS written (skipUndetected has no effect when detection is skipped)
+      expect(adapter.writeConfig).toHaveBeenCalled();
+      expect(result.results[0].success).toBe(true);
+    });
+
+    it('should handle multiple clients with mixed detection results', async () => {
+      const claudeAdapter = createMockAdapter('claude-code', true);
+      const vscodeAdapter = createMockAdapter('vscode', true);
+      const cursorAdapter = createMockAdapter('cursor', true);
+
+      claudeAdapter.readConfig.mockResolvedValue(null);
+      vscodeAdapter.readConfig.mockResolvedValue(null);
+      cursorAdapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient
+        .mockReturnValueOnce(claudeAdapter)
+        .mockReturnValueOnce(vscodeAdapter)
+        .mockReturnValueOnce(cursorAdapter);
+
+      // Mock detection: claude found, vscode not found, cursor found
+      mockBinaryDetector.detectClient
+        .mockResolvedValueOnce({
+          status: 'found',
+          version: '1.0.0',
+          warnings: [],
+        })
+        .mockResolvedValueOnce({
+          status: 'not-found',
+          warnings: [],
+        })
+        .mockResolvedValueOnce({
+          status: 'found',
+          version: '2.0.0',
+          warnings: [],
+        });
+
+      const result = await syncClients({
+        clients: ['claude-code', 'vscode', 'cursor'],
+        platform,
+        skipUndetected: true,
+      });
+
+      // Assert: 3 results returned
+      expect(result.results).toHaveLength(3);
+
+      // Assert: claude-code succeeded
+      expect(result.results[0].client).toBe('claude-code');
+      expect(result.results[0].success).toBe(true);
+      expect(result.results[0].configPath).toBeTruthy();
+      expect(claudeAdapter.writeConfig).toHaveBeenCalled();
+
+      // Assert: vscode skipped
+      expect(result.results[1].client).toBe('vscode');
+      expect(result.results[1].success).toBe(true);
+      expect(result.results[1].configPath).toBe('');
+      expect(result.results[1].error).toBe('Skipped - client not detected on system');
+      expect(vscodeAdapter.writeConfig).not.toHaveBeenCalled();
+
+      // Assert: cursor succeeded
+      expect(result.results[2].client).toBe('cursor');
+      expect(result.results[2].success).toBe(true);
+      expect(result.results[2].configPath).toBeTruthy();
+      expect(cursorAdapter.writeConfig).toHaveBeenCalled();
+    });
+
+    it('should return empty configPath for skipped clients', async () => {
+      const adapter = createMockAdapter('windsurf', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      mockBinaryDetector.detectClient.mockResolvedValue({
+        status: 'not-found',
+        warnings: [],
+      });
+
+      const result = await syncClients({
+        clients: ['windsurf'],
+        platform,
+        skipUndetected: true,
+      });
+
+      // Assert: configPath is empty string (not undefined)
+      expect(result.results[0].configPath).toBe('');
+      expect(result.results[0].configPath).not.toBeUndefined();
+      expect(result.results[0].success).toBe(true);
+    });
+
+    it('should preserve binaryDetection result for skipped clients', async () => {
+      const adapter = createMockAdapter('copilot-cli', true);
+      adapter.readConfig.mockResolvedValue(null);
+
+      mockGetAdapterForClient.mockReturnValue(adapter);
+
+      const detectionResult = {
+        status: 'not-found' as const,
+        warnings: ['Binary not in PATH', 'Application bundle not found'],
+      };
+
+      mockBinaryDetector.detectClient.mockResolvedValue(detectionResult);
+
+      const result = await syncClients({
+        clients: ['copilot-cli'],
+        platform,
+        skipUndetected: true,
+      });
+
+      // Assert: binaryDetection result is preserved
+      expect(result.results[0].binaryDetection).toEqual(detectionResult);
+      expect(result.results[0].binaryDetection?.status).toBe('not-found');
+      expect(result.results[0].binaryDetection?.warnings).toHaveLength(2);
     });
   });
 

@@ -57,6 +57,8 @@ export interface SyncOptions {
   skipBinaryDetection?: boolean;
   /** Skip plugin installation (default: false) */
   skipPlugins?: boolean;
+  /** Skip clients that are not detected on system (default: true) */
+  skipUndetected?: boolean;
 }
 
 /**
@@ -165,7 +167,19 @@ async function syncToClient(
         warnings.push(...binaryDetection.warnings);
       }
 
-      // If binary not found, add warning but continue (warn but allow)
+      // If binary not found and skipUndetected is enabled, skip this client
+      if (binaryDetection.status === 'not-found' && options.skipUndetected) {
+        return {
+          client: client.name,
+          success: true, // Not a failure, just skipped
+          configPath: '', // No config written
+          binaryDetection,
+          warnings: [],
+          error: 'Skipped - client not detected on system',
+        };
+      }
+
+      // If binary not found but skipUndetected is false, add warning but continue
       if (binaryDetection.status === 'not-found') {
         warnings.push(
           `${client.name} binary/application not detected on system. Generating config anyway.`

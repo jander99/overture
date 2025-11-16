@@ -88,6 +88,61 @@ describe('sync command', () => {
     });
   });
 
+  describe('--skip-undetected flag', () => {
+    it('should pass skipUndetected: true by default', async () => {
+      await command.parseAsync(['node', 'sync']);
+
+      expect(mockSyncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipUndetected: true,
+        })
+      );
+    });
+
+    it('should pass skipUndetected: false when --no-skip-undetected specified', async () => {
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected']);
+
+      expect(mockSyncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipUndetected: false,
+        })
+      );
+    });
+
+    it('should work with --dry-run flag', async () => {
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected', '--dry-run']);
+
+      expect(mockSyncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipUndetected: false,
+          dryRun: true,
+        })
+      );
+    });
+
+    it('should work with --client flag', async () => {
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected', '--client', 'claude-code']);
+
+      expect(mockSyncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipUndetected: false,
+          clients: ['claude-code'],
+        })
+      );
+    });
+
+    it('should work with --skip-plugins flag', async () => {
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected', '--skip-plugins']);
+
+      expect(mockSyncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipUndetected: false,
+          skipPlugins: true,
+        })
+      );
+    });
+  });
+
   describe('other flags', () => {
     it('should pass dryRun when --dry-run specified', async () => {
       await command.parseAsync(['node', 'sync', '--dry-run']);
@@ -141,6 +196,171 @@ describe('sync command', () => {
     });
   });
 
+  describe('output formatting', () => {
+    it('should display detected clients in detection phase', async () => {
+      mockSyncClients.mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '/path/to/config',
+            binaryDetection: {
+              status: 'found',
+              version: '1.0.0',
+              configPath: '/path/to/config',
+              warnings: [],
+            },
+            warnings: [],
+          },
+        ],
+        warnings: [],
+        errors: [],
+      });
+
+      const mockInfo = jest.spyOn(Logger, 'info');
+      const mockSuccess = jest.spyOn(Logger, 'success');
+
+      await command.parseAsync(['node', 'sync']);
+
+      // Should show detection phase
+      expect(mockSuccess).toHaveBeenCalledWith(
+        expect.stringContaining('claude-code')
+      );
+    });
+
+    it('should display skipped clients in detection phase', async () => {
+      mockSyncClients.mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-desktop',
+            success: true,
+            configPath: '',
+            binaryDetection: {
+              status: 'not-found',
+              warnings: [],
+            },
+            warnings: [],
+            error: 'Skipped - client not detected on system',
+          },
+        ],
+        warnings: [],
+        errors: [],
+      });
+
+      const mockSkip = jest.spyOn(Logger, 'skip');
+
+      await command.parseAsync(['node', 'sync']);
+
+      // Should show skipped client
+      expect(mockSkip).toHaveBeenCalledWith(
+        expect.stringContaining('claude-desktop')
+      );
+    });
+
+    it('should only show critical warnings', async () => {
+      mockSyncClients.mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '/path/to/config',
+            binaryDetection: {
+              status: 'found',
+              warnings: [],
+            },
+            warnings: [
+              'claude-code detected: 1.0.0',  // Informational - should be filtered
+              'Invalid configuration error',   // Critical - should be shown
+            ],
+          },
+        ],
+        warnings: [],
+        errors: [],
+      });
+
+      const mockWarn = jest.spyOn(Logger, 'warn');
+
+      await command.parseAsync(['node', 'sync']);
+
+      // Should only show critical warning
+      expect(mockWarn).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid configuration error')
+      );
+      expect(mockWarn).not.toHaveBeenCalledWith(
+        expect.stringContaining('detected: 1.0.0')
+      );
+    });
+
+    it('should separate detection and sync phases', async () => {
+      mockSyncClients.mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '/path/to/config',
+            binaryDetection: {
+              status: 'found',
+              version: '1.0.0',
+              warnings: [],
+            },
+            warnings: [],
+          },
+        ],
+        warnings: [],
+        errors: [],
+      });
+
+      const mockSection = jest.spyOn(Logger, 'section');
+
+      await command.parseAsync(['node', 'sync']);
+
+      // Should show both phases
+      expect(mockSection).toHaveBeenCalledWith(
+        expect.stringContaining('Detecting clients')
+      );
+      expect(mockSection).toHaveBeenCalledWith(
+        expect.stringContaining('Syncing configurations')
+      );
+    });
+
+    it('should not show sync phase if no clients detected', async () => {
+      mockSyncClients.mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '',
+            binaryDetection: {
+              status: 'not-found',
+              warnings: [],
+            },
+            warnings: [],
+            error: 'Skipped - client not detected on system',
+          },
+        ],
+        warnings: [],
+        errors: [],
+      });
+
+      const mockSection = jest.spyOn(Logger, 'section');
+
+      await command.parseAsync(['node', 'sync']);
+
+      // Should show detection phase but not sync phase
+      expect(mockSection).toHaveBeenCalledWith(
+        expect.stringContaining('Detecting clients')
+      );
+      expect(mockSection).not.toHaveBeenCalledWith(
+        expect.stringContaining('Syncing configurations')
+      );
+    });
+  });
+
   describe('command metadata', () => {
     it('should have correct command name', () => {
       expect(command.name()).toBe('sync');
@@ -155,6 +375,13 @@ describe('sync command', () => {
         opt.flags.includes('--skip-plugins')
       );
       expect(skipPluginsOption).toBeDefined();
+    });
+
+    it('should support --no-skip-undetected option', () => {
+      const skipUndetectedOption = command.options.find((opt) =>
+        opt.flags.includes('--no-skip-undetected')
+      );
+      expect(skipUndetectedOption).toBeDefined();
     });
 
     it('should support --dry-run option', () => {

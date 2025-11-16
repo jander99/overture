@@ -54,4 +54,41 @@ export class Logger {
   static nl(): void {
     console.log();
   }
+
+  /**
+   * Log a section header (bold text with spacing)
+   *
+   * @param message - The section header text
+   *
+   * @example
+   * Logger.section('🔍 Client Detection:');
+   */
+  static section(message: string): void {
+    console.log();
+    console.log(chalk.bold(message));
+  }
+
+  /**
+   * Log a skipped item (gray with ⊘ icon)
+   *
+   * @param message - The skip message
+   *
+   * @example
+   * Logger.skip('cursor - not detected, skipped');
+   */
+  static skip(message: string): void {
+    console.log(chalk.gray('⊘'), chalk.gray(message));
+  }
+
+  /**
+   * Log without icon (for plain data display)
+   *
+   * @param message - The message to display
+   *
+   * @example
+   * Logger.plain('Additional information here');
+   */
+  static plain(message: string): void {
+    console.log(message);
+  }
 }

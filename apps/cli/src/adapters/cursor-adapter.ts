@@ -5,10 +5,7 @@
  * Supports both global and project-level configurations.
  *
  * Config locations:
- * - Global:
- *   - macOS: ~/Library/Application Support/Cursor/User/globalStorage/mcp.json
- *   - Linux: ~/.config/Cursor/User/globalStorage/mcp.json
- *   - Windows: %APPDATA%/Cursor/User/globalStorage/mcp.json
+ * - Global: ~/.cursor/mcp.json (all platforms)
  * - Project: ./.cursor/mcp.json
  *
  * @module adapters/cursor-adapter
