@@ -129,10 +129,17 @@ export function createSyncCommand(): Command {
 
         // ==================== Phase 3: Critical Warnings Only ====================
         const criticalWarnings: Array<{ client: string; warning: string }> = [];
+        const tips: Set<string> = new Set();
 
-        // Collect critical warnings from client results
+        // Collect critical warnings from client results (not global to avoid duplication)
         for (const clientResult of result.results) {
           for (const warning of clientResult.warnings) {
+            // Extract tips separately
+            if (warning.includes('💡 Tip:')) {
+              tips.add(warning);
+              continue;
+            }
+
             if (isCriticalWarning(warning)) {
               criticalWarnings.push({
                 client: clientResult.client,
@@ -142,25 +149,23 @@ export function createSyncCommand(): Command {
           }
         }
 
-        // Collect critical warnings from global warnings
-        for (const warning of result.warnings) {
-          if (isCriticalWarning(warning)) {
-            criticalWarnings.push({
-              client: 'global',
-              warning: warning,
-            });
-          }
-        }
-
         // Show critical warnings if any exist
         if (criticalWarnings.length > 0) {
           Logger.section('⚠️  Warnings:');
           for (const item of criticalWarnings) {
-            if (item.client === 'global') {
-              Logger.warn(`  - ${item.warning}`);
-            } else {
-              Logger.warn(`  - ${item.client}: ${item.warning}`);
-            }
+            Logger.warn(`  - ${item.client}: ${item.warning}`);
+          }
+        }
+
+        // Show unique tips at the end if any exist
+        if (tips.size > 0) {
+          if (criticalWarnings.length === 0) {
+            Logger.section('💡 Tips:');
+          } else {
+            Logger.nl();
+          }
+          for (const tip of tips) {
+            Logger.info(`  ${tip}`);
           }
         }
 
