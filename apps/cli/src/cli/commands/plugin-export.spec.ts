@@ -16,16 +16,18 @@ jest.mock('../../utils/logger');
 describe('plugin-export command', () => {
   let command: Command;
   let mockExportPlugins: jest.Mock;
+  let mockExportAllPlugins: jest.Mock;
 
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Create mock export function
+    // Create mock export functions
     mockExportPlugins = jest.fn();
+    mockExportAllPlugins = jest.fn();
     (PluginExporter as jest.MockedClass<typeof PluginExporter>).mockImplementation(() => ({
       exportPlugins: mockExportPlugins,
-      exportAllPlugins: jest.fn(),
+      exportAllPlugins: mockExportAllPlugins,
       compareInstalledWithConfig: jest.fn(),
     }) as any);
 
@@ -149,22 +151,20 @@ describe('plugin-export command', () => {
 
   describe('--all flag', () => {
     it('should export all plugins when --all specified', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      mockExportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync(['node', 'export', '--all']);
 
-      expect(mockExportPlugins).toHaveBeenCalledWith({
-        interactive: false,
-        exportAll: true,
-      });
+      expect(mockExportAllPlugins).toHaveBeenCalled();
+      expect(mockExportPlugins).not.toHaveBeenCalled();
     });
 
     it('should handle successful export with --all flag', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      mockExportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync(['node', 'export', '--all']);
 
-      expect(mockExportPlugins).toHaveBeenCalled();
+      expect(mockExportAllPlugins).toHaveBeenCalled();
       expect(Logger.error).not.toHaveBeenCalled();
     });
 
@@ -188,7 +188,7 @@ describe('plugin-export command', () => {
 
   describe('flag conflicts', () => {
     it('should handle --plugin and --all together (--all takes precedence)', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      mockExportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync([
         'node',
@@ -198,11 +198,9 @@ describe('plugin-export command', () => {
         '--all',
       ]);
 
-      // --all should take precedence
-      expect(mockExportPlugins).toHaveBeenCalledWith({
-        interactive: false,
-        exportAll: true,
-      });
+      // --all should take precedence and call exportAllPlugins
+      expect(mockExportAllPlugins).toHaveBeenCalled();
+      expect(mockExportPlugins).not.toHaveBeenCalled();
     });
   });
 

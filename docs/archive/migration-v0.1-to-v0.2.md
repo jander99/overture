@@ -1,7 +1,15 @@
 # Migration Guide: v0.1 to v0.2
 
-**Version:** 0.2.0  
-**Migration Difficulty:** Easy to Moderate  
+**⚠️ DEPRECATED:** This guide is for migrating from v0.1 to v0.2. As of Overture v2.0, the `scope` field has been **removed**. Scope is now implicit based on file location:
+- MCPs in `~/.config/overture.yml` are global
+- MCPs in `.overture/config.yaml` are project-scoped
+
+**If you're using v2.0+**, ignore all references to the `scope` field in this document.
+
+---
+
+**Version:** 0.2.0
+**Migration Difficulty:** Easy to Moderate
 **Estimated Time:** 5-30 minutes (depending on configuration complexity)
 
 ---
@@ -116,7 +124,7 @@ mcp:
 **Why:** Enables user/project config separation.
 
 **Valid Values:**
-- `"global"` — Reference to user global config (`~/.config/overture/config.yaml`)
+- `"global"` — Reference to user global config (`~/.config/overture.yml`)
 - `"project"` — Defined and managed in project config (`.overture/config.yaml`)
 
 ---
@@ -227,7 +235,7 @@ overture sync --client claude-code,vscode
 
 ### User + Project Config Separation
 
-**User Global Config:** `~/.config/overture/config.yaml`
+**User Global Config:** `~/.config/overture.yml`
 ```yaml
 version: "2.0"
 
@@ -619,7 +627,7 @@ mcp:
 
 **1. Create User Global Config:**
 
-`~/.config/overture/config.yaml`
+`~/.config/overture.yml`
 ```yaml
 version: "2.0"
 
@@ -679,7 +687,7 @@ mcp:
 
 **3. Initialize User Config:**
 ```bash
-overture user init  # Creates ~/.config/overture/config.yaml
+overture user init  # Creates ~/.config/overture.yml
 ```
 
 **4. Test with Dry-Run:**
@@ -737,7 +745,7 @@ grep -A5 "mcps:" project-b/.overture.yaml
 
 **2. Create User Global Config:**
 
-`~/.config/overture/config.yaml`
+`~/.config/overture.yml`
 ```yaml
 version: "2.0"
 
@@ -912,7 +920,7 @@ mcp:
 
 **Which scope to use?**
 - **project** — MCP defined in this project config (most common for first migration)
-- **global** — MCP defined in user global config (use after creating `~/.config/overture/config.yaml`)
+- **global** — MCP defined in user global config (use after creating `~/.config/overture.yml`)
 
 ---
 
@@ -1172,7 +1180,7 @@ overture mcp list
 ```bash
 overture user init
 
-# Creates: ~/.config/overture/config.yaml
+# Creates: ~/.config/overture.yml
 # With common MCPs pre-configured
 ```
 
@@ -1580,7 +1588,7 @@ mcp:
 
 **For:** Multiple projects, shared MCPs
 
-**User Global Config:** `~/.config/overture/config.yaml`
+**User Global Config:** `~/.config/overture.yml`
 ```yaml
 version: "2.0"
 mcp:

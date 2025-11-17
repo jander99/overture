@@ -80,13 +80,12 @@ Currently implemented (911/911 tests passing, 83%+ coverage):
 ```bash
 # User declares canonical MCP config once
 ~/.config/overture.yml:
-  github: { command: mcp-github, scope: global }
-  memory: { command: mcp-memory, scope: global }
+  github: { command: mcp-github }
+  memory: { command: mcp-memory }
 
 # Project declares additional needs
-.overture.yml:
+.overture/config.yaml:
   python-repl: { command: uvx, args: [mcp-server-python-repl] }
-  github: { scope: global }  # Reference, not redefinition
 
 # Sync to all platforms
 overture sync
@@ -114,17 +113,16 @@ overture sync
 plugins:
   python-development:
     marketplace: claude-code-workflows
-    scope: global
 
-# Project: .overture.yml
+# Project: .overture/config.yaml
 plugins:
   python-development:
     marketplace: claude-code-workflows
-    scope: global  # Reference only, already installed
+    # Note: Already installed globally
 
   kubernetes-operations:
     marketplace: claude-code-workflows
-    scope: project  # Install only when working on this project
+    # Note: Project-specific plugin
 ```
 
 **Generated CLAUDE.md:**

@@ -365,7 +365,7 @@ async function syncToClient(
  * Sync plugins from user config
  *
  * Installs missing plugins declared in user global config.
- * Reads from ~/.config/overture/config.yaml only (plugins are global in Claude Code).
+ * Reads from ~/.config/overture.yml only (plugins are global in Claude Code).
  * Warns if plugins found in project config.
  *
  * @param userConfig - User global configuration
@@ -389,7 +389,7 @@ async function syncPlugins(
     console.warn('⚠️  Warning: Plugin configuration found in project config');
     console.warn('    Plugins found:', pluginNames);
     console.warn('    Claude Code plugins are installed globally');
-    console.warn('    Move to ~/.config/overture/config.yaml');
+    console.warn('    Move to ~/.config/overture.yml');
   }
 
   // Get plugins from user config only

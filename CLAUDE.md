@@ -85,8 +85,8 @@ Claude Reads CLAUDE.md:
 ### Key Files
 
 **Input:**
-- `.overture/config.yaml` — User configuration (plugins + MCPs + mappings)
-- `~/.config/overture/config.yaml` — Global configuration (optional)
+- `.overture/config.yaml` — Project configuration (plugins + MCPs + mappings)
+- `~/.config/overture.yml` — User global configuration (optional)
 
 **Output:**
 - `.mcp.json` — Project-scoped MCP servers
@@ -111,24 +111,22 @@ plugins:
 
 # MCP server configurations
 mcp:
-  filesystem:
-    scope: global  # Reference to global MCP
+  # Note: Scope is implicit based on file location
+  # - MCPs in ~/.config/overture.yml are global
+  # - MCPs in .overture/config.yaml are project-scoped
 
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
-    scope: project
 
   ruff:
     command: uvx
     args: [mcp-server-ruff]
-    scope: project
 
   github:
     command: mcp-server-github
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
-    scope: project
 ```
 
 ## Required MCP Servers for Development

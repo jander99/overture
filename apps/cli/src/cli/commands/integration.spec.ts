@@ -131,7 +131,7 @@ describe('CLI Integration Tests (WU-034)', () => {
       expect(result.exitCode).toBe(0);
       expect(result.output).toContain('User configuration created');
 
-      // Note: Config file is created at ~/.config/overture/config.yaml
+      // Note: Config file is created at ~/.config/overture.yml
       // We don't verify the file directly to avoid modifying the test user's home directory
     });
 

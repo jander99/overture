@@ -192,7 +192,7 @@ describe('PluginDetector', () => {
       });
 
       it('should use custom settings path when provided', async () => {
-        const customPath = '/custom/path/settings.json';
+        const customPath = path.join(process.cwd(), '.claude', 'custom-settings.json');
         const settings = buildClaudeSettings({});
 
         mockFs.readFile.mockResolvedValue(JSON.stringify(settings));
@@ -200,6 +200,14 @@ describe('PluginDetector', () => {
         await detector.detectInstalledPlugins({ settingsPath: customPath });
 
         expect(mockFs.readFile).toHaveBeenCalledWith(customPath, 'utf-8');
+      });
+
+      it('should reject settings path outside .claude directory', async () => {
+        const invalidPath = '/custom/path/settings.json';
+
+        await expect(
+          detector.detectInstalledPlugins({ settingsPath: invalidPath })
+        ).rejects.toThrow('Settings path must be within .claude directory');
       });
     });
 
@@ -226,7 +234,7 @@ describe('PluginDetector', () => {
       });
 
       it('should log warning with correct path when file not found', async () => {
-        const customPath = '/test/path/settings.json';
+        const customPath = path.join(process.cwd(), '.claude', 'test-settings.json');
         const error = new Error('File not found') as NodeJS.ErrnoException;
         error.code = 'ENOENT';
         mockFs.readFile.mockRejectedValue(error);
@@ -725,7 +733,7 @@ describe('PluginDetector', () => {
     });
 
     it('should use custom settings path', async () => {
-      const customPath = '/custom/path/settings.json';
+      const customPath = path.join(process.cwd(), '.claude', 'custom-settings.json');
       const settings = buildClaudeSettings({
         'test-plugin': {
           marketplace: 'test-marketplace',

@@ -16,7 +16,7 @@ import { ErrorHandler } from '../../core/error-handler';
  * Performs the following operations:
  * 1. Detects installed Claude Code plugins
  * 2. Prompts user to select plugins (or uses explicit list)
- * 3. Updates ~/.config/overture/config.yaml with selected plugins
+ * 3. Updates ~/.config/overture.yml with selected plugins
  * 4. Shows confirmation message
  */
 export function createPluginExportCommand(): Command {

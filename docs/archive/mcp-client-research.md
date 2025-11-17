@@ -1,6 +1,8 @@
 # MCP Client Configuration Research Report
 
-**Research Date:** 2025-11-10  
+**⚠️ ARCHIVED:** This research document is from November 2025 and describes the state of MCP configuration at that time. Some implementation details may be outdated.
+
+**Research Date:** 2025-11-10
 **Purpose:** Document MCP server configuration across multiple AI development clients to inform Overture v0.2 multi-platform support
 
 ---

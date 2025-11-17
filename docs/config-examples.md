@@ -92,7 +92,6 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "${HOME}"]
     transport: "stdio"
-    scope: "global"
     metadata:
       description: "File system access for home directory"
       homepage: "https://github.com/modelcontextprotocol/servers"
@@ -102,7 +101,6 @@ mcp:
     command: "npx"
     args: ["-y", "mcp-server-memory"]
     transport: "stdio"
-    scope: "global"
     metadata:
       description: "Persistent memory across conversations"
 
@@ -111,14 +109,12 @@ mcp:
     command: "npx"
     args: ["-y", "mcp-server-sequential-thinking"]
     transport: "stdio"
-    scope: "global"
 
   # Documentation lookup
   context7:
     command: "npx"
     args: ["-y", "context7-mcp"]
     transport: "stdio"
-    scope: "global"
     env:
       CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
 
@@ -127,7 +123,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "global"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     metadata:
@@ -167,7 +162,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-python-repl"]
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]  # uvx not reliable on Windows
       commandOverrides:
@@ -182,7 +176,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-ruff"]
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]
     metadata:
@@ -194,7 +187,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-pytest", "--project", "."]
     transport: "stdio"
-    scope: "project"
     env:
       PYTEST_ADDOPTS: "${PYTEST_ADDOPTS:--v}"
 
@@ -231,7 +223,6 @@ mcp:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL}"
     platforms:
@@ -248,7 +239,6 @@ mcp:
     command: "docker-mcp-server"
     args: []
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]  # Windows Docker requires different setup
       commandOverrides:
@@ -260,7 +250,6 @@ mcp:
     command: "mcp-server-powershell"
     args: []
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["darwin", "linux"]  # Windows only
     metadata:
@@ -271,7 +260,6 @@ mcp:
     command: "mcp-server-macos-shortcuts"
     args: []
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["linux", "win32"]  # macOS only
     metadata:
@@ -301,7 +289,6 @@ mcp:
     command: "mcp-server-github"
     args: ["--transport", "http", "--port", "3000"]
     transport: "http"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     clients:
@@ -314,7 +301,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     metadata:
@@ -325,7 +311,6 @@ mcp:
     command: "mcp-server-claude-extensions"
     args: []
     transport: "stdio"
-    scope: "project"
     clients:
       include: ["claude-code", "claude-desktop"]  # Whitelist Claude only
     metadata:
@@ -336,7 +321,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "global"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     clients:
@@ -349,7 +333,6 @@ mcp:
     command: "mcp-server-jetbrains"
     args: []
     transport: "stdio"
-    scope: "project"
     clients:
       include: ["jetbrains-copilot"]  # JetBrains only
     metadata:
@@ -382,7 +365,6 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
     transport: "stdio"
-    scope: "project"
     metadata:
       description: "File system access for entire monorepo"
       tags: ["universal", "filesystem"]
@@ -391,7 +373,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
     metadata:
@@ -402,7 +383,6 @@ mcp:
     command: "npx"
     args: ["-y", "nx-mcp-server"]
     transport: "stdio"
-    scope: "project"
     metadata:
       description: "Nx monorepo management and build orchestration"
       tags: ["universal", "build", "monorepo"]
@@ -415,7 +395,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-python-repl"]
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]
     metadata:
@@ -426,7 +405,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-ruff"]
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]
     metadata:
@@ -437,7 +415,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-pytest", "--project", "apps/api"]
     transport: "stdio"
-    scope: "project"
     env:
       PYTEST_ADDOPTS: "-v --cov"
     metadata:
@@ -452,7 +429,6 @@ mcp:
     command: "npx"
     args: ["-y", "mcp-server-typescript"]
     transport: "stdio"
-    scope: "project"
     metadata:
       description: "TypeScript language server integration"
       tags: ["typescript", "language-server"]
@@ -461,7 +437,6 @@ mcp:
     command: "npx"
     args: ["-y", "mcp-server-eslint", "--project", "."]
     transport: "stdio"
-    scope: "project"
     metadata:
       description: "ESLint for JavaScript/TypeScript linting"
       tags: ["javascript", "typescript", "linting"]
@@ -474,7 +449,6 @@ mcp:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL}"
     platforms:
@@ -496,7 +470,6 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./local.db"]
     transport: "stdio"
-    scope: "project"
     metadata:
       description: "SQLite for local development databases"
       tags: ["database", "sqlite"]
@@ -509,7 +482,6 @@ mcp:
     command: "docker-mcp-server"
     args: []
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]
     metadata:
@@ -520,7 +492,6 @@ mcp:
     command: "kubectl-mcp-server"
     args: ["--context", "dev-cluster"]
     transport: "stdio"
-    scope: "project"
     env:
       KUBECONFIG: "${KUBECONFIG:-~/.kube/config}"
     metadata:
@@ -563,7 +534,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"  # Error if not set
 
@@ -572,7 +542,6 @@ mcp:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL:-postgresql://localhost:5432/dev}"
       MAX_CONNECTIONS: "${MAX_CONNECTIONS:-10}"
@@ -583,7 +552,6 @@ mcp:
     command: "mcp-server-aws"
     args: []
     transport: "stdio"
-    scope: "project"
     env:
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
@@ -595,7 +563,6 @@ mcp:
     command: "mcp-server-logger"
     args: []
     transport: "stdio"
-    scope: "project"
     env:
       DEBUG: "${DEBUG:-false}"
       LOG_LEVEL: "${LOG_LEVEL:-info}"
@@ -606,14 +573,12 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "${WORKSPACE:-${HOME}/workspace}"]
     transport: "stdio"
-    scope: "project"
 
   # API configuration
   openai:
     command: "mcp-server-openai"
     args: []
     transport: "stdio"
-    scope: "global"
     env:
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
       OPENAI_ORG_ID: "${OPENAI_ORG_ID:-}"  # Optional, empty string if not set
@@ -646,7 +611,6 @@ mcp:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL}"
     clients:
@@ -666,7 +630,6 @@ mcp:
     command: "mcp-server-github"
     args: []
     transport: "stdio"
-    scope: "global"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"  # Personal token
     clients:
@@ -680,7 +643,6 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
     transport: "stdio"
-    scope: "project"
     clients:
       overrides:
         claude-code:
@@ -695,7 +657,6 @@ mcp:
     command: "mcp-api-server"
     args: ["--port", "3000"]
     transport: "http"
-    scope: "project"
     clients:
       overrides:
         vscode:
@@ -708,7 +669,6 @@ mcp:
     command: "mcp-server-cloud"
     args: ["--provider", "aws"]
     transport: "stdio"
-    scope: "project"
     env:
       CLOUD_PROVIDER: "${CLOUD_PROVIDER:-aws}"
       CLOUD_REGION: "${CLOUD_REGION:-us-east-1}"
@@ -839,24 +799,20 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
     transport: "stdio"
-    scope: "project"
 
   typescript-language-server:
     command: "npx"
     args: ["-y", "mcp-server-typescript"]
     transport: "stdio"
-    scope: "project"
 
   eslint:
     command: "npx"
     args: ["-y", "mcp-server-eslint"]
     transport: "stdio"
-    scope: "project"
 
   github:
     command: "mcp-server-github"
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
 ```
@@ -871,7 +827,6 @@ mcp:
     command: "uvx"
     args: ["mcp-server-python-repl"]
     transport: "stdio"
-    scope: "project"
     platforms:
       exclude: ["win32"]
 
@@ -879,20 +834,17 @@ mcp:
     command: "uvx"
     args: ["mcp-server-ruff"]
     transport: "stdio"
-    scope: "project"
 
   postgres:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL}"
 
   github:
     command: "mcp-server-github"
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
 ```
@@ -907,32 +859,27 @@ mcp:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
     transport: "stdio"
-    scope: "project"
 
   nx:
     command: "npx"
     args: ["-y", "nx-mcp-server"]
     transport: "stdio"
-    scope: "project"
 
   typescript-language-server:
     command: "npx"
     args: ["-y", "mcp-server-typescript"]
     transport: "stdio"
-    scope: "project"
 
   postgres:
     command: "npx"
     args: ["@modelcontextprotocol/server-postgres"]
     transport: "stdio"
-    scope: "project"
     env:
       DATABASE_URL: "${DATABASE_URL}"
 
   github:
     command: "mcp-server-github"
     transport: "stdio"
-    scope: "project"
     env:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
 ```
@@ -941,9 +888,10 @@ mcp:
 
 ## Best Practices
 
-### 1. Use Scope Appropriately
-- `scope: "global"` for MCPs used across all projects (filesystem, memory, github)
-- `scope: "project"` for project-specific MCPs (databases, language servers)
+### 1. Organize MCPs by File Location (Implicit Scoping)
+- Global MCPs in `~/.config/overture.yml` for MCPs used across all projects (filesystem, memory, github)
+- Project-specific MCPs in `.overture/config.yaml` for project-specific MCPs (databases, language servers)
+- Note: As of Overture v2.0, the `scope` field has been removed. Scope is implicit based on file location.
 
 ### 2. Leverage Environment Variables
 - Store secrets in environment variables, not config files
@@ -984,7 +932,6 @@ mcp:
 mcp:
   github:
     command: "mcp-server-github"
-    scope: "global"
 ```
 
 ```yaml
@@ -993,7 +940,6 @@ mcp:
   github:
     command: "mcp-server-github"
     transport: "stdio"  # Required!
-    scope: "global"
 ```
 
 ### ❌ Using Both Include and Exclude

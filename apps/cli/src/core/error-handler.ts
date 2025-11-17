@@ -313,7 +313,7 @@ export class ErrorHandler {
     ) {
       // Determine which config is missing from context
       if (context.path && context.path.includes('.config/overture')) {
-        return 'Run `overture user init` to create global configuration at ~/.config/overture/config.yaml';
+        return 'Run `overture user init` to create global configuration at ~/.config/overture.yml';
       }
       return 'Run `overture init` to create project configuration at .overture/config.yaml\nFor global config, use `overture user init`';
     }

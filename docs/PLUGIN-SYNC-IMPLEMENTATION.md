@@ -25,7 +25,7 @@
 Implement plugin synchronization feature for Overture to enable users to keep Claude Code plugins synced across different development environments and machines.
 
 **Core Value Proposition**:
-- User maintains a single `~/.config/overture/config.yaml` file
+- User maintains a single `~/.config/overture.yml` file
 - Sync this file across machines (git, cloud storage, etc.)
 - Run `overture sync` on any machine to install declared plugins automatically
 - Export current plugin state to config for portability
@@ -50,7 +50,7 @@ Based on user clarification session, the following requirements are confirmed:
 
 ### ✅ Storage Location: User Global Only
 
-- **Primary Location**: `~/.config/overture/config.yaml`
+- **Primary Location**: `~/.config/overture.yml`
 - **Rationale**: Claude Code plugins are installed globally for all sessions
 - **Project Config Handling**: **Warn if plugins detected in `.overture/config.yaml`**
   - Plugins in project config won't work as expected (Claude Code doesn't support project-scoped plugins)
@@ -216,7 +216,7 @@ export class PluginInstaller {
 **Responsibilities:**
 - Detect installed plugins via PluginDetector
 - Interactive prompt for which plugins to export
-- Update `~/.config/overture/config.yaml` with new plugin entries
+- Update `~/.config/overture.yml` with new plugin entries
 - Preserve existing config structure and comments
 
 **Interface:**
@@ -552,7 +552,7 @@ Task({
   Requirements:
   - Use PluginDetector to list installed plugins
   - Interactive checkbox selection (using inquirer or similar)
-  - Update ~/.config/overture/config.yaml with selected plugins
+  - Update ~/.config/overture.yml with selected plugins
   - Preserve existing config structure and comments
   - Support non-interactive mode with explicit plugin list
 
@@ -781,7 +781,7 @@ Task({
 
 ### User Global Config Schema
 
-**File**: `~/.config/overture/config.yaml`
+**File**: `~/.config/overture.yml`
 
 ```yaml
 version: "1.0"
@@ -834,7 +834,7 @@ project:
 
 # ⚠️ WARNING: Plugin configuration detected in project config
 # Claude Code plugins are installed globally and cannot be project-scoped
-# Please move plugin configuration to: ~/.config/overture/config.yaml
+# Please move plugin configuration to: ~/.config/overture.yml
 
 plugins:  # This will trigger a warning
   python-development:
@@ -856,7 +856,7 @@ mcp:
 
 **Enhanced Behavior:**
 
-1. Check for plugins in user global config (`~/.config/overture/config.yaml`)
+1. Check for plugins in user global config (`~/.config/overture.yml`)
 2. Warn if plugins detected in project config (`.overture/config.yaml`)
 3. Detect installed plugins via `.claude/settings.json`
 4. Calculate missing plugins (in config but not installed)
@@ -886,7 +886,7 @@ Installing missing plugins:
 
 ⚠️  Warning: Plugin configuration found in project config
     Plugins are installed globally in Claude Code
-    Move to ~/.config/overture/config.yaml for proper functionality
+    Move to ~/.config/overture.yml for proper functionality
 
 🔍 Syncing MCP servers...
 ✅ Sync complete!
@@ -931,7 +931,7 @@ overture plugin export [options]
 
 1. Detect all installed Claude Code plugins via PluginDetector
 2. Show interactive checklist of plugins to export
-3. Update `~/.config/overture/config.yaml` with selected plugins
+3. Update `~/.config/overture.yml` with selected plugins
 4. Preserve existing config structure
 5. Show confirmation message
 
@@ -955,13 +955,13 @@ Found 5 installed plugins:
   ◯ test-plugin@local-dev
   ◉ kubernetes-operations@claude-code-workflows
 
-✅ Updated ~/.config/overture/config.yaml with 3 plugins:
+✅ Updated ~/.config/overture.yml with 3 plugins:
    • python-development@claude-code-workflows
    • backend-development@claude-code-workflows
    • kubernetes-operations@claude-code-workflows
 
 📝 Next steps:
-   • Review your config: cat ~/.config/overture/config.yaml
+   • Review your config: cat ~/.config/overture.yml
    • Sync config with your dotfiles repo
    • Run 'overture sync' on other machines to install these plugins
 ```
@@ -973,7 +973,7 @@ $ overture plugin export --plugin python-development --plugin backend-developmen
 
 🔍 Exporting specified plugins...
 
-✅ Updated ~/.config/overture/config.yaml with 2 plugins:
+✅ Updated ~/.config/overture.yml with 2 plugins:
    • python-development@claude-code-workflows
    • backend-development@claude-code-workflows
 ```
@@ -1009,12 +1009,12 @@ Installed Claude Code Plugins:
 
 ✓ python-development@claude-code-workflows
   Status: Enabled
-  In config: Yes (~/.config/overture/config.yaml)
+  In config: Yes (~/.config/overture.yml)
   MCPs: python-repl, ruff, filesystem
 
 ✓ backend-development@claude-code-workflows
   Status: Disabled
-  In config: Yes (~/.config/overture/config.yaml)
+  In config: Yes (~/.config/overture.yml)
   MCPs: docker, postgres
 
   experimental-plugin@custom-marketplace
@@ -1308,11 +1308,11 @@ Or update your config with the correct marketplace name.
 
 **Error:**
 ```
-❌ Error: Cannot write to ~/.config/overture/config.yaml
+❌ Error: Cannot write to ~/.config/overture.yml
 
 Permission denied. Please check file permissions:
-  $ ls -la ~/.config/overture/config.yaml
-  $ chmod 644 ~/.config/overture/config.yaml
+  $ ls -la ~/.config/overture.yml
+  $ chmod 644 ~/.config/overture.yml
 ```
 
 ---
@@ -1348,7 +1348,7 @@ Permission denied. Please check file permissions:
     Project-level plugin configuration will not work as expected.
 
     Please move plugin configuration to:
-      ~/.config/overture/config.yaml
+      ~/.config/overture.yml
 
     Project config should only contain:
       • Project metadata
@@ -1566,7 +1566,7 @@ marketplaces:
 ```bash
 # Clone dotfiles or sync config
 $ git clone git@github.com:user/dotfiles.git
-$ cp dotfiles/overture/config.yaml ~/.config/overture/config.yaml
+$ cp dotfiles/overture/config.yaml ~/.config/overture.yml
 
 # Install Claude Code
 $ # (download and install from claude.com)
@@ -1611,7 +1611,7 @@ $ overture plugin export
   ◉ backend-development@claude-code-workflows (already in config)
   ◉ data-science@claude-code-workflows (new)
 
-✅ Updated ~/.config/overture/config.yaml with 3 plugins
+✅ Updated ~/.config/overture.yml with 3 plugins
 
 # Commit and push config
 $ cd ~/dotfiles
@@ -1622,7 +1622,7 @@ $ git push
 # On Machine B: Pull and sync
 $ cd ~/dotfiles
 $ git pull
-$ cp overture/config.yaml ~/.config/overture/config.yaml
+$ cp overture/config.yaml ~/.config/overture.yml
 $ overture sync
 
 📦 Plugin sync: 1 installed, 2 skipped
@@ -1654,14 +1654,14 @@ $ overture sync
     Plugins found: python-development
 
     Claude Code plugins are installed globally.
-    Move to ~/.config/overture/config.yaml
+    Move to ~/.config/overture.yml
 
 📦 Plugins skipped (not in user config)
 🔍 Syncing MCP servers...
 ✅ Sync complete
 
 # Fix: Move to user config
-$ # Manually move plugins section to ~/.config/overture/config.yaml
+$ # Manually move plugins section to ~/.config/overture.yml
 $ overture sync
 ✅ All plugins synced correctly
 ```
