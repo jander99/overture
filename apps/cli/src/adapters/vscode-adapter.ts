@@ -85,38 +85,18 @@ export class VSCodeAdapter extends BaseClientAdapter {
         continue;
       }
 
-      // Start with base config
-      let command = mcpConfig.command;
-      let args = [...mcpConfig.args];
-      let env = { ...mcpConfig.env };
-      let transport = mcpConfig.transport;
-
-      // Apply platform overrides
-      if (mcpConfig.platforms?.commandOverrides?.[platform]) {
-        command = mcpConfig.platforms.commandOverrides[platform];
-      }
-      if (mcpConfig.platforms?.argsOverrides?.[platform]) {
-        args = [...mcpConfig.platforms.argsOverrides[platform]];
-      }
-
-      // Apply client-specific overrides
-      const clientOverride = mcpConfig.clients?.overrides?.[this.name];
-      if (clientOverride) {
-        if (clientOverride.command) command = clientOverride.command;
-        if (clientOverride.args) args = [...clientOverride.args];
-        if (clientOverride.env) env = { ...env, ...clientOverride.env };
-        if (clientOverride.transport) transport = clientOverride.transport;
-      }
+      // Build config with all overrides applied
+      const serverConfig = this.buildServerConfig(mcpConfig, platform);
 
       // VS Code requires environment variable expansion by Overture
-      const expandedEnv = this.needsEnvVarExpansion() ? expandEnvVarsInObject(env) : env;
+      const expandedEnv = this.needsEnvVarExpansion() ? expandEnvVarsInObject(serverConfig.env || {}) : serverConfig.env;
 
       // VS Code requires "type" field
       servers[name] = {
-        command,
-        args,
-        type: transport, // VS Code uses "type" instead of "transport"
-        env: Object.keys(expandedEnv).length > 0 ? expandedEnv : undefined,
+        command: serverConfig.command,
+        args: serverConfig.args,
+        type: serverConfig.transport, // VS Code uses "type" instead of "transport"
+        env: Object.keys(expandedEnv || {}).length > 0 ? expandedEnv : undefined,
       };
     }
 

@@ -85,35 +85,19 @@ export class JetBrainsCopilotAdapter extends BaseClientAdapter {
         continue;
       }
 
-      // Start with base config
-      let command = mcpConfig.command;
-      let args = [...mcpConfig.args];
-      let env = { ...mcpConfig.env };
-
-      // Apply platform overrides
-      if (mcpConfig.platforms?.commandOverrides?.[platform]) {
-        command = mcpConfig.platforms.commandOverrides[platform];
-      }
-      if (mcpConfig.platforms?.argsOverrides?.[platform]) {
-        args = [...mcpConfig.platforms.argsOverrides[platform]];
-      }
-
-      // Apply client-specific overrides
-      const clientOverride = mcpConfig.clients?.overrides?.[this.name];
-      if (clientOverride) {
-        if (clientOverride.command) command = clientOverride.command;
-        if (clientOverride.args) args = [...clientOverride.args];
-        if (clientOverride.env) env = { ...env, ...clientOverride.env };
-      }
+      // Build config with all overrides applied
+      const serverConfig = this.buildServerConfig(mcpConfig, platform);
 
       // JetBrains Copilot likely requires Overture to expand environment variables
       // (similar to VS Code, no native ${VAR} support assumed)
-      const expandedEnv = this.needsEnvVarExpansion() ? expandEnvVarsInObject(env) : env;
+      const expandedEnv = this.needsEnvVarExpansion()
+        ? expandEnvVarsInObject(serverConfig.env || {})
+        : serverConfig.env;
 
       mcpServers[name] = {
-        command,
-        args,
-        env: Object.keys(expandedEnv).length > 0 ? expandedEnv : undefined,
+        command: serverConfig.command,
+        args: serverConfig.args,
+        env: Object.keys(expandedEnv || {}).length > 0 ? expandedEnv : undefined,
       };
     }
 

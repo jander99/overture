@@ -76,34 +76,16 @@ export class CopilotCliAdapter extends BaseClientAdapter {
         continue;
       }
 
-      // Start with base config
-      let command = mcpConfig.command;
-      let args = [...mcpConfig.args];
-      let env = { ...mcpConfig.env };
-
-      // Apply platform overrides
-      if (mcpConfig.platforms?.commandOverrides?.[platform]) {
-        command = mcpConfig.platforms.commandOverrides[platform];
-      }
-      if (mcpConfig.platforms?.argsOverrides?.[platform]) {
-        args = [...mcpConfig.platforms.argsOverrides[platform]];
-      }
-
-      // Apply client-specific overrides
-      const clientOverride = mcpConfig.clients?.overrides?.[this.name];
-      if (clientOverride) {
-        if (clientOverride.command) command = clientOverride.command;
-        if (clientOverride.args) args = [...clientOverride.args];
-        if (clientOverride.env) env = { ...env, ...clientOverride.env };
-      }
+      // Build config with all overrides applied
+      const serverConfig = this.buildServerConfig(mcpConfig, platform);
 
       // Copilot CLI requires 'type' and 'tools' fields
       mcpServers[name] = {
         type: 'local', // stdio transport = 'local' type in Copilot
-        command,
-        args,
+        command: serverConfig.command,
+        args: serverConfig.args,
         tools: ['*'], // Enable all tools from the MCP server
-        env: Object.keys(env).length > 0 ? env : undefined,
+        env: serverConfig.env,
       };
     }
 

@@ -30,8 +30,9 @@ export interface ClientMcpServerDef {
   command: string;
   args: string[];
   env?: Record<string, string>;
-  type?: TransportType; // VS Code requires "type" field
+  type?: TransportType | 'local'; // VS Code requires "type" field; 'local' for Copilot
   url?: string; // For HTTP transport
+  tools?: string[]; // For Copilot CLI
 }
 
 /**
@@ -288,5 +289,62 @@ export abstract class BaseClientAdapter implements ClientAdapter {
     }
 
     return true;
+  }
+
+  /**
+   * Build MCP server config with platform and client overrides applied
+   *
+   * Handles:
+   * - Platform-specific command and args overrides
+   * - Client-specific command, args, env, and transport overrides
+   * - Environment variable preservation
+   *
+   * @param mcpConfig - MCP server configuration from Overture config
+   * @param platform - Target platform
+   * @returns Partial server definition with command, args, env, and optionally transport
+   *
+   * @example
+   * ```typescript
+   * const config = this.buildServerConfig(mcpConfig, 'linux');
+   * // Returns: { command: 'uvx', args: ['mcp-server-python'], env: { ... }, transport?: 'stdio' }
+   * ```
+   */
+  protected buildServerConfig(
+    mcpConfig: OvertureConfig['mcp'][string],
+    platform: Platform
+  ): {
+    command: string;
+    args: string[];
+    env?: Record<string, string>;
+    transport?: TransportType;
+  } {
+    let command = mcpConfig.command;
+    let args = [...mcpConfig.args];
+    let env = { ...mcpConfig.env };
+    let transport = mcpConfig.transport;
+
+    // Apply platform overrides
+    if (mcpConfig.platforms?.commandOverrides?.[platform]) {
+      command = mcpConfig.platforms.commandOverrides[platform];
+    }
+    if (mcpConfig.platforms?.argsOverrides?.[platform]) {
+      args = [...mcpConfig.platforms.argsOverrides[platform]];
+    }
+
+    // Apply client-specific overrides
+    const clientOverride = mcpConfig.clients?.overrides?.[this.name];
+    if (clientOverride) {
+      if (clientOverride.command) command = clientOverride.command;
+      if (clientOverride.args) args = [...clientOverride.args];
+      if (clientOverride.env) env = { ...env, ...clientOverride.env };
+      if (clientOverride.transport) transport = clientOverride.transport;
+    }
+
+    return {
+      command,
+      args,
+      env: Object.keys(env).length > 0 ? env : undefined,
+      transport,
+    };
   }
 }
