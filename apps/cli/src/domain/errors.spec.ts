@@ -824,4 +824,251 @@ describe('Domain: Error Classes', () => {
       });
     });
   });
+
+  describe('Error Serialization', () => {
+    describe('OvertureError toJSON', () => {
+      it('should serialize base error properties', () => {
+        // Arrange
+        const error = new OvertureError('test message', 'TEST_CODE', 42);
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toEqual({
+          name: 'OvertureError',
+          message: 'test message',
+          code: 'TEST_CODE',
+          exitCode: 42,
+          stack: error.stack,
+        });
+      });
+
+      it('should include stack trace in serialization', () => {
+        // Arrange
+        const error = new OvertureError('test', 'CODE');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json.stack).toBeDefined();
+        expect(typeof json.stack).toBe('string');
+      });
+    });
+
+    describe('ConfigError toJSON', () => {
+      it('should serialize with filePath', () => {
+        // Arrange
+        const error = new ConfigError('config error', '/path/to/config.yaml');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'ConfigError',
+          message: 'config error',
+          code: 'CONFIG_ERROR',
+          exitCode: 2,
+          filePath: '/path/to/config.yaml',
+        });
+        expect(json.stack).toBeDefined();
+      });
+
+      it('should serialize with undefined filePath', () => {
+        // Arrange
+        const error = new ConfigError('config error');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'ConfigError',
+          message: 'config error',
+          code: 'CONFIG_ERROR',
+          exitCode: 2,
+          filePath: undefined,
+        });
+      });
+    });
+
+    describe('ValidationError toJSON', () => {
+      it('should serialize with issues array', () => {
+        // Arrange
+        const issues = ['Issue 1', 'Issue 2'];
+        const error = new ValidationError('validation error', issues);
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'ValidationError',
+          message: 'validation error',
+          code: 'VALIDATION_ERROR',
+          exitCode: 3,
+          issues: ['Issue 1', 'Issue 2'],
+        });
+        expect(json.stack).toBeDefined();
+      });
+
+      it('should serialize with empty issues array', () => {
+        // Arrange
+        const error = new ValidationError('validation error');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'ValidationError',
+          message: 'validation error',
+          code: 'VALIDATION_ERROR',
+          exitCode: 3,
+          issues: [],
+        });
+      });
+    });
+
+    describe('PluginError toJSON', () => {
+      it('should serialize with pluginName', () => {
+        // Arrange
+        const error = new PluginError('plugin error', 'python-development');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'PluginError',
+          message: 'plugin error',
+          code: 'PLUGIN_ERROR',
+          exitCode: 4,
+          pluginName: 'python-development',
+        });
+        expect(json.stack).toBeDefined();
+      });
+
+      it('should serialize with undefined pluginName', () => {
+        // Arrange
+        const error = new PluginError('plugin error');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'PluginError',
+          message: 'plugin error',
+          code: 'PLUGIN_ERROR',
+          exitCode: 4,
+          pluginName: undefined,
+        });
+      });
+    });
+
+    describe('McpError toJSON', () => {
+      it('should serialize with mcpName', () => {
+        // Arrange
+        const error = new McpError('mcp error', 'python-repl');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'McpError',
+          message: 'mcp error',
+          code: 'MCP_ERROR',
+          exitCode: 5,
+          mcpName: 'python-repl',
+        });
+        expect(json.stack).toBeDefined();
+      });
+
+      it('should serialize with undefined mcpName', () => {
+        // Arrange
+        const error = new McpError('mcp error');
+
+        // Act
+        const json = error.toJSON();
+
+        // Assert
+        expect(json).toMatchObject({
+          name: 'McpError',
+          message: 'mcp error',
+          code: 'MCP_ERROR',
+          exitCode: 5,
+          mcpName: undefined,
+        });
+      });
+    });
+
+    describe('JSON.stringify compatibility', () => {
+      it('should work with JSON.stringify for OvertureError', () => {
+        // Arrange
+        const error = new OvertureError('test', 'CODE');
+
+        // Act
+        const jsonString = JSON.stringify(error);
+        const parsed = JSON.parse(jsonString);
+
+        // Assert
+        expect(parsed.name).toBe('OvertureError');
+        expect(parsed.message).toBe('test');
+        expect(parsed.code).toBe('CODE');
+        expect(parsed.exitCode).toBe(1);
+      });
+
+      it('should work with JSON.stringify for ConfigError', () => {
+        // Arrange
+        const error = new ConfigError('test', '/path/to/file');
+
+        // Act
+        const jsonString = JSON.stringify(error);
+        const parsed = JSON.parse(jsonString);
+
+        // Assert
+        expect(parsed.filePath).toBe('/path/to/file');
+      });
+
+      it('should work with JSON.stringify for ValidationError', () => {
+        // Arrange
+        const error = new ValidationError('test', ['Issue 1', 'Issue 2']);
+
+        // Act
+        const jsonString = JSON.stringify(error);
+        const parsed = JSON.parse(jsonString);
+
+        // Assert
+        expect(parsed.issues).toEqual(['Issue 1', 'Issue 2']);
+      });
+
+      it('should work with JSON.stringify for PluginError', () => {
+        // Arrange
+        const error = new PluginError('test', 'my-plugin');
+
+        // Act
+        const jsonString = JSON.stringify(error);
+        const parsed = JSON.parse(jsonString);
+
+        // Assert
+        expect(parsed.pluginName).toBe('my-plugin');
+      });
+
+      it('should work with JSON.stringify for McpError', () => {
+        // Arrange
+        const error = new McpError('test', 'my-mcp');
+
+        // Act
+        const jsonString = JSON.stringify(error);
+        const parsed = JSON.parse(jsonString);
+
+        // Assert
+        expect(parsed.mcpName).toBe('my-mcp');
+      });
+    });
+  });
 });

@@ -53,6 +53,14 @@ export class MarketplaceRegistry {
   };
 
   /**
+   * Custom marketplace mappings added at runtime
+   *
+   * Stores dynamically registered marketplace shortcuts.
+   * Separate from KNOWN_MARKETPLACES to maintain immutability.
+   */
+  private static customMarketplaces = new Map<string, string>();
+
+  /**
    * Resolve marketplace shortcut to full path
    *
    * If the provided marketplace is a known shortcut, returns the full path.
@@ -77,7 +85,19 @@ export class MarketplaceRegistry {
    * ```
    */
   static resolveMarketplace(shortNameOrPath: string): string {
-    return this.KNOWN_MARKETPLACES[shortNameOrPath] || shortNameOrPath;
+    // Check built-in marketplaces first
+    if (shortNameOrPath in this.KNOWN_MARKETPLACES) {
+      return this.KNOWN_MARKETPLACES[shortNameOrPath];
+    }
+
+    // Check custom marketplaces
+    const customPath = this.customMarketplaces.get(shortNameOrPath);
+    if (customPath) {
+      return customPath;
+    }
+
+    // Return unchanged if not found (assume it's already a full path)
+    return shortNameOrPath;
   }
 
   /**
@@ -98,7 +118,7 @@ export class MarketplaceRegistry {
    * ```
    */
   static isKnownMarketplace(shortName: string): boolean {
-    return shortName in this.KNOWN_MARKETPLACES;
+    return shortName in this.KNOWN_MARKETPLACES || this.customMarketplaces.has(shortName);
   }
 
   /**
@@ -121,11 +141,19 @@ export class MarketplaceRegistry {
    * ```
    */
   static getAllKnown(): MarketplaceConfig[] {
-    return Object.entries(this.KNOWN_MARKETPLACES).map(([shortName, fullPath]) => ({
+    const builtIn = Object.entries(this.KNOWN_MARKETPLACES).map(([shortName, fullPath]) => ({
       shortName,
       fullPath,
       type: 'github' as const,
     }));
+
+    const custom = Array.from(this.customMarketplaces.entries()).map(([shortName, fullPath]) => ({
+      shortName,
+      fullPath,
+      type: 'github' as const,
+    }));
+
+    return [...builtIn, ...custom];
   }
 
   /**
@@ -149,11 +177,20 @@ export class MarketplaceRegistry {
    * ```
    */
   static getShortcutForPath(fullPath: string): string | undefined {
+    // Check built-in marketplaces first
     for (const [shortName, registeredPath] of Object.entries(this.KNOWN_MARKETPLACES)) {
       if (registeredPath === fullPath) {
         return shortName;
       }
     }
+
+    // Check custom marketplaces
+    for (const [shortName, registeredPath] of this.customMarketplaces.entries()) {
+      if (registeredPath === fullPath) {
+        return shortName;
+      }
+    }
+
     return undefined;
   }
 
@@ -227,7 +264,7 @@ export class MarketplaceRegistry {
    * ```
    */
   static addCustomMarketplace(shortName: string, fullPath: string): void {
-    (this.KNOWN_MARKETPLACES as Record<string, string>)[shortName] = fullPath;
+    this.customMarketplaces.set(shortName, fullPath);
   }
 
   /**
@@ -252,16 +289,11 @@ export class MarketplaceRegistry {
    */
   static removeCustomMarketplace(shortName: string): boolean {
     // Prevent removal of built-in marketplaces
-    const builtIns = ['claude-code-workflows'];
-    if (builtIns.includes(shortName)) {
+    if (shortName in this.KNOWN_MARKETPLACES) {
       return false;
     }
 
-    if (shortName in this.KNOWN_MARKETPLACES) {
-      delete (this.KNOWN_MARKETPLACES as Record<string, string>)[shortName];
-      return true;
-    }
-
-    return false;
+    // Remove from custom marketplaces
+    return this.customMarketplaces.delete(shortName);
   }
 }
