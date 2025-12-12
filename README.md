@@ -493,6 +493,84 @@ my-project/
 
 ---
 
+## AI Coding CLI Comparison Matrix
+
+This comparison uses Claude Code as the baseline and compares features across major AI coding CLIs as of December 2025.
+
+| Feature | Claude Code | OpenAI Codex | GitHub Copilot CLI | Gemini CLI | Cursor CLI | Windsurf | Amazon Q CLI |
+|---------|-------------|--------------|-------------------|------------|------------|----------|--------------|
+| **Core Capabilities** |
+| MCP Client Support | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| MCP Server Mode | ✅ `claude mcp serve` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Subagents/Task Delegation | ✅ Built-in | ✅ Via `/delegate` | ✅ Via `/delegate` | ✅ ReAct loop | ✅ Agent mode | ✅ Cascade | ✅ Agent mode |
+| Background/Async Tasks | ✅ Task tool | ✅ Cloud sandbox | ✅ Coding agent | ❌ | ✅ Background agents | ❌ | ✅ Background |
+| **Memory & Context** |
+| Session Persistence | ✅ `/init`, CLAUDE.md | ✅ `codex resume` | ✅ Session history | ✅ Conversation history | ✅ `cursor resume` | ✅ Auto-save | ✅ `q chat --resume` |
+| Cross-Session Memory | ✅ Via MCP servers | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Built-in Memories | ✅ Auto-Memories | ✅ Via MCP |
+| Project Context Files | ✅ CLAUDE.md | ✅ AGENTS.md | ✅ `.github/agents/` | ✅ GEMINI.md | ✅ `.cursorrules` | ✅ Rules | ✅ Context files |
+| Context Window | ~200K tokens | ~200K tokens | ~200K tokens | 1M tokens | ~200K tokens | ~200K tokens | ~200K tokens |
+| **Extensibility** |
+| Hooks/Automation | ✅ Pre/post hooks | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Context hooks |
+| Custom Slash Commands | ✅ `.claude/commands/` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Slash commands |
+| Plugin System | ✅ `claude plugin` | ❌ | ✅ Custom agents | ❌ | ✅ Extensions | ✅ Extensions | ❌ |
+| **Development Features** |
+| Code Review | ✅ Via commands | ✅ Built-in | ✅ Built-in | ✅ Agent mode | ✅ Built-in | ✅ Built-in | ✅ Built-in |
+| Web Search | ✅ Built-in | ✅ Built-in | ✅ Via GitHub | ✅ Google Search | ✅ Via MCP | ✅ Built-in | ✅ Built-in |
+| File Operations | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools |
+| Git Integration | ✅ Native | ✅ Native | ✅ Deep GitHub | ✅ Native | ✅ Native | ✅ Native | ✅ AWS CodeCommit |
+| **Platform & Access** |
+| Open Source | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ (transitioning) |
+| Free Tier | ❌ | ✅ (with Plus) | ❌ | ✅ 1000 req/day | ❌ | ✅ Limited | ✅ Free tier |
+| IDE Integration | ✅ VS Code, JetBrains | ✅ VS Code, Cursor | ✅ VS Code, JetBrains | ✅ VS Code | ✅ Native IDE | ✅ Native IDE | ✅ VS Code, JetBrains |
+| Cloud Execution | ❌ Local only | ✅ Codex Cloud | ✅ Coding agent | ❌ Local only | ❌ Local only | ❌ Local only | ✅ AWS integration |
+
+### Key Differentiators
+
+**Claude Code** ([docs](https://docs.anthropic.com/en/docs/claude-code))
+- Only CLI that can run as both MCP client AND server
+- Rich plugin ecosystem with hooks for automation
+- Project-scoped configuration via `.mcp.json`
+
+**OpenAI Codex CLI** ([GitHub](https://github.com/openai/codex))
+- Cloud sandbox execution for isolated tasks
+- Integrated code review with GPT-5-Codex
+- Slack integration for team delegation
+
+**GitHub Copilot CLI** ([docs](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli))
+- Deep GitHub integration (PRs, issues, repos)
+- Partner-built agents (Terraform, MongoDB, etc.)
+- `/delegate` for async background work
+
+**Gemini CLI** ([GitHub](https://github.com/google-gemini/gemini-cli))
+- 1M token context window
+- Google Search grounding built-in
+- Generous free tier (1000 requests/day)
+
+**Cursor CLI** ([docs](https://cursor.com/cli))
+- Built-in persistent memory system
+- Browser integration via MCP
+- Permission controls via `cli-config.json`
+
+**Windsurf** ([docs](https://docs.windsurf.com))
+- Cascade agent with built-in planning
+- Auto-generate memories from conversations
+- Turbo mode for auto-executing commands
+- Gartner Magic Quadrant Leader 2025
+
+**Amazon Q Developer CLI** ([GitHub](https://github.com/aws/amazon-q-developer-cli))
+- Deep AWS service integration
+- Transitioning to Kiro CLI
+- Context hooks for dynamic context injection
+
+### MCP Adoption Timeline
+
+The Model Context Protocol has become the standard for AI tool extensibility:
+- **March 2025**: OpenAI adopted MCP across ChatGPT
+- **April 2025**: Google confirmed MCP support for Gemini
+- **2025**: All major CLIs now support MCP as clients
+
+---
+
 ## Related Projects
 
 - [wshobson/agents](https://github.com/wshobson/agents) — Claude plugin marketplace
