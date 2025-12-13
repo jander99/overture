@@ -37,7 +37,14 @@ export const ClientNameSchema = z.enum([
   'windsurf',
   'copilot-cli',
   'jetbrains-copilot',
+  'codex',
+  'gemini-cli',
 ]);
+
+/**
+ * Detection environment schema (Platform + WSL2)
+ */
+export const DetectionEnvironmentSchema = z.enum(['darwin', 'linux', 'win32', 'wsl2']);
 
 /**
  * Merge strategy schema
@@ -163,6 +170,43 @@ export const PluginConfigSchema = z.object({
 }).strict();
 
 /**
+ * Client Discovery Override Schema
+ *
+ * Per-client override configuration for discovery.
+ */
+export const ClientDiscoveryOverrideSchema = z.object({
+  binary_path: z.string().optional(),
+  config_path: z.string().optional(),
+  app_bundle_path: z.string().optional(),
+  enabled: z.boolean().optional(),
+}).strict();
+
+/**
+ * WSL2 Configuration Schema
+ *
+ * Configuration for WSL2 environment detection.
+ */
+export const WSL2ConfigSchema = z.object({
+  windows_user_profile: z.string().optional(),
+  windows_binary_paths: z.array(z.string()).optional(),
+  windows_config_paths: z.record(ClientNameSchema, z.string()).optional(),
+}).strict();
+
+/**
+ * Discovery Configuration Schema
+ *
+ * Settings for CLI/tool discovery and detection.
+ */
+export const DiscoveryConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  timeout: z.number().int().positive().default(5000),
+  wsl2_auto_detect: z.boolean().default(true),
+  environment: DetectionEnvironmentSchema.optional(),
+  clients: z.record(ClientNameSchema, ClientDiscoveryOverrideSchema).optional(),
+  wsl2: WSL2ConfigSchema.optional(),
+}).strict();
+
+/**
  * Main Overture v2.0 Configuration Schema
  *
  * Validates the complete user or project configuration file.
@@ -174,6 +218,7 @@ export const OvertureConfigSchema = z.object({
   clients: z.record(z.string(), ClientConfigSchema).optional(),
   mcp: z.record(z.string(), McpServerConfigSchema),
   sync: SyncOptionsSchema.optional(),
+  discovery: DiscoveryConfigSchema.optional(),
 }).strict(); // Reject unknown fields at top level
 
 /**
@@ -296,3 +341,7 @@ export type ValidationError = z.infer<typeof ValidationErrorSchema>;
 export type ValidationWarning = z.infer<typeof ValidationWarningSchema>;
 export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 export type ProcessLock = z.infer<typeof ProcessLockSchema>;
+export type DetectionEnvironment = z.infer<typeof DetectionEnvironmentSchema>;
+export type ClientDiscoveryOverride = z.infer<typeof ClientDiscoveryOverrideSchema>;
+export type WSL2Config = z.infer<typeof WSL2ConfigSchema>;
+export type DiscoveryConfig = z.infer<typeof DiscoveryConfigSchema>;

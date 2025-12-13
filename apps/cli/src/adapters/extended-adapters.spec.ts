@@ -1,7 +1,8 @@
 /**
  * Extended Client Adapters Tests
  *
- * Tests for CursorAdapter, WindsurfAdapter, CopilotCliAdapter, and JetBrainsCopilotAdapter
+ * Tests for CursorAdapter, WindsurfAdapter, CopilotCliAdapter, JetBrainsCopilotAdapter,
+ * CodexAdapter, and GeminiCliAdapter
  *
  * @module adapters/extended-adapters.spec
  */
@@ -11,6 +12,8 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
+import { CodexAdapter } from './codex-adapter';
+import { GeminiCliAdapter } from './gemini-cli-adapter';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
@@ -25,6 +28,8 @@ jest.mock('../core/path-resolver', () => ({
   getCopilotCliPath: jest.fn(() => '/home/user/.config/github-copilot/mcp.json'),
   getJetBrainsCopilotPath: jest.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
   getJetBrainsCopilotWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+  getCodexPath: jest.fn(() => '/home/user/.codex/mcp-config.json'),
+  getGeminiCliPath: jest.fn(() => '/home/user/.gemini/mcp-config.json'),
 }));
 
 describe('CursorAdapter', () => {
@@ -455,5 +460,260 @@ describe('JetBrainsCopilotAdapter', () => {
     expect(result.mcpServers.test.command).toBe('override-command');
     expect(result.mcpServers.test.args).toEqual(['override-arg']);
     expect(result.mcpServers.test.env).toEqual({ BASE: 'value', OVERRIDE: 'value' });
+  });
+});
+
+describe('CodexAdapter', () => {
+  let adapter: CodexAdapter;
+
+  beforeEach(() => {
+    adapter = new CodexAdapter();
+    jest.clearAllMocks();
+  });
+
+  it('should have correct properties', () => {
+    expect(adapter.name).toBe('codex');
+    expect(adapter.schemaRootKey).toBe('mcpServers');
+  });
+
+  it('should detect user config path only', () => {
+    const path = adapter.detectConfigPath('linux');
+    expect(path).toBe('/home/user/.codex/mcp-config.json');
+  });
+
+  it('should return binary names', () => {
+    expect(adapter.getBinaryNames()).toEqual(['codex']);
+  });
+
+  it('should require binary', () => {
+    expect(adapter.requiresBinary()).toBe(true);
+  });
+
+  it('should support stdio transport only', () => {
+    expect(adapter.supportsTransport('stdio')).toBe(true);
+    expect(adapter.supportsTransport('http')).toBe(false);
+    expect(adapter.supportsTransport('sse')).toBe(false);
+  });
+
+  it('should not need env var expansion', () => {
+    expect(adapter.needsEnvVarExpansion()).toBe(false);
+  });
+
+  it('should read existing config', () => {
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.readFileSync.mockReturnValue(JSON.stringify({
+      mcpServers: {
+        filesystem: {
+          command: 'mcp-server-filesystem',
+          args: [],
+        },
+      },
+    }));
+
+    const config = adapter.readConfig('/test/path');
+    expect(config.mcpServers).toBeDefined();
+    expect(config.mcpServers.filesystem).toBeDefined();
+  });
+
+  it('should return empty config if file does not exist', () => {
+    mockFs.existsSync.mockReturnValue(false);
+
+    const config = adapter.readConfig('/test/path');
+    expect(config).toEqual({ mcpServers: {} });
+  });
+
+  it('should write config to file', () => {
+    mockFs.existsSync.mockReturnValue(true);
+
+    adapter.writeConfig('/test/path', {
+      mcpServers: {
+        test: { command: 'test', args: [] },
+      },
+    });
+
+    expect(mockFs.writeFileSync).toHaveBeenCalled();
+  });
+
+  it('should convert Overture config correctly', () => {
+    const overtureConfig: OvertureConfig = {
+      version: '2.0',
+      mcp: {
+        filesystem: {
+          command: 'mcp-server-filesystem',
+          args: [],
+          env: {},
+          transport: 'stdio',
+        },
+      },
+    };
+
+    const result = adapter.convertFromOverture(overtureConfig, 'linux');
+    expect(result.mcpServers.filesystem).toBeDefined();
+    expect(result.mcpServers.filesystem.command).toBe('mcp-server-filesystem');
+  });
+
+  it('should filter http transport MCPs', () => {
+    const overtureConfig: OvertureConfig = {
+      version: '2.0',
+      mcp: {
+        stdio: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'stdio',
+        },
+        http: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'http',
+        },
+      },
+    };
+
+    const result = adapter.convertFromOverture(overtureConfig, 'linux');
+    expect(result.mcpServers.stdio).toBeDefined();
+    expect(result.mcpServers.http).toBeUndefined();
+  });
+});
+
+describe('GeminiCliAdapter', () => {
+  let adapter: GeminiCliAdapter;
+
+  beforeEach(() => {
+    adapter = new GeminiCliAdapter();
+    jest.clearAllMocks();
+  });
+
+  it('should have correct properties', () => {
+    expect(adapter.name).toBe('gemini-cli');
+    expect(adapter.schemaRootKey).toBe('mcpServers');
+  });
+
+  it('should detect user config path only', () => {
+    const path = adapter.detectConfigPath('linux');
+    expect(path).toBe('/home/user/.gemini/mcp-config.json');
+  });
+
+  it('should return binary names', () => {
+    expect(adapter.getBinaryNames()).toEqual(['gemini']);
+  });
+
+  it('should require binary', () => {
+    expect(adapter.requiresBinary()).toBe(true);
+  });
+
+  it('should support stdio transport only', () => {
+    expect(adapter.supportsTransport('stdio')).toBe(true);
+    expect(adapter.supportsTransport('http')).toBe(false);
+    expect(adapter.supportsTransport('sse')).toBe(false);
+  });
+
+  it('should not need env var expansion', () => {
+    expect(adapter.needsEnvVarExpansion()).toBe(false);
+  });
+
+  it('should read existing config', () => {
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.readFileSync.mockReturnValue(JSON.stringify({
+      mcpServers: {
+        memory: {
+          command: 'mcp-server-memory',
+          args: [],
+        },
+      },
+    }));
+
+    const config = adapter.readConfig('/test/path');
+    expect(config.mcpServers).toBeDefined();
+    expect(config.mcpServers.memory).toBeDefined();
+  });
+
+  it('should return empty config if file does not exist', () => {
+    mockFs.existsSync.mockReturnValue(false);
+
+    const config = adapter.readConfig('/test/path');
+    expect(config).toEqual({ mcpServers: {} });
+  });
+
+  it('should write config to file', () => {
+    mockFs.existsSync.mockReturnValue(true);
+
+    adapter.writeConfig('/test/path', {
+      mcpServers: {
+        test: { command: 'test', args: [] },
+      },
+    });
+
+    expect(mockFs.writeFileSync).toHaveBeenCalled();
+  });
+
+  it('should convert Overture config correctly', () => {
+    const overtureConfig: OvertureConfig = {
+      version: '2.0',
+      mcp: {
+        memory: {
+          command: 'mcp-server-memory',
+          args: [],
+          env: {},
+          transport: 'stdio',
+        },
+      },
+    };
+
+    const result = adapter.convertFromOverture(overtureConfig, 'linux');
+    expect(result.mcpServers.memory).toBeDefined();
+    expect(result.mcpServers.memory.command).toBe('mcp-server-memory');
+  });
+
+  it('should filter excluded MCPs', () => {
+    const overtureConfig: OvertureConfig = {
+      version: '2.0',
+      mcp: {
+        included: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'stdio',
+        },
+        excluded: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'stdio',
+          clients: {
+            exclude: ['gemini-cli'],
+          },
+        },
+      },
+    };
+
+    const result = adapter.convertFromOverture(overtureConfig, 'linux');
+    expect(result.mcpServers.included).toBeDefined();
+    expect(result.mcpServers.excluded).toBeUndefined();
+  });
+
+  it('should filter http transport MCPs', () => {
+    const overtureConfig: OvertureConfig = {
+      version: '2.0',
+      mcp: {
+        stdio: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'stdio',
+        },
+        http: {
+          command: 'test',
+          args: [],
+          env: {},
+          transport: 'http',
+        },
+      },
+    };
+
+    const result = adapter.convertFromOverture(overtureConfig, 'linux');
+    expect(result.mcpServers.stdio).toBeDefined();
+    expect(result.mcpServers.http).toBeUndefined();
   });
 });

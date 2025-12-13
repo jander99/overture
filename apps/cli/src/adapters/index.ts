@@ -15,6 +15,8 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
+import { CodexAdapter } from './codex-adapter';
+import { GeminiCliAdapter } from './gemini-cli-adapter';
 
 /**
  * Initialize all client adapters
@@ -39,6 +41,8 @@ export function initializeAdapters(): void {
   adapterRegistry.register(new WindsurfAdapter());
   adapterRegistry.register(new CopilotCliAdapter());
   adapterRegistry.register(new JetBrainsCopilotAdapter());
+  adapterRegistry.register(new CodexAdapter());
+  adapterRegistry.register(new GeminiCliAdapter());
 }
 
 // Export adapters for direct use if needed
@@ -50,6 +54,8 @@ export {
   WindsurfAdapter,
   CopilotCliAdapter,
   JetBrainsCopilotAdapter,
+  CodexAdapter,
+  GeminiCliAdapter,
 };
 
 // Export adapter registry utilities
