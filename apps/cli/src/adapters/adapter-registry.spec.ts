@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Adapter Registry Tests
  *

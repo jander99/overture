@@ -1,32 +1,43 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import type { OvertureConfig } from '../../domain/config.types';
 
+// Store original path.dirname for mock
+const originalDirname = path.dirname;
+
 // Mock all dependencies BEFORE importing createUserCommand
-jest.mock('fs');
-jest.mock('js-yaml');
-jest.mock('chalk', () => ({
+vi.mock('fs');
+vi.mock('js-yaml');
+vi.mock('path', async () => {
+  const actual = await vi.importActual<typeof import('path')>('path');
+  return {
+    ...actual,
+    dirname: vi.fn((p: string) => actual.dirname(p)),
+  };
+});
+vi.mock('chalk', () => ({
   default: {
-    bold: jest.fn((x) => x),
-    cyan: jest.fn((x) => x),
-    gray: jest.fn((x) => x),
-    yellow: jest.fn((x) => x),
-    green: jest.fn((x) => x),
-    red: jest.fn((x) => x),
-    blue: jest.fn((x) => x),
+    bold: vi.fn((x) => x),
+    cyan: vi.fn((x) => x),
+    gray: vi.fn((x) => x),
+    yellow: vi.fn((x) => x),
+    green: vi.fn((x) => x),
+    red: vi.fn((x) => x),
+    blue: vi.fn((x) => x),
   },
 }));
-jest.mock('log-symbols', () => ({
+vi.mock('log-symbols', () => ({
   success: '✔',
   error: '✖',
   warning: '⚠',
   info: 'ℹ',
 }));
-jest.mock('../../utils/logger');
-jest.mock('../../utils/prompts');
-jest.mock('../../core/path-resolver');
+vi.mock('../../utils/logger');
+vi.mock('../../utils/prompts');
+vi.mock('../../core/path-resolver');
 
 // Now import after mocks are set up
 import { createUserCommand } from './user';
@@ -36,22 +47,22 @@ import { getUserConfigPath } from '../../core/path-resolver';
 
 describe('CLI Command: user', () => {
   let command: Command;
-  let mockExit: jest.SpyInstance;
+  let mockExit: MockInstance;
   const mockUserConfigPath = '/home/user/.config/overture.yml';
   const mockConfigDir = '/home/user/.config';
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     command = createUserCommand();
 
     // Mock process.exit to prevent test termination
-    mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+    mockExit = vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
       throw new Error(`process.exit: ${code}`);
     });
 
     // Setup default mocks
-    (getUserConfigPath as jest.Mock).mockReturnValue(mockUserConfigPath);
-    jest.spyOn(path, 'dirname').mockReturnValue(mockConfigDir);
+    (getUserConfigPath as Mock).mockReturnValue(mockUserConfigPath);
+    (path.dirname as Mock).mockReturnValue(mockConfigDir);
   });
 
   afterEach(() => {
@@ -96,12 +107,12 @@ describe('CLI Command: user', () => {
   describe('Successful initialization', () => {
     it('should initialize user config with selected MCP servers', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem', 'memory']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('mocked-yaml-content');
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem', 'memory']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('mocked-yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -124,12 +135,12 @@ describe('CLI Command: user', () => {
 
     it('should create config directory if it does not exist', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -140,12 +151,12 @@ describe('CLI Command: user', () => {
 
     it('should not create config directory if it already exists', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(true); // Config dir exists
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -156,10 +167,10 @@ describe('CLI Command: user', () => {
 
     it('should overwrite existing config with --force flag', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem', 'memory']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (fs.existsSync as Mock).mockReturnValue(true);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem', 'memory']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init', '--force']);
@@ -175,10 +186,10 @@ describe('CLI Command: user', () => {
 
     it('should overwrite existing config with -f shorthand flag', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['context7']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (fs.existsSync as Mock).mockReturnValue(true);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['context7']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init', '-f']);
@@ -191,16 +202,16 @@ describe('CLI Command: user', () => {
     it('should include all selected MCP servers in configuration', async () => {
       // Arrange
       const selectedMcps = ['filesystem', 'memory', 'sequentialthinking', 'context7'];
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(selectedMcps);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(selectedMcps);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -218,16 +229,16 @@ describe('CLI Command: user', () => {
 
     it('should set correct default values for configuration', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -246,12 +257,12 @@ describe('CLI Command: user', () => {
     it('should display configuration summary before confirmation', async () => {
       // Arrange
       const selectedMcps = ['filesystem', 'memory'];
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(selectedMcps);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (Prompts.multiSelect as Mock).mockResolvedValue(selectedMcps);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -266,12 +277,12 @@ describe('CLI Command: user', () => {
 
     it('should display next steps after successful creation', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -296,7 +307,7 @@ describe('CLI Command: user', () => {
   describe('Error handling', () => {
     it('should exit with error when config exists without --force', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.existsSync as Mock).mockReturnValue(true);
 
       // Act & Assert
       await expect(
@@ -315,15 +326,15 @@ describe('CLI Command: user', () => {
       // Arrange: Validation happens after MCP config is built, so invalid MCPs
       // are simply skipped (they won't have defaults). An empty MCP config is valid.
       // To truly test validation errors, we'd need to break the schema itself.
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['unknown-server']);
-      (Prompts.confirm as jest.Mock)
+      (Prompts.multiSelect as Mock).mockResolvedValue(['unknown-server']);
+      (Prompts.confirm as Mock)
         .mockResolvedValueOnce(true) // Continue without valid MCPs
         .mockResolvedValueOnce(true); // Create config
 
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act - Should succeed with empty MCP config
       await command.parseAsync(['node', 'overture', 'init']);
@@ -334,13 +345,13 @@ describe('CLI Command: user', () => {
 
     it('should handle file write errors', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
+      (fs.writeFileSync as Mock).mockImplementation(() => {
         throw new Error('Permission denied');
       });
 
@@ -356,13 +367,13 @@ describe('CLI Command: user', () => {
 
     it('should handle directory creation errors', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
-      (fs.mkdirSync as jest.Mock).mockImplementation(() => {
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
+      (fs.mkdirSync as Mock).mockImplementation(() => {
         throw new Error('Cannot create directory');
       });
 
@@ -383,17 +394,17 @@ describe('CLI Command: user', () => {
   describe('User interaction', () => {
     it('should warn when no MCP servers are selected', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue([]);
-      (Prompts.confirm as jest.Mock)
+      (Prompts.multiSelect as Mock).mockResolvedValue([]);
+      (Prompts.confirm as Mock)
         .mockResolvedValueOnce(true) // Continue without MCPs
         .mockResolvedValueOnce(true); // Create config
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -408,13 +419,13 @@ describe('CLI Command: user', () => {
 
     it('should cancel when user declines to continue without MCPs', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue([]);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(false);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue([]);
+      (Prompts.confirm as Mock).mockResolvedValue(false);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       // Act & Assert
       await expect(
@@ -427,14 +438,14 @@ describe('CLI Command: user', () => {
 
     it('should cancel when user declines final confirmation', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(false);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(false);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       // Act & Assert
       await expect(
@@ -447,18 +458,18 @@ describe('CLI Command: user', () => {
 
     it('should proceed with empty MCP config when user confirms', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue([]);
-      (Prompts.confirm as jest.Mock)
+      (Prompts.multiSelect as Mock).mockResolvedValue([]);
+      (Prompts.confirm as Mock)
         .mockResolvedValueOnce(true) // Continue without MCPs
         .mockResolvedValueOnce(true); // Create config
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -473,14 +484,14 @@ describe('CLI Command: user', () => {
 
     it('should prompt for confirmation before writing config', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -497,16 +508,16 @@ describe('CLI Command: user', () => {
   describe('MCP server configuration', () => {
     it('should configure filesystem MCP with correct defaults', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -523,16 +534,16 @@ describe('CLI Command: user', () => {
 
     it('should configure github MCP with environment variable', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['github']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['github']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -550,16 +561,16 @@ describe('CLI Command: user', () => {
     it('should configure multiple MCP servers correctly', async () => {
       // Arrange
       const selectedMcps = ['filesystem', 'memory', 'context7'];
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(selectedMcps);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(selectedMcps);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -577,16 +588,16 @@ describe('CLI Command: user', () => {
     it('should set all MCPs to global scope', async () => {
       // Arrange
       const selectedMcps = ['filesystem', 'memory', 'sequentialthinking'];
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(selectedMcps);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(selectedMcps);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -606,14 +617,14 @@ describe('CLI Command: user', () => {
   describe('YAML generation', () => {
     it('should call yaml.dump with correct options', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue('yaml-content');
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue('yaml-content');
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -632,14 +643,14 @@ describe('CLI Command: user', () => {
     it('should write YAML content to correct file path', async () => {
       // Arrange
       const mockYamlContent = 'version: "2.0"\nmcp: {}';
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (yaml.dump as jest.Mock).mockReturnValue(mockYamlContent);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (yaml.dump as Mock).mockReturnValue(mockYamlContent);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       // Act
       await command.parseAsync(['node', 'overture', 'init']);
@@ -659,16 +670,16 @@ describe('CLI Command: user', () => {
   describe('Client configuration', () => {
     it('should enable claude-code and claude-desktop by default', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });
@@ -683,16 +694,16 @@ describe('CLI Command: user', () => {
 
     it('should disable other clients by default', async () => {
       // Arrange
-      (fs.existsSync as jest.Mock)
+      (fs.existsSync as Mock)
         .mockReturnValueOnce(false) // Config file doesn't exist
         .mockReturnValueOnce(false); // Config dir doesn't exist
-      (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem']);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (fs.mkdirSync as jest.Mock).mockReturnValue(undefined);
-      (fs.writeFileSync as jest.Mock).mockReturnValue(undefined);
+      (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem']);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (fs.mkdirSync as Mock).mockReturnValue(undefined);
+      (fs.writeFileSync as Mock).mockReturnValue(undefined);
 
       let capturedConfig: OvertureConfig | null = null;
-      (yaml.dump as jest.Mock).mockImplementation((config) => {
+      (yaml.dump as Mock).mockImplementation((config) => {
         capturedConfig = config;
         return 'yaml-content';
       });

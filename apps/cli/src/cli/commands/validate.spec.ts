@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Tests for validate command
  *
@@ -5,7 +6,7 @@
  */
 
 // Mock chalk FIRST before any other imports
-jest.mock('chalk', () => {
+vi.mock('chalk', () => {
   const mockFn = (str: string) => str;
   // Make mockFn chainable and add all the methods - as actual functions
   mockFn.bold = mockFn;
@@ -17,7 +18,7 @@ jest.mock('chalk', () => {
   mockFn.gray = mockFn;
   mockFn.cyan = mockFn;
   mockFn.dim = mockFn;
-  return mockFn;
+  return { default: mockFn };
 });
 
 // Import error classes BEFORE mocking config-loader
@@ -32,49 +33,49 @@ import type { OvertureConfig, ClientName, Platform } from '../../domain/config.t
 import type { ClientAdapter } from '../../adapters/client-adapter.interface';
 
 // Mock dependencies
-jest.mock('../../core/config-loader', () => {
-  const actual = jest.requireActual('../../core/config-loader');
+vi.mock('../../core/config-loader', async () => {
+  const actual = await vi.importActual('../../core/config-loader');
   return {
     ...actual,
-    loadConfig: jest.fn(),
+    loadConfig: vi.fn(),
   };
 });
-jest.mock('../../core/transport-validator');
-jest.mock('../../adapters/adapter-registry');
-jest.mock('../../core/path-resolver');
-jest.mock('../../core/error-handler');
+vi.mock('../../core/transport-validator');
+vi.mock('../../adapters/adapter-registry');
+vi.mock('../../core/path-resolver');
+vi.mock('../../core/error-handler');
 
 describe('validate command', () => {
-  let mockLoadConfig: jest.SpyInstance;
-  let mockGetTransportWarnings: jest.SpyInstance;
-  let mockGetTransportValidationSummary: jest.SpyInstance;
-  let mockAdapterRegistry: { get: jest.Mock; getInstalledAdapters: jest.Mock };
-  let mockGetPlatform: jest.SpyInstance;
-  let exitSpy: jest.SpyInstance;
+  let mockLoadConfig: MockInstance;
+  let mockGetTransportWarnings: MockInstance;
+  let mockGetTransportValidationSummary: MockInstance;
+  let mockAdapterRegistry: { get: Mock; getInstalledAdapters: Mock };
+  let mockGetPlatform: MockInstance;
+  let exitSpy: MockInstance;
 
   // Mock client adapter
   const mockClientAdapter: ClientAdapter = {
     name: 'claude-code' as ClientName,
     schemaRootKey: 'mcpServers',
-    detectConfigPath: jest.fn(),
-    readConfig: jest.fn(),
-    writeConfig: jest.fn(),
-    convertFromOverture: jest.fn(),
-    supportsTransport: jest.fn().mockReturnValue(true),
-    needsEnvVarExpansion: jest.fn().mockReturnValue(false),
-    isInstalled: jest.fn().mockReturnValue(true),
+    detectConfigPath: vi.fn(),
+    readConfig: vi.fn(),
+    writeConfig: vi.fn(),
+    convertFromOverture: vi.fn(),
+    supportsTransport: vi.fn().mockReturnValue(true),
+    needsEnvVarExpansion: vi.fn().mockReturnValue(false),
+    isInstalled: vi.fn().mockReturnValue(true),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock process.exit FIRST before any other setup
-    exitSpy = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
       throw new Error(`Process exit: ${code}`);
     });
 
     // Mock ErrorHandler to call process.exit with appropriate codes based on error type
-    (errorHandlerModule.ErrorHandler.handleCommandError as jest.Mock).mockImplementation((error, cmd, verbose) => {
+    (errorHandlerModule.ErrorHandler.handleCommandError as Mock).mockImplementation((error, cmd, verbose) => {
       let exitCode = 1;
 
       // Determine exit code based on error type
@@ -90,11 +91,11 @@ describe('validate command', () => {
     });
 
     // Mock config loader
-    mockLoadConfig = jest.spyOn(configLoader, 'loadConfig');
+    mockLoadConfig = vi.spyOn(configLoader, 'loadConfig');
 
     // Mock transport validator
-    mockGetTransportWarnings = jest.spyOn(transportValidator, 'getTransportWarnings').mockReturnValue([]);
-    mockGetTransportValidationSummary = jest.spyOn(transportValidator, 'getTransportValidationSummary').mockReturnValue({
+    mockGetTransportWarnings = vi.spyOn(transportValidator, 'getTransportWarnings').mockReturnValue([]);
+    mockGetTransportValidationSummary = vi.spyOn(transportValidator, 'getTransportValidationSummary').mockReturnValue({
       total: 0,
       supported: 0,
       unsupported: 0,
@@ -103,13 +104,13 @@ describe('validate command', () => {
 
     // Mock adapter registry
     mockAdapterRegistry = {
-      get: jest.fn(),
-      getInstalledAdapters: jest.fn().mockReturnValue([]),
+      get: vi.fn(),
+      getInstalledAdapters: vi.fn().mockReturnValue([]),
     };
     (adapterRegistryModule.adapterRegistry as any) = mockAdapterRegistry;
 
     // Mock path resolver
-    mockGetPlatform = jest.spyOn(pathResolver, 'getPlatform').mockReturnValue('linux');
+    mockGetPlatform = vi.spyOn(pathResolver, 'getPlatform').mockReturnValue('linux');
   });
 
   afterEach(() => {

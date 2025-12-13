@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Binary Detector Tests
  *
@@ -13,47 +14,47 @@ import type { Platform } from '../domain/config.types';
 import * as fs from 'fs';
 
 // Mock dependencies
-jest.mock('../infrastructure/process-executor');
-jest.mock('fs');
+vi.mock('../infrastructure/process-executor');
+vi.mock('fs');
 
-const mockProcessExecutor = ProcessExecutor as jest.Mocked<typeof ProcessExecutor>;
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockProcessExecutor = ProcessExecutor as Mocked<typeof ProcessExecutor>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('BinaryDetector', () => {
   let detector: BinaryDetector;
   const platform: Platform = 'linux';
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     detector = new BinaryDetector();
   });
 
   describe('detectClient', () => {
-    let mockAdapter: jest.Mocked<ClientAdapter>;
+    let mockAdapter: MockedObject<ClientAdapter>;
 
     beforeEach(() => {
       mockAdapter = {
         name: 'claude-code' as any,
         schemaRootKey: 'mcpServers',
-        getBinaryNames: jest.fn(() => ['claude']),
-        getAppBundlePaths: jest.fn(() => []),
-        requiresBinary: jest.fn(() => true),
-        detectConfigPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
+        getBinaryNames: vi.fn(() => ['claude']),
+        getAppBundlePaths: vi.fn(() => []),
+        requiresBinary: vi.fn(() => true),
+        detectConfigPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
       } as any;
     });
 
     it('should detect CLI-only client with binary found', async () => {
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: true,
         path: '/usr/local/bin/claude',
         version: '2.1.0',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -65,7 +66,7 @@ describe('BinaryDetector', () => {
     });
 
     it('should detect CLI-only client with binary not found', async () => {
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: false,
       });
 
@@ -80,11 +81,11 @@ describe('BinaryDetector', () => {
       mockAdapter.getBinaryNames.mockReturnValue([]);
       mockAdapter.getAppBundlePaths.mockReturnValue(['/Applications/Claude.app']);
       mockAdapter.requiresBinary.mockReturnValue(false);
-      jest.spyOn(detector, 'detectAppBundle').mockResolvedValue({
+      vi.spyOn(detector, 'detectAppBundle').mockResolvedValue({
         found: true,
         path: '/Applications/Claude.app',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -98,14 +99,14 @@ describe('BinaryDetector', () => {
       mockAdapter.requiresBinary.mockReturnValue(false);
 
       // Binary not found, but app bundle found
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: false,
       });
-      jest.spyOn(detector, 'detectAppBundle').mockResolvedValue({
+      vi.spyOn(detector, 'detectAppBundle').mockResolvedValue({
         found: true,
         path: '/Applications/Windsurf.app',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -115,12 +116,12 @@ describe('BinaryDetector', () => {
 
     it('should check multiple binary names', async () => {
       mockAdapter.getBinaryNames.mockReturnValue(['idea', 'pycharm', 'webstorm']);
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: true,
         path: '/usr/bin/pycharm',
         version: '2023.3',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -129,12 +130,12 @@ describe('BinaryDetector', () => {
     });
 
     it('should warn about invalid config file', async () => {
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: true,
         path: '/usr/bin/test',
         version: '1.0.0',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(false);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(false);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -149,12 +150,12 @@ describe('BinaryDetector', () => {
         user: '/home/user/.config/claude/mcp.json',
         project: '/project/.claude/mcp.json',
       });
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: true,
         path: '/usr/bin/claude',
         version: '1.0.0',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -164,7 +165,7 @@ describe('BinaryDetector', () => {
 
     it('should return not-found when binary required but not found', async () => {
       mockAdapter.requiresBinary.mockReturnValue(true);
-      jest.spyOn(detector, 'detectBinary').mockResolvedValue({
+      vi.spyOn(detector, 'detectBinary').mockResolvedValue({
         found: false,
       });
 
@@ -177,11 +178,11 @@ describe('BinaryDetector', () => {
       mockAdapter.getBinaryNames.mockReturnValue([]);
       mockAdapter.getAppBundlePaths.mockReturnValue(['/Applications/App.app']);
       mockAdapter.requiresBinary.mockReturnValue(false);
-      jest.spyOn(detector, 'detectAppBundle').mockResolvedValue({
+      vi.spyOn(detector, 'detectAppBundle').mockResolvedValue({
         found: true,
         path: '/Applications/App.app',
       });
-      jest.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
+      vi.spyOn(detector, 'validateConfigFile').mockReturnValue(true);
 
       const result = await detector.detectClient(mockAdapter, platform);
 
@@ -191,18 +192,18 @@ describe('BinaryDetector', () => {
 
   describe('edge cases', () => {
     it('should handle adapter with no binary names or app paths', async () => {
-      const mockAdapter: jest.Mocked<ClientAdapter> = {
+      const mockAdapter: MockedObject<ClientAdapter> = {
         name: 'test' as any,
         schemaRootKey: 'mcpServers',
-        getBinaryNames: jest.fn(() => []),
-        getAppBundlePaths: jest.fn(() => []),
-        requiresBinary: jest.fn(() => false),
-        detectConfigPath: jest.fn(() => '/path/to/config.json'),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
+        getBinaryNames: vi.fn(() => []),
+        getAppBundlePaths: vi.fn(() => []),
+        requiresBinary: vi.fn(() => false),
+        detectConfigPath: vi.fn(() => '/path/to/config.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
       } as any;
 
       const result = await detector.detectClient(mockAdapter, platform);

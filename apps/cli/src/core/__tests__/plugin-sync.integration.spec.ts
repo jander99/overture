@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Plugin Sync Integration Tests
  *
@@ -20,17 +21,20 @@ import type { OvertureConfig } from '../../domain/config.types';
 import type { ClaudeSettings } from '../../domain/plugin.types';
 
 // Mock modules
-jest.mock('fs/promises');
-jest.mock('../path-resolver');
-jest.mock('../../infrastructure/process-executor');
-jest.mock('../config-loader');
-jest.mock('../binary-detector');
+vi.mock('fs/promises');
+vi.mock('../path-resolver');
+vi.mock('../../infrastructure/process-executor');
+vi.mock('../config-loader');
+vi.mock('../binary-detector');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
-const mockPathResolver = require('../path-resolver');
-const { ProcessExecutor } = require('../../infrastructure/process-executor');
-const mockConfigLoader = require('../config-loader');
-const { BinaryDetector } = require('../binary-detector');
+import * as pathResolver from '../path-resolver';
+import { ProcessExecutor } from '../../infrastructure/process-executor';
+import * as configLoader from '../config-loader';
+import { BinaryDetector } from '../binary-detector';
+
+const mockFs = fs as Mocked<typeof fs>;
+const mockPathResolver = pathResolver as Mocked<typeof pathResolver>;
+const mockConfigLoader = configLoader as Mocked<typeof configLoader>;
 
 describe('Plugin Sync Integration Tests', () => {
   let detector: PluginDetector;
@@ -82,7 +86,7 @@ describe('Plugin Sync Integration Tests', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     detector = new PluginDetector();
     installer = new PluginInstaller();
     exporter = new PluginExporter(detector);
@@ -112,7 +116,7 @@ describe('Plugin Sync Integration Tests', () => {
     });
 
     // Mock binary detector to always return found
-    BinaryDetector.prototype.detectBinary = jest.fn().mockResolvedValue({ found: true });
+    BinaryDetector.prototype.detectBinary = vi.fn().mockResolvedValue({ found: true });
   });
 
   describe('PluginDetector Integration', () => {
@@ -140,7 +144,7 @@ describe('Plugin Sync Integration Tests', () => {
     it('should return empty array when settings.json not found', async () => {
       // Arrange
       mockFs.readFile.mockRejectedValue({ code: 'ENOENT' });
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Act
       const plugins = await detector.detectInstalledPlugins();
@@ -157,7 +161,7 @@ describe('Plugin Sync Integration Tests', () => {
     it('should handle malformed settings.json gracefully', async () => {
       // Arrange
       mockFs.readFile.mockResolvedValue('{ invalid json }');
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Act
       const plugins = await detector.detectInstalledPlugins();
@@ -322,7 +326,7 @@ describe('Plugin Sync Integration Tests', () => {
         return undefined;
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await exporter.exportPlugins({
@@ -381,7 +385,7 @@ describe('Plugin Sync Integration Tests', () => {
         return undefined;
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await exporter.exportPlugins({
@@ -447,7 +451,7 @@ describe('Plugin Sync Integration Tests', () => {
       mockConfigLoader.loadUserConfig.mockReturnValue(userConfigWithPlugins);
       mockConfigLoader.loadProjectConfig.mockReturnValue(null);
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true, skipPlugins: false });
@@ -465,7 +469,7 @@ describe('Plugin Sync Integration Tests', () => {
       mockConfigLoader.loadUserConfig.mockReturnValue(userConfigWithPlugins);
       mockConfigLoader.loadProjectConfig.mockReturnValue(null);
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true, skipPlugins: true });
@@ -499,7 +503,7 @@ describe('Plugin Sync Integration Tests', () => {
       mockConfigLoader.loadProjectConfig.mockReturnValue(projectConfig);
       mockPathResolver.findProjectRoot.mockReturnValue('/project');
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true, projectRoot: '/project' });
@@ -533,7 +537,7 @@ describe('Plugin Sync Integration Tests', () => {
 
       ProcessExecutor.exec.mockRejectedValue(new Error('Installation failed'));
 
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Act
       const result = await syncClients({ skipBinaryDetection: true });
@@ -574,7 +578,7 @@ describe('Plugin Sync Integration Tests', () => {
       mockConfigLoader.loadUserConfig.mockReturnValue(fullConfig);
       mockConfigLoader.loadProjectConfig.mockReturnValue(null);
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true });
@@ -644,7 +648,7 @@ describe('Plugin Sync Integration Tests', () => {
       expect(allPlugins).toHaveLength(2);
 
       // Step 4: Export all plugins
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       await exporter.exportPlugins({
         interactive: false,
@@ -668,7 +672,7 @@ describe('Plugin Sync Integration Tests', () => {
         mcp: {},
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true });
@@ -701,7 +705,7 @@ describe('Plugin Sync Integration Tests', () => {
         mcp: {},
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({ skipBinaryDetection: true });

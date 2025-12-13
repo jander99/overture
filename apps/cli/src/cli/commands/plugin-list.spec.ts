@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Tests for plugin-list command
  *
@@ -9,25 +10,33 @@ import { createPluginListCommand } from './plugin-list';
 import { PluginExporter } from '../../core/plugin-exporter';
 import { Logger } from '../../utils/logger';
 
+// Create mock instance using vi.hoisted for proper hoisting
+const { pluginExporterMock, MockPluginExporter } = vi.hoisted(() => {
+  const mockInstance = {
+    exportPlugins: vi.fn(),
+    exportAllPlugins: vi.fn(),
+    compareInstalledWithConfig: vi.fn(),
+  };
+  return {
+    pluginExporterMock: mockInstance,
+    MockPluginExporter: function PluginExporter() {
+      return mockInstance;
+    },
+  };
+});
+
 // Mock dependencies
-jest.mock('../../core/plugin-exporter');
-jest.mock('../../utils/logger');
+vi.mock('../../core/plugin-exporter', () => ({
+  PluginExporter: MockPluginExporter,
+}));
+vi.mock('../../utils/logger');
 
 describe('plugin-list command', () => {
   let command: Command;
-  let mockCompareInstalledWithConfig: jest.Mock;
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
-
-    // Create mock function
-    mockCompareInstalledWithConfig = jest.fn();
-    (PluginExporter as jest.MockedClass<typeof PluginExporter>).mockImplementation(() => ({
-      exportPlugins: jest.fn(),
-      exportAllPlugins: jest.fn(),
-      compareInstalledWithConfig: mockCompareInstalledWithConfig,
-    }) as any);
+    vi.clearAllMocks();
 
     // Create command
     command = createPluginListCommand();
@@ -35,7 +44,7 @@ describe('plugin-list command', () => {
 
   describe('default output mode', () => {
     it('should call compareInstalledWithConfig to get plugin data', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [],
         configOnly: [],
         both: [],
@@ -43,11 +52,11 @@ describe('plugin-list command', () => {
 
       await command.parseAsync(['node', 'list']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
     });
 
     it('should display plugins in human-readable format', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -68,11 +77,11 @@ describe('plugin-list command', () => {
       await command.parseAsync(['node', 'list']);
 
       expect(Logger.info).toHaveBeenCalled();
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
     });
 
     it('should handle no plugins installed', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [],
         configOnly: [],
         both: [],
@@ -81,13 +90,13 @@ describe('plugin-list command', () => {
       await command.parseAsync(['node', 'list']);
 
       expect(Logger.info).toHaveBeenCalled();
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
     });
   });
 
   describe('--json flag', () => {
     it('should output JSON format when --json specified', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -106,11 +115,11 @@ describe('plugin-list command', () => {
       });
 
       // Mock console.log to capture JSON output
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       await command.parseAsync(['node', 'list', '--json']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalled();
 
       // Verify JSON was output
@@ -121,7 +130,7 @@ describe('plugin-list command', () => {
     });
 
     it('should include all plugin data in JSON output', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -139,7 +148,7 @@ describe('plugin-list command', () => {
         ],
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       await command.parseAsync(['node', 'list', '--json']);
 
@@ -156,7 +165,7 @@ describe('plugin-list command', () => {
 
   describe('--config-only flag', () => {
     it('should filter to only plugins in config', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -176,12 +185,12 @@ describe('plugin-list command', () => {
 
       await command.parseAsync(['node', 'list', '--config-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
       expect(Logger.info).toHaveBeenCalled();
     });
 
     it('should handle no plugins in config', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -195,14 +204,14 @@ describe('plugin-list command', () => {
 
       await command.parseAsync(['node', 'list', '--config-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
       expect(Logger.info).toHaveBeenCalled();
     });
   });
 
   describe('--installed-only flag', () => {
     it('should filter to only installed plugins not in config', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [
           {
             name: 'experimental-plugin',
@@ -222,12 +231,12 @@ describe('plugin-list command', () => {
 
       await command.parseAsync(['node', 'list', '--installed-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
       expect(Logger.info).toHaveBeenCalled();
     });
 
     it('should handle no installed-only plugins', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [],
         configOnly: [],
         both: [
@@ -241,24 +250,24 @@ describe('plugin-list command', () => {
 
       await command.parseAsync(['node', 'list', '--installed-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
       expect(Logger.info).toHaveBeenCalled();
     });
   });
 
   describe('flag combinations', () => {
     it('should support --json with --config-only', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [{ name: 'exp', marketplace: 'custom', enabled: true }],
         configOnly: [],
         both: [{ name: 'python', marketplace: 'claude-code-workflows', enabled: true }],
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       await command.parseAsync(['node', 'list', '--json', '--config-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
 
       const jsonOutput = JSON.parse(consoleLogSpy.mock.calls[0][0]);
       expect(jsonOutput.installed).toHaveLength(1); // Only 'both' plugins
@@ -267,17 +276,17 @@ describe('plugin-list command', () => {
     });
 
     it('should support --json with --installed-only', async () => {
-      mockCompareInstalledWithConfig.mockResolvedValue({
+      pluginExporterMock.compareInstalledWithConfig.mockResolvedValue({
         installedOnly: [{ name: 'exp', marketplace: 'custom', enabled: true }],
         configOnly: [],
         both: [{ name: 'python', marketplace: 'claude-code-workflows', enabled: true }],
       });
 
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
       await command.parseAsync(['node', 'list', '--json', '--installed-only']);
 
-      expect(mockCompareInstalledWithConfig).toHaveBeenCalled();
+      expect(pluginExporterMock.compareInstalledWithConfig).toHaveBeenCalled();
 
       const jsonOutput = JSON.parse(consoleLogSpy.mock.calls[0][0]);
       expect(jsonOutput.installed).toHaveLength(1); // Only 'installedOnly' plugins
@@ -289,9 +298,9 @@ describe('plugin-list command', () => {
   describe('error handling', () => {
     it('should handle errors gracefully', async () => {
       const error = new Error('Failed to detect plugins');
-      mockCompareInstalledWithConfig.mockRejectedValue(error);
+      pluginExporterMock.compareInstalledWithConfig.mockRejectedValue(error);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 

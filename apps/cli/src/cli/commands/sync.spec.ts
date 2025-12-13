@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Tests for sync command
  *
@@ -10,19 +11,19 @@ import * as syncEngine from '../../core/sync-engine';
 import { Logger } from '../../utils/logger';
 
 // Mock dependencies
-jest.mock('../../core/sync-engine');
-jest.mock('../../utils/logger');
+vi.mock('../../core/sync-engine');
+vi.mock('../../utils/logger');
 
 describe('sync command', () => {
   let command: Command;
-  let mockSyncClients: jest.SpyInstance;
+  let mockSyncClients: MockInstance;
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock syncClients function
-    mockSyncClients = jest.spyOn(syncEngine, 'syncClients').mockResolvedValue({
+    mockSyncClients = vi.spyOn(syncEngine, 'syncClients').mockResolvedValue({
       success: true,
       results: [],
       warnings: [],
@@ -184,7 +185,7 @@ describe('sync command', () => {
         errors: ['Sync failed'],
       });
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 
@@ -218,8 +219,8 @@ describe('sync command', () => {
         errors: [],
       });
 
-      const mockInfo = jest.spyOn(Logger, 'info');
-      const mockSuccess = jest.spyOn(Logger, 'success');
+      const mockInfo = vi.spyOn(Logger, 'info');
+      const mockSuccess = vi.spyOn(Logger, 'success');
 
       await command.parseAsync(['node', 'sync']);
 
@@ -249,7 +250,7 @@ describe('sync command', () => {
         errors: [],
       });
 
-      const mockSkip = jest.spyOn(Logger, 'skip');
+      const mockSkip = vi.spyOn(Logger, 'skip');
 
       await command.parseAsync(['node', 'sync']);
 
@@ -281,7 +282,7 @@ describe('sync command', () => {
         errors: [],
       });
 
-      const mockWarn = jest.spyOn(Logger, 'warn');
+      const mockWarn = vi.spyOn(Logger, 'warn');
 
       await command.parseAsync(['node', 'sync']);
 
@@ -314,7 +315,7 @@ describe('sync command', () => {
         errors: [],
       });
 
-      const mockSection = jest.spyOn(Logger, 'section');
+      const mockSection = vi.spyOn(Logger, 'section');
 
       await command.parseAsync(['node', 'sync']);
 
@@ -347,7 +348,7 @@ describe('sync command', () => {
         errors: [],
       });
 
-      const mockSection = jest.spyOn(Logger, 'section');
+      const mockSection = vi.spyOn(Logger, 'section');
 
       await command.parseAsync(['node', 'sync']);
 

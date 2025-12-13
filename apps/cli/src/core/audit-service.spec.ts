@@ -22,13 +22,13 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path/to/config' }),
-        readConfig: jest.fn().mockReturnValue({ mcpServers: {} }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path/to/config' }),
+        readConfig: vi.fn().mockReturnValue({ mcpServers: {} }),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -45,18 +45,18 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path/to/config' }),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path/to/config' }),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {
             github: { command: 'mcp-server-github', args: [] },
             filesystem: { command: 'npx', args: ['@modelcontextprotocol/server-filesystem'] },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -86,19 +86,19 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path/to/config' }),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path/to/config' }),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {
             github: { command: 'mcp-server-github', args: [] },
             filesystem: { command: 'npx', args: ['@modelcontextprotocol/server-filesystem'] },
             slack: { command: 'mcp-server-slack', args: [] },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -122,17 +122,17 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-desktop',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue('/path/to/user/config'),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue('/path/to/user/config'),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {
             unmanaged: { command: 'some-mcp', args: [] },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -150,11 +150,11 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({
           user: '/path/to/user/config',
           project: '/path/to/project/config',
         }),
-        readConfig: jest
+        readConfig: vi
           .fn()
           .mockReturnValueOnce({
             mcpServers: {
@@ -166,11 +166,11 @@ describe('AuditService', () => {
               projectMcp: { command: 'project-mcp', args: [] },
             },
           }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -189,13 +189,13 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'vscode',
         schemaRootKey: 'servers',
-        detectConfigPath: jest.fn().mockReturnValue(null),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn().mockReturnValue(null),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -213,17 +213,17 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'vscode',
         schemaRootKey: 'servers', // VS Code uses "servers" instead of "mcpServers"
-        detectConfigPath: jest.fn().mockReturnValue('/path/to/vscode/config'),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue('/path/to/vscode/config'),
+        readConfig: vi.fn().mockReturnValue({
           servers: {
             unmanagedServer: { command: 'some-server', args: [], type: 'stdio' },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -240,11 +240,11 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({
           user: '/path/to/user/config',
           project: '/path/to/project/config',
         }),
-        readConfig: jest
+        readConfig: vi
           .fn()
           .mockReturnValueOnce({
             mcpServers: {
@@ -256,11 +256,11 @@ describe('AuditService', () => {
               duplicateMcp: { command: 'dup-mcp', args: [] },
             },
           }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const overtureConfig: OvertureConfig = {
@@ -279,33 +279,33 @@ describe('AuditService', () => {
       const mockAdapter1: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path1' }),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path1' }),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {
             unmanaged1: { command: 'mcp1', args: [] },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const mockAdapter2: ClientAdapter = {
         name: 'vscode',
         schemaRootKey: 'servers',
-        detectConfigPath: jest.fn().mockReturnValue('/path2'),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue('/path2'),
+        readConfig: vi.fn().mockReturnValue({
           servers: {
             unmanaged2: { command: 'mcp2', args: [], type: 'stdio' },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const adapters = [mockAdapter1, mockAdapter2];
@@ -326,33 +326,33 @@ describe('AuditService', () => {
       const mockAdapter1: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path1' }),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path1' }),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {
             managed: { command: 'mcp1', args: [] },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const mockAdapter2: ClientAdapter = {
         name: 'vscode',
         schemaRootKey: 'servers',
-        detectConfigPath: jest.fn().mockReturnValue('/path2'),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue('/path2'),
+        readConfig: vi.fn().mockReturnValue({
           servers: {
             unmanaged2: { command: 'mcp2', args: [], type: 'stdio' },
           },
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const adapters = [mockAdapter1, mockAdapter2];
@@ -379,15 +379,15 @@ describe('AuditService', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue({ user: '/path' }),
-        readConfig: jest.fn().mockReturnValue({
+        detectConfigPath: vi.fn().mockReturnValue({ user: '/path' }),
+        readConfig: vi.fn().mockReturnValue({
           mcpServers: {},
         }),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const adapters = [mockAdapter];

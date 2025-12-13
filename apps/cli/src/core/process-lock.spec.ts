@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Process Lock Tests
  *
@@ -14,12 +15,12 @@ import {
 } from './process-lock';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('./path-resolver', () => ({
-  getLockFilePath: jest.fn(() => '/home/user/.config/overture/overture.lock'),
+vi.mock('./path-resolver', () => ({
+  getLockFilePath: vi.fn(() => '/home/user/.config/overture/overture.lock'),
 }));
 
 describe('Process Lock', () => {
@@ -28,7 +29,7 @@ describe('Process Lock', () => {
   const originalPid = process.pid;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock process.pid
     Object.defineProperty(process, 'pid', { value: 12345, writable: true });
   });

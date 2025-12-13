@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Adapter Branch Coverage Tests
  *
@@ -15,32 +16,32 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
-import { AdapterRegistry } from './adapter-registry';
+import { AdapterRegistry, getAdapterForClient } from './adapter-registry';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('../core/path-resolver', () => ({
-  getPlatform: jest.fn(() => 'linux'),
-  getClaudeCodeGlobalPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-  getClaudeCodeProjectPath: jest.fn(() => '/project/.mcp.json'),
-  getClaudeDesktopPath: jest.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
-  getVSCodeGlobalPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-  getVSCodeWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
-  getCursorGlobalPath: jest.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
-  getCursorProjectPath: jest.fn(() => '/project/.cursor/mcp.json'),
-  getWindsurfPath: jest.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
-  getCopilotCliPath: jest.fn(() => '/home/user/.config/github-copilot/mcp.json'),
-  getJetBrainsCopilotPath: jest.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
-  getJetBrainsCopilotWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+vi.mock('../core/path-resolver', () => ({
+  getPlatform: vi.fn(() => 'linux'),
+  getClaudeCodeGlobalPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+  getClaudeCodeProjectPath: vi.fn(() => '/project/.mcp.json'),
+  getClaudeDesktopPath: vi.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
+  getVSCodeGlobalPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+  getVSCodeWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
+  getCursorGlobalPath: vi.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
+  getCursorProjectPath: vi.fn(() => '/project/.cursor/mcp.json'),
+  getWindsurfPath: vi.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
+  getCopilotCliPath: vi.fn(() => '/home/user/.config/github-copilot/mcp.json'),
+  getJetBrainsCopilotPath: vi.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
+  getJetBrainsCopilotWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
 }));
 
 // Mock env-expander
-jest.mock('../core/env-expander', () => ({
-  expandEnvVarsInObject: jest.fn((env) => {
+vi.mock('../core/env-expander', () => ({
+  expandEnvVarsInObject: vi.fn((env) => {
     const expanded: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
       expanded[key] = value.replace(/\$\{(\w+)\}/g, (_, varName) => process.env[varName] || '');
@@ -54,7 +55,7 @@ describe('ClaudeDesktopAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new ClaudeDesktopAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should handle convertFromOverture with all override branches', () => {
@@ -149,7 +150,7 @@ describe('CopilotCliAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new CopilotCliAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should handle all override branches', () => {
@@ -207,7 +208,7 @@ describe('WindsurfAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new WindsurfAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should handle all override branches', () => {
@@ -265,7 +266,7 @@ describe('JetBrainsCopilotAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new JetBrainsCopilotAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.TEST_TOKEN = 'token-value';
   });
 
@@ -329,7 +330,7 @@ describe('VSCodeAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new VSCodeAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.API_KEY = 'api-key-value';
   });
 
@@ -395,7 +396,7 @@ describe('CursorAdapter - Complete Branch Coverage', () => {
 
   beforeEach(() => {
     adapter = new CursorAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should handle all override branches', () => {
@@ -456,8 +457,6 @@ describe('AdapterRegistry - Complete Coverage', () => {
   });
 
   it('should handle getAdapterForClient with unregistered adapter', () => {
-    const { getAdapterForClient } = require('./adapter-registry');
-
     expect(() => getAdapterForClient('claude-code')).toThrow('No adapter registered for client: claude-code');
   });
 
@@ -465,25 +464,25 @@ describe('AdapterRegistry - Complete Coverage', () => {
     const mockAdapter1 = {
       name: 'claude-code' as const,
       schemaRootKey: 'mcpServers' as const,
-      detectConfigPath: jest.fn(() => '/path'),
-      readConfig: jest.fn(),
-      writeConfig: jest.fn(),
-      convertFromOverture: jest.fn(),
-      supportsTransport: jest.fn(),
-      needsEnvVarExpansion: jest.fn(),
-      isInstalled: jest.fn(() => true),
+      detectConfigPath: vi.fn(() => '/path'),
+      readConfig: vi.fn(),
+      writeConfig: vi.fn(),
+      convertFromOverture: vi.fn(),
+      supportsTransport: vi.fn(),
+      needsEnvVarExpansion: vi.fn(),
+      isInstalled: vi.fn(() => true),
     };
 
     const mockAdapter2 = {
       name: 'vscode' as const,
       schemaRootKey: 'servers' as const,
-      detectConfigPath: jest.fn(() => null),
-      readConfig: jest.fn(),
-      writeConfig: jest.fn(),
-      convertFromOverture: jest.fn(),
-      supportsTransport: jest.fn(),
-      needsEnvVarExpansion: jest.fn(),
-      isInstalled: jest.fn(() => false),
+      detectConfigPath: vi.fn(() => null),
+      readConfig: vi.fn(),
+      writeConfig: vi.fn(),
+      convertFromOverture: vi.fn(),
+      supportsTransport: vi.fn(),
+      needsEnvVarExpansion: vi.fn(),
+      isInstalled: vi.fn(() => false),
     };
 
     registry.register(mockAdapter1);

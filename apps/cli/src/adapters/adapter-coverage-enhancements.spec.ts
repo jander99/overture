@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Adapter Coverage Enhancements
  *
@@ -18,27 +19,27 @@ import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('../core/path-resolver', () => ({
-  getClaudeCodeGlobalPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-  getClaudeCodeProjectPath: jest.fn(() => '/project/.mcp.json'),
-  getClaudeDesktopPath: jest.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
-  getVSCodeGlobalPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-  getVSCodeWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
-  getCursorGlobalPath: jest.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
-  getCursorProjectPath: jest.fn(() => '/project/.cursor/mcp.json'),
-  getWindsurfPath: jest.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
-  getCopilotCliPath: jest.fn(() => '/home/user/.config/github-copilot/mcp.json'),
-  getJetBrainsCopilotPath: jest.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
-  getJetBrainsCopilotWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+vi.mock('../core/path-resolver', () => ({
+  getClaudeCodeGlobalPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+  getClaudeCodeProjectPath: vi.fn(() => '/project/.mcp.json'),
+  getClaudeDesktopPath: vi.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
+  getVSCodeGlobalPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+  getVSCodeWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
+  getCursorGlobalPath: vi.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
+  getCursorProjectPath: vi.fn(() => '/project/.cursor/mcp.json'),
+  getWindsurfPath: vi.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
+  getCopilotCliPath: vi.fn(() => '/home/user/.config/github-copilot/mcp.json'),
+  getJetBrainsCopilotPath: vi.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
+  getJetBrainsCopilotWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
 }));
 
 // Mock env-expander
-jest.mock('../core/env-expander', () => ({
-  expandEnvVarsInObject: jest.fn((env) => {
+vi.mock('../core/env-expander', () => ({
+  expandEnvVarsInObject: vi.fn((env) => {
     // Simple expansion for testing
     const expanded: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
@@ -138,7 +139,7 @@ describe('Adapter Error Handling - All Adapters', () => {
 
   describe('writeConfig error scenarios', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it('ClaudeCodeAdapter should create directory if it does not exist', () => {
@@ -227,7 +228,7 @@ describe('Adapter Error Handling - All Adapters', () => {
 
   describe('convertFromOverture edge cases', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it('should omit env object when empty', () => {

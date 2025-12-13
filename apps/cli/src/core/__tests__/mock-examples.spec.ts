@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Mock Strategy Examples
  *
@@ -22,19 +23,19 @@ import {
 } from './mock-builders';
 
 // Mock all external dependencies
-jest.mock('fs/promises');
-jest.mock('inquirer', () => ({
-  prompt: jest.fn()
+vi.mock('fs/promises');
+vi.mock('inquirer', () => ({
+  prompt: vi.fn()
 }));
-jest.mock('../../infrastructure/process-executor');
+vi.mock('../../infrastructure/process-executor');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
-const mockInquirer = { prompt: jest.fn() };
-const mockProcessExecutor = ProcessExecutor as jest.MockedClass<typeof ProcessExecutor>;
+const mockFs = fs as Mocked<typeof fs>;
+const mockInquirer = { prompt: vi.fn() };
+const mockProcessExecutor = ProcessExecutor as MockedClass<typeof ProcessExecutor>;
 
 describe('Mock Strategy Examples', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('File System Mocking', () => {

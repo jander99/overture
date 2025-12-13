@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Core Client Adapters Tests
  *
@@ -13,16 +14,16 @@ import { VSCodeAdapter } from './vscode-adapter';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('../core/path-resolver', () => ({
-  getClaudeCodeGlobalPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-  getClaudeCodeProjectPath: jest.fn(() => '/project/.mcp.json'),
-  getClaudeDesktopPath: jest.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
-  getVSCodeGlobalPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-  getVSCodeWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+vi.mock('../core/path-resolver', () => ({
+  getClaudeCodeGlobalPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+  getClaudeCodeProjectPath: vi.fn(() => '/project/.mcp.json'),
+  getClaudeDesktopPath: vi.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
+  getVSCodeGlobalPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+  getVSCodeWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
 }));
 
 describe('ClaudeCodeAdapter', () => {
@@ -30,7 +31,7 @@ describe('ClaudeCodeAdapter', () => {
 
   beforeEach(() => {
     adapter = new ClaudeCodeAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should have correct properties', () => {
@@ -193,7 +194,7 @@ describe('ClaudeDesktopAdapter', () => {
 
   beforeEach(() => {
     adapter = new ClaudeDesktopAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should have correct properties', () => {
@@ -242,7 +243,7 @@ describe('VSCodeAdapter', () => {
 
   beforeEach(() => {
     adapter = new VSCodeAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should have correct properties', () => {

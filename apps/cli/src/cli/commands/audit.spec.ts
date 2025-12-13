@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Audit Command Tests
  *
@@ -16,37 +17,45 @@ import { getPlatform } from '../../core/path-resolver';
 import type { ClientAdapter } from '../../adapters/client-adapter.interface';
 import type { OvertureConfig } from '../../domain/config.types';
 
+// Create mock instance using vi.hoisted for proper hoisting
+const { auditServiceMock, MockAuditService } = vi.hoisted(() => {
+  const mockInstance = {
+    auditClient: vi.fn(),
+    auditAllClients: vi.fn(),
+    compareConfigs: vi.fn(),
+    generateSuggestions: vi.fn(),
+  };
+  return {
+    auditServiceMock: mockInstance,
+    MockAuditService: function AuditService() {
+      return mockInstance;
+    },
+  };
+});
+
 // Mock dependencies
-jest.mock('../../core/audit-service');
-jest.mock('../../core/config-loader');
-jest.mock('../../adapters/adapter-registry');
-jest.mock('../../utils/logger');
-jest.mock('../../core/path-resolver');
+vi.mock('../../core/audit-service', () => ({
+  AuditService: MockAuditService,
+}));
+vi.mock('../../core/config-loader');
+vi.mock('../../adapters/adapter-registry');
+vi.mock('../../utils/logger');
+vi.mock('../../core/path-resolver');
 
 describe('CLI Command: audit', () => {
   let command: Command;
-  let mockExit: jest.SpyInstance;
-  let auditServiceMock: jest.Mocked<AuditService>;
+  let mockExit: MockInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     command = createAuditCommand();
 
     // Mock process.exit to prevent test termination
-    mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+    mockExit = vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
       throw new Error(`process.exit: ${code}`);
     });
 
-    // Create mock audit service
-    auditServiceMock = {
-      auditClient: jest.fn(),
-      auditAllClients: jest.fn(),
-      compareConfigs: jest.fn(),
-      generateSuggestions: jest.fn(),
-    } as any;
-
-    (AuditService as jest.Mock).mockImplementation(() => auditServiceMock);
-    (getPlatform as jest.Mock).mockReturnValue('linux');
+    (getPlatform as Mock).mockReturnValue('linux');
   });
 
   afterEach(() => {
@@ -71,25 +80,25 @@ describe('CLI Command: audit', () => {
       const mockAdapter1: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const mockAdapter2: ClientAdapter = {
         name: 'vscode',
         schemaRootKey: 'servers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const unmanagedByClient = {
@@ -103,8 +112,8 @@ describe('CLI Command: audit', () => {
         'overture user add mcp slack',
       ];
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([mockAdapter1, mockAdapter2]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([mockAdapter1, mockAdapter2]);
       auditServiceMock.auditAllClients.mockReturnValue(unmanagedByClient);
       auditServiceMock.generateSuggestions.mockReturnValue(suggestions);
 
@@ -133,19 +142,19 @@ describe('CLI Command: audit', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn().mockReturnValue(true),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn().mockReturnValue(true),
       };
 
       const unmanaged = ['filesystem', 'slack'];
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.get as jest.Mock).mockReturnValue(mockAdapter);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.get as Mock).mockReturnValue(mockAdapter);
       auditServiceMock.auditClient.mockReturnValue(unmanaged);
       auditServiceMock.generateSuggestions.mockReturnValue([
         'overture user add mcp filesystem',
@@ -180,17 +189,17 @@ describe('CLI Command: audit', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([mockAdapter]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([mockAdapter]);
       auditServiceMock.auditAllClients.mockReturnValue({});
 
       // Act
@@ -210,13 +219,13 @@ describe('CLI Command: audit', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
       const unmanagedByClient = {
@@ -225,8 +234,8 @@ describe('CLI Command: audit', () => {
 
       const suggestions = ['overture user add mcp filesystem'];
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([mockAdapter]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([mockAdapter]);
       auditServiceMock.auditAllClients.mockReturnValue(unmanagedByClient);
       auditServiceMock.generateSuggestions.mockReturnValue(suggestions);
 
@@ -242,7 +251,7 @@ describe('CLI Command: audit', () => {
   describe('Error handling', () => {
     it('should error when --client flag references unknown client', async () => {
       // Arrange
-      (adapterRegistry.get as jest.Mock).mockReturnValue(undefined);
+      (adapterRegistry.get as Mock).mockReturnValue(undefined);
 
       // Act & Assert
       await expect(async () => {
@@ -254,7 +263,7 @@ describe('CLI Command: audit', () => {
 
     it('should error when config cannot be loaded', async () => {
       // Arrange
-      (loadConfig as jest.Mock).mockImplementation(() => {
+      (loadConfig as Mock).mockImplementation(() => {
         throw new Error('Config not found');
       });
 
@@ -273,14 +282,13 @@ describe('CLI Command: audit', () => {
         mcp: {},
       };
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([]);
 
-      // Act & Assert
-      await expect(async () => {
-        await command.parseAsync(['node', 'overture']);
-      }).resolves.not.toThrow();
+      // Act - should complete without throwing
+      await command.parseAsync(['node', 'overture']);
 
+      // Assert
       expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('No installed'));
       expect(Logger.success).toHaveBeenCalledWith(expect.stringContaining('No unmanaged'));
     });
@@ -295,17 +303,17 @@ describe('CLI Command: audit', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([mockAdapter]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([mockAdapter]);
       auditServiceMock.auditAllClients.mockImplementation(() => {
         throw new Error('Audit failed');
       });
@@ -330,17 +338,17 @@ describe('CLI Command: audit', () => {
       const mockAdapter1: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn(),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn(),
+        detectConfigPath: vi.fn(),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn(),
       };
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.getInstalledAdapters as jest.Mock).mockReturnValue([mockAdapter1]);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.getInstalledAdapters as Mock).mockReturnValue([mockAdapter1]);
       auditServiceMock.auditAllClients.mockReturnValue({});
 
       // Act
@@ -361,23 +369,22 @@ describe('CLI Command: audit', () => {
       const mockAdapter: ClientAdapter = {
         name: 'claude-code',
         schemaRootKey: 'mcpServers',
-        detectConfigPath: jest.fn().mockReturnValue(null), // Not installed
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-        isInstalled: jest.fn().mockReturnValue(false),
+        detectConfigPath: vi.fn().mockReturnValue(null), // Not installed
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+        isInstalled: vi.fn().mockReturnValue(false),
       };
 
-      (loadConfig as jest.Mock).mockReturnValue(mockConfig);
-      (adapterRegistry.get as jest.Mock).mockReturnValue(mockAdapter);
+      (loadConfig as Mock).mockReturnValue(mockConfig);
+      (adapterRegistry.get as Mock).mockReturnValue(mockAdapter);
 
-      // Act & Assert
-      await expect(async () => {
-        await command.parseAsync(['node', 'overture', '--client', 'claude-code']);
-      }).resolves.not.toThrow();
+      // Act - should complete without throwing
+      await command.parseAsync(['node', 'overture', '--client', 'claude-code']);
 
+      // Assert
       expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('not installed'));
       expect(Logger.success).toHaveBeenCalledWith(expect.stringContaining('No unmanaged'));
     });

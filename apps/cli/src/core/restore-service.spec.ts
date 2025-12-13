@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Restore Service Tests
  *
@@ -15,20 +16,20 @@ import {
 import type { BackupMetadata } from './backup-service';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock backup-service
-jest.mock('./backup-service', () => ({
-  getBackup: jest.fn(),
-  getLatestBackup: jest.fn(),
+vi.mock('./backup-service', () => ({
+  getBackup: vi.fn(),
+  getLatestBackup: vi.fn(),
 }));
 
-const backupService = require('./backup-service');
+import * as backupService from './backup-service';
 
 describe('Restore Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('restoreBackup', () => {

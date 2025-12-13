@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Unit tests for error-handler
  *
@@ -24,23 +25,23 @@ import {
 import { Logger } from '../utils/logger';
 
 // Mock Logger
-jest.mock('../utils/logger');
+vi.mock('../utils/logger');
 
 describe('ErrorHandler', () => {
-  let mockExit: jest.SpyInstance;
-  let mockConsoleError: jest.SpyInstance;
+  let mockExit: MockInstance;
+  let mockConsoleError: MockInstance;
 
   beforeEach(() => {
     // Mock process.exit
-    mockExit = jest.spyOn(process, 'exit').mockImplementation((() => {
+    mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
       throw new Error('process.exit called');
     }) as never);
 
     // Mock console.error
-    mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
+    mockConsoleError = vi.spyOn(console, 'error').mockImplementation();
 
     // Clear logger mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {

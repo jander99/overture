@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * PluginDetector Tests
  *
@@ -17,20 +18,20 @@ import { buildClaudeSettings } from './__tests__/mock-builders';
 import { PluginError } from '../domain/errors';
 
 // Mock fs/promises
-jest.mock('fs/promises');
+vi.mock('fs/promises');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('PluginDetector', () => {
   let detector: PluginDetector;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     detector = new PluginDetector();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('detectInstalledPlugins', () => {
@@ -219,7 +220,7 @@ describe('PluginDetector', () => {
         mockFs.readFile.mockRejectedValue(error);
 
         // Suppress console.warn for clean test output
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         // Act
         const plugins = await detector.detectInstalledPlugins();
@@ -239,7 +240,7 @@ describe('PluginDetector', () => {
         error.code = 'ENOENT';
         mockFs.readFile.mockRejectedValue(error);
 
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         await detector.detectInstalledPlugins({ settingsPath: customPath });
 
@@ -256,7 +257,7 @@ describe('PluginDetector', () => {
         // Arrange: Invalid JSON
         mockFs.readFile.mockResolvedValue('{ invalid json }');
 
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         // Act
         const plugins = await detector.detectInstalledPlugins();
@@ -273,7 +274,7 @@ describe('PluginDetector', () => {
       it('should handle empty file gracefully', async () => {
         mockFs.readFile.mockResolvedValue('');
 
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         const plugins = await detector.detectInstalledPlugins();
 
@@ -301,7 +302,7 @@ describe('PluginDetector', () => {
 
         mockFs.readFile.mockResolvedValue(JSON.stringify(settings));
 
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         const plugins = await detector.detectInstalledPlugins();
 
@@ -336,7 +337,7 @@ describe('PluginDetector', () => {
         error.code = 'EACCES';
         mockFs.readFile.mockRejectedValue(error);
 
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         const plugins = await detector.detectInstalledPlugins();
 
@@ -683,7 +684,7 @@ describe('PluginDetector', () => {
       error.code = 'ENOENT';
       mockFs.readFile.mockRejectedValue(error);
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const isInstalled = await detector.isPluginInstalled(
         'python-development',
@@ -794,7 +795,7 @@ describe('PluginDetector', () => {
 
       mockFs.readFile.mockResolvedValue(JSON.stringify(settings));
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const plugins = await detector.detectInstalledPlugins();
 

@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Adapter 100% Coverage Tests
  *
@@ -19,23 +20,23 @@ import { AdapterRegistry, adapterRegistry } from './adapter-registry';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('../core/path-resolver', () => ({
-  getPlatform: jest.fn(() => 'linux'),
-  getClaudeCodeGlobalPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-  getClaudeCodeProjectPath: jest.fn(() => '/project/.mcp.json'),
-  getClaudeDesktopPath: jest.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
-  getVSCodeGlobalPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-  getVSCodeWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
-  getCursorGlobalPath: jest.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
-  getCursorProjectPath: jest.fn(() => '/project/.cursor/mcp.json'),
-  getWindsurfPath: jest.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
-  getCopilotCliPath: jest.fn(() => '/home/user/.config/github-copilot/mcp.json'),
-  getJetBrainsCopilotPath: jest.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
-  getJetBrainsCopilotWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+vi.mock('../core/path-resolver', () => ({
+  getPlatform: vi.fn(() => 'linux'),
+  getClaudeCodeGlobalPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+  getClaudeCodeProjectPath: vi.fn(() => '/project/.mcp.json'),
+  getClaudeDesktopPath: vi.fn(() => '/home/user/Library/Application Support/Claude/claude_desktop_config.json'),
+  getVSCodeGlobalPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+  getVSCodeWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
+  getCursorGlobalPath: vi.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
+  getCursorProjectPath: vi.fn(() => '/project/.cursor/mcp.json'),
+  getWindsurfPath: vi.fn(() => '/home/user/.codeium/windsurf/mcp_config.json'),
+  getCopilotCliPath: vi.fn(() => '/home/user/.config/github-copilot/mcp.json'),
+  getJetBrainsCopilotPath: vi.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
+  getJetBrainsCopilotWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
 }));
 
 describe('Line 35 Coverage - ClaudeDesktopAdapter readConfig success path', () => {
@@ -195,7 +196,7 @@ describe('AdapterRegistry Lines 24 and 140', () => {
 
 describe('Comprehensive Branch Coverage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should test all boolean branches in each adapter', () => {
