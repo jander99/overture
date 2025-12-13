@@ -6,13 +6,14 @@
   "implicitDependencies": ["@overture/cli"],
   "targets": {
     "e2e": {
-      "executor": "@nx/jest:jest",
-      "outputs": ["{projectRoot}/test-output/jest/coverage"],
+      "executor": "nx:run-commands",
       "options": {
-        "jestConfig": "apps/cli-e2e/jest.config.ts",
-        "passWithNoTests": true
+        "command": "vitest run --config apps/cli-e2e/vitest.config.ts"
       },
-      "dependsOn": ["@overture/cli:build", "@overture/cli:serve"]
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": ["{projectRoot}/test-output"],
+      "dependsOn": ["@overture/cli:build"]
     }
   },
   "tags": []

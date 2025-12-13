@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Tests for plugin-export command
  *
@@ -9,27 +10,33 @@ import { createPluginExportCommand } from './plugin-export';
 import { PluginExporter } from '../../core/plugin-exporter';
 import { Logger } from '../../utils/logger';
 
+// Create mock instance using vi.hoisted for proper hoisting
+const { pluginExporterMock, MockPluginExporter } = vi.hoisted(() => {
+  const mockInstance = {
+    exportPlugins: vi.fn(),
+    exportAllPlugins: vi.fn(),
+    compareInstalledWithConfig: vi.fn(),
+  };
+  return {
+    pluginExporterMock: mockInstance,
+    MockPluginExporter: function PluginExporter() {
+      return mockInstance;
+    },
+  };
+});
+
 // Mock dependencies
-jest.mock('../../core/plugin-exporter');
-jest.mock('../../utils/logger');
+vi.mock('../../core/plugin-exporter', () => ({
+  PluginExporter: MockPluginExporter,
+}));
+vi.mock('../../utils/logger');
 
 describe('plugin-export command', () => {
   let command: Command;
-  let mockExportPlugins: jest.Mock;
-  let mockExportAllPlugins: jest.Mock;
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
-
-    // Create mock export functions
-    mockExportPlugins = jest.fn();
-    mockExportAllPlugins = jest.fn();
-    (PluginExporter as jest.MockedClass<typeof PluginExporter>).mockImplementation(() => ({
-      exportPlugins: mockExportPlugins,
-      exportAllPlugins: mockExportAllPlugins,
-      compareInstalledWithConfig: jest.fn(),
-    }) as any);
+    vi.clearAllMocks();
 
     // Create command
     command = createPluginExportCommand();
@@ -37,31 +44,31 @@ describe('plugin-export command', () => {
 
   describe('interactive mode (default)', () => {
     it('should call exportPlugins with interactive: true by default', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportPlugins.mockResolvedValue(undefined);
 
       // Parse command without options
       await command.parseAsync(['node', 'export']);
 
-      expect(mockExportPlugins).toHaveBeenCalledWith({
+      expect(pluginExporterMock.exportPlugins).toHaveBeenCalledWith({
         interactive: true,
       });
     });
 
     it('should handle successful export in interactive mode', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync(['node', 'export']);
 
-      expect(mockExportPlugins).toHaveBeenCalled();
+      expect(pluginExporterMock.exportPlugins).toHaveBeenCalled();
       expect(Logger.error).not.toHaveBeenCalled();
     });
 
     it('should handle errors in interactive mode', async () => {
       const error = new Error('Export failed');
-      mockExportPlugins.mockRejectedValue(error);
+      pluginExporterMock.exportPlugins.mockRejectedValue(error);
 
       // Mock process.exit to prevent test from exiting
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 
@@ -77,7 +84,7 @@ describe('plugin-export command', () => {
 
   describe('non-interactive mode with --plugin flag', () => {
     it('should export single plugin when --plugin specified once', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync([
         'node',
@@ -86,14 +93,14 @@ describe('plugin-export command', () => {
         'python-development',
       ]);
 
-      expect(mockExportPlugins).toHaveBeenCalledWith({
+      expect(pluginExporterMock.exportPlugins).toHaveBeenCalledWith({
         interactive: false,
         pluginNames: ['python-development'],
       });
     });
 
     it('should export multiple plugins when --plugin specified multiple times', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync([
         'node',
@@ -104,14 +111,14 @@ describe('plugin-export command', () => {
         'backend-development',
       ]);
 
-      expect(mockExportPlugins).toHaveBeenCalledWith({
+      expect(pluginExporterMock.exportPlugins).toHaveBeenCalledWith({
         interactive: false,
         pluginNames: ['python-development', 'backend-development'],
       });
     });
 
     it('should handle successful export with --plugin flag', async () => {
-      mockExportPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync([
         'node',
@@ -120,15 +127,15 @@ describe('plugin-export command', () => {
         'python-development',
       ]);
 
-      expect(mockExportPlugins).toHaveBeenCalled();
+      expect(pluginExporterMock.exportPlugins).toHaveBeenCalled();
       expect(Logger.error).not.toHaveBeenCalled();
     });
 
     it('should handle errors with --plugin flag', async () => {
       const error = new Error('Plugin not found');
-      mockExportPlugins.mockRejectedValue(error);
+      pluginExporterMock.exportPlugins.mockRejectedValue(error);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 
@@ -151,28 +158,28 @@ describe('plugin-export command', () => {
 
   describe('--all flag', () => {
     it('should export all plugins when --all specified', async () => {
-      mockExportAllPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync(['node', 'export', '--all']);
 
-      expect(mockExportAllPlugins).toHaveBeenCalled();
-      expect(mockExportPlugins).not.toHaveBeenCalled();
+      expect(pluginExporterMock.exportAllPlugins).toHaveBeenCalled();
+      expect(pluginExporterMock.exportPlugins).not.toHaveBeenCalled();
     });
 
     it('should handle successful export with --all flag', async () => {
-      mockExportAllPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync(['node', 'export', '--all']);
 
-      expect(mockExportAllPlugins).toHaveBeenCalled();
+      expect(pluginExporterMock.exportAllPlugins).toHaveBeenCalled();
       expect(Logger.error).not.toHaveBeenCalled();
     });
 
     it('should handle errors with --all flag', async () => {
       const error = new Error('No plugins installed');
-      mockExportPlugins.mockRejectedValue(error);
+      pluginExporterMock.exportPlugins.mockRejectedValue(error);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 
@@ -188,7 +195,7 @@ describe('plugin-export command', () => {
 
   describe('flag conflicts', () => {
     it('should handle --plugin and --all together (--all takes precedence)', async () => {
-      mockExportAllPlugins.mockResolvedValue(undefined);
+      pluginExporterMock.exportAllPlugins.mockResolvedValue(undefined);
 
       await command.parseAsync([
         'node',
@@ -199,8 +206,8 @@ describe('plugin-export command', () => {
       ]);
 
       // --all should take precedence and call exportAllPlugins
-      expect(mockExportAllPlugins).toHaveBeenCalled();
-      expect(mockExportPlugins).not.toHaveBeenCalled();
+      expect(pluginExporterMock.exportAllPlugins).toHaveBeenCalled();
+      expect(pluginExporterMock.exportPlugins).not.toHaveBeenCalled();
     });
   });
 
@@ -230,9 +237,9 @@ describe('plugin-export command', () => {
     it('should handle PluginError gracefully', async () => {
       const error = new Error('No installed plugins match the provided names');
       error.name = 'PluginError';
-      mockExportPlugins.mockRejectedValue(error);
+      pluginExporterMock.exportPlugins.mockRejectedValue(error);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 
@@ -247,9 +254,9 @@ describe('plugin-export command', () => {
 
     it('should handle generic errors gracefully', async () => {
       const error = new Error('Unexpected error');
-      mockExportPlugins.mockRejectedValue(error);
+      pluginExporterMock.exportPlugins.mockRejectedValue(error);
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
+      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit called');
       });
 

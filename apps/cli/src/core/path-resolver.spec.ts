@@ -1,8 +1,18 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Path Resolution Utilities Tests
  *
  * @module core/path-resolver.spec
  */
+
+// Mock os module before importing
+vi.mock('os', async () => {
+  const actual = await vi.importActual<typeof import('os')>('os');
+  return {
+    ...actual,
+    homedir: vi.fn(() => '/home/testuser'),
+  };
+});
 
 import * as os from 'os';
 import * as path from 'path';
@@ -37,19 +47,20 @@ describe('Path Resolver', () => {
   const mockHomeDir = '/home/testuser';
 
   beforeEach(() => {
-    // Mock os.homedir()
-    jest.spyOn(os, 'homedir').mockReturnValue(mockHomeDir);
+    // Reset os.homedir mock
+    (os.homedir as Mock).mockReturnValue(mockHomeDir);
 
     // Mock process.cwd()
-    process.cwd = jest.fn().mockReturnValue('/mock/project');
+    process.cwd = vi.fn().mockReturnValue('/mock/project');
 
-    // Reset environment variables
+    // Reset environment variables and clear HOME so getHomeDir() uses os.homedir()
     process.env = { ...originalEnv };
+    delete process.env.HOME;
   });
 
   afterEach(() => {
     // Restore mocks
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     Object.defineProperty(process, 'platform', {
       value: originalPlatform,
     });

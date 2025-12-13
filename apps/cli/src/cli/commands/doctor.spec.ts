@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Doctor Command Tests
  *
@@ -14,20 +15,20 @@ import { ProcessExecutor } from '../../infrastructure/process-executor';
 import type { OvertureConfig } from '../../domain/config.types';
 
 // Mock dependencies
-jest.mock('../../core/binary-detector');
-jest.mock('../../core/config-loader');
-jest.mock('../../core/path-resolver');
-jest.mock('../../infrastructure/process-executor');
+vi.mock('../../core/binary-detector');
+vi.mock('../../core/config-loader');
+vi.mock('../../core/path-resolver');
+vi.mock('../../infrastructure/process-executor');
 
-const mockBinaryDetector = BinaryDetector as jest.MockedClass<typeof BinaryDetector>;
-const mockLoadUserConfig = loadUserConfig as jest.MockedFunction<typeof loadUserConfig>;
-const mockLoadProjectConfig = loadProjectConfig as jest.MockedFunction<typeof loadProjectConfig>;
-const mockFindProjectRoot = findProjectRoot as jest.MockedFunction<typeof findProjectRoot>;
-const mockProcessExecutor = ProcessExecutor as jest.Mocked<typeof ProcessExecutor>;
+const mockBinaryDetector = BinaryDetector as MockedClass<typeof BinaryDetector>;
+const mockLoadUserConfig = loadUserConfig as MockedFunction<typeof loadUserConfig>;
+const mockLoadProjectConfig = loadProjectConfig as MockedFunction<typeof loadProjectConfig>;
+const mockFindProjectRoot = findProjectRoot as MockedFunction<typeof findProjectRoot>;
+const mockProcessExecutor = ProcessExecutor as Mocked<typeof ProcessExecutor>;
 
 describe('Doctor Command', () => {
   let command: ReturnType<typeof createDoctorCommand>;
-  let mockDetectorInstance: jest.Mocked<BinaryDetector>;
+  let mockDetectorInstance: MockedObject<BinaryDetector>;
 
   const testUserConfig: OvertureConfig = {
     version: '2.0',
@@ -48,14 +49,14 @@ describe('Doctor Command', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create mock detector instance
     mockDetectorInstance = {
-      detectClient: jest.fn(),
-      detectBinary: jest.fn(),
-      detectAppBundle: jest.fn(),
-      validateConfigFile: jest.fn(),
+      detectClient: vi.fn(),
+      detectBinary: vi.fn(),
+      detectAppBundle: vi.fn(),
+      validateConfigFile: vi.fn(),
     } as any;
 
     mockBinaryDetector.mockImplementation(() => mockDetectorInstance);

@@ -1,14 +1,15 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { FsUtils } from './fs-utils';
 import { ConfigError } from '../domain/errors';
 
 // Mock fs/promises
-jest.mock('fs/promises');
+vi.mock('fs/promises');
 
 describe('FsUtils', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('readFile', () => {
@@ -16,7 +17,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/file.txt';
       const content = 'file content';
 
-      (fs.readFile as jest.Mock).mockResolvedValue(content);
+      (fs.readFile as Mock).mockResolvedValue(content);
 
       const result = await FsUtils.readFile(filePath);
 
@@ -29,7 +30,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/missing.txt';
       const error = new Error('ENOENT: no such file or directory');
 
-      (fs.readFile as jest.Mock).mockRejectedValue(error);
+      (fs.readFile as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(ConfigError);
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(
@@ -41,7 +42,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/file.txt';
       const error = new Error('ENOENT: no such file or directory');
 
-      (fs.readFile as jest.Mock).mockRejectedValue(error);
+      (fs.readFile as Mock).mockRejectedValue(error);
 
       try {
         await FsUtils.readFile(filePath);
@@ -56,7 +57,7 @@ describe('FsUtils', () => {
       const filePath = '/root/protected.txt';
       const error = new Error('EACCES: permission denied');
 
-      (fs.readFile as jest.Mock).mockRejectedValue(error);
+      (fs.readFile as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(ConfigError);
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(
@@ -68,7 +69,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/empty.txt';
       const content = '';
 
-      (fs.readFile as jest.Mock).mockResolvedValue(content);
+      (fs.readFile as Mock).mockResolvedValue(content);
 
       const result = await FsUtils.readFile(filePath);
 
@@ -79,7 +80,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/file.txt';
       const content = 'Line 1\nLine 2\nLine 3';
 
-      (fs.readFile as jest.Mock).mockResolvedValue(content);
+      (fs.readFile as Mock).mockResolvedValue(content);
 
       const result = await FsUtils.readFile(filePath);
 
@@ -92,8 +93,8 @@ describe('FsUtils', () => {
       const filePath = '/path/to/file.txt';
       const content = 'new content';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       await FsUtils.writeFile(filePath, content);
 
@@ -108,8 +109,8 @@ describe('FsUtils', () => {
       const content = 'content';
       const expectedDir = path.dirname(filePath);
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       await FsUtils.writeFile(filePath, content);
 
@@ -121,8 +122,8 @@ describe('FsUtils', () => {
       const filePath = '/existing/dir/file.txt';
       const content = 'content';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       await FsUtils.writeFile(filePath, content);
 
@@ -136,7 +137,7 @@ describe('FsUtils', () => {
       const content = 'content';
       const error = new Error('EACCES: permission denied');
 
-      (fs.mkdir as jest.Mock).mockRejectedValue(error);
+      (fs.mkdir as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
         ConfigError
@@ -151,8 +152,8 @@ describe('FsUtils', () => {
       const content = 'content';
       const error = new Error('ENOSPC: no space left on device');
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockRejectedValue(error);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
         ConfigError
@@ -167,8 +168,8 @@ describe('FsUtils', () => {
       const content = 'content';
       const error = new Error('Write failed');
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockRejectedValue(error);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockRejectedValue(error);
 
       try {
         await FsUtils.writeFile(filePath, content);
@@ -183,8 +184,8 @@ describe('FsUtils', () => {
       const filePath = '/path/to/empty.txt';
       const content = '';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       await FsUtils.writeFile(filePath, content);
 
@@ -195,8 +196,8 @@ describe('FsUtils', () => {
       const filePath = '/path/to/large.txt';
       const content = 'x'.repeat(10000);
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       await FsUtils.writeFile(filePath, content);
 
@@ -208,7 +209,7 @@ describe('FsUtils', () => {
     it('should return true when file exists', async () => {
       const filePath = '/path/to/existing.txt';
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.exists(filePath);
 
@@ -220,7 +221,7 @@ describe('FsUtils', () => {
       const filePath = '/path/to/missing.txt';
       const error = new Error('ENOENT: no such file or directory');
 
-      (fs.access as jest.Mock).mockRejectedValue(error);
+      (fs.access as Mock).mockRejectedValue(error);
 
       const result = await FsUtils.exists(filePath);
 
@@ -231,7 +232,7 @@ describe('FsUtils', () => {
       const filePath = '/root/protected.txt';
       const error = new Error('EACCES: permission denied');
 
-      (fs.access as jest.Mock).mockRejectedValue(error);
+      (fs.access as Mock).mockRejectedValue(error);
 
       const result = await FsUtils.exists(filePath);
 
@@ -242,7 +243,7 @@ describe('FsUtils', () => {
       const filePath = '/any/path.txt';
       const error = new Error('Some unexpected error');
 
-      (fs.access as jest.Mock).mockRejectedValue(error);
+      (fs.access as Mock).mockRejectedValue(error);
 
       const result = await FsUtils.exists(filePath);
 
@@ -253,7 +254,7 @@ describe('FsUtils', () => {
     it('should work with absolute paths', async () => {
       const filePath = '/absolute/path/to/file.txt';
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.exists(filePath);
 
@@ -264,7 +265,7 @@ describe('FsUtils', () => {
     it('should work with relative paths', async () => {
       const filePath = './relative/path/file.txt';
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.exists(filePath);
 
@@ -277,7 +278,7 @@ describe('FsUtils', () => {
     it('should create directory successfully', async () => {
       const dirPath = '/path/to/directory';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
 
       await FsUtils.ensureDir(dirPath);
 
@@ -288,7 +289,7 @@ describe('FsUtils', () => {
     it('should handle existing directory without error', async () => {
       const dirPath = '/existing/directory';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
 
       await FsUtils.ensureDir(dirPath);
 
@@ -298,7 +299,7 @@ describe('FsUtils', () => {
     it('should create nested directories', async () => {
       const dirPath = '/deep/nested/directory/structure';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
 
       await FsUtils.ensureDir(dirPath);
 
@@ -309,7 +310,7 @@ describe('FsUtils', () => {
       const dirPath = '/root/protected';
       const error = new Error('EACCES: permission denied');
 
-      (fs.mkdir as jest.Mock).mockRejectedValue(error);
+      (fs.mkdir as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.ensureDir(dirPath)).rejects.toThrow(error);
     });
@@ -317,11 +318,11 @@ describe('FsUtils', () => {
     it('should use recursive flag for mkdir', async () => {
       const dirPath = '/some/path';
 
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
 
       await FsUtils.ensureDir(dirPath);
 
-      const callArgs = (fs.mkdir as jest.Mock).mock.calls[0];
+      const callArgs = (fs.mkdir as Mock).mock.calls[0];
       expect(callArgs[1]).toEqual({ recursive: true });
     });
   });
@@ -332,7 +333,7 @@ describe('FsUtils', () => {
       const startDir = '/home/user/project';
       const filePath = path.join(startDir, fileName);
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.findUp(fileName, startDir);
 
@@ -349,7 +350,7 @@ describe('FsUtils', () => {
       // Second call fails (src)
       // Third call fails (src/components already checked)
       // Fourth call succeeds (project)
-      (fs.access as jest.Mock).mockImplementation((filePath) => {
+      (fs.access as Mock).mockImplementation((filePath) => {
         if (filePath === expectedPath) {
           return Promise.resolve(undefined);
         }
@@ -365,7 +366,7 @@ describe('FsUtils', () => {
       const fileName = 'nonexistent.txt';
       const startDir = '/home/user/project';
 
-      (fs.access as jest.Mock).mockRejectedValue(
+      (fs.access as Mock).mockRejectedValue(
         new Error('ENOENT: no such file')
       );
 
@@ -378,7 +379,7 @@ describe('FsUtils', () => {
       const fileName = 'root-only.txt';
       const startDir = '/home/user/project';
 
-      (fs.access as jest.Mock).mockRejectedValue(
+      (fs.access as Mock).mockRejectedValue(
         new Error('ENOENT: no such file')
       );
 
@@ -394,7 +395,7 @@ describe('FsUtils', () => {
       const cwdPath = process.cwd();
       const filePath = path.join(cwdPath, fileName);
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.findUp(fileName);
 
@@ -407,7 +408,7 @@ describe('FsUtils', () => {
       const startDir = '/absolute/path/to/dir';
       const filePath = path.join(startDir, fileName);
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.findUp(fileName, startDir);
 
@@ -420,7 +421,7 @@ describe('FsUtils', () => {
       const resolvedStart = path.resolve(startDir);
       const filePath = path.join(resolvedStart, fileName);
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.findUp(fileName, startDir);
 
@@ -433,7 +434,7 @@ describe('FsUtils', () => {
       const expectedPath = '/home/user/workspace/project/overture.yaml';
 
       const accessCalls: string[] = [];
-      (fs.access as jest.Mock).mockImplementation((filePath) => {
+      (fs.access as Mock).mockImplementation((filePath) => {
         accessCalls.push(filePath);
         if (filePath === expectedPath) {
           return Promise.resolve(undefined);
@@ -454,7 +455,7 @@ describe('FsUtils', () => {
       const foundPath = '/a/b/early-find.txt';
 
       const accessCalls: string[] = [];
-      (fs.access as jest.Mock).mockImplementation((filePath) => {
+      (fs.access as Mock).mockImplementation((filePath) => {
         accessCalls.push(filePath);
         if (filePath === foundPath) {
           return Promise.resolve(undefined);
@@ -474,7 +475,7 @@ describe('FsUtils', () => {
       const startDir = '/home/user/project';
       const filePath = path.join(startDir, fileName);
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as Mock).mockResolvedValue(undefined);
 
       const result = await FsUtils.findUp(fileName, startDir);
 
@@ -490,9 +491,9 @@ describe('FsUtils', () => {
       const newContent = 'updated: true';
 
       // Setup mocks
-      (fs.readFile as jest.Mock).mockResolvedValue(originalContent);
-      (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-      (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+      (fs.readFile as Mock).mockResolvedValue(originalContent);
+      (fs.mkdir as Mock).mockResolvedValue(undefined);
+      (fs.writeFile as Mock).mockResolvedValue(undefined);
 
       // Read, modify, write
       const read = await FsUtils.readFile(filePath);
@@ -508,8 +509,8 @@ describe('FsUtils', () => {
       const filePath = '/path/to/file.txt';
       const content = 'file content';
 
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
-      (fs.readFile as jest.Mock).mockResolvedValue(content);
+      (fs.access as Mock).mockResolvedValue(undefined);
+      (fs.readFile as Mock).mockResolvedValue(content);
 
       const exists = await FsUtils.exists(filePath);
       expect(exists).toBe(true);
@@ -525,13 +526,13 @@ describe('FsUtils', () => {
       const content = 'config: data';
 
       // Mock to find file in parent directory
-      (fs.access as jest.Mock).mockImplementation((filePath) => {
+      (fs.access as Mock).mockImplementation((filePath) => {
         if (filePath === foundPath) {
           return Promise.resolve(undefined);
         }
         return Promise.reject(new Error('not found'));
       });
-      (fs.readFile as jest.Mock).mockResolvedValue(content);
+      (fs.readFile as Mock).mockResolvedValue(content);
 
       const configPath = await FsUtils.findUp(fileName, startDir);
       expect(configPath).toBe(foundPath);

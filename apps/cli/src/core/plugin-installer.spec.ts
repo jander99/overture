@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Plugin Installer Tests
  *
@@ -12,18 +13,41 @@ import { ProcessExecutor } from '../infrastructure/process-executor';
 import { BinaryDetector } from './binary-detector';
 import { MarketplaceRegistry } from '../domain/marketplace-registry';
 
-// Mock dependencies
-jest.mock('../infrastructure/process-executor');
-jest.mock('./binary-detector');
+// Create mock instances using vi.hoisted so they can be accessed by vi.mock
+const { mockBinaryDetectorInstance, MockBinaryDetectorClass, mockProcessExecutorExec } = vi.hoisted(() => {
+  const instance = {
+    detectBinary: vi.fn(),
+    detectClient: vi.fn(),
+    detectAppBundle: vi.fn(),
+    validateConfigFile: vi.fn(),
+  };
+  const mockExec = vi.fn();
+  return {
+    mockBinaryDetectorInstance: instance,
+    MockBinaryDetectorClass: function BinaryDetector() {
+      return instance;
+    },
+    mockProcessExecutorExec: mockExec,
+  };
+});
 
-const mockProcessExecutor = ProcessExecutor as jest.Mocked<typeof ProcessExecutor>;
-const mockBinaryDetector = BinaryDetector as jest.MockedClass<typeof BinaryDetector>;
+// Mock dependencies
+vi.mock('../infrastructure/process-executor', () => ({
+  ProcessExecutor: {
+    exec: mockProcessExecutorExec,
+    commandExists: vi.fn(),
+    spawn: vi.fn(),
+  },
+}));
+vi.mock('./binary-detector', () => ({
+  BinaryDetector: MockBinaryDetectorClass,
+}));
 
 describe('PluginInstaller', () => {
   let installer: PluginInstaller;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     installer = new PluginInstaller();
   });
 
@@ -31,13 +55,10 @@ describe('PluginInstaller', () => {
     describe('successful installation', () => {
       it('should install plugin successfully with known marketplace', async () => {
         // Mock Claude binary is available
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
         // Mock marketplace add command
-        mockProcessExecutor.exec
+        mockProcessExecutorExec
           .mockResolvedValueOnce({
             stdout: 'Marketplace added successfully',
             stderr: '',
@@ -62,13 +83,13 @@ describe('PluginInstaller', () => {
         expect(result.error).toBeUndefined();
 
         // Verify commands were called
-        expect(mockProcessExecutor.exec).toHaveBeenCalledWith('claude', [
+        expect(mockProcessExecutorExec).toHaveBeenCalledWith('claude', [
           'plugin',
           'marketplace',
           'add',
           'anthropics/claude-code-workflows',
         ]);
-        expect(mockProcessExecutor.exec).toHaveBeenCalledWith('claude', [
+        expect(mockProcessExecutorExec).toHaveBeenCalledWith('claude', [
           'plugin',
           'install',
           'python-development@claude-code-workflows',
@@ -76,12 +97,9 @@ describe('PluginInstaller', () => {
       });
 
       it('should install plugin with unknown marketplace (skip marketplace add)', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec.mockResolvedValueOnce({
+        mockProcessExecutorExec.mockResolvedValueOnce({
           stdout: 'Plugin custom-plugin installed successfully',
           stderr: '',
           exitCode: 0,
@@ -97,8 +115,8 @@ describe('PluginInstaller', () => {
         expect(result.marketplace).toBe('myorg/custom-marketplace');
 
         // Should NOT call marketplace add for unknown marketplace
-        expect(mockProcessExecutor.exec).toHaveBeenCalledTimes(1);
-        expect(mockProcessExecutor.exec).toHaveBeenCalledWith('claude', [
+        expect(mockProcessExecutorExec).toHaveBeenCalledTimes(1);
+        expect(mockProcessExecutorExec).toHaveBeenCalledWith('claude', [
           'plugin',
           'install',
           'custom-plugin@myorg/custom-marketplace',
@@ -106,16 +124,13 @@ describe('PluginInstaller', () => {
       });
 
       it('should install plugin when marketplace add fails but installation succeeds', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
         // Mock console.warn to suppress output
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
         // Mock marketplace add fails
-        mockProcessExecutor.exec
+        mockProcessExecutorExec
           .mockResolvedValueOnce({
             stdout: '',
             stderr: 'Marketplace already exists',
@@ -142,10 +157,7 @@ describe('PluginInstaller', () => {
 
     describe('Claude binary not found', () => {
       it('should return error when Claude CLI is not found', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: false }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: false });
 
         const result = await installer.installPlugin(
           'python-development',
@@ -159,18 +171,15 @@ describe('PluginInstaller', () => {
         expect(result.error).toContain('https://claude.com/claude-code');
 
         // Should not attempt installation
-        expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+        expect(mockProcessExecutorExec).not.toHaveBeenCalled();
       });
     });
 
     describe('installation failure', () => {
       it('should return error result when installation fails', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec
+        mockProcessExecutorExec
           .mockResolvedValueOnce({
             stdout: '',
             stderr: '',
@@ -193,12 +202,9 @@ describe('PluginInstaller', () => {
       });
 
       it('should handle command execution errors', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec.mockRejectedValue(
+        mockProcessExecutorExec.mockRejectedValue(
           new Error('Command not found: claude')
         );
 
@@ -229,7 +235,7 @@ describe('PluginInstaller', () => {
         );
 
         // Should not call any commands
-        expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+        expect(mockProcessExecutorExec).not.toHaveBeenCalled();
       });
 
       it('should not check binary availability in dry-run mode', async () => {
@@ -239,26 +245,24 @@ describe('PluginInstaller', () => {
           { dryRun: true }
         );
 
-        expect(mockBinaryDetector).not.toHaveBeenCalled();
+        // In dry-run mode, we don't check binary availability
+        expect(mockBinaryDetectorInstance.detectBinary).not.toHaveBeenCalled();
       });
     });
 
     describe('timeout handling', () => {
       it('should timeout if installation takes too long', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
         // Mock marketplace add succeeds quickly
-        mockProcessExecutor.exec.mockResolvedValueOnce({
+        mockProcessExecutorExec.mockResolvedValueOnce({
           stdout: '',
           stderr: '',
           exitCode: 0,
         });
 
         // Mock install command that never resolves
-        mockProcessExecutor.exec.mockImplementation(
+        mockProcessExecutorExec.mockImplementation(
           (cmd, args) =>
             new Promise((resolve) => {
               if (args.includes('install')) {
@@ -280,12 +284,9 @@ describe('PluginInstaller', () => {
       }, 10000);
 
       it('should use default timeout when not specified', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec.mockResolvedValue({
+        mockProcessExecutorExec.mockResolvedValue({
           stdout: 'Plugin installed successfully',
           stderr: '',
           exitCode: 0,
@@ -302,12 +303,9 @@ describe('PluginInstaller', () => {
 
     describe('command output capture', () => {
       it('should capture stdout when installation succeeds', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec.mockResolvedValue({
+        mockProcessExecutorExec.mockResolvedValue({
           stdout: 'Installing plugin...\nPlugin installed successfully!',
           stderr: '',
           exitCode: 0,
@@ -323,12 +321,9 @@ describe('PluginInstaller', () => {
       });
 
       it('should capture stderr when installation fails', async () => {
-        const mockDetector = {
-          detectBinary: jest.fn().mockResolvedValue({ found: true }),
-        };
-        mockBinaryDetector.mockImplementation(() => mockDetector as any);
+        mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-        mockProcessExecutor.exec.mockResolvedValue({
+        mockProcessExecutorExec.mockResolvedValue({
           stdout: 'Attempting installation...',
           stderr: 'Error: Network connection failed',
           exitCode: 1,
@@ -348,7 +343,7 @@ describe('PluginInstaller', () => {
 
   describe('ensureMarketplace', () => {
     it('should add known marketplace via Claude CLI', async () => {
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Marketplace added successfully',
         stderr: '',
         exitCode: 0,
@@ -356,7 +351,7 @@ describe('PluginInstaller', () => {
 
       await installer.ensureMarketplace('claude-code-workflows');
 
-      expect(mockProcessExecutor.exec).toHaveBeenCalledWith('claude', [
+      expect(mockProcessExecutorExec).toHaveBeenCalledWith('claude', [
         'plugin',
         'marketplace',
         'add',
@@ -367,13 +362,13 @@ describe('PluginInstaller', () => {
     it('should skip unknown marketplace', async () => {
       await installer.ensureMarketplace('myorg/custom-marketplace');
 
-      expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+      expect(mockProcessExecutorExec).not.toHaveBeenCalled();
     });
 
     it('should handle marketplace add errors gracefully', async () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: '',
         stderr: 'Marketplace already exists',
         exitCode: 1,
@@ -389,9 +384,9 @@ describe('PluginInstaller', () => {
     });
 
     it('should handle marketplace add exceptions gracefully', async () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
-      mockProcessExecutor.exec.mockRejectedValue(
+      mockProcessExecutorExec.mockRejectedValue(
         new Error('Command execution failed')
       );
 
@@ -407,22 +402,16 @@ describe('PluginInstaller', () => {
 
   describe('checkClaudeBinary', () => {
     it('should return true when Claude CLI is available', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
       const result = await installer.checkClaudeBinary();
 
       expect(result).toBe(true);
-      expect(mockDetector.detectBinary).toHaveBeenCalledWith('claude');
+      expect(mockBinaryDetectorInstance.detectBinary).toHaveBeenCalledWith('claude');
     });
 
     it('should return false when Claude CLI is not available', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: false }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: false });
 
       const result = await installer.checkClaudeBinary();
 
@@ -430,10 +419,7 @@ describe('PluginInstaller', () => {
     });
 
     it('should return false when detection throws error', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockRejectedValue(new Error('Detection failed')),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockRejectedValue(new Error('Detection failed'));
 
       const result = await installer.checkClaudeBinary();
 
@@ -443,12 +429,9 @@ describe('PluginInstaller', () => {
 
   describe('installPlugins', () => {
     it('should install multiple plugins sequentially', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Plugin installed successfully',
         stderr: '',
         exitCode: 0,
@@ -470,12 +453,9 @@ describe('PluginInstaller', () => {
     });
 
     it('should continue installing after failure', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      mockProcessExecutor.exec
+      mockProcessExecutorExec
         .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })
         // First install succeeds
         .mockResolvedValueOnce({
@@ -525,7 +505,7 @@ describe('PluginInstaller', () => {
       expect(results[1].success).toBe(true);
       expect(results[1].output).toContain('[DRY RUN]');
 
-      expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+      expect(mockProcessExecutorExec).not.toHaveBeenCalled();
     });
   });
 
@@ -593,15 +573,12 @@ describe('PluginInstaller', () => {
 
   describe('MarketplaceRegistry integration', () => {
     it('should resolve marketplace shortcuts before installation', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      const resolveSpy = jest.spyOn(MarketplaceRegistry, 'resolveMarketplace');
-      const isKnownSpy = jest.spyOn(MarketplaceRegistry, 'isKnownMarketplace');
+      const resolveSpy = vi.spyOn(MarketplaceRegistry, 'resolveMarketplace');
+      const isKnownSpy = vi.spyOn(MarketplaceRegistry, 'isKnownMarketplace');
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Success',
         stderr: '',
         exitCode: 0,
@@ -616,19 +593,16 @@ describe('PluginInstaller', () => {
       expect(resolveSpy).toHaveBeenCalledWith('claude-code-workflows');
 
       // Verify full path was used
-      expect(mockProcessExecutor.exec).toHaveBeenCalledWith(
+      expect(mockProcessExecutorExec).toHaveBeenCalledWith(
         'claude',
         expect.arrayContaining(['anthropics/claude-code-workflows'])
       );
     });
 
     it('should use marketplace identifier as-is for unknown marketplaces', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Success',
         stderr: '',
         exitCode: 0,
@@ -637,7 +611,7 @@ describe('PluginInstaller', () => {
       await installer.installPlugin('custom-plugin', 'myorg/custom');
 
       // Should use marketplace as-is (no marketplace add call)
-      expect(mockProcessExecutor.exec).toHaveBeenCalledWith('claude', [
+      expect(mockProcessExecutorExec).toHaveBeenCalledWith('claude', [
         'plugin',
         'install',
         'custom-plugin@myorg/custom',
@@ -654,7 +628,7 @@ describe('PluginInstaller', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Invalid plugin name');
-      expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+      expect(mockProcessExecutorExec).not.toHaveBeenCalled();
     });
 
     it('should reject plugin names with shell metacharacters', async () => {
@@ -674,7 +648,7 @@ describe('PluginInstaller', () => {
         expect(result.error).toContain('Invalid plugin name');
       }
 
-      expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+      expect(mockProcessExecutorExec).not.toHaveBeenCalled();
     });
 
     it('should reject marketplace identifiers with command injection', async () => {
@@ -685,7 +659,7 @@ describe('PluginInstaller', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Invalid marketplace');
-      expect(mockProcessExecutor.exec).not.toHaveBeenCalled();
+      expect(mockProcessExecutorExec).not.toHaveBeenCalled();
     });
 
     it('should reject empty plugin names', async () => {
@@ -703,12 +677,9 @@ describe('PluginInstaller', () => {
     });
 
     it('should allow valid plugin names with hyphens and underscores', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Success',
         stderr: '',
         exitCode: 0,
@@ -723,12 +694,9 @@ describe('PluginInstaller', () => {
     });
 
     it('should allow valid GitHub-style marketplace identifiers', async () => {
-      const mockDetector = {
-        detectBinary: jest.fn().mockResolvedValue({ found: true }),
-      };
-      mockBinaryDetector.mockImplementation(() => mockDetector as any);
+      mockBinaryDetectorInstance.detectBinary.mockResolvedValue({ found: true });
 
-      mockProcessExecutor.exec.mockResolvedValue({
+      mockProcessExecutorExec.mockResolvedValue({
         stdout: 'Success',
         stderr: '',
         exitCode: 0,

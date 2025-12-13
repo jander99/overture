@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Transport Validation Tests
  *
@@ -23,13 +24,13 @@ const createMockAdapter = (
 ): ClientAdapter => ({
   name: name as any,
   schemaRootKey: 'mcpServers',
-  detectConfigPath: jest.fn(),
-  readConfig: jest.fn(),
-  writeConfig: jest.fn(),
-  convertFromOverture: jest.fn(),
-  supportsTransport: jest.fn((t) => supportedTransports.includes(t)),
-  needsEnvVarExpansion: jest.fn(() => false),
-  isInstalled: jest.fn(() => true),
+  detectConfigPath: vi.fn(),
+  readConfig: vi.fn(),
+  writeConfig: vi.fn(),
+  convertFromOverture: vi.fn(),
+  supportsTransport: vi.fn((t) => supportedTransports.includes(t)),
+  needsEnvVarExpansion: vi.fn(() => false),
+  isInstalled: vi.fn(() => true),
 });
 
 describe('Transport Validator', () => {

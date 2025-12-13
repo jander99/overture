@@ -41,7 +41,7 @@ export function expandTilde(filepath: string): string {
     return filepath;
   }
 
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
   return filepath.replace(/^~(?=$|\/|\\)/, homeDir);
 }
 
@@ -54,7 +54,7 @@ export function expandTilde(filepath: string): string {
  * @returns XDG config directory path
  */
 export function getXdgConfigHome(): string {
-  return process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+  return process.env.XDG_CONFIG_HOME || path.join(getHomeDir(), '.config');
 }
 
 /**
@@ -66,7 +66,19 @@ export function getXdgConfigHome(): string {
  * @returns XDG data directory path
  */
 export function getXdgDataHome(): string {
-  return process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+  return process.env.XDG_DATA_HOME || path.join(getHomeDir(), '.local', 'share');
+}
+
+/**
+ * Get home directory, respecting HOME env var for testability
+ *
+ * This function checks process.env.HOME first, which allows tests to
+ * override the home directory. Falls back to os.homedir() if not set.
+ *
+ * @returns Home directory path
+ */
+export function getHomeDir(): string {
+  return process.env.HOME || os.homedir();
 }
 
 /**
@@ -87,7 +99,7 @@ export function getUserConfigPath(): string {
   }
 
   // macOS and Windows both use ~/.config
-  return path.join(os.homedir(), '.config', 'overture.yml');
+  return path.join(getHomeDir(), '.config', 'overture.yml');
 }
 
 /**
@@ -114,9 +126,9 @@ export function getClaudeCodeGlobalPath(platform?: Platform): string {
     case 'linux':
       return path.join(getXdgConfigHome(), 'claude', 'mcp.json');
     case 'darwin':
-      return path.join(os.homedir(), '.config', 'claude', 'mcp.json');
+      return path.join(getHomeDir(), '.config', 'claude', 'mcp.json');
     case 'win32':
-      return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Claude', 'mcp.json');
+      return path.join(process.env.APPDATA || path.join(getHomeDir(), 'AppData', 'Roaming'), 'Claude', 'mcp.json');
     default:
       throw new Error(`Unsupported platform: ${targetPlatform}`);
   }
@@ -149,12 +161,12 @@ export function getClaudeDesktopPath(platform?: Platform): string {
 
   switch (targetPlatform) {
     case 'darwin':
-      return path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+      return path.join(getHomeDir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
     case 'linux':
       return path.join(getXdgConfigHome(), 'Claude', 'claude_desktop_config.json');
     case 'win32':
       return path.join(
-        process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+        process.env.APPDATA || path.join(getHomeDir(), 'AppData', 'Roaming'),
         'Claude',
         'claude_desktop_config.json'
       );
@@ -174,12 +186,12 @@ export function getVSCodeGlobalPath(platform?: Platform): string {
 
   switch (targetPlatform) {
     case 'darwin':
-      return path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'mcp.json');
+      return path.join(getHomeDir(), 'Library', 'Application Support', 'Code', 'User', 'mcp.json');
     case 'linux':
       return path.join(getXdgConfigHome(), 'Code', 'User', 'mcp.json');
     case 'win32':
       return path.join(
-        process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
+        process.env.APPDATA || path.join(getHomeDir(), 'AppData', 'Roaming'),
         'Code',
         'User',
         'mcp.json'
@@ -208,7 +220,7 @@ export function getVSCodeWorkspacePath(workspaceRoot?: string): string {
  */
 export function getCursorGlobalPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
 
   // Cursor uses ~/.cursor/mcp.json for global configuration on all platforms
   switch (targetPlatform) {
@@ -240,7 +252,7 @@ export function getCursorProjectPath(projectRoot?: string): string {
  */
 export function getWindsurfPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
 
   switch (targetPlatform) {
     case 'darwin':
@@ -261,7 +273,7 @@ export function getWindsurfPath(platform?: Platform): string {
  */
 export function getCopilotCliPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
 
   // Copilot CLI uses ~/.copilot/mcp-config.json by default
   // or $XDG_CONFIG_HOME/.copilot/mcp-config.json if XDG_CONFIG_HOME is set
@@ -288,7 +300,7 @@ export function getCopilotCliPath(platform?: Platform): string {
  */
 export function getCodexPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
 
   // Codex CLI uses ~/.codex/mcp-config.json on all platforms
   switch (targetPlatform) {
@@ -309,7 +321,7 @@ export function getCodexPath(platform?: Platform): string {
  */
 export function getGeminiCliPath(platform?: Platform): string {
   const targetPlatform = platform || getPlatform();
-  const homeDir = os.homedir();
+  const homeDir = getHomeDir();
 
   // Gemini CLI uses ~/.gemini/mcp-config.json on all platforms
   switch (targetPlatform) {
@@ -335,7 +347,7 @@ export function getJetBrainsCopilotPath(platform?: Platform): string {
     case 'darwin':
       // TODO: Research macOS path for JetBrains Copilot plugin
       // Placeholder based on typical JetBrains structure
-      return path.join(os.homedir(), 'Library', 'Application Support', 'github-copilot', 'intellij', 'mcp.json');
+      return path.join(getHomeDir(), 'Library', 'Application Support', 'github-copilot', 'intellij', 'mcp.json');
     case 'linux':
       // TODO: Research Linux path for JetBrains Copilot plugin
       // Placeholder based on XDG conventions
@@ -343,7 +355,7 @@ export function getJetBrainsCopilotPath(platform?: Platform): string {
     case 'win32':
       // Confirmed path from user
       return path.join(
-        process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+        process.env.LOCALAPPDATA || path.join(getHomeDir(), 'AppData', 'Local'),
         'github-copilot',
         'intellij',
         'mcp.json'
@@ -383,7 +395,7 @@ export function getBackupDir(): string {
     return path.join(getXdgConfigHome(), 'overture', 'backups');
   }
 
-  return path.join(os.homedir(), '.config', 'overture', 'backups');
+  return path.join(getHomeDir(), '.config', 'overture', 'backups');
 }
 
 /**
@@ -398,7 +410,7 @@ export function getLockFilePath(): string {
     return path.join(getXdgConfigHome(), 'overture', 'overture.lock');
   }
 
-  return path.join(os.homedir(), '.config', 'overture', 'overture.lock');
+  return path.join(getHomeDir(), '.config', 'overture', 'overture.lock');
 }
 
 /**

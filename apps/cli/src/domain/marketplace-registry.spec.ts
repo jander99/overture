@@ -16,7 +16,7 @@ describe('MarketplaceRegistry', () => {
   beforeEach(() => {
     // Clear any custom marketplaces that might have been added
     // This ensures test isolation
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('resolveMarketplace', () => {

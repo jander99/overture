@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Configuration Loader Tests
  *
@@ -20,26 +21,26 @@ import {
 import type { OvertureConfig } from '../domain/config.schema';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock os module
-jest.mock('os');
-const mockOs = os as jest.Mocked<typeof os>;
+vi.mock('os');
+const mockOs = os as Mocked<typeof os>;
 
 // Mock path-resolver
-jest.mock('./path-resolver', () => ({
-  getUserConfigPath: jest.fn(() => '/home/testuser/.config/overture.yml'),
-  getProjectConfigPath: jest.fn(() => '/mock/project/.overture/config.yaml'),
-  findProjectRoot: jest.fn(() => null),
+vi.mock('./path-resolver', () => ({
+  getUserConfigPath: vi.fn(() => '/home/testuser/.config/overture.yml'),
+  getProjectConfigPath: vi.fn(() => '/mock/project/.overture/config.yaml'),
+  findProjectRoot: vi.fn(() => null),
 }));
 
 import * as pathResolver from './path-resolver';
-const mockFindProjectRoot = pathResolver.findProjectRoot as jest.Mock;
+const mockFindProjectRoot = pathResolver.findProjectRoot as Mock;
 
 describe('Config Loader', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockFindProjectRoot.mockReturnValue(null);
   });
 

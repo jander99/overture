@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * CLI Integration Tests (WU-034)
  *
@@ -12,16 +13,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-// Mock chalk using the manual mock file at __mocks__/chalk.ts
-jest.mock('chalk');
+// Note: chalk is mocked via alias in vitest.config.ts - no vi.mock needed
 
 // Mock inquirer (inline mock for compatibility)
-jest.mock('inquirer', () => ({
-  prompt: jest.fn(),
-  createPromptModule: jest.fn(),
+vi.mock('inquirer', () => ({
+  prompt: vi.fn(),
+  createPromptModule: vi.fn(),
 }));
 
-jest.mock('../../utils/prompts');
+vi.mock('../../utils/prompts');
 
 import { createProgram } from '../index';
 import { Prompts } from '../../utils/prompts';
@@ -37,10 +37,10 @@ beforeEach(() => {
   process.chdir(tempDir);
 
   // Configure Prompts mock implementations
-  (Prompts.multiSelect as jest.Mock).mockResolvedValue(['filesystem', 'memory']);
-  (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-  (Prompts.select as jest.Mock).mockResolvedValue('option1');
-  (Prompts.input as jest.Mock).mockResolvedValue('test-value');
+  (Prompts.multiSelect as Mock).mockResolvedValue(['filesystem', 'memory']);
+  (Prompts.confirm as Mock).mockResolvedValue(true);
+  (Prompts.select as Mock).mockResolvedValue('option1');
+  (Prompts.input as Mock).mockResolvedValue('test-value');
 });
 
 afterEach(() => {

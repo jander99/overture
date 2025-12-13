@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Client-Aware Env Service Tests
  *
@@ -18,13 +19,13 @@ import type { ClientMcpConfig } from '../adapters/client-adapter.interface';
 const createMockAdapter = (name: string, needsExpansion: boolean): ClientAdapter => ({
   name: name as any,
   schemaRootKey: 'mcpServers',
-  detectConfigPath: jest.fn(),
-  readConfig: jest.fn(),
-  writeConfig: jest.fn(),
-  convertFromOverture: jest.fn(),
-  supportsTransport: jest.fn(),
-  needsEnvVarExpansion: jest.fn(() => needsExpansion),
-  isInstalled: jest.fn(() => true),
+  detectConfigPath: vi.fn(),
+  readConfig: vi.fn(),
+  writeConfig: vi.fn(),
+  convertFromOverture: vi.fn(),
+  supportsTransport: vi.fn(),
+  needsEnvVarExpansion: vi.fn(() => needsExpansion),
+  isInstalled: vi.fn(() => true),
 });
 
 describe('Client Env Service', () => {

@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Sync Engine Performance Benchmarks
  *
@@ -34,17 +35,17 @@ import { filterMcpsForClient } from '../core/exclusion-filter';
 import { getTransportWarnings } from '../core/transport-validator';
 
 // Mock modules for controlled testing
-jest.mock('../core/config-loader');
-jest.mock('../adapters/adapter-registry', () => ({
-  getAdapterForClient: jest.fn(),
+vi.mock('../core/config-loader');
+vi.mock('../adapters/adapter-registry', () => ({
+  getAdapterForClient: vi.fn(),
 }));
-jest.mock('../core/process-lock');
-jest.mock('../core/backup-service');
+vi.mock('../core/process-lock');
+vi.mock('../core/backup-service');
 
-const mockConfigLoader = configLoader as jest.Mocked<typeof configLoader>;
-const mockProcessLock = processLock as jest.Mocked<typeof processLock>;
-const mockBackupService = backupService as jest.Mocked<typeof backupService>;
-const mockGetAdapterForClient = adapterRegistry.getAdapterForClient as jest.MockedFunction<
+const mockConfigLoader = configLoader as Mocked<typeof configLoader>;
+const mockProcessLock = processLock as Mocked<typeof processLock>;
+const mockBackupService = backupService as Mocked<typeof backupService>;
+const mockGetAdapterForClient = adapterRegistry.getAdapterForClient as MockedFunction<
   typeof adapterRegistry.getAdapterForClient
 >;
 
@@ -232,19 +233,19 @@ function createMockAdapter(
   name: string,
   installed: boolean = true,
   supportedTransports: string[] = ['stdio']
-): jest.Mocked<ClientAdapter> {
+): MockedObject<ClientAdapter> {
   return {
     name: name as any,
     schemaRootKey: 'mcpServers',
-    detectConfigPath: jest.fn(() => `/home/user/.config/${name}/mcp.json`),
-    readConfig: jest.fn(),
-    writeConfig: jest.fn(),
-    convertFromOverture: jest.fn((config) => ({
+    detectConfigPath: vi.fn(() => `/home/user/.config/${name}/mcp.json`),
+    readConfig: vi.fn(),
+    writeConfig: vi.fn(),
+    convertFromOverture: vi.fn((config) => ({
       mcpServers: config.mcp,
     })),
-    supportsTransport: jest.fn((t) => supportedTransports.includes(t)),
-    needsEnvVarExpansion: jest.fn(() => false),
-    isInstalled: jest.fn(() => installed),
+    supportsTransport: vi.fn((t) => supportedTransports.includes(t)),
+    needsEnvVarExpansion: vi.fn(() => false),
+    isInstalled: vi.fn(() => installed),
   };
 }
 
@@ -274,7 +275,7 @@ describe('Sync Engine Performance Benchmarks', () => {
   const benchmarkResults: BenchmarkResult[] = [];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Default mocks
     mockProcessLock.acquireLock.mockResolvedValue(true);

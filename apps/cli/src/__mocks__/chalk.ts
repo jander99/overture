@@ -1,5 +1,5 @@
 /**
- * Jest mock for chalk library
+ * Vitest mock for chalk library
  * Simple passthrough mock that supports chaining
  * All color/style methods return the input string unchanged
  */

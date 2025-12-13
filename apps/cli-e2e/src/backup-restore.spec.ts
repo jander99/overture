@@ -463,10 +463,13 @@ describe('Backup and Restore E2E Tests', () => {
       expect(afterCleanup.length).toBe(5);
     });
 
-    it('should not delete backups when under threshold', () => {
+    it('should not delete backups when under threshold', async () => {
       // Use unique client to avoid interference from previous tests
+      // Add delays between backups to ensure unique timestamps
       backupClientConfig('windsurf', createMockConfig('t1', { test1: { command: 'a' } }));
+      await new Promise((r) => setTimeout(r, 10));
       backupClientConfig('windsurf', createMockConfig('t2', { test2: { command: 'b' } }));
+      await new Promise((r) => setTimeout(r, 10));
       backupClientConfig('windsurf', createMockConfig('t3', { test3: { command: 'c' } }));
 
       // Manual cleanup with threshold of 10 should keep all 3

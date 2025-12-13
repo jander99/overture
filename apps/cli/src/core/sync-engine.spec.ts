@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Sync Engine Tests
  *
@@ -24,23 +25,70 @@ import {
   buildInstallationResult,
 } from './__tests__/mock-builders';
 
-// Mock modules
-jest.mock('./config-loader');
-jest.mock('../adapters/adapter-registry', () => ({
-  getAdapterForClient: jest.fn(),
-}));
-jest.mock('./process-lock');
-jest.mock('./backup-service');
-jest.mock('./plugin-detector');
-jest.mock('./plugin-installer');
-jest.mock('./binary-detector');
+// Create mock instances using vi.hoisted for classes that need constructor mocking
+const {
+  mockBinaryDetectorInstance,
+  MockBinaryDetectorClass,
+  mockPluginDetectorInstance,
+  MockPluginDetectorClass,
+  mockPluginInstallerInstance,
+  MockPluginInstallerClass,
+} = vi.hoisted(() => {
+  const binaryInstance = {
+    detectClient: vi.fn(),
+    detectBinary: vi.fn(),
+    detectAppBundle: vi.fn(),
+    validateConfigFile: vi.fn(),
+  };
+  const pluginDetectorInstance = {
+    detectInstalledPlugins: vi.fn(),
+    isPluginInstalled: vi.fn(),
+  };
+  const pluginInstallerInstance = {
+    installPlugin: vi.fn(),
+    installPlugins: vi.fn(),
+    checkClaudeBinary: vi.fn(),
+    ensureMarketplace: vi.fn(),
+  };
+  return {
+    mockBinaryDetectorInstance: binaryInstance,
+    MockBinaryDetectorClass: function BinaryDetector() {
+      return binaryInstance;
+    },
+    mockPluginDetectorInstance: pluginDetectorInstance,
+    MockPluginDetectorClass: function PluginDetector() {
+      return pluginDetectorInstance;
+    },
+    mockPluginInstallerInstance: pluginInstallerInstance,
+    MockPluginInstallerClass: function PluginInstaller() {
+      return pluginInstallerInstance;
+    },
+  };
+});
 
-const mockConfigLoader = configLoader as jest.Mocked<typeof configLoader>;
-const mockProcessLock = processLock as jest.Mocked<typeof processLock>;
-const mockBackupService = backupService as jest.Mocked<typeof backupService>;
+// Mock modules
+vi.mock('./config-loader');
+vi.mock('../adapters/adapter-registry', () => ({
+  getAdapterForClient: vi.fn(),
+}));
+vi.mock('./process-lock');
+vi.mock('./backup-service');
+vi.mock('./plugin-detector', () => ({
+  PluginDetector: MockPluginDetectorClass,
+}));
+vi.mock('./plugin-installer', () => ({
+  PluginInstaller: MockPluginInstallerClass,
+}));
+vi.mock('./binary-detector', () => ({
+  BinaryDetector: MockBinaryDetectorClass,
+}));
+
+const mockConfigLoader = configLoader as Mocked<typeof configLoader>;
+const mockProcessLock = processLock as Mocked<typeof processLock>;
+const mockBackupService = backupService as Mocked<typeof backupService>;
 
 // Access the mocked function
-const mockGetAdapterForClient = adapterRegistry.getAdapterForClient as jest.MockedFunction<
+const mockGetAdapterForClient = adapterRegistry.getAdapterForClient as MockedFunction<
   typeof adapterRegistry.getAdapterForClient
 >;
 
@@ -49,21 +97,21 @@ const createMockAdapter = (
   name: string,
   installed: boolean = true,
   supportedTransports: string[] = ['stdio']
-): jest.Mocked<ClientAdapter> => ({
+): MockedObject<ClientAdapter> => ({
   name: name as any,
   schemaRootKey: 'mcpServers',
-  detectConfigPath: jest.fn(() => `/home/user/.config/${name}/mcp.json`),
-  readConfig: jest.fn(),
-  writeConfig: jest.fn(),
-  convertFromOverture: jest.fn((config) => ({
+  detectConfigPath: vi.fn(() => `/home/user/.config/${name}/mcp.json`),
+  readConfig: vi.fn(),
+  writeConfig: vi.fn(),
+  convertFromOverture: vi.fn((config) => ({
     mcpServers: config.mcp,
   })),
-  supportsTransport: jest.fn((t) => supportedTransports.includes(t)),
-  needsEnvVarExpansion: jest.fn(() => false),
-  getBinaryNames: jest.fn(() => [name]),
-  getAppBundlePaths: jest.fn(() => []),
-  requiresBinary: jest.fn(() => installed),
-  isInstalled: jest.fn(() => installed),
+  supportsTransport: vi.fn((t) => supportedTransports.includes(t)),
+  needsEnvVarExpansion: vi.fn(() => false),
+  getBinaryNames: vi.fn(() => [name]),
+  getAppBundlePaths: vi.fn(() => []),
+  requiresBinary: vi.fn(() => installed),
+  isInstalled: vi.fn(() => installed),
 });
 
 describe('Sync Engine', () => {
@@ -87,10 +135,8 @@ describe('Sync Engine', () => {
     },
   };
 
-  let mockDefaultBinaryDetector: jest.Mocked<BinaryDetector>;
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Default mocks
     mockConfigLoader.loadUserConfig.mockResolvedValue(testUserConfig);
@@ -101,16 +147,15 @@ describe('Sync Engine', () => {
     mockBackupService.backupClientConfig.mockReturnValue('/backup/path.json');
 
     // Mock BinaryDetector to return 'found' by default for existing tests
-    mockDefaultBinaryDetector = new BinaryDetector() as jest.Mocked<BinaryDetector>;
-    mockDefaultBinaryDetector.detectClient = jest.fn().mockResolvedValue({
+    mockBinaryDetectorInstance.detectClient.mockResolvedValue({
       status: 'found',
       version: '1.0.0',
       warnings: [],
     });
 
-    (BinaryDetector as jest.MockedClass<typeof BinaryDetector>).mockImplementation(
-      () => mockDefaultBinaryDetector
-    );
+    // Default plugin detector/installer mocks
+    mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
+    mockPluginInstallerInstance.installPlugins.mockResolvedValue([]);
   });
 
   describe('syncClients', () => {
@@ -578,20 +623,9 @@ describe('Sync Engine', () => {
   });
 
   describe('skipUndetected option', () => {
-    let mockBinaryDetector: jest.Mocked<BinaryDetector>;
-
     beforeEach(() => {
       // Reset existing mocks
-      jest.clearAllMocks();
-
-      // Mock BinaryDetector
-      mockBinaryDetector = new BinaryDetector() as jest.Mocked<BinaryDetector>;
-      mockBinaryDetector.detectClient = jest.fn();
-
-      // Set up constructor mock
-      (BinaryDetector as jest.MockedClass<typeof BinaryDetector>).mockImplementation(
-        () => mockBinaryDetector
-      );
+      vi.clearAllMocks();
     });
 
     it('should skip clients not detected when skipUndetected is true', async () => {
@@ -601,7 +635,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Mock binary detection to return 'not-found'
-      mockBinaryDetector.detectClient.mockResolvedValue({
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue({
         status: 'not-found',
         warnings: ['vscode binary not found'],
       });
@@ -629,7 +663,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Mock binary detection to return 'not-found'
-      mockBinaryDetector.detectClient.mockResolvedValue({
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue({
         status: 'not-found',
         warnings: ['vscode binary not found'],
       });
@@ -661,7 +695,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Mock binary detection to return 'not-found'
-      mockBinaryDetector.detectClient.mockResolvedValue({
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue({
         status: 'not-found',
         warnings: [],
       });
@@ -693,7 +727,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Mock binary detection to return 'found'
-      mockBinaryDetector.detectClient.mockResolvedValue({
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue({
         status: 'found',
         version: '1.0.0',
         binaryPath: '/usr/local/bin/claude',
@@ -732,7 +766,7 @@ describe('Sync Engine', () => {
       });
 
       // Assert: Binary detection was skipped
-      expect(mockBinaryDetector.detectClient).not.toHaveBeenCalled();
+      expect(mockBinaryDetectorInstance.detectClient).not.toHaveBeenCalled();
       expect(result.results[0].binaryDetection?.status).toBe('skipped');
 
       // Assert: Config WAS written (skipUndetected has no effect when detection is skipped)
@@ -755,7 +789,7 @@ describe('Sync Engine', () => {
         .mockReturnValueOnce(cursorAdapter);
 
       // Mock detection: claude found, vscode not found, cursor found
-      mockBinaryDetector.detectClient
+      mockBinaryDetectorInstance.detectClient
         .mockResolvedValueOnce({
           status: 'found',
           version: '1.0.0',
@@ -806,7 +840,7 @@ describe('Sync Engine', () => {
 
       mockGetAdapterForClient.mockReturnValue(adapter);
 
-      mockBinaryDetector.detectClient.mockResolvedValue({
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue({
         status: 'not-found',
         warnings: [],
       });
@@ -834,7 +868,7 @@ describe('Sync Engine', () => {
         warnings: ['Binary not in PATH', 'Application bundle not found'],
       };
 
-      mockBinaryDetector.detectClient.mockResolvedValue(detectionResult);
+      mockBinaryDetectorInstance.detectClient.mockResolvedValue(detectionResult);
 
       const result = await syncClients({
         clients: ['copilot-cli'],
@@ -850,32 +884,9 @@ describe('Sync Engine', () => {
   });
 
   describe('Plugin Sync Integration', () => {
-    let mockDetector: jest.Mocked<PluginDetector>;
-    let mockInstaller: jest.Mocked<PluginInstaller>;
-
     beforeEach(() => {
       // Reset mocks
-      jest.clearAllMocks();
-
-      // Mock PluginDetector
-      mockDetector = new PluginDetector() as jest.Mocked<PluginDetector>;
-      mockDetector.detectInstalledPlugins = jest.fn();
-      mockDetector.isPluginInstalled = jest.fn();
-
-      // Mock PluginInstaller
-      mockInstaller = new PluginInstaller() as jest.Mocked<PluginInstaller>;
-      mockInstaller.installPlugin = jest.fn();
-      mockInstaller.installPlugins = jest.fn();
-      mockInstaller.ensureMarketplace = jest.fn();
-      mockInstaller.checkClaudeBinary = jest.fn();
-
-      // Set up constructor mocks
-      (PluginDetector as jest.MockedClass<typeof PluginDetector>).mockImplementation(
-        () => mockDetector
-      );
-      (PluginInstaller as jest.MockedClass<typeof PluginInstaller>).mockImplementation(
-        () => mockInstaller
-      );
+      vi.clearAllMocks();
     });
 
     it('should sync plugins before MCP sync', async () => {
@@ -892,14 +903,14 @@ describe('Sync Engine', () => {
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
       // Mock: 1 plugin already installed, 1 missing
-      mockDetector.detectInstalledPlugins.mockResolvedValue([
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([
         buildInstalledPlugin({
           name: 'python-development',
           marketplace: 'claude-code-workflows',
         }),
       ]);
 
-      mockInstaller.installPlugin.mockResolvedValue(
+      mockPluginInstallerInstance.installPlugin.mockResolvedValue(
         buildInstallationResult({ success: true })
       );
 
@@ -915,8 +926,8 @@ describe('Sync Engine', () => {
       });
 
       // Assert: Plugin sync happened
-      expect(mockDetector.detectInstalledPlugins).toHaveBeenCalled();
-      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+      expect(mockPluginDetectorInstance.detectInstalledPlugins).toHaveBeenCalled();
+      expect(mockPluginInstallerInstance.installPlugin).toHaveBeenCalledWith(
         'backend-development',
         'claude-code-workflows',
         expect.any(Object)
@@ -942,8 +953,8 @@ describe('Sync Engine', () => {
         project: projectConfig.project,
       });
 
-      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
-      mockInstaller.installPlugin.mockResolvedValue(
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
+      mockPluginInstallerInstance.installPlugin.mockResolvedValue(
         buildInstallationResult({ success: true })
       );
 
@@ -958,7 +969,7 @@ describe('Sync Engine', () => {
       });
 
       // Assert: Plugin installation called for user config plugins
-      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+      expect(mockPluginInstallerInstance.installPlugin).toHaveBeenCalledWith(
         'python-development',
         'claude-code-workflows',
         expect.any(Object)
@@ -980,14 +991,14 @@ describe('Sync Engine', () => {
         plugins: projectConfig.plugins,
       });
 
-      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
 
       const adapter = createMockAdapter('claude-code');
       adapter.readConfig.mockResolvedValue(null);
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Spy on console.warn
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       // Act
       const result = await syncClients({
@@ -1015,7 +1026,7 @@ describe('Sync Engine', () => {
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
       // Mock: All plugins already installed
-      mockDetector.detectInstalledPlugins.mockResolvedValue([
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([
         buildInstalledPlugin({
           name: 'python-development',
           marketplace: 'claude-code-workflows',
@@ -1037,7 +1048,7 @@ describe('Sync Engine', () => {
       });
 
       // Assert: No installations attempted
-      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+      expect(mockPluginInstallerInstance.installPlugin).not.toHaveBeenCalled();
     });
 
     it('should show progress indicators during installation', async () => {
@@ -1052,8 +1063,8 @@ describe('Sync Engine', () => {
       mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
-      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
-      mockInstaller.installPlugin.mockResolvedValue(
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
+      mockPluginInstallerInstance.installPlugin.mockResolvedValue(
         buildInstallationResult({ success: true })
       );
 
@@ -1062,7 +1073,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Spy on console.log
-      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({
@@ -1089,11 +1100,11 @@ describe('Sync Engine', () => {
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
       // Mock: 1 already installed, 1 will succeed, 1 will fail
-      mockDetector.detectInstalledPlugins.mockResolvedValue([
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([
         buildInstalledPlugin({ name: 'plugin-skip', marketplace: 'claude-code-workflows' }),
       ]);
 
-      mockInstaller.installPlugin.mockImplementation(
+      mockPluginInstallerInstance.installPlugin.mockImplementation(
         async (name: string, marketplace: string) => {
           if (name === 'plugin-success') {
             return buildInstallationResult({ success: true, plugin: name, marketplace });
@@ -1113,7 +1124,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Spy on console.log
-      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({
@@ -1139,8 +1150,8 @@ describe('Sync Engine', () => {
       mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
-      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
-      mockInstaller.installPlugin.mockResolvedValue(
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
+      mockPluginInstallerInstance.installPlugin.mockResolvedValue(
         buildInstallationResult({ success: true })
       );
 
@@ -1155,7 +1166,7 @@ describe('Sync Engine', () => {
       });
 
       // Assert: Both plugin and MCP sync happened
-      expect(mockInstaller.installPlugin).toHaveBeenCalled();
+      expect(mockPluginInstallerInstance.installPlugin).toHaveBeenCalled();
       expect(adapter.writeConfig).toHaveBeenCalled();
     });
 
@@ -1181,8 +1192,8 @@ describe('Sync Engine', () => {
       });
 
       // Assert: Plugin sync skipped
-      expect(mockDetector.detectInstalledPlugins).not.toHaveBeenCalled();
-      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+      expect(mockPluginDetectorInstance.detectInstalledPlugins).not.toHaveBeenCalled();
+      expect(mockPluginInstallerInstance.installPlugin).not.toHaveBeenCalled();
 
       // Assert: MCP sync still happened
       expect(adapter.writeConfig).toHaveBeenCalled();
@@ -1198,8 +1209,8 @@ describe('Sync Engine', () => {
       mockConfigLoader.loadProjectConfig.mockResolvedValue(null);
       mockConfigLoader.mergeConfigs.mockReturnValue(userConfig);
 
-      mockDetector.detectInstalledPlugins.mockResolvedValue([]);
-      mockInstaller.installPlugin.mockResolvedValue(
+      mockPluginDetectorInstance.detectInstalledPlugins.mockResolvedValue([]);
+      mockPluginInstallerInstance.installPlugin.mockResolvedValue(
         buildInstallationResult({
           success: true,
           output: '[DRY RUN] Would install: python-development@claude-code-workflows',
@@ -1211,7 +1222,7 @@ describe('Sync Engine', () => {
       mockGetAdapterForClient.mockReturnValue(adapter);
 
       // Spy on console.log
-      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation();
 
       // Act
       await syncClients({
@@ -1222,7 +1233,7 @@ describe('Sync Engine', () => {
 
       // Assert: Dry-run messages logged
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('DRY RUN'));
-      expect(mockInstaller.installPlugin).toHaveBeenCalledWith(
+      expect(mockPluginInstallerInstance.installPlugin).toHaveBeenCalledWith(
         'python-development',
         'claude-code-workflows',
         expect.objectContaining({ dryRun: true })
@@ -1250,8 +1261,8 @@ describe('Sync Engine', () => {
       });
 
       // Assert: No plugin operations, MCP sync still works
-      expect(mockDetector.detectInstalledPlugins).not.toHaveBeenCalled();
-      expect(mockInstaller.installPlugin).not.toHaveBeenCalled();
+      expect(mockPluginDetectorInstance.detectInstalledPlugins).not.toHaveBeenCalled();
+      expect(mockPluginInstallerInstance.installPlugin).not.toHaveBeenCalled();
       expect(adapter.writeConfig).toHaveBeenCalled();
       expect(result.success).toBe(true);
     });

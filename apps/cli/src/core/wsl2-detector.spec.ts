@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * WSL2 Detector Tests
  *
@@ -11,18 +12,18 @@ import { ProcessExecutor } from '../infrastructure/process-executor';
 import * as fs from 'fs';
 
 // Mock dependencies
-jest.mock('../infrastructure/process-executor');
-jest.mock('fs');
+vi.mock('../infrastructure/process-executor');
+vi.mock('fs');
 
-const mockProcessExecutor = ProcessExecutor as jest.Mocked<typeof ProcessExecutor>;
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockProcessExecutor = ProcessExecutor as Mocked<typeof ProcessExecutor>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('WSL2Detector', () => {
   let detector: WSL2Detector;
   const originalEnv = process.env;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     detector = new WSL2Detector();
     detector.resetCache();
     // Reset environment

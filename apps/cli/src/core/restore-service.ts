@@ -10,7 +10,7 @@
 
 import * as fs from 'fs';
 import type { ClientName } from '../domain/config.types';
-import { getBackup, type BackupMetadata } from './backup-service';
+import { getBackup, getLatestBackup, type BackupMetadata } from './backup-service';
 
 /**
  * Restore result
@@ -97,7 +97,6 @@ export function restoreLatestBackup(
   client: ClientName,
   targetPath: string
 ): RestoreResult {
-  const { getLatestBackup } = require('./backup-service');
   const latestBackup = getLatestBackup(client);
 
   if (!latestBackup) {

@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Backup Service Tests
  *
@@ -17,23 +18,23 @@ import {
 import type { ClientName } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('./path-resolver', () => ({
-  getBackupDir: jest.fn(() => '/home/user/.config/overture/backups'),
+vi.mock('./path-resolver', () => ({
+  getBackupDir: vi.fn(() => '/home/user/.config/overture/backups'),
 }));
 
 describe('Backup Service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset Date.now() to a fixed value for consistent timestamps
-    jest.spyOn(Date.prototype, 'toISOString').mockReturnValue('2025-01-15T10:30:00.000Z');
+    vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2025-01-15T10:30:00.000Z');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('backupClientConfig', () => {

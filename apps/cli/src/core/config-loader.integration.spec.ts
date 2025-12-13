@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Integration Tests for Config Loader
  *
@@ -22,11 +23,13 @@ import {
 } from './config-loader';
 
 // Mock path resolver to use temp paths
-const mockGetUserConfigPath = jest.fn();
-const mockGetProjectConfigPath = jest.fn();
+const { mockGetUserConfigPath, mockGetProjectConfigPath } = vi.hoisted(() => ({
+  mockGetUserConfigPath: vi.fn(),
+  mockGetProjectConfigPath: vi.fn(),
+}));
 
-jest.mock('./path-resolver', () => {
-  const actual = jest.requireActual<typeof import('./path-resolver')>('./path-resolver');
+vi.mock('./path-resolver', async () => {
+  const actual = await vi.importActual<typeof import('./path-resolver')>('./path-resolver');
 
   return {
     ...actual,
@@ -51,9 +54,8 @@ describe('ConfigLoader Integration Tests', () => {
     // Create temp directory for each test
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'overture-test-'));
 
-    // Clear all mocks
-    mockGetUserConfigPath.mockClear();
-    mockGetProjectConfigPath.mockClear();
+    // Reset all mocks to their initial state
+    vi.resetAllMocks();
   });
 
   afterEach(() => {
@@ -477,7 +479,7 @@ mcp:
     });
 
     it('should return false when user config does not exist', () => {
-      jest.spyOn(pathResolver, 'getUserConfigPath').mockReturnValue(path.join(tempDir, 'does-not-exist.yml'));
+      vi.spyOn(pathResolver, 'getUserConfigPath').mockReturnValue(path.join(tempDir, 'does-not-exist.yml'));
 
       expect(hasUserConfig()).toBe(false);
     });
@@ -493,7 +495,7 @@ mcp:
     });
 
     it('should return false when project config does not exist', () => {
-      jest.spyOn(pathResolver, 'getProjectConfigPath').mockReturnValue(path.join(tempDir, '.overture', 'config.yaml'));
+      vi.spyOn(pathResolver, 'getProjectConfigPath').mockReturnValue(path.join(tempDir, '.overture', 'config.yaml'));
 
       expect(hasProjectConfig()).toBe(false);
     });

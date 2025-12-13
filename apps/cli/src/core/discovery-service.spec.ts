@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Discovery Service Tests
  *
@@ -15,43 +16,52 @@ import type { ClientAdapter } from '../adapters/client-adapter.interface';
 import type { DiscoveryConfig } from '../domain/config.types';
 import * as fs from 'fs';
 
+// Create mock instance using vi.hoisted so it can be accessed by vi.mock
+const { mockBinaryDetectorInstance, MockBinaryDetector } = vi.hoisted(() => {
+  const instance = {
+    detectClient: vi.fn(),
+    detectBinary: vi.fn(),
+    detectAppBundle: vi.fn(),
+    validateConfigFile: vi.fn(),
+  };
+  return {
+    mockBinaryDetectorInstance: instance,
+    MockBinaryDetector: function BinaryDetector() {
+      return instance;
+    },
+  };
+});
+
 // Mock dependencies
-jest.mock('./binary-detector');
-jest.mock('./wsl2-detector', () => ({
-  WSL2Detector: jest.fn(),
+vi.mock('./binary-detector', () => ({
+  BinaryDetector: MockBinaryDetector,
+}));
+vi.mock('./wsl2-detector', () => ({
+  WSL2Detector: vi.fn(),
   wsl2Detector: {
-    detectEnvironment: jest.fn(),
-    getWindowsInstallPaths: jest.fn(),
-    getWindowsConfigPath: jest.fn(),
-    resetCache: jest.fn(),
+    detectEnvironment: vi.fn(),
+    getWindowsInstallPaths: vi.fn(),
+    getWindowsConfigPath: vi.fn(),
+    resetCache: vi.fn(),
   },
   WINDOWS_DEFAULT_PATHS: {
     'claude-code': { binaryPaths: [], configPath: 'AppData/Roaming/Claude/mcp.json' },
     'claude-desktop': { binaryPaths: [], configPath: 'AppData/Roaming/Claude/claude_desktop_config.json' },
   },
 }));
-jest.mock('../adapters/adapter-registry');
-jest.mock('fs');
+vi.mock('../adapters/adapter-registry');
+vi.mock('fs');
 
-const mockBinaryDetectorInstance = {
-  detectClient: jest.fn(),
-  detectBinary: jest.fn(),
-  detectAppBundle: jest.fn(),
-  validateConfigFile: jest.fn(),
-};
-
-(BinaryDetector as jest.Mock).mockImplementation(() => mockBinaryDetectorInstance);
-
-const mockAdapterRegistry = adapterRegistry as jest.Mocked<typeof adapterRegistry>;
-const mockWsl2Detector = wsl2Detector as jest.Mocked<typeof wsl2Detector>;
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockAdapterRegistry = adapterRegistry as Mocked<typeof adapterRegistry>;
+const mockWsl2Detector = wsl2Detector as Mocked<typeof wsl2Detector>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
-  let mockAdapter: jest.Mocked<ClientAdapter>;
+  let mockAdapter: MockedObject<ClientAdapter>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset mock implementations
     mockWsl2Detector.detectEnvironment.mockResolvedValue({ isWSL2: false });
@@ -62,16 +72,16 @@ describe('DiscoveryService', () => {
     mockAdapter = {
       name: 'claude-code' as any,
       schemaRootKey: 'mcpServers',
-      getBinaryNames: jest.fn(() => ['claude']),
-      getAppBundlePaths: jest.fn(() => []),
-      requiresBinary: jest.fn(() => true),
-      detectConfigPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-      readConfig: jest.fn(),
-      writeConfig: jest.fn(),
-      convertFromOverture: jest.fn(),
-      supportsTransport: jest.fn(),
-      needsEnvVarExpansion: jest.fn(),
-    } as unknown as jest.Mocked<ClientAdapter>;
+      getBinaryNames: vi.fn(() => ['claude']),
+      getAppBundlePaths: vi.fn(() => []),
+      requiresBinary: vi.fn(() => true),
+      detectConfigPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+      readConfig: vi.fn(),
+      writeConfig: vi.fn(),
+      convertFromOverture: vi.fn(),
+      supportsTransport: vi.fn(),
+      needsEnvVarExpansion: vi.fn(),
+    } as unknown as Mocked<ClientAdapter>;
 
     // Mock adapter registry
     mockAdapterRegistry.getAll.mockReturnValue([mockAdapter]);
@@ -139,19 +149,19 @@ describe('DiscoveryService', () => {
     });
 
     it('should handle multiple clients', async () => {
-      const mockAdapter2: jest.Mocked<ClientAdapter> = {
+      const mockAdapter2: MockedObject<ClientAdapter> = {
         name: 'vscode' as any,
         schemaRootKey: 'servers',
-        getBinaryNames: jest.fn(() => ['code']),
-        getAppBundlePaths: jest.fn(() => []),
-        requiresBinary: jest.fn(() => true),
-        detectConfigPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-        readConfig: jest.fn(),
-        writeConfig: jest.fn(),
-        convertFromOverture: jest.fn(),
-        supportsTransport: jest.fn(),
-        needsEnvVarExpansion: jest.fn(),
-      } as unknown as jest.Mocked<ClientAdapter>;
+        getBinaryNames: vi.fn(() => ['code']),
+        getAppBundlePaths: vi.fn(() => []),
+        requiresBinary: vi.fn(() => true),
+        detectConfigPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        convertFromOverture: vi.fn(),
+        supportsTransport: vi.fn(),
+        needsEnvVarExpansion: vi.fn(),
+      } as unknown as Mocked<ClientAdapter>;
 
       mockAdapterRegistry.getAll.mockReturnValue([mockAdapter, mockAdapter2]);
 
@@ -490,7 +500,7 @@ describe('DiscoveryService', () => {
       const guiAdapter = {
         ...mockAdapter,
         name: 'claude-desktop' as any,
-      } as jest.Mocked<ClientAdapter>;
+      } as Mocked<ClientAdapter>;
 
       const result = await service.discoverClient(guiAdapter, 'linux', wsl2Info);
 

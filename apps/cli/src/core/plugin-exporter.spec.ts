@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Plugin Exporter Tests
  *
@@ -8,16 +9,16 @@
  */
 
 // Mock dependencies BEFORE imports
-jest.mock('fs/promises');
-jest.mock('inquirer', () => ({
+vi.mock('fs/promises');
+vi.mock('inquirer', () => ({
   default: {
-    prompt: jest.fn(),
+    prompt: vi.fn(),
   },
-  prompt: jest.fn(),
+  prompt: vi.fn(),
 }));
-jest.mock('./plugin-detector');
-jest.mock('./path-resolver', () => ({
-  getUserConfigPath: jest.fn(() => '/home/user/.config/overture.yml'),
+vi.mock('./plugin-detector');
+vi.mock('./path-resolver', () => ({
+  getUserConfigPath: vi.fn(() => '/home/user/.config/overture.yml'),
 }));
 
 import * as fs from 'fs/promises';
@@ -30,25 +31,25 @@ import type { OvertureConfig } from '../domain/config.types';
 import { PluginError } from '../domain/errors';
 import { buildInstalledPlugin } from './__tests__/mock-builders';
 
-const mockFs = fs as jest.Mocked<typeof fs>;
-const mockInquirer = inquirer as jest.Mocked<typeof inquirer>;
-const MockedPluginDetector = PluginDetector as jest.MockedClass<typeof PluginDetector>;
+const mockFs = fs as Mocked<typeof fs>;
+const mockInquirer = inquirer as Mocked<typeof inquirer>;
+const MockedPluginDetector = PluginDetector as MockedClass<typeof PluginDetector>;
 
 describe('PluginExporter', () => {
   let exporter: PluginExporter;
-  let mockDetector: jest.Mocked<PluginDetector>;
-  let consoleLogSpy: jest.SpyInstance;
+  let mockDetector: MockedObject<PluginDetector>;
+  let consoleLogSpy: MockInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Mock console.log to suppress output during tests
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation();
 
     // Create mock detector instance
     mockDetector = {
-      detectInstalledPlugins: jest.fn(),
-    } as unknown as jest.Mocked<PluginDetector>;
+      detectInstalledPlugins: vi.fn(),
+    } as unknown as Mocked<PluginDetector>;
 
     // Create exporter with mock detector
     exporter = new PluginExporter(mockDetector);

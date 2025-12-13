@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Adapter Final Coverage Tests
  *
@@ -14,38 +15,38 @@ import { CursorAdapter } from './cursor-adapter';
 import { WindsurfAdapter } from './windsurf-adapter';
 import { CopilotCliAdapter } from './copilot-cli-adapter';
 import { JetBrainsCopilotAdapter } from './jetbrains-copilot-adapter';
-import { AdapterRegistry, getAdapterForClient } from './adapter-registry';
+import { AdapterRegistry, getAdapterForClient, adapterRegistry } from './adapter-registry';
 import type { OvertureConfig } from '../domain/config.types';
 
 // Mock fs module
-jest.mock('fs');
-const mockFs = fs as jest.Mocked<typeof fs>;
+vi.mock('fs');
+const mockFs = fs as Mocked<typeof fs>;
 
 // Mock path-resolver
-jest.mock('../core/path-resolver', () => ({
-  getPlatform: jest.fn(() => 'linux'),
-  getClaudeCodeGlobalPath: jest.fn(() => '/home/user/.config/claude/mcp.json'),
-  getClaudeCodeProjectPath: jest.fn(() => '/project/.mcp.json'),
-  getClaudeDesktopPath: jest.fn(() => ({
+vi.mock('../core/path-resolver', () => ({
+  getPlatform: vi.fn(() => 'linux'),
+  getClaudeCodeGlobalPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+  getClaudeCodeProjectPath: vi.fn(() => '/project/.mcp.json'),
+  getClaudeDesktopPath: vi.fn(() => ({
     user: '/home/user/Library/Application Support/Claude/claude_desktop_config.json',
   })),
-  getVSCodeGlobalPath: jest.fn(() => '/home/user/.config/Code/User/mcp.json'),
-  getVSCodeWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
-  getCursorGlobalPath: jest.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
-  getCursorProjectPath: jest.fn(() => '/project/.cursor/mcp.json'),
-  getWindsurfPath: jest.fn(() => ({
+  getVSCodeGlobalPath: vi.fn(() => '/home/user/.config/Code/User/mcp.json'),
+  getVSCodeWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
+  getCursorGlobalPath: vi.fn(() => '/home/user/.config/Cursor/User/globalStorage/mcp.json'),
+  getCursorProjectPath: vi.fn(() => '/project/.cursor/mcp.json'),
+  getWindsurfPath: vi.fn(() => ({
     user: '/home/user/.codeium/windsurf/mcp_config.json',
   })),
-  getCopilotCliPath: jest.fn(() => ({
+  getCopilotCliPath: vi.fn(() => ({
     user: '/home/user/.config/github-copilot/mcp.json',
   })),
-  getJetBrainsCopilotPath: jest.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
-  getJetBrainsCopilotWorkspacePath: jest.fn(() => '/project/.vscode/mcp.json'),
+  getJetBrainsCopilotPath: vi.fn(() => '/home/user/.config/github-copilot/intellij/mcp.json'),
+  getJetBrainsCopilotWorkspacePath: vi.fn(() => '/project/.vscode/mcp.json'),
 }));
 
 // Mock env-expander
-jest.mock('../core/env-expander', () => ({
-  expandEnvVarsInObject: jest.fn((env) => {
+vi.mock('../core/env-expander', () => ({
+  expandEnvVarsInObject: vi.fn((env) => {
     const expanded: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
       expanded[key] = value.replace(/\$\{(\w+)\}/g, (_, varName) => process.env[varName] || '');
@@ -56,7 +57,7 @@ jest.mock('../core/env-expander', () => ({
 
 describe('Uncovered Line Coverage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('ClaudeDesktopAdapter - Line 35, 48, 119', () => {
@@ -219,7 +220,6 @@ describe('Uncovered Line Coverage', () => {
   describe('AdapterRegistry - Line 24, 140', () => {
     it('should cover getAdapterForClient with registered adapter (line 140)', () => {
       // Clear any existing adapters first
-      const { adapterRegistry } = require('./adapter-registry');
       adapterRegistry.clear();
 
       const adapter = new ClaudeCodeAdapter();
@@ -231,7 +231,6 @@ describe('Uncovered Line Coverage', () => {
 
     it('should throw error for unregistered adapter (line 140)', () => {
       // Clear registry first
-      const { adapterRegistry } = require('./adapter-registry');
       adapterRegistry.clear();
 
       // This should hit the error path
@@ -242,7 +241,7 @@ describe('Uncovered Line Coverage', () => {
 
 describe('Edge Cases for Complete Coverage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should handle detectConfigPath for all platforms', () => {

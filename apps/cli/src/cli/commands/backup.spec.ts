@@ -1,5 +1,6 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 // Mock chalk FIRST before any other imports
-jest.mock('chalk', () => {
+vi.mock('chalk', () => {
   // Create a function that returns the string unchanged
   const mockFn = (str: any) => String(str ?? '');
 
@@ -19,8 +20,8 @@ jest.mock('chalk', () => {
 });
 
 // Mock inquirer
-jest.mock('inquirer', () => ({
-  prompt: jest.fn(),
+vi.mock('inquirer', () => ({
+  prompt: vi.fn(),
 }));
 
 import { Command } from 'commander';
@@ -35,24 +36,30 @@ import type { ClientName } from '../../domain/config.types';
 import type { BackupMetadata } from '../../core/backup-service';
 import type { RestoreResult } from '../../core/restore-service';
 
+// Hoist Logger mock so error-handler can access it
+const { LoggerMock } = vi.hoisted(() => {
+  const mock = {
+    info: vi.fn(),
+    success: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    nl: vi.fn(),
+  };
+  return { LoggerMock: mock };
+});
+
 // Mock all dependencies
-jest.mock('../../core/backup-service');
-jest.mock('../../core/restore-service');
-jest.mock('../../utils/logger', () => ({
-  Logger: {
-    info: jest.fn(),
-    success: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    nl: jest.fn(),
-  },
+vi.mock('../../core/backup-service');
+vi.mock('../../core/restore-service');
+vi.mock('../../utils/logger', () => ({
+  Logger: LoggerMock,
 }));
-jest.mock('../../utils/prompts');
-jest.mock('../../core/path-resolver');
+vi.mock('../../utils/prompts');
+vi.mock('../../core/path-resolver');
 
 // Mock error-handler to avoid chalk issues
-jest.mock('../../core/error-handler', () => {
+vi.mock('../../core/error-handler', () => {
   // Create error classes with proper exit code handling
   class ConfigurationError extends Error {
     constructor(message: string) {
@@ -92,17 +99,9 @@ jest.mock('../../core/error-handler', () => {
   return {
     ErrorHandler: {
       handleCommandError: (error: any, command?: string, verbose?: boolean) => {
-        // Import Logger (it's mocked so this is safe)
-        const { Logger } = require('../../utils/logger');
-
-        // Log error for debugging (will be visible in test output)
-        if (process.env.DEBUG_TESTS) {
-          console.error('ErrorHandler caught:', error);
-        }
-
-        // Log error message (simulating what real error handler does)
+        // Log the error message using the hoisted LoggerMock
         const errorMessage = error instanceof Error ? error.message : String(error);
-        Logger.error(errorMessage);
+        LoggerMock.error(errorMessage);
 
         // Determine exit code based on error type
         let exitCode = 1; // Default to general error
@@ -139,33 +138,33 @@ jest.mock('../../core/error-handler', () => {
 });
 
 // Mock adapter registry
-jest.mock('../../adapters/adapter-registry', () => ({
+vi.mock('../../adapters/adapter-registry', () => ({
   adapterRegistry: {
-    get: jest.fn(),
-    getAllNames: jest.fn(),
+    get: vi.fn(),
+    getAllNames: vi.fn(),
   },
 }));
 
 describe('CLI Command: backup', () => {
   let command: Command;
-  let mockExit: jest.SpyInstance;
-  let mockConsoleLog: jest.SpyInstance;
+  let mockExit: MockInstance;
+  let mockConsoleLog: MockInstance;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Set up PathResolver mock
-    (PathResolver.getPlatform as jest.Mock).mockReturnValue('linux');
+    (PathResolver.getPlatform as Mock).mockReturnValue('linux');
 
     command = createBackupCommand();
 
     // Mock process.exit to prevent test termination
-    mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+    mockExit = vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
       throw new Error(`process.exit: ${code}`);
     });
 
     // Mock console.log for table output
-    mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
+    mockConsoleLog = vi.spyOn(console, 'log').mockImplementation();
   });
 
   afterEach(() => {
@@ -200,7 +199,7 @@ describe('CLI Command: backup', () => {
         },
       ];
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue(backups);
+      (BackupService.listBackups as Mock).mockReturnValue(backups);
 
       // Act
       await command.parseAsync(['node', 'overture', 'list']);
@@ -224,7 +223,7 @@ describe('CLI Command: backup', () => {
         },
       ];
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue(backups);
+      (BackupService.listBackups as Mock).mockReturnValue(backups);
 
       // Act
       await command.parseAsync(['node', 'overture', 'list', '--client', 'vscode']);
@@ -237,7 +236,7 @@ describe('CLI Command: backup', () => {
 
     it('should warn when no backups found', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockReturnValue([]);
+      (BackupService.listBackups as Mock).mockReturnValue([]);
 
       // Act
       await command.parseAsync(['node', 'overture', 'list']);
@@ -248,7 +247,7 @@ describe('CLI Command: backup', () => {
 
     it('should warn when no backups found for specific client', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockReturnValue([]);
+      (BackupService.listBackups as Mock).mockReturnValue([]);
 
       // Act
       await command.parseAsync(['node', 'overture', 'list', '--client', 'cursor']);
@@ -259,7 +258,7 @@ describe('CLI Command: backup', () => {
 
     it('should handle errors gracefully', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockImplementation(() => {
+      (BackupService.listBackups as Mock).mockImplementation(() => {
         throw new Error('Failed to read backup directory');
       });
 
@@ -296,7 +295,7 @@ describe('CLI Command: backup', () => {
         },
       ];
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue(backups);
+      (BackupService.listBackups as Mock).mockReturnValue(backups);
 
       // Act
       await command.parseAsync(['node', 'overture', 'list']);
@@ -315,21 +314,21 @@ describe('CLI Command: backup', () => {
     const mockAdapter = {
       name: 'claude-code' as ClientName,
       schemaRootKey: 'mcpServers' as const,
-      detectConfigPath: jest.fn().mockReturnValue('/path/to/config.json'),
-      readConfig: jest.fn(),
-      writeConfig: jest.fn(),
-      convertToClientConfig: jest.fn(),
-      isInstalled: jest.fn().mockReturnValue(true),
+      detectConfigPath: vi.fn().mockReturnValue('/path/to/config.json'),
+      readConfig: vi.fn(),
+      writeConfig: vi.fn(),
+      convertToClientConfig: vi.fn(),
+      isInstalled: vi.fn().mockReturnValue(true),
     };
 
     beforeEach(() => {
-      (adapterRegistry.get as jest.Mock).mockReturnValue(mockAdapter);
-      (adapterRegistry.getAllNames as jest.Mock).mockReturnValue([
+      (adapterRegistry.get as Mock).mockReturnValue(mockAdapter);
+      (adapterRegistry.getAllNames as Mock).mockReturnValue([
         'claude-code',
         'vscode',
         'cursor',
       ]);
-      (PathResolver.getPlatform as jest.Mock).mockReturnValue('linux');
+      (PathResolver.getPlatform as Mock).mockReturnValue('linux');
     });
 
     it('should restore specific backup with confirmation', async () => {
@@ -347,9 +346,9 @@ describe('CLI Command: backup', () => {
         restoredPath: '/path/to/config.json',
       };
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue([backup]);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (RestoreService.restoreBackup as jest.Mock).mockReturnValue(restoreResult);
+      (BackupService.listBackups as Mock).mockReturnValue([backup]);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (RestoreService.restoreBackup as Mock).mockReturnValue(restoreResult);
 
       // Act
       await command.parseAsync([
@@ -388,9 +387,9 @@ describe('CLI Command: backup', () => {
         restoredPath: '/path/to/vscode-config.json',
       };
 
-      (BackupService.getLatestBackup as jest.Mock).mockReturnValue(backup);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (RestoreService.restoreLatestBackup as jest.Mock).mockReturnValue(restoreResult);
+      (BackupService.getLatestBackup as Mock).mockReturnValue(backup);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (RestoreService.restoreLatestBackup as Mock).mockReturnValue(restoreResult);
 
       // Act
       await command.parseAsync([
@@ -419,8 +418,8 @@ describe('CLI Command: backup', () => {
         size: 1024,
       };
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue([backup]);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(false);
+      (BackupService.listBackups as Mock).mockReturnValue([backup]);
+      (Prompts.confirm as Mock).mockResolvedValue(false);
 
       // Act & Assert
       await expect(
@@ -451,8 +450,8 @@ describe('CLI Command: backup', () => {
         restoredPath: '/path/to/config.json',
       };
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue([backup]);
-      (RestoreService.restoreBackup as jest.Mock).mockReturnValue(restoreResult);
+      (BackupService.listBackups as Mock).mockReturnValue([backup]);
+      (RestoreService.restoreBackup as Mock).mockReturnValue(restoreResult);
 
       // Act
       await command.parseAsync([
@@ -471,7 +470,7 @@ describe('CLI Command: backup', () => {
 
     it('should error when client is unknown', async () => {
       // Arrange
-      (adapterRegistry.get as jest.Mock).mockReturnValue(undefined);
+      (adapterRegistry.get as Mock).mockReturnValue(undefined);
 
       // Act & Assert
       await expect(
@@ -484,7 +483,7 @@ describe('CLI Command: backup', () => {
 
     it('should error when no backups exist for client', async () => {
       // Arrange
-      (BackupService.getLatestBackup as jest.Mock).mockReturnValue(null);
+      (BackupService.getLatestBackup as Mock).mockReturnValue(null);
 
       // Act & Assert
       await expect(
@@ -496,7 +495,7 @@ describe('CLI Command: backup', () => {
 
     it('should error when specific backup not found', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockReturnValue([
+      (BackupService.listBackups as Mock).mockReturnValue([
         {
           client: 'claude-code',
           timestamp: '2025-01-11T10-00-00-000Z',
@@ -537,9 +536,9 @@ describe('CLI Command: backup', () => {
         error: 'Failed to write file',
       };
 
-      (BackupService.listBackups as jest.Mock).mockReturnValue([backup]);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(true);
-      (RestoreService.restoreBackup as jest.Mock).mockReturnValue(restoreResult);
+      (BackupService.listBackups as Mock).mockReturnValue([backup]);
+      (Prompts.confirm as Mock).mockResolvedValue(true);
+      (RestoreService.restoreBackup as Mock).mockReturnValue(restoreResult);
 
       // Act & Assert
       await expect(
@@ -564,8 +563,8 @@ describe('CLI Command: backup', () => {
         size: 1024,
       };
 
-      (BackupService.getLatestBackup as jest.Mock).mockReturnValue(backup);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(false);
+      (BackupService.getLatestBackup as Mock).mockReturnValue(backup);
+      (Prompts.confirm as Mock).mockResolvedValue(false);
 
       // Act & Assert
       await expect(
@@ -588,8 +587,8 @@ describe('CLI Command: backup', () => {
         size: 1024,
       };
 
-      (BackupService.getLatestBackup as jest.Mock).mockReturnValue(backup);
-      (Prompts.confirm as jest.Mock).mockResolvedValue(false);
+      (BackupService.getLatestBackup as Mock).mockReturnValue(backup);
+      (Prompts.confirm as Mock).mockResolvedValue(false);
 
       // Act & Assert
       await expect(
@@ -603,7 +602,7 @@ describe('CLI Command: backup', () => {
 
     it('should handle exceptions during restore', async () => {
       // Arrange
-      (BackupService.getLatestBackup as jest.Mock).mockImplementation(() => {
+      (BackupService.getLatestBackup as Mock).mockImplementation(() => {
         throw new Error('Backup directory corrupted');
       });
 
@@ -623,7 +622,7 @@ describe('CLI Command: backup', () => {
   // ============================================================================
   describe('backup cleanup', () => {
     beforeEach(() => {
-      (adapterRegistry.getAllNames as jest.Mock).mockReturnValue([
+      (adapterRegistry.getAllNames as Mock).mockReturnValue([
         'claude-code',
         'vscode',
         'cursor',
@@ -632,14 +631,14 @@ describe('CLI Command: backup', () => {
 
     it('should cleanup old backups for all clients', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock)
+      (BackupService.listBackups as Mock)
         .mockReturnValueOnce(Array(15).fill({})) // claude-code: 15 before
         .mockReturnValueOnce(Array(10).fill({})) // claude-code: 10 after
         .mockReturnValueOnce(Array(12).fill({})) // vscode: 12 before
         .mockReturnValueOnce(Array(10).fill({})) // vscode: 10 after
         .mockReturnValueOnce([]); // cursor: 0 before (skipped, no second call)
 
-      (BackupService.cleanupOldBackups as jest.Mock).mockImplementation(() => {});
+      (BackupService.cleanupOldBackups as Mock).mockImplementation(() => {});
 
       // Act
       await command.parseAsync(['node', 'overture', 'cleanup']);
@@ -655,11 +654,11 @@ describe('CLI Command: backup', () => {
     it('should cleanup backups for specific client with --client flag', async () => {
       // Arrange
       // When --client is specified, only that client's backups are checked
-      (BackupService.listBackups as jest.Mock)
+      (BackupService.listBackups as Mock)
         .mockReturnValueOnce(Array(15).fill({})) // vscode: before
         .mockReturnValueOnce(Array(10).fill({})); // vscode: after
 
-      (BackupService.cleanupOldBackups as jest.Mock).mockImplementation(() => {});
+      (BackupService.cleanupOldBackups as Mock).mockImplementation(() => {});
 
       // Act
       await command.parseAsync(['node', 'overture', 'cleanup', '--client', 'vscode']);
@@ -674,13 +673,13 @@ describe('CLI Command: backup', () => {
     it('should support custom keep count with --keep flag', async () => {
       // Arrange
       // All clients: claude-code (10 backups), vscode & cursor (0 backups, skipped)
-      (BackupService.listBackups as jest.Mock)
+      (BackupService.listBackups as Mock)
         .mockReturnValueOnce(Array(10).fill({}))  // claude-code: before (10)
         .mockReturnValueOnce(Array(5).fill({}))   // claude-code: after (5)
         .mockReturnValueOnce([])                   // vscode: 0 backups (skipped)
         .mockReturnValueOnce([]);                  // cursor: 0 backups (skipped)
 
-      (BackupService.cleanupOldBackups as jest.Mock).mockImplementation(() => {});
+      (BackupService.cleanupOldBackups as Mock).mockImplementation(() => {});
 
       // Act
       await command.parseAsync(['node', 'overture', 'cleanup', '--keep', '5']);
@@ -692,7 +691,7 @@ describe('CLI Command: backup', () => {
 
     it('should handle no backups to cleanup', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockReturnValue([]);
+      (BackupService.listBackups as Mock).mockReturnValue([]);
 
       // Act
       await command.parseAsync(['node', 'overture', 'cleanup']);
@@ -725,7 +724,7 @@ describe('CLI Command: backup', () => {
 
     it('should handle cleanup errors gracefully', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock).mockImplementation(() => {
+      (BackupService.listBackups as Mock).mockImplementation(() => {
         throw new Error('Permission denied');
       });
 
@@ -741,7 +740,7 @@ describe('CLI Command: backup', () => {
 
     it('should report cleanup for each client', async () => {
       // Arrange
-      (BackupService.listBackups as jest.Mock)
+      (BackupService.listBackups as Mock)
         .mockReturnValueOnce(Array(15).fill({})) // claude-code before
         .mockReturnValueOnce(Array(10).fill({})) // claude-code after
         .mockReturnValueOnce(Array(8).fill({}))  // vscode before
@@ -749,14 +748,14 @@ describe('CLI Command: backup', () => {
         .mockReturnValueOnce([])                  // cursor before
         .mockReturnValueOnce([]);                 // cursor after
 
-      (BackupService.cleanupOldBackups as jest.Mock).mockImplementation(() => {});
+      (BackupService.cleanupOldBackups as Mock).mockImplementation(() => {});
 
       // Act
       await command.parseAsync(['node', 'overture', 'cleanup']);
 
       // Assert
       // Check that Logger.info was called with message containing the cleanup info
-      const infoCalls = (Logger.info as jest.Mock).mock.calls;
+      const infoCalls = (Logger.info as Mock).mock.calls;
       const cleanupCall = infoCalls.find((call) =>
         call[0].includes('Removed 5 old backup(s), kept 10')
       );

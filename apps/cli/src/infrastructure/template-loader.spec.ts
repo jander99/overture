@@ -1,3 +1,4 @@
+import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import { TemplateLoader } from './template-loader';
@@ -5,15 +6,15 @@ import { FsUtils } from './fs-utils';
 import { ConfigError } from '../domain/errors';
 
 // Mock FsUtils
-jest.mock('./fs-utils', () => ({
+vi.mock('./fs-utils', () => ({
   FsUtils: {
-    readFile: jest.fn(),
+    readFile: vi.fn(),
   },
 }));
 
 describe('TemplateLoader', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('registerHelpers', () => {
@@ -76,7 +77,7 @@ describe('TemplateLoader', () => {
       const templateContent = 'Hello {{name}}!';
       const data = { name: 'World' };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('greeting.hbs', data);
 
@@ -91,7 +92,7 @@ describe('TemplateLoader', () => {
         'Project {{projectName}} with type {{projectType}}';
       const data = { projectName: 'my-app', projectType: 'backend' };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('config.hbs', data);
 
@@ -103,7 +104,7 @@ describe('TemplateLoader', () => {
         '{{#if enabled}}Feature is enabled{{else}}Feature is disabled{{/if}}';
       const data = { enabled: true };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('feature.hbs', data);
 
@@ -115,7 +116,7 @@ describe('TemplateLoader', () => {
         '{{#if enabled}}Feature is enabled{{else}}Feature is disabled{{/if}}';
       const data = { enabled: false };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('feature.hbs', data);
 
@@ -127,7 +128,7 @@ describe('TemplateLoader', () => {
         'Plugins: {{#each plugins}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}';
       const data = { plugins: ['auth', 'logging', 'cache'] };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('plugins.hbs', data);
 
@@ -144,7 +145,7 @@ describe('TemplateLoader', () => {
         ],
       };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('items.hbs', data);
 
@@ -158,7 +159,7 @@ describe('TemplateLoader', () => {
         data: { key: 'value', nested: { prop: 42 } },
       };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('json-data.hbs', data);
 
@@ -172,7 +173,7 @@ describe('TemplateLoader', () => {
         config: { environment: 'production', debug: false },
       };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('yaml-config.hbs', data);
 
@@ -182,11 +183,11 @@ describe('TemplateLoader', () => {
 
     it('should construct template path correctly', async () => {
       const templateContent = 'Test content';
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       await TemplateLoader.render('my-template.hbs', {});
 
-      const callArgs = (FsUtils.readFile as jest.Mock).mock.calls[0][0];
+      const callArgs = (FsUtils.readFile as Mock).mock.calls[0][0];
       expect(callArgs).toContain('my-template.hbs');
       expect(callArgs).toContain('templates');
       expect(callArgs).toContain('assets');
@@ -194,7 +195,7 @@ describe('TemplateLoader', () => {
 
     it('should handle missing template file error from FsUtils', async () => {
       const error = new ConfigError('ENOENT: no such file', 'missing.hbs');
-      (FsUtils.readFile as jest.Mock).mockRejectedValue(error);
+      (FsUtils.readFile as Mock).mockRejectedValue(error);
 
       await expect(
         TemplateLoader.render('missing.hbs', {})
@@ -206,7 +207,7 @@ describe('TemplateLoader', () => {
 
     it('should handle empty template', async () => {
       const templateContent = '';
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('empty.hbs', {});
 
@@ -215,7 +216,7 @@ describe('TemplateLoader', () => {
 
     it('should handle template with no variables or data', async () => {
       const templateContent = 'Static content here';
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('static.hbs', {});
 
@@ -237,7 +238,7 @@ Type: {{projectType}}
         config: { port: 3000, env: 'dev' },
       };
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('complex.hbs', data);
 
@@ -252,7 +253,7 @@ Type: {{projectType}}
       const templateContent = '{{#if missing}}exists{{else}}missing{{/if}}';
       const data = {};
 
-      (FsUtils.readFile as jest.Mock).mockResolvedValue(templateContent);
+      (FsUtils.readFile as Mock).mockResolvedValue(templateContent);
 
       const result = await TemplateLoader.render('undefined.hbs', data);
 
