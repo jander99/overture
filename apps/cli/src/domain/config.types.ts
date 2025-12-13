@@ -40,7 +40,15 @@ export type ClientName =
   | 'cursor'
   | 'windsurf'
   | 'copilot-cli'
-  | 'jetbrains-copilot';
+  | 'jetbrains-copilot'
+  | 'codex'
+  | 'gemini-cli';
+
+/**
+ * Detection environment types
+ * Extends Platform with WSL2 as a special case
+ */
+export type DetectionEnvironment = 'darwin' | 'linux' | 'win32' | 'wsl2';
 
 /**
  * Merge strategy for config synchronization
@@ -337,6 +345,133 @@ export interface SyncOptions {
 }
 
 /**
+ * Per-client discovery override configuration
+ *
+ * Allows overriding default binary and config paths for specific clients.
+ *
+ * @example
+ * ```yaml
+ * discovery:
+ *   clients:
+ *     claude-code:
+ *       binary_path: "/custom/path/to/claude"
+ *       config_path: "~/.custom-claude/mcp.json"
+ * ```
+ */
+export interface ClientDiscoveryOverride {
+  /**
+   * Override binary path for this client
+   * @example "/usr/local/bin/claude"
+   */
+  binary_path?: string;
+
+  /**
+   * Override config file path for this client
+   * @example "~/.custom-claude/mcp.json"
+   */
+  config_path?: string;
+
+  /**
+   * Override app bundle path for this client (GUI apps)
+   * @example "/Applications/Claude.app"
+   */
+  app_bundle_path?: string;
+
+  /**
+   * Disable discovery for this client
+   * @default true (enabled)
+   */
+  enabled?: boolean;
+}
+
+/**
+ * WSL2-specific discovery configuration
+ *
+ * Configuration for detecting Windows applications from WSL2 environment.
+ *
+ * @example
+ * ```yaml
+ * discovery:
+ *   wsl2:
+ *     windows_user_profile: "/mnt/c/Users/jeff"
+ *     windows_binary_paths:
+ *       - "/mnt/c/Program Files/Custom Apps"
+ * ```
+ */
+export interface WSL2Config {
+  /**
+   * Windows user profile path (auto-detected if not specified)
+   * @example "/mnt/c/Users/jeff"
+   */
+  windows_user_profile?: string;
+
+  /**
+   * Additional Windows paths to search for binaries
+   * @example ["/mnt/c/Program Files/Custom Apps"]
+   */
+  windows_binary_paths?: string[];
+
+  /**
+   * Per-client Windows config file paths
+   * @example { "claude-desktop": "/mnt/c/Users/jeff/AppData/Roaming/Claude/config.json" }
+   */
+  windows_config_paths?: Partial<Record<ClientName, string>>;
+}
+
+/**
+ * Discovery configuration
+ *
+ * Settings for CLI/tool discovery and detection.
+ *
+ * @example
+ * ```yaml
+ * discovery:
+ *   enabled: true
+ *   timeout: 5000
+ *   wsl2_auto_detect: true
+ *   clients:
+ *     codex:
+ *       binary_path: "~/.local/bin/codex"
+ *   wsl2:
+ *     windows_user_profile: "/mnt/c/Users/jeff"
+ * ```
+ */
+export interface DiscoveryConfig {
+  /**
+   * Enable/disable discovery
+   * @default true
+   */
+  enabled?: boolean;
+
+  /**
+   * Timeout per binary detection in milliseconds
+   * @default 5000
+   */
+  timeout?: number;
+
+  /**
+   * Auto-detect WSL2 environment and enable Windows path fallback
+   * @default true
+   */
+  wsl2_auto_detect?: boolean;
+
+  /**
+   * Force specific detection environment (overrides auto-detection)
+   */
+  environment?: DetectionEnvironment;
+
+  /**
+   * Per-client discovery overrides
+   */
+  clients?: Partial<Record<ClientName, ClientDiscoveryOverride>>;
+
+  /**
+   * WSL2-specific configuration
+   */
+  wsl2?: WSL2Config;
+}
+
+/**
  * Overture v2.0 Configuration (User Global)
  *
  * This is the main configuration file for Overture v2.0.
@@ -400,6 +535,11 @@ export interface OvertureConfig {
    * Synchronization options
    */
   sync?: SyncOptions;
+
+  /**
+   * Discovery configuration for CLI/tool detection
+   */
+  discovery?: DiscoveryConfig;
 }
 
 /**

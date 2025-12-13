@@ -281,6 +281,48 @@ export function getCopilotCliPath(platform?: Platform): string {
 }
 
 /**
+ * Get OpenAI Codex CLI MCP configuration path
+ *
+ * @param platform - Target platform (defaults to current platform)
+ * @returns Codex CLI config path
+ */
+export function getCodexPath(platform?: Platform): string {
+  const targetPlatform = platform || getPlatform();
+  const homeDir = os.homedir();
+
+  // Codex CLI uses ~/.codex/mcp-config.json on all platforms
+  switch (targetPlatform) {
+    case 'darwin':
+    case 'linux':
+    case 'win32':
+      return path.join(homeDir, '.codex', 'mcp-config.json');
+    default:
+      throw new Error(`Unsupported platform: ${targetPlatform}`);
+  }
+}
+
+/**
+ * Get Google Gemini CLI MCP configuration path
+ *
+ * @param platform - Target platform (defaults to current platform)
+ * @returns Gemini CLI config path
+ */
+export function getGeminiCliPath(platform?: Platform): string {
+  const targetPlatform = platform || getPlatform();
+  const homeDir = os.homedir();
+
+  // Gemini CLI uses ~/.gemini/mcp-config.json on all platforms
+  switch (targetPlatform) {
+    case 'darwin':
+    case 'linux':
+    case 'win32':
+      return path.join(homeDir, '.gemini', 'mcp-config.json');
+    default:
+      throw new Error(`Unsupported platform: ${targetPlatform}`);
+  }
+}
+
+/**
  * Get JetBrains GitHub Copilot plugin MCP configuration path
  *
  * @param platform - Target platform (defaults to current platform)
@@ -477,6 +519,10 @@ export function getClientConfigPath(
         user: getJetBrainsCopilotPath(platform),
         project: getJetBrainsCopilotWorkspacePath(projectRoot),
       };
+    case 'codex':
+      return getCodexPath(platform);
+    case 'gemini-cli':
+      return getGeminiCliPath(platform);
     default:
       throw new Error(`Unknown client: ${clientName}`);
   }

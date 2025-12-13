@@ -6,16 +6,18 @@
  * - Client version information
  * - Config file validity
  * - MCP server command availability
+ * - WSL2 environment detection
  *
  * @module cli/commands/doctor
- * @version 0.2.5
+ * @version 0.3.0
  */
 
 import { Command } from 'commander';
 import * as os from 'os';
-import type { Platform, ClientName } from '../../domain/config.types';
+import type { Platform, ClientName, DiscoveryConfig } from '../../domain/config.types';
 import { adapterRegistry } from '../../adapters/adapter-registry';
 import { BinaryDetector } from '../../core/binary-detector';
+import { DiscoveryService } from '../../core/discovery-service';
 import { loadUserConfig, loadProjectConfig } from '../../core/config-loader';
 import { findProjectRoot } from '../../core/path-resolver';
 import { ProcessExecutor } from '../../infrastructure/process-executor';
@@ -44,6 +46,8 @@ const ALL_CLIENTS: ClientName[] = [
   'windsurf',
   'copilot-cli',
   'jetbrains-copilot',
+  'codex',
+  'gemini-cli',
 ];
 
 /**
@@ -75,9 +79,25 @@ export function createDoctorCommand(): Command {
     .description('Check system for installed clients and MCP servers')
     .option('--json', 'Output results as JSON')
     .option('--verbose', 'Show detailed output')
+    .option('--wsl2', 'Force WSL2 detection mode')
+    .option('--no-wsl2', 'Disable WSL2 detection')
     .action(async (options) => {
       try {
         const platform = getCurrentPlatform();
+
+        // Build discovery config from options
+        const discoveryConfig: DiscoveryConfig = {
+          enabled: true,
+          wsl2_auto_detect: options.wsl2 !== false, // --no-wsl2 sets this to false
+        };
+
+        // Force WSL2 mode if --wsl2 flag is set
+        if (options.wsl2 === true) {
+          discoveryConfig.environment = 'wsl2';
+        }
+
+        // Create discovery service with config
+        const discoveryService = new DiscoveryService(discoveryConfig);
         const detector = new BinaryDetector();
 
         // Detect project root
@@ -89,12 +109,21 @@ export function createDoctorCommand(): Command {
           ? await loadProjectConfig(projectRoot)
           : null;
 
+        // Run discovery
+        const discoveryReport = await discoveryService.discoverAll();
+
         const results = {
+          environment: {
+            platform: discoveryReport.environment.platform,
+            isWSL2: discoveryReport.environment.isWSL2,
+            wsl2Info: discoveryReport.environment.wsl2Info,
+          },
           clients: [] as any[],
           mcpServers: [] as any[],
           summary: {
             clientsDetected: 0,
             clientsMissing: 0,
+            wsl2Detections: 0,
             configsValid: 0,
             configsInvalid: 0,
             mcpCommandsAvailable: 0,
@@ -102,17 +131,27 @@ export function createDoctorCommand(): Command {
           },
         };
 
-        // Check all clients
-        if (!options.json) {
-          Logger.info(chalk.bold('\nChecking client installations...\n'));
+        // Show environment info (if not JSON mode)
+        if (!options.json && discoveryReport.environment.isWSL2) {
+          Logger.info(chalk.bold('\nEnvironment:\n'));
+          console.log(`  Platform: ${chalk.cyan('WSL2')} (${discoveryReport.environment.wsl2Info?.distroName || 'Unknown'})`);
+          if (discoveryReport.environment.wsl2Info?.windowsUserProfile) {
+            console.log(`  Windows User: ${chalk.dim(discoveryReport.environment.wsl2Info.windowsUserProfile)}`);
+          }
+          console.log('');
         }
 
-        for (const clientName of ALL_CLIENTS) {
-          const adapter = adapterRegistry.get(clientName);
-          if (!adapter) continue;
+        // Check all clients
+        if (!options.json) {
+          Logger.info(chalk.bold('Checking client installations...\n'));
+        }
 
-          const detection = await detector.detectClient(adapter, platform);
-          const configPath = adapter.detectConfigPath(platform, projectRoot || undefined);
+        for (const clientDiscovery of discoveryReport.clients) {
+          const clientName = clientDiscovery.client;
+          const detection = clientDiscovery.detection;
+          const adapter = adapterRegistry.get(clientName);
+
+          const configPath = adapter?.detectConfigPath(platform, projectRoot || undefined);
           const configPathStr =
             typeof configPath === 'string'
               ? configPath
@@ -131,6 +170,9 @@ export function createDoctorCommand(): Command {
             configPath: configPathStr,
             configValid,
             warnings: detection.warnings,
+            source: clientDiscovery.source,
+            environment: clientDiscovery.environment,
+            windowsPath: clientDiscovery.windowsPath,
           };
 
           results.clients.push(clientResult);
@@ -138,6 +180,9 @@ export function createDoctorCommand(): Command {
           // Update summary
           if (detection.status === 'found') {
             results.summary.clientsDetected++;
+            if (clientDiscovery.source === 'wsl2-fallback') {
+              results.summary.wsl2Detections++;
+            }
           } else if (detection.status === 'not-found') {
             results.summary.clientsMissing++;
           }
@@ -155,8 +200,14 @@ export function createDoctorCommand(): Command {
                 ? chalk.dim(` (${detection.version})`)
                 : '';
               const pathStr = detection.binaryPath || detection.appBundlePath;
+
+              // Show WSL2 tag for Windows detections
+              const wsl2Tag = clientDiscovery.source === 'wsl2-fallback'
+                ? chalk.cyan(' [WSL2: Windows]')
+                : '';
+
               Logger.success(
-                `${chalk.green('✓')} ${chalk.bold(clientName)}${versionStr} - ${chalk.dim(pathStr)}`
+                `${chalk.green('✓')} ${chalk.bold(clientName)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`
               );
 
               if (configPathStr) {
@@ -165,6 +216,13 @@ export function createDoctorCommand(): Command {
                   : chalk.yellow('invalid');
                 console.log(
                   `  Config: ${configPathStr} (${configStatus})`
+                );
+              }
+
+              // Show Windows path for WSL2 detections
+              if (clientDiscovery.windowsPath && options.verbose) {
+                console.log(
+                  `  ${chalk.dim('Windows path:')} ${chalk.dim(clientDiscovery.windowsPath)}`
                 );
               }
 
@@ -258,6 +316,14 @@ export function createDoctorCommand(): Command {
           console.log(
             `  Clients missing:  ${chalk.red(results.summary.clientsMissing)}`
           );
+
+          // Show WSL2 detections if any
+          if (results.summary.wsl2Detections > 0) {
+            console.log(
+              `  WSL2 detections:  ${chalk.cyan(results.summary.wsl2Detections)}`
+            );
+          }
+
           console.log(
             `  Configs valid:    ${chalk.green(results.summary.configsValid)}`
           );
@@ -306,9 +372,13 @@ function getInstallRecommendation(client: ClientName): string | null {
     cursor: 'Install Cursor: https://cursor.com',
     windsurf: 'Install Windsurf: https://codeium.com/windsurf',
     'copilot-cli':
-      "Install GitHub Copilot CLI: npm install -g @githubnext/github-copilot-cli",
+      'Install GitHub Copilot CLI: npm install -g @github/copilot',
     'jetbrains-copilot':
       'Install JetBrains IDE with GitHub Copilot plugin',
+    codex:
+      'Install OpenAI Codex CLI: pip install openai-codex',
+    'gemini-cli':
+      'Install Gemini CLI: https://developers.google.com/gemini/cli',
   };
 
   return recommendations[client] || null;
