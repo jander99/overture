@@ -5,5 +5,20 @@
   "bin": {
     "overture": "./bin/overture"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@overture/config-types": "*",
+    "@overture/errors": "*",
+    "@overture/config-schema": "*",
+    "@overture/config-core": "*",
+    "@overture/discovery-core": "*",
+    "@overture/plugin-core": "*",
+    "@overture/sync-core": "*",
+    "@overture/client-adapters": "*",
+    "@overture/adapters-infrastructure": "*",
+    "@overture/utils": "*",
+    "@overture/ports-filesystem": "*",
+    "@overture/ports-process": "*",
+    "@overture/ports-output": "*",
+    "commander": "^12.1.0"
+  }
 }

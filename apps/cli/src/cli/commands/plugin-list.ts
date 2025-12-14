@@ -1,8 +1,7 @@
 import { Command } from 'commander';
-import { PluginExporter } from '../../core/plugin-exporter';
-import { Logger } from '../../utils/logger';
-import { ErrorHandler } from '../../core/error-handler';
-import type { InstalledPlugin } from '../../domain/plugin.types';
+import { ErrorHandler } from '@overture/utils';
+import type { InstalledPlugin } from '@overture/config-types';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Creates the 'plugin list' command for listing installed plugins.
@@ -23,7 +22,8 @@ import type { InstalledPlugin } from '../../domain/plugin.types';
  * - Whether plugin is in config
  * - Summary statistics
  */
-export function createPluginListCommand(): Command {
+export function createPluginListCommand(deps: AppDependencies): Command {
+  const { pluginExporter, output } = deps;
   const command = new Command('list');
 
   command
@@ -33,10 +33,8 @@ export function createPluginListCommand(): Command {
     .option('--installed-only', 'Show only installed plugins not in config')
     .action(async (options) => {
       try {
-        const exporter = new PluginExporter();
-
         // Get plugin comparison data
-        const comparison = await exporter.compareInstalledWithConfig();
+        const comparison = await pluginExporter.compareInstalledWithConfig();
 
         // Combine installed plugins based on filter
         let plugins: Array<InstalledPlugin & { inConfig: boolean }>;
@@ -76,20 +74,20 @@ export function createPluginListCommand(): Command {
           console.log(JSON.stringify(output, null, 2));
         } else {
           // Human-readable format
-          Logger.info('Installed Claude Code Plugins:');
-          Logger.nl();
+          output.info('Installed Claude Code Plugins:');
+          output.nl();
 
           if (plugins.length === 0) {
-            Logger.info('  No plugins found matching filter criteria.');
+            output.info('  No plugins found matching filter criteria.');
           } else {
             for (const plugin of plugins) {
               const statusIcon = plugin.enabled ? '✓' : ' ';
               const configStatus = plugin.inConfig ? 'Yes' : 'No';
 
-              Logger.info(`${statusIcon} ${plugin.name}@${plugin.marketplace}`);
-              Logger.info(`  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`);
-              Logger.info(`  In config: ${configStatus}`);
-              Logger.nl();
+              output.info(`${statusIcon} ${plugin.name}@${plugin.marketplace}`);
+              output.info(`  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`);
+              output.info(`  In config: ${configStatus}`);
+              output.nl();
             }
           }
 
@@ -97,14 +95,14 @@ export function createPluginListCommand(): Command {
           const totalInstalled = comparison.both.length + comparison.installedOnly.length;
           const inConfig = comparison.both.length;
 
-          Logger.info(`📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`);
+          output.info(`📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`);
 
           // Tips
           if (comparison.installedOnly.length > 0 && !options.installedOnly) {
-            Logger.nl();
-            Logger.info('💡 Tips:');
-            Logger.info("   • Use 'overture plugin export' to add plugins to config");
-            Logger.info("   • Use 'overture sync' to install plugins from config");
+            output.nl();
+            output.info('💡 Tips:');
+            output.info("   • Use 'overture plugin export' to add plugins to config");
+            output.info("   • Use 'overture sync' to install plugins from config");
           }
         }
       } catch (error) {

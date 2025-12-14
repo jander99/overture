@@ -16,5 +16,46 @@
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
+  ],
+  "references": [
+    {
+      "path": "../../libs/ports/output/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/ports/process/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/ports/filesystem/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/shared/utils/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/infrastructure/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/client-adapters/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/core/sync/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/core/plugin/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/core/discovery/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/core/config/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/domain/config-schema/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/domain/errors/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/domain/config-types/tsconfig.lib.json"
+    }
   ]
 }

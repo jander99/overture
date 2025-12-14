@@ -1,5 +1,0 @@
-Installing bad-plugin@unknown-marketplace...
-✗ Error: Marketplace 'unknown-marketplace' not found
-
-Please add the marketplace first:
-  claude plugin marketplace add <org/repo>

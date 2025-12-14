@@ -1,10 +1,8 @@
-import * as path from 'path';
-import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
-import { Logger } from '../../utils/logger';
-import { CONFIG_PATH } from '../../domain/constants';
-import type { OvertureConfig } from '../../domain/config.types';
+import { CONFIG_PATH } from '@overture/config-core';
+import type { OvertureConfig } from '@overture/config-types';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Creates the 'init' command for initializing Overture configuration.
@@ -14,7 +12,8 @@ import type { OvertureConfig } from '../../domain/config.types';
  * Initializes a new .overture/config.yaml file with sensible defaults
  * for v0.2 multi-client MCP configuration.
  */
-export function createInitCommand(): Command {
+export function createInitCommand(deps: AppDependencies): Command {
+  const { filesystem, output, pathResolver } = deps;
   const command = new Command('init');
 
   command
@@ -23,17 +22,17 @@ export function createInitCommand(): Command {
     .action(async (options) => {
       try {
         const projectDir = process.cwd();
-        const configPath = path.join(projectDir, CONFIG_PATH);
-        const overtureDir = path.dirname(configPath);
+        const configPath = pathResolver.resolveProjectConfig(projectDir);
+        const overtureDir = pathResolver.getProjectOvertureDir(projectDir);
 
         // Check if config already exists
-        if (fs.existsSync(configPath) && !options.force) {
-          Logger.error('Configuration already exists');
-          Logger.info(`Use --force to overwrite or edit ${CONFIG_PATH}`);
+        if (filesystem.fileExists(configPath) && !options.force) {
+          output.error('Configuration already exists');
+          output.info(`Use --force to overwrite or edit ${CONFIG_PATH}`);
           process.exit(1);
         }
 
-        Logger.info('Initializing Overture configuration...');
+        output.info('Initializing Overture configuration...');
 
         // Create basic v0.2 config
         const config: OvertureConfig = {
@@ -55,8 +54,8 @@ export function createInitCommand(): Command {
         };
 
         // Ensure .overture directory exists
-        if (!fs.existsSync(overtureDir)) {
-          fs.mkdirSync(overtureDir, { recursive: true });
+        if (!filesystem.directoryExists(overtureDir)) {
+          filesystem.createDirectory(overtureDir);
         }
 
         // Write YAML configuration
@@ -88,16 +87,16 @@ export function createInitCommand(): Command {
 
 ${yamlContent}`;
 
-        fs.writeFileSync(configPath, configWithComments, 'utf-8');
+        filesystem.writeFile(configPath, configWithComments);
 
-        Logger.success('Configuration created!');
-        Logger.info(`Location: ${configPath}`);
-        Logger.nl();
-        Logger.info('Next steps:');
-        Logger.info('  1. Edit .overture/config.yaml to add MCP servers');
-        Logger.info('  2. Run \`overture sync\` to generate client configurations');
+        output.success('Configuration created!');
+        output.info(`Location: ${configPath}`);
+        output.nl();
+        output.info('Next steps:');
+        output.info('  1. Edit .overture/config.yaml to add MCP servers');
+        output.info('  2. Run \`overture sync\` to generate client configurations');
       } catch (error) {
-        Logger.error(`Failed to initialize configuration: ${(error as Error).message}`);
+        output.error(`Failed to initialize configuration: ${(error as Error).message}`);
         process.exit(1);
       }
     });

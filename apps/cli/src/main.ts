@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { createProgram } from './cli';
-import { Logger } from './utils/logger';
-import { OvertureError } from './domain/errors';
-import { initializeAdapters } from './adapters';
+import { createAppDependencies } from './composition-root';
+import { Logger } from '@overture/utils';
+import { OvertureError } from '@overture/errors';
 
 /**
  * Handle errors and determine exit code.
@@ -46,16 +46,17 @@ export function handleError(error: unknown): number {
 /**
  * Main entry point for the Overture CLI.
  *
- * Initializes the Commander program and handles global error cases.
- * Errors are logged with appropriate formatting, and stack traces
- * are shown when DEBUG environment variable is set.
+ * Creates all dependencies via composition root and initializes
+ * the Commander program. Handles global error cases with appropriate
+ * formatting and exit codes.
  */
 export async function main(): Promise<void> {
   try {
-    // Initialize client adapters before creating the CLI
-    initializeAdapters();
+    // Create all dependencies via composition root
+    const deps = createAppDependencies();
 
-    const program = createProgram();
+    // Create CLI program with dependencies
+    const program = createProgram(deps);
     await program.parseAsync(process.argv);
   } catch (error) {
     const exitCode = handleError(error);

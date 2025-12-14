@@ -1,8 +1,6 @@
 import { Command } from 'commander';
-import { syncClients } from '../../core/sync-engine';
-import { Logger } from '../../utils/logger';
-import { ErrorHandler } from '../../core/error-handler';
-import type { ClientName } from '../../domain/config.types';
+import type { AppDependencies } from '../../composition-root';
+import type { ClientName } from '@overture/config-types';
 
 /**
  * Determines if a warning is critical and should be displayed.
@@ -43,8 +41,12 @@ function isCriticalWarning(warning: string): boolean {
  * 4. Backs up existing client configs
  * 5. Generates client-specific MCP configurations
  * 6. Writes configs to each client's config directory
+ *
+ * @param deps - Application dependencies from composition root
+ * @returns Configured Commander Command instance
  */
-export function createSyncCommand(): Command {
+export function createSyncCommand(deps: AppDependencies): Command {
+  const { syncEngine, output } = deps;
   const command = new Command('sync');
 
   command
@@ -58,12 +60,12 @@ export function createSyncCommand(): Command {
       try {
         // Show dry-run indicator
         if (options.dryRun) {
-          Logger.info('Running in dry-run mode - no changes will be made');
+          output.info('Running in dry-run mode - no changes will be made');
         }
 
         // Show client filter if specified
         if (options.client) {
-          Logger.info(`Syncing for client: ${options.client}`);
+          output.info(`Syncing for client: ${options.client}`);
         }
 
         // Build sync options (projectRoot auto-detected by sync engine)
@@ -75,12 +77,12 @@ export function createSyncCommand(): Command {
           clients: options.client ? [options.client as ClientName] : undefined,
         };
 
-        // Run sync
-        const result = await syncClients(syncOptions);
+        // Run sync via injected sync engine
+        const result = await syncEngine.sync(syncOptions);
 
         // ==================== Phase 1: Detection Summary ====================
-        Logger.section('🔍 Detecting clients...');
-        Logger.nl();
+        output.section('🔍 Detecting clients...');
+        output.nl();
 
         // Separate clients by detection status and whether they were actually skipped
         const detectedClients = result.results.filter(
@@ -98,31 +100,31 @@ export function createSyncCommand(): Command {
           const detection = clientResult.binaryDetection!;
           const versionStr = detection.version ? ` (v${detection.version})` : '';
           const configPath = detection.configPath || clientResult.configPath;
-          Logger.success(`${clientResult.client}${versionStr} → ${configPath}`);
+          output.success(`${clientResult.client}${versionStr} → ${configPath}`);
         }
 
         // Show undetected but synced clients (when --no-skip-undetected is used)
         for (const clientResult of undetectedButSyncedClients) {
           const configPath = clientResult.configPath;
-          Logger.warn(`${clientResult.client} - not detected but config will be generated → ${configPath}`);
+          output.warn(`${clientResult.client} - not detected but config will be generated → ${configPath}`);
         }
 
         // Show actually skipped clients
         for (const clientResult of actuallySkippedClients) {
-          Logger.skip(`${clientResult.client} - not detected, skipped`);
+          output.skip(`${clientResult.client} - not detected, skipped`);
         }
 
         // ==================== Phase 2: Sync Summary ====================
         const syncedClients = [...detectedClients, ...undetectedButSyncedClients];
         if (syncedClients.length > 0) {
-          Logger.section('⚙️  Syncing configurations...');
-          Logger.nl();
+          output.section('⚙️  Syncing configurations...');
+          output.nl();
 
           for (const clientResult of syncedClients) {
             if (clientResult.success) {
-              Logger.success(`${clientResult.client} - synchronized`);
+              output.success(`${clientResult.client} - synchronized`);
             } else {
-              Logger.error(`${clientResult.client} - sync failed`);
+              output.error(`${clientResult.client} - sync failed`);
             }
           }
         }
@@ -151,38 +153,38 @@ export function createSyncCommand(): Command {
 
         // Show critical warnings if any exist
         if (criticalWarnings.length > 0) {
-          Logger.section('⚠️  Warnings:');
+          output.section('⚠️  Warnings:');
           for (const item of criticalWarnings) {
-            Logger.warn(`  - ${item.client}: ${item.warning}`);
+            output.warn(`  - ${item.client}: ${item.warning}`);
           }
         }
 
         // Show unique tips at the end if any exist
         if (tips.size > 0) {
           if (criticalWarnings.length === 0) {
-            Logger.section('💡 Tips:');
+            output.section('💡 Tips:');
           } else {
-            Logger.nl();
+            output.nl();
           }
           for (const tip of tips) {
-            Logger.info(`  ${tip}`);
+            output.info(`  ${tip}`);
           }
         }
 
         // Show global errors
         if (result.errors.length > 0) {
-          Logger.section('❌ Errors:');
+          output.section('❌ Errors:');
           for (const error of result.errors) {
-            Logger.error(`  - ${error}`);
+            output.error(`  - ${error}`);
           }
         }
 
         // Final status
-        Logger.nl();
+        output.nl();
         if (result.success) {
-          Logger.success('Sync complete!');
+          output.success('Sync complete!');
         } else {
-          Logger.error('Sync completed with errors');
+          output.error('Sync completed with errors');
         }
 
         // Exit with appropriate code
@@ -190,7 +192,15 @@ export function createSyncCommand(): Command {
           process.exit(1);
         }
       } catch (error) {
-        ErrorHandler.handleCommandError(error, 'sync');
+        // Use output for error handling instead of ErrorHandler
+        if (error instanceof Error) {
+          output.error(`Sync failed: ${error.message}`);
+          if (process.env.DEBUG && error.stack) {
+            output.debug(error.stack);
+          }
+        } else {
+          output.error('Sync failed with unknown error');
+        }
         process.exit(1);
       }
     });

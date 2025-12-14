@@ -16,6 +16,7 @@
         "main": "{projectRoot}/src/main.ts",
         "tsConfig": "{projectRoot}/tsconfig.app.json",
         "skipTypeCheck": true,
+        "declaration": false,
         "assets": [
           {
             "input": "{projectRoot}/src/assets",

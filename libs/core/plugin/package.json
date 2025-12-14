@@ -1,0 +1,38 @@
+{
+  "name": "@overture/plugin-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@overture/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "tags": [
+      "type:core",
+      "scope:plugin"
+    ]
+  },
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "@overture/config-types": "*",
+    "@overture/config-core": "*",
+    "@overture/config-schema": "*",
+    "@overture/errors": "*",
+    "@overture/ports-filesystem": "*",
+    "@overture/ports-process": "*",
+    "@overture/ports-output": "*",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.5"
+  }
+}

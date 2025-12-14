@@ -16,6 +16,22 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@overture/source"]
+    "customConditions": ["@overture/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@overture/client-adapters": ["libs/adapters/client-adapters/src/index.ts"],
+      "@overture/config-core": ["libs/core/config/src/index.ts"],
+      "@overture/config-schema": ["libs/domain/config-schema/src/index.ts"],
+      "@overture/config-types": ["libs/domain/config-types/src/index.ts"],
+      "@overture/discovery-core": ["libs/core/discovery/src/index.ts"],
+      "@overture/errors": ["libs/domain/errors/src/index.ts"],
+      "@overture/plugin-core": ["libs/core/plugin/src/index.ts"],
+      "@overture/ports-filesystem": ["libs/ports/filesystem/src/index.ts"],
+      "@overture/ports-output": ["libs/ports/output/src/index.ts"],
+      "@overture/ports-process": ["libs/ports/process/src/index.ts"],
+      "@overture/sync-core": ["libs/core/sync/src/index.ts"],
+      "@overture/testing": ["libs/shared/testing/src/index.ts"],
+      "@overture/utils": ["libs/shared/utils/src/index.ts"]
+    }
   }
 }

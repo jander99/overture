@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handleError, main } from './main';
-import { OvertureError } from './domain/errors';
-import { Logger } from './utils/logger';
+import { OvertureError } from '@overture/errors';
+import { Logger } from '@overture/utils';
 
 // Mock the Logger
-vi.mock('./utils/logger', () => ({
+vi.mock('@overture/utils', () => ({
   Logger: {
     error: vi.fn(),
     debug: vi.fn(),
@@ -14,13 +14,13 @@ vi.mock('./utils/logger', () => ({
   },
 }));
 
-// Mock the CLI and adapters for main() tests
+// Mock the CLI and composition root for main() tests
 vi.mock('./cli', () => ({
   createProgram: vi.fn(),
 }));
 
-vi.mock('./adapters', () => ({
-  initializeAdapters: vi.fn(),
+vi.mock('./composition-root', () => ({
+  createAppDependencies: vi.fn(() => ({})),
 }));
 
 describe('main.ts', () => {
@@ -190,14 +190,15 @@ describe('main.ts', () => {
   });
 
   describe('main function', () => {
-    it('should initialize adapters before creating program', async () => {
+    it('should create dependencies before creating program', async () => {
       // Arrange
       const { createProgram } = await import('./cli');
-      const { initializeAdapters } = await import('./adapters');
+      const { createAppDependencies } = await import('./composition-root');
       const initOrder: string[] = [];
 
-      vi.mocked(initializeAdapters).mockImplementation(() => {
-        initOrder.push('initializeAdapters');
+      vi.mocked(createAppDependencies).mockImplementation(() => {
+        initOrder.push('createAppDependencies');
+        return {} as any;
       });
       vi.mocked(createProgram).mockImplementation(() => {
         initOrder.push('createProgram');
@@ -210,7 +211,7 @@ describe('main.ts', () => {
       await main();
 
       // Assert
-      expect(initOrder).toEqual(['initializeAdapters', 'createProgram']);
+      expect(initOrder).toEqual(['createAppDependencies', 'createProgram']);
     });
 
     it('should call parseAsync with process.argv', async () => {

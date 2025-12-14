@@ -1,7 +1,6 @@
 import { Command } from 'commander';
-import { PluginExporter } from '../../core/plugin-exporter';
-import { Logger } from '../../utils/logger';
-import { ErrorHandler } from '../../core/error-handler';
+import { ErrorHandler } from '@overture/utils';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Creates the 'plugin export' command for exporting installed plugins to config.
@@ -19,7 +18,8 @@ import { ErrorHandler } from '../../core/error-handler';
  * 3. Updates ~/.config/overture.yml with selected plugins
  * 4. Shows confirmation message
  */
-export function createPluginExportCommand(): Command {
+export function createPluginExportCommand(deps: AppDependencies): Command {
+  const { pluginExporter, output } = deps;
   const command = new Command('export');
 
   command
@@ -28,24 +28,22 @@ export function createPluginExportCommand(): Command {
     .option('--all', 'Export all installed plugins without prompting')
     .action(async (options) => {
       try {
-        const exporter = new PluginExporter();
-
         // Determine export mode
         if (options.all) {
           // Export all mode
-          Logger.info('Exporting all installed plugins...');
-          await exporter.exportAllPlugins();
+          output.info('Exporting all installed plugins...');
+          await pluginExporter.exportAllPlugins();
         } else if (options.plugin && options.plugin.length > 0) {
           // Non-interactive mode with explicit plugin list
-          Logger.info(`Exporting ${options.plugin.length} plugin(s)...`);
-          await exporter.exportPlugins({
+          output.info(`Exporting ${options.plugin.length} plugin(s)...`);
+          await pluginExporter.exportPlugins({
             interactive: false,
             pluginNames: options.plugin,
           });
         } else {
           // Interactive mode (default)
-          Logger.info('Starting interactive plugin export...');
-          await exporter.exportPlugins({
+          output.info('Starting interactive plugin export...');
+          await pluginExporter.exportPlugins({
             interactive: true,
           });
         }

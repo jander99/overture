@@ -1,10 +1,9 @@
 import { Command } from 'commander';
-import { loadConfig, ConfigLoadError, ConfigValidationError } from '../../core/config-loader';
-import { getTransportWarnings, getTransportValidationSummary, type TransportWarning } from '../../core/transport-validator';
-import { adapterRegistry } from '../../adapters/adapter-registry';
-import { ErrorHandler } from '../../core/error-handler';
-import { Logger } from '../../utils/logger';
-import type { Platform, ClientName } from '../../domain/config.types';
+import { ConfigError, ValidationError } from '@overture/errors';
+import { getTransportWarnings, getTransportValidationSummary, type TransportWarning } from '@overture/sync-core';
+import { ErrorHandler } from '@overture/utils';
+import type { Platform, ClientName } from '@overture/config-types';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Valid platform names
@@ -45,7 +44,8 @@ const ENV_VAR_PATTERN = /^\$\{[A-Z_][A-Z0-9_]*(?::-[^}]*)?\}$/;
  * - Required fields (command, transport)
  * - Transport compatibility
  */
-export function createValidateCommand(): Command {
+export function createValidateCommand(deps: AppDependencies): Command {
+  const { configLoader, adapterRegistry, output } = deps;
   const command = new Command('validate');
 
   command
@@ -56,10 +56,10 @@ export function createValidateCommand(): Command {
     .action(async (options) => {
       try {
         // Load configuration (throws ConfigLoadError or ConfigValidationError)
-        const config = await loadConfig(process.cwd());
+        const config = await configLoader.loadConfig(process.cwd());
 
         if (!config) {
-          Logger.error('No configuration found');
+          output.error('No configuration found');
           process.exit(2);
         }
 
@@ -221,8 +221,8 @@ export function createValidateCommand(): Command {
 
         // If there are validation errors, exit with code 3
         if (errors.length > 0) {
-          Logger.error('Validation errors:');
-          errors.forEach((err) => Logger.error(`  - ${err}`));
+          output.error('Validation errors:');
+          errors.forEach((err) => output.error(`  - ${err}`));
           process.exit(3);
         }
 
@@ -255,8 +255,8 @@ export function createValidateCommand(): Command {
 
         // Display transport warnings
         if (allWarnings.length > 0) {
-          Logger.warn('Transport compatibility warnings:');
-          allWarnings.forEach((w) => Logger.warn(`  - ${w.message}`));
+          output.warn('Transport compatibility warnings:');
+          allWarnings.forEach((w) => output.warn(`  - ${w.message}`));
         }
 
         // Show verbose summary if requested
@@ -264,14 +264,14 @@ export function createValidateCommand(): Command {
           const adapter = adapterRegistry.get(options.client);
           if (adapter) {
             const summary = getTransportValidationSummary(config.mcp, adapter);
-            Logger.info('Transport validation summary:');
-            Logger.info(`  Total MCPs: ${summary.total}`);
-            Logger.info(`  Supported: ${summary.supported}`);
-            Logger.info(`  Unsupported: ${summary.unsupported}`);
+            output.info('Transport validation summary:');
+            output.info(`  Total MCPs: ${summary.total}`);
+            output.info(`  Supported: ${summary.supported}`);
+            output.info(`  Unsupported: ${summary.unsupported}`);
           }
         }
 
-        Logger.success('Configuration is valid');
+        output.success('Configuration is valid');
         process.exit(0);
       } catch (error) {
         // Re-throw if this is a process.exit error (from test mocking)
@@ -279,15 +279,15 @@ export function createValidateCommand(): Command {
           throw error;
         }
 
-        // Handle ConfigLoadError with exit code 2
-        if (error instanceof ConfigLoadError) {
+        // Handle ConfigError with exit code 2
+        if (error instanceof ConfigError) {
           ErrorHandler.handleCommandError(error, 'validate', options.verbose);
           // ErrorHandler.handleCommandError calls process.exit internally
           return; // This won't be reached, but TypeScript needs it
         }
 
-        // Handle ConfigValidationError with exit code 3
-        if (error instanceof ConfigValidationError) {
+        // Handle ValidationError with exit code 3
+        if (error instanceof ValidationError) {
           ErrorHandler.handleCommandError(error, 'validate', options.verbose);
           // ErrorHandler.handleCommandError calls process.exit internally
           return; // This won't be reached, but TypeScript needs it

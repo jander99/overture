@@ -11,7 +11,9 @@
     "@nx/eslint-plugin": "22.0.3",
     "@nx/js": "22.0.3",
     "@nx/node": "22.0.3",
+    "@nx/vite": "22.0.3",
     "@nx/vitest": "^22.2.3",
+    "@nx/web": "22.0.3",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
@@ -19,9 +21,11 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.6",
     "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/ui": "^4.0.0",
     "esbuild": "^0.25.12",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.0.0",
+    "jiti": "2.4.2",
     "memfs": "^4.50.0",
     "nx": "22.0.3",
     "prettier": "^3.6.2",
@@ -35,7 +39,12 @@
   "workspaces": [
     "packages/*",
     "cli",
-    "cli-e2e"
+    "cli-e2e",
+    "libs/shared/*",
+    "libs/domain/*",
+    "libs/ports/*",
+    "libs/core/*",
+    "libs/adapters/*"
   ],
   "dependencies": {
     "chalk": "^4.1.2",

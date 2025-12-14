@@ -14,16 +14,11 @@
 
 import { Command } from 'commander';
 import * as os from 'os';
-import type { Platform, ClientName, DiscoveryConfig } from '../../domain/config.types';
-import { adapterRegistry } from '../../adapters/adapter-registry';
-import { BinaryDetector } from '../../core/binary-detector';
-import { DiscoveryService } from '../../core/discovery-service';
-import { loadUserConfig, loadProjectConfig } from '../../core/config-loader';
-import { findProjectRoot } from '../../core/path-resolver';
-import { ProcessExecutor } from '../../infrastructure/process-executor';
-import { ErrorHandler } from '../../core/error-handler';
-import { Logger } from '../../utils/logger';
+import type { Platform, ClientName, DiscoveryConfig } from '@overture/config-types';
+import { BinaryDetector } from '@overture/discovery-core';
+import { ErrorHandler } from '@overture/utils';
 import chalk from 'chalk';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Get current platform
@@ -51,17 +46,6 @@ const ALL_CLIENTS: ClientName[] = [
 ];
 
 /**
- * Check if MCP command exists
- */
-async function checkMcpCommand(command: string): Promise<boolean> {
-  try {
-    return await ProcessExecutor.commandExists(command);
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Creates the 'doctor' command for system diagnostics.
  *
  * Usage: overture doctor [options]
@@ -72,7 +56,8 @@ async function checkMcpCommand(command: string): Promise<boolean> {
  * - Config file validity
  * - MCP server command availability
  */
-export function createDoctorCommand(): Command {
+export function createDoctorCommand(deps: AppDependencies): Command {
+  const { discoveryService, output, adapterRegistry, configLoader, pathResolver, process } = deps;
   const command = new Command('doctor');
 
   command
@@ -84,29 +69,15 @@ export function createDoctorCommand(): Command {
     .action(async (options) => {
       try {
         const platform = getCurrentPlatform();
-
-        // Build discovery config from options
-        const discoveryConfig: DiscoveryConfig = {
-          enabled: true,
-          wsl2_auto_detect: options.wsl2 !== false, // --no-wsl2 sets this to false
-        };
-
-        // Force WSL2 mode if --wsl2 flag is set
-        if (options.wsl2 === true) {
-          discoveryConfig.environment = 'wsl2';
-        }
-
-        // Create discovery service with config
-        const discoveryService = new DiscoveryService(discoveryConfig);
         const detector = new BinaryDetector();
 
         // Detect project root
-        const projectRoot = findProjectRoot();
+        const projectRoot = pathResolver.findProjectRoot();
 
         // Load configs
-        const userConfig = await loadUserConfig();
+        const userConfig = await configLoader.loadUserConfig();
         const projectConfig = projectRoot
-          ? await loadProjectConfig(projectRoot)
+          ? await configLoader.loadProjectConfig(projectRoot)
           : null;
 
         // Run discovery
@@ -133,7 +104,7 @@ export function createDoctorCommand(): Command {
 
         // Show environment info (if not JSON mode)
         if (!options.json && discoveryReport.environment.isWSL2) {
-          Logger.info(chalk.bold('\nEnvironment:\n'));
+          output.info(chalk.bold('\nEnvironment:\n'));
           console.log(`  Platform: ${chalk.cyan('WSL2')} (${discoveryReport.environment.wsl2Info?.distroName || 'Unknown'})`);
           if (discoveryReport.environment.wsl2Info?.windowsUserProfile) {
             console.log(`  Windows User: ${chalk.dim(discoveryReport.environment.wsl2Info.windowsUserProfile)}`);
@@ -143,7 +114,7 @@ export function createDoctorCommand(): Command {
 
         // Check all clients
         if (!options.json) {
-          Logger.info(chalk.bold('Checking client installations...\n'));
+          output.info(chalk.bold('Checking client installations...\n'));
         }
 
         for (const clientDiscovery of discoveryReport.clients) {
@@ -206,7 +177,7 @@ export function createDoctorCommand(): Command {
                 ? chalk.cyan(' [WSL2: Windows]')
                 : '';
 
-              Logger.success(
+              output.success(
                 `${chalk.green('✓')} ${chalk.bold(clientName)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`
               );
 
@@ -229,11 +200,11 @@ export function createDoctorCommand(): Command {
               // Show warnings
               if (detection.warnings.length > 0 && options.verbose) {
                 detection.warnings.forEach((warning) => {
-                  Logger.warn(`  ${chalk.yellow('⚠')} ${warning}`);
+                  output.warn(`  ${chalk.yellow('⚠')} ${warning}`);
                 });
               }
             } else if (detection.status === 'not-found') {
-              Logger.error(
+              output.error(
                 `${chalk.red('✗')} ${chalk.bold(clientName)} - not installed`
               );
 
@@ -258,11 +229,11 @@ export function createDoctorCommand(): Command {
 
         if (Object.keys(mcpConfig).length > 0) {
           if (!options.json) {
-            Logger.info(chalk.bold('Checking MCP servers...\n'));
+            output.info(chalk.bold('Checking MCP servers...\n'));
           }
 
           for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
-            const commandExists = await checkMcpCommand(mcpDef.command);
+            const commandExists = await process.commandExists(mcpDef.command);
 
             const mcpResult = {
               name: mcpName,
@@ -282,11 +253,11 @@ export function createDoctorCommand(): Command {
             // Console output (if not JSON mode)
             if (!options.json) {
               if (commandExists) {
-                Logger.success(
+                output.success(
                   `${chalk.green('✓')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.dim('(found)')}`
                 );
               } else {
-                Logger.warn(
+                output.warn(
                   `${chalk.yellow('⚠')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.yellow('(not found)')}`
                 );
 
@@ -309,7 +280,7 @@ export function createDoctorCommand(): Command {
         } else {
           // Summary
           console.log('');
-          Logger.info(chalk.bold('Summary:\n'));
+          output.info(chalk.bold('Summary:\n'));
           console.log(
             `  Clients detected: ${chalk.green(results.summary.clientsDetected)} / ${ALL_CLIENTS.length}`
           );

@@ -10,20 +10,17 @@
  */
 
 import { Command } from 'commander';
-import { AuditService } from '../../core/audit-service';
-import { loadConfig } from '../../core/config-loader';
-import { adapterRegistry } from '../../adapters/adapter-registry';
-import { getPlatform } from '../../core/path-resolver';
-import { Logger } from '../../utils/logger';
-import type { ClientName } from '../../domain/config.types';
-import { ErrorHandler } from '../../core/error-handler';
+import type { ClientName } from '@overture/config-types';
+import { ErrorHandler } from '@overture/utils';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Creates the 'audit' command for detecting unmanaged MCPs
  *
  * @returns Commander Command instance
  */
-export function createAuditCommand(): Command {
+export function createAuditCommand(deps: AppDependencies): Command {
+  const { auditService, adapterRegistry, configLoader, pathResolver, output } = deps;
   const command = new Command('audit');
 
   command
@@ -31,20 +28,19 @@ export function createAuditCommand(): Command {
     .option('--client <name>', 'Audit specific client only (e.g., claude-code, vscode)')
     .action(async (options) => {
       try {
-        Logger.info('Loading Overture configuration...');
+        output.info('Loading Overture configuration...');
 
         // Load Overture configuration
-        const overtureConfig = loadConfig();
-        const platform = getPlatform();
-        const auditService = new AuditService();
+        const overtureConfig = await configLoader.loadConfig();
+        const platform = pathResolver.getPlatform();
 
         // Determine which clients to audit
         if (options.client) {
           // Audit specific client
-          await auditSingleClient(options.client as ClientName, overtureConfig, platform, auditService);
+          await auditSingleClient(deps, options.client as ClientName, overtureConfig, platform);
         } else {
           // Audit all installed clients
-          await auditAllInstalledClients(overtureConfig, platform, auditService);
+          await auditAllInstalledClients(deps, overtureConfig, platform);
         }
       } catch (error) {
         const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
@@ -59,47 +55,48 @@ export function createAuditCommand(): Command {
  * Audit a single client for unmanaged MCPs
  */
 async function auditSingleClient(
+  deps: AppDependencies,
   clientName: ClientName,
   overtureConfig: any,
-  platform: string,
-  auditService: AuditService
+  platform: string
 ): Promise<void> {
   // Get adapter for client
+  const { adapterRegistry, auditService, output } = deps;
   const adapter = adapterRegistry.get(clientName);
 
   if (!adapter) {
-    Logger.error(`Unknown client: ${clientName}`);
-    Logger.info('Available clients: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
+    output.error(`Unknown client: ${clientName}`);
+    output.info('Available clients: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
     process.exit(1);
   }
 
   // Check if client is installed
   if (!adapter.isInstalled(platform as any)) {
-    Logger.warn(`Client '${clientName}' is not installed on this system`);
-    Logger.success(`No unmanaged MCPs found (client not installed)`);
+    output.warn(`Client '${clientName}' is not installed on this system`);
+    output.success(`No unmanaged MCPs found (client not installed)`);
     return;
   }
 
-  Logger.info(`Auditing client: ${clientName}...\n`);
+  output.info(`Auditing client: ${clientName}...\n`);
 
   // Audit the client
   const unmanaged = auditService.auditClient(adapter, overtureConfig, platform as any);
 
   // Display results
   if (unmanaged.length === 0) {
-    Logger.success(`No unmanaged MCPs found in ${clientName}`);
+    output.success(`No unmanaged MCPs found in ${clientName}`);
   } else {
-    Logger.warn(`Found ${unmanaged.length} unmanaged MCP(s) in ${clientName}:`);
-    Logger.nl();
-    Logger.info(`  ${clientName}:`);
+    output.warn(`Found ${unmanaged.length} unmanaged MCP(s) in ${clientName}:`);
+    output.nl();
+    output.info(`  ${clientName}:`);
     unmanaged.forEach((mcpName) => {
-      Logger.info(`    - ${mcpName}`);
+      output.info(`    - ${mcpName}`);
     });
-    Logger.nl();
+    output.nl();
 
     // Generate suggestions
-    const suggestions = auditService.generateSuggestions({ [clientName]: unmanaged } as Record<ClientName, string[]>);
-    displaySuggestions(suggestions);
+    const suggestions = deps.auditService.generateSuggestions({ [clientName]: unmanaged } as Record<ClientName, string[]>);
+    displaySuggestions(deps, suggestions);
   }
 }
 
@@ -107,65 +104,69 @@ async function auditSingleClient(
  * Audit all installed clients for unmanaged MCPs
  */
 async function auditAllInstalledClients(
+  deps: AppDependencies,
   overtureConfig: any,
-  platform: string,
-  auditService: AuditService
+  platform: string
 ): Promise<void> {
+  const { adapterRegistry, auditService, output } = deps;
+  
   // Get installed adapters
   const installedAdapters = adapterRegistry.getInstalledAdapters(platform as any);
 
   if (installedAdapters.length === 0) {
-    Logger.warn('No installed AI clients detected');
-    Logger.info('Overture supports: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
-    Logger.success('No unmanaged MCPs found (no clients installed)');
+    output.warn('No installed AI clients detected');
+    output.info('Overture supports: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
+    output.success('No unmanaged MCPs found (no clients installed)');
     return;
   }
 
-  Logger.info(`Auditing ${installedAdapters.length} installed client(s)...\n`);
+  output.info(`Auditing ${installedAdapters.length} installed client(s)...\n`);
 
   // Audit all clients
   const unmanagedByClient = auditService.auditAllClients(installedAdapters, overtureConfig, platform as any);
 
   // Display results
   if (Object.keys(unmanagedByClient).length === 0) {
-    Logger.success('No unmanaged MCPs found in any client');
-    Logger.info('All client MCPs are managed by Overture');
+    output.success('No unmanaged MCPs found in any client');
+    output.info('All client MCPs are managed by Overture');
   } else {
     const totalUnmanaged = Object.values(unmanagedByClient).reduce((sum, mcps) => sum + mcps.length, 0);
-    Logger.warn(`Found ${totalUnmanaged} unmanaged MCP(s) across ${Object.keys(unmanagedByClient).length} client(s):`);
-    Logger.nl();
+    output.warn(`Found ${totalUnmanaged} unmanaged MCP(s) across ${Object.keys(unmanagedByClient).length} client(s):`);
+    output.nl();
 
     // Display by client
     for (const [clientName, mcpNames] of Object.entries(unmanagedByClient)) {
-      Logger.info(`  ${clientName}:`);
+      output.info(`  ${clientName}:`);
       mcpNames.forEach((mcpName) => {
-        Logger.info(`    - ${mcpName}`);
+        output.info(`    - ${mcpName}`);
       });
-      Logger.nl();
+      output.nl();
     }
 
     // Generate suggestions
     const suggestions = auditService.generateSuggestions(unmanagedByClient as any);
-    displaySuggestions(suggestions);
+    displaySuggestions(deps, suggestions);
   }
 }
 
 /**
  * Display suggestions for adding unmanaged MCPs
  */
-function displaySuggestions(suggestions: string[]): void {
+function displaySuggestions(deps: AppDependencies, suggestions: string[]): void {
+  const { output } = deps;
+  
   if (suggestions.length === 0) {
     return;
   }
 
-  Logger.info('Suggestions:');
-  Logger.info('To add these MCPs to Overture, run:');
-  Logger.nl();
+  output.info('Suggestions:');
+  output.info('To add these MCPs to Overture, run:');
+  output.nl();
 
   suggestions.forEach((suggestion) => {
-    Logger.info(`  ${suggestion}`);
+    output.info(`  ${suggestion}`);
   });
 
-  Logger.nl();
-  Logger.info('Note: You will need to manually configure command, args, and transport for each MCP');
+  output.nl();
+  output.info('Note: You will need to manually configure command, args, and transport for each MCP');
 }

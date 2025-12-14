@@ -52,3 +52,4 @@ performance-report.txt
 .cursor/
 
 vitest.config.*.timestamp*
+vite.config.*.timestamp*

@@ -1,0 +1,65 @@
+/**
+ * @overture/client-adapters
+ *
+ * Client adapters for AI development clients (Claude Code, VS Code, Cursor, etc.).
+ * Implements hexagonal architecture with dependency injection for filesystem operations.
+ *
+ * @module @overture/client-adapters
+ * @version 3.0
+ *
+ * @example
+ * ```typescript
+ * import { createAdapterRegistry } from '@overture/client-adapters';
+ * import { createFilesystemAdapter } from '@overture/adapters-filesystem';
+ *
+ * // Create filesystem adapter
+ * const filesystem = createFilesystemAdapter();
+ *
+ * // Create adapter registry with all adapters
+ * const registry = createAdapterRegistry(filesystem);
+ *
+ * // Get specific adapter
+ * const adapter = registry.get('claude-code');
+ * if (adapter) {
+ *   const config = await adapter.readConfig('/path/to/config.json');
+ *   console.log(config);
+ * }
+ *
+ * // Detect installed clients
+ * const installed = registry.detectInstalledClients('linux');
+ * console.log('Installed clients:', installed);
+ * ```
+ */
+
+// Core interfaces and types
+export type {
+  ClientAdapter,
+  ClientMcpConfig,
+  ClientMcpServerDef,
+  ConfigPathResult,
+} from './lib/client-adapter.interface.js';
+export { BaseClientAdapter } from './lib/client-adapter.interface.js';
+
+// Registry
+export {
+  AdapterRegistry,
+  getAdapterForClient,
+} from './lib/adapter-registry.js';
+
+// Factory
+export {
+  createAdapterRegistry,
+  createAdapter,
+} from './lib/adapter-factory.js';
+
+// Individual adapters (for specialized use cases)
+export { ClaudeCodeAdapter } from './lib/adapters/claude-code.adapter.js';
+// TODO: Export remaining adapters when implemented
+// export { ClaudeDesktopAdapter } from './lib/adapters/claude-desktop.adapter.js';
+// export { VSCodeAdapter } from './lib/adapters/vscode.adapter.js';
+// export { CursorAdapter } from './lib/adapters/cursor.adapter.js';
+// export { WindsurfAdapter } from './lib/adapters/windsurf.adapter.js';
+// export { JetBrainsCopilotAdapter } from './lib/adapters/jetbrains-copilot.adapter.js';
+// export { CopilotCliAdapter } from './lib/adapters/copilot-cli.adapter.js';
+// export { CodexAdapter } from './lib/adapters/codex.adapter.js';
+// export { GeminiCliAdapter } from './lib/adapters/gemini-cli.adapter.js';

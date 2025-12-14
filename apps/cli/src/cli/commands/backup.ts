@@ -1,21 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import {
-  listBackups,
-  cleanupOldBackups,
-  getLatestBackup,
-  type BackupMetadata,
-} from '../../core/backup-service';
-import {
-  restoreBackup,
-  restoreLatestBackup,
-} from '../../core/restore-service';
-import { adapterRegistry } from '../../adapters/adapter-registry';
-import type { ClientName } from '../../domain/config.types';
-import { Logger } from '../../utils/logger';
-import { Prompts } from '../../utils/prompts';
-import { getPlatform } from '../../core/path-resolver';
-import { ErrorHandler, UserCancelledError } from '../../core/error-handler';
+import type { BackupMetadata } from '@overture/sync-core';
+import type { ClientName } from '@overture/config-types';
+import { Prompts, ErrorHandler, UserCancelledError } from '@overture/utils';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Creates the 'backup' command group for managing client MCP configuration backups.
@@ -27,7 +15,8 @@ import { ErrorHandler, UserCancelledError } from '../../core/error-handler';
  * - overture backup restore <client> --latest - Restore most recent backup
  * - overture backup cleanup                   - Remove old backups (keep last 10)
  */
-export function createBackupCommand(): Command {
+export function createBackupCommand(deps: AppDependencies): Command {
+  const { backupService, restoreService, adapterRegistry, pathResolver, output } = deps;
   const command = new Command('backup');
 
   command.description('Manage client MCP configuration backups');
@@ -39,23 +28,23 @@ export function createBackupCommand(): Command {
     .option('-c, --client <name>', 'Filter by client name')
     .action(async (options: { client?: ClientName }) => {
       try {
-        const backups = listBackups(options.client);
+        const backups = backupService.listBackups(options.client);
 
         if (backups.length === 0) {
           if (options.client) {
-            Logger.warn(`No backups found for client: ${options.client}`);
+            output.warn(`No backups found for client: ${options.client}`);
           } else {
-            Logger.warn('No backups found');
+            output.warn('No backups found');
           }
           return;
         }
 
-        Logger.info(
+        output.info(
           options.client
             ? `Backups for ${options.client}:`
             : 'All backups:'
         );
-        Logger.nl();
+        output.nl();
 
         // Group backups by client
         const backupsByClient = new Map<ClientName, BackupMetadata[]>();
@@ -80,10 +69,10 @@ export function createBackupCommand(): Command {
             );
           }
 
-          Logger.nl();
+          output.nl();
         }
 
-        Logger.info(`Total: ${backups.length} backup(s)`);
+        output.info(`Total: ${backups.length} backup(s)`);
       } catch (error) {
         const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
         ErrorHandler.handleCommandError(error, 'backup list', verbose);
@@ -108,10 +97,10 @@ export function createBackupCommand(): Command {
           // Validate client
           const adapter = adapterRegistry.get(client);
           if (!adapter) {
-            Logger.error(`Unknown client: ${client}`);
-            Logger.info('Available clients:');
+            output.error(`Unknown client: ${client}`);
+            output.info('Available clients:');
             adapterRegistry.getAllNames().forEach((name) => {
-              Logger.info(`  - ${name}`);
+              output.info(`  - ${name}`);
             });
             throw Object.assign(new Error('Invalid client'), { exitCode: 2 });
           }
@@ -121,37 +110,37 @@ export function createBackupCommand(): Command {
           let isLatest = false;
 
           if (options.latest || !timestamp) {
-            backupToRestore = getLatestBackup(client);
+            backupToRestore = backupService.getLatestBackup(client);
             isLatest = true;
 
             if (!backupToRestore) {
-              Logger.error(`No backups found for ${client}`);
+              output.error(`No backups found for ${client}`);
               throw Object.assign(new Error('No backups found'), { exitCode: 2 });
             }
           } else {
-            const backups = listBackups(client);
+            const backups = backupService.listBackups(client);
             backupToRestore = backups.find((b) => b.timestamp === timestamp) || null;
 
             if (!backupToRestore) {
-              Logger.error(`Backup not found: ${client} at ${timestamp}`);
-              Logger.info(`Available backups for ${client}:`);
+              output.error(`Backup not found: ${client} at ${timestamp}`);
+              output.info(`Available backups for ${client}:`);
               backups.forEach((b) => {
-                Logger.info(`  - ${b.timestamp}`);
+                output.info(`  - ${b.timestamp}`);
               });
               throw Object.assign(new Error('Backup not found'), { exitCode: 2 });
             }
           }
 
           // Show backup details
-          Logger.info('Backup details:');
-          Logger.info(`  Client: ${chalk.cyan(backupToRestore.client)}`);
-          Logger.info(`  Timestamp: ${formatTimestamp(backupToRestore.timestamp)}`);
-          Logger.info(`  Size: ${formatSize(backupToRestore.size)}`);
-          Logger.info(`  Age: ${formatAge(backupToRestore.timestamp)}`);
+          output.info('Backup details:');
+          output.info(`  Client: ${chalk.cyan(backupToRestore.client)}`);
+          output.info(`  Timestamp: ${formatTimestamp(backupToRestore.timestamp)}`);
+          output.info(`  Size: ${formatSize(backupToRestore.size)}`);
+          output.info(`  Age: ${formatAge(backupToRestore.timestamp)}`);
           if (isLatest) {
-            Logger.info(`  ${chalk.yellow('(Most recent backup)')}`);
+            output.info(`  ${chalk.yellow('(Most recent backup)')}`);
           }
-          Logger.nl();
+          output.nl();
 
           // Confirm restore
           if (options.confirm) {
@@ -166,11 +155,11 @@ export function createBackupCommand(): Command {
           }
 
           // Get target path from adapter
-          const platform = getPlatform();
+          const platform = pathResolver.getPlatform();
           const configPaths = adapter.detectConfigPath(platform);
 
           if (!configPaths) {
-            Logger.error(`Client ${client} is not installed on this platform`);
+            output.error(`Client ${client} is not installed on this platform`);
             process.exit(2);
           }
 
@@ -181,15 +170,15 @@ export function createBackupCommand(): Command {
 
           // Perform restore
           const result = isLatest
-            ? restoreLatestBackup(client, configPath)
-            : restoreBackup(client, backupToRestore.timestamp, configPath);
+            ? restoreService.restoreLatestBackup(client, configPath)
+            : restoreService.restoreBackup(client, backupToRestore.timestamp, configPath);
 
           if (result.success) {
-            Logger.success('Backup restored successfully');
-            Logger.info(`  From: ${result.backupPath}`);
-            Logger.info(`  To: ${result.restoredPath}`);
+            output.success('Backup restored successfully');
+            output.info(`  From: ${result.backupPath}`);
+            output.info(`  To: ${result.restoredPath}`);
           } else {
-            Logger.error(`Restore failed: ${result.error}`);
+            output.error(`Restore failed: ${result.error}`);
             process.exit(1);
           }
         } catch (error) {
@@ -209,7 +198,7 @@ export function createBackupCommand(): Command {
       try {
         const keepCount = parseInt(options.keep, 10);
         if (isNaN(keepCount) || keepCount < 1) {
-          Logger.error('Keep count must be a positive integer');
+          output.error('Keep count must be a positive integer');
           throw Object.assign(new Error('Invalid keep count'), { exitCode: 2 });
         }
 
@@ -221,26 +210,26 @@ export function createBackupCommand(): Command {
         let totalDeleted = 0;
 
         for (const client of clients) {
-          const beforeCount = listBackups(client).length;
+          const beforeCount = backupService.listBackups(client).length;
           if (beforeCount === 0) continue;
 
-          cleanupOldBackups(client, keepCount);
-          const afterCount = listBackups(client).length;
+          backupService.cleanupOldBackups(client, keepCount);
+          const afterCount = backupService.listBackups(client).length;
           const deleted = beforeCount - afterCount;
 
           if (deleted > 0) {
-            Logger.info(
+            output.info(
               `${chalk.cyan(client)}: Removed ${deleted} old backup(s), kept ${afterCount}`
             );
             totalDeleted += deleted;
           }
         }
 
-        Logger.nl();
+        output.nl();
         if (totalDeleted > 0) {
-          Logger.success(`Cleaned up ${totalDeleted} backup(s)`);
+          output.success(`Cleaned up ${totalDeleted} backup(s)`);
         } else {
-          Logger.info('No backups to clean up');
+          output.info('No backups to clean up');
         }
       } catch (error) {
         const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';

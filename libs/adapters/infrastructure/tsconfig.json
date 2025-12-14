@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../../domain/errors"
+    },
+    {
+      "path": "../../ports/output"
+    },
+    {
+      "path": "../../ports/process"
+    },
+    {
+      "path": "../../ports/filesystem"
+    },
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

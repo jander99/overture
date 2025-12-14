@@ -1,0 +1,36 @@
+{
+  "name": "@overture/adapters-infrastructure",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@overture/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "tags": [
+      "type:adapter",
+      "scope:infrastructure"
+    ]
+  },
+  "dependencies": {
+    "@overture/ports-filesystem": "*",
+    "@overture/ports-process": "*",
+    "@overture/ports-output": "*",
+    "@overture/errors": "*",
+    "handlebars": "^4.7.8",
+    "execa": "^5.1.1",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2"
+  }
+}

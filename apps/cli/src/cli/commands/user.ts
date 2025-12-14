@@ -1,14 +1,11 @@
-import * as path from 'path';
-import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { Logger } from '../../utils/logger';
-import { Prompts } from '../../utils/prompts';
-import { getUserConfigPath } from '../../core/path-resolver';
-import { OvertureConfigSchema } from '../../domain/config.schema';
-import { loadUserConfig, hasUserConfig, ConfigLoadError } from '../../core/config-loader';
-import type { OvertureConfig } from '../../domain/config.types';
+import { Prompts, Logger } from '@overture/utils';
+import { OvertureConfigSchema } from '@overture/config-schema';
+import { ConfigError } from '@overture/errors';
+import type { OvertureConfig } from '@overture/config-types';
+import type { AppDependencies } from '../../composition-root';
 
 /**
  * Common MCP servers available for global configuration
@@ -92,7 +89,8 @@ type OutputFormat = 'yaml' | 'json';
  * - overture user init - Initialize user global configuration at ~/.config/overture.yml
  * - overture user show [--format <yaml|json>] - Display user global configuration
  */
-export function createUserCommand(): Command {
+export function createUserCommand(deps: AppDependencies): Command {
+  const { configLoader, pathResolver, filesystem, output } = deps;
   const command = new Command('user');
 
   command.description('Manage user global configuration');
@@ -104,19 +102,19 @@ export function createUserCommand(): Command {
     .option('-f, --force', 'Overwrite existing configuration')
     .action(async (options) => {
       try {
-        const userConfigPath = getUserConfigPath();
-        const configDir = path.dirname(userConfigPath);
+        const userConfigPath = pathResolver.getUserConfigPath();
+        const configDir = pathResolver.getUserConfigDir();
 
         // Check if config already exists
-        if (fs.existsSync(userConfigPath) && !options.force) {
-          Logger.error('User configuration already exists');
-          Logger.info(`Location: ${userConfigPath}`);
-          Logger.info('Use --force to overwrite or edit the file directly');
+        if (filesystem.fileExists(userConfigPath) && !options.force) {
+          output.error('User configuration already exists');
+          output.info(`Location: ${userConfigPath}`);
+          output.info('Use --force to overwrite or edit the file directly');
           process.exit(1);
         }
 
-        Logger.info('Initializing user global configuration...');
-        Logger.nl();
+        output.info('Initializing user global configuration...');
+        output.nl();
 
         // Prompt for MCP servers to enable
         const selectedMcps = await Prompts.multiSelect(
@@ -125,14 +123,14 @@ export function createUserCommand(): Command {
         );
 
         if (selectedMcps.length === 0) {
-          Logger.warn('No MCP servers selected');
+          output.warn('No MCP servers selected');
           const shouldContinue = await Prompts.confirm(
             'Continue without any MCP servers?',
             false
           );
 
           if (!shouldContinue) {
-            Logger.info('Configuration cancelled');
+            output.info('Configuration cancelled');
             process.exit(0);
           }
         }
@@ -176,22 +174,22 @@ export function createUserCommand(): Command {
         // Validate configuration
         const validationResult = OvertureConfigSchema.safeParse(userConfig);
         if (!validationResult.success) {
-          Logger.error('Configuration validation failed');
-          Logger.error(validationResult.error.message);
+          output.error('Configuration validation failed');
+          output.error(validationResult.error.message);
           process.exit(1);
         }
 
         // Confirmation
-        Logger.nl();
-        Logger.info('Configuration summary:');
-        Logger.info(`  Location: ${userConfigPath}`);
-        Logger.info(`  MCP servers: ${selectedMcps.length}`);
+        output.nl();
+        output.info('Configuration summary:');
+        output.info(`  Location: ${userConfigPath}`);
+        output.info(`  MCP servers: ${selectedMcps.length}`);
         if (selectedMcps.length > 0) {
           selectedMcps.forEach((mcp) => {
-            Logger.info(`    - ${mcp}`);
+            output.info(`    - ${mcp}`);
           });
         }
-        Logger.nl();
+        output.nl();
 
         const shouldProceed = await Prompts.confirm(
           'Create user configuration?',
@@ -199,14 +197,14 @@ export function createUserCommand(): Command {
         );
 
         if (!shouldProceed) {
-          Logger.info('Configuration cancelled');
+          output.info('Configuration cancelled');
           process.exit(0);
         }
 
         // Create config directory if it doesn't exist
-        if (!fs.existsSync(configDir)) {
-          fs.mkdirSync(configDir, { recursive: true });
-          Logger.debug(`Created directory: ${configDir}`);
+        if (!filesystem.directoryExists(configDir)) {
+          filesystem.createDirectory(configDir);
+          output.debug(`Created directory: ${configDir}`);
         }
 
         // Write YAML configuration
@@ -216,22 +214,22 @@ export function createUserCommand(): Command {
           noRefs: true,
         });
 
-        fs.writeFileSync(userConfigPath, yamlContent, 'utf-8');
+        filesystem.writeFile(userConfigPath, yamlContent);
 
-        Logger.success('User configuration created!');
-        Logger.info(`Location: ${userConfigPath}`);
-        Logger.nl();
-        Logger.info('Next steps:');
-        Logger.info('  1. Review and customize the configuration file');
-        Logger.info('  2. Set any required environment variables (e.g., GITHUB_TOKEN)');
-        Logger.info('  3. Run `overture sync` to apply configuration to clients');
+        output.success('User configuration created!');
+        output.info(`Location: ${userConfigPath}`);
+        output.nl();
+        output.info('Next steps:');
+        output.info('  1. Review and customize the configuration file');
+        output.info('  2. Set any required environment variables (e.g., GITHUB_TOKEN)');
+        output.info('  3. Run `overture sync` to apply configuration to clients');
       } catch (error) {
         // Don't handle process.exit() errors - let them propagate
         if (error instanceof Error && error.message.startsWith('process.exit:')) {
           throw error;
         }
 
-        Logger.error(`Failed to initialize user configuration: ${(error as Error).message}`);
+        output.error(`Failed to initialize user configuration: ${(error as Error).message}`);
         process.exit((error as any).exitCode || 1);
       }
     });
@@ -243,40 +241,42 @@ export function createUserCommand(): Command {
     .option('-f, --format <format>', 'Output format (yaml or json)', 'yaml')
     .action(async (options: { format: string }) => {
       try {
-        const configPath = getUserConfigPath();
+        const configPath = pathResolver.getUserConfigPath();
 
         // Check if config exists
-        if (!hasUserConfig()) {
-          Logger.warn('User configuration not found');
-          Logger.info(`Expected location: ${configPath}`);
-          Logger.nl();
-          Logger.info('Create a user config to define global MCP servers that apply to all projects.');
-          Logger.info('Run `overture user init` to create a user configuration.');
+        if (!configLoader.hasUserConfig()) {
+          output.warn('User configuration not found');
+          output.info(`Expected location: ${configPath}`);
+          output.nl();
+          output.info('Create a user config to define global MCP servers that apply to all projects.');
+          output.info('Run `overture user init` to create a user configuration.');
           process.exit(2);
         }
 
         // Validate format option
         const format = options.format.toLowerCase();
         if (format !== 'yaml' && format !== 'json') {
-          Logger.error(`Invalid format: ${format}`);
-          Logger.info('Valid formats: yaml, json');
+          output.error(`Invalid format: ${format}`);
+          output.info('Valid formats: yaml, json');
           process.exit(1);
         }
 
         // Load config
-        const config = loadUserConfig();
+        const config = await configLoader.loadUserConfig();
 
         // Display config
         displayUserConfig(config, configPath, format as OutputFormat);
       } catch (error) {
-        if (error instanceof ConfigLoadError) {
-          Logger.error('Failed to load user configuration');
-          Logger.error(error.message);
-          Logger.debug(`Path: ${error.path}`);
+        if (error instanceof ConfigError) {
+          output.error('Failed to load user configuration');
+          output.error(error.message);
+          if (error.filePath) {
+            output.debug(`Path: ${error.filePath}`);
+          }
           process.exit(1);
         }
 
-        Logger.error(`Failed to display user configuration: ${(error as Error).message}`);
+        output.error(`Failed to display user configuration: ${(error as Error).message}`);
         process.exit(1);
       }
     });
