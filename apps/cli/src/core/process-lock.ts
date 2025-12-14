@@ -83,51 +83,67 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
   let delay = opts.retryDelay;
 
   while (attempts <= opts.maxRetries) {
-    try {
-      // Check if lock file exists
-      if (fs.existsSync(lockPath)) {
-        // Read existing lock
-        const lockContent = fs.readFileSync(lockPath, 'utf-8');
-        const lockData: LockData = JSON.parse(lockContent);
+    // Prepare lock data
+    const lockData: LockData = {
+      pid: process.pid,
+      timestamp: Date.now(),
+      operation: opts.operation,
+    };
 
-        // Check if lock is stale
-        const lockAge = Date.now() - lockData.timestamp;
-        if (lockAge > opts.staleTimeout) {
-          // Stale lock detected, remove it
-          console.warn(
-            `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${lockData.pid})`
-          );
-          fs.unlinkSync(lockPath);
-        } else {
-          // Lock is active
+    try {
+      // Atomically create lock file using 'wx' flag (exclusive create, fails if exists)
+      // This eliminates TOCTOU race condition between checking and creating
+      fs.writeFileSync(lockPath, JSON.stringify(lockData, null, 2), {
+        encoding: 'utf-8',
+        flag: 'wx', // Exclusive create - fails with EEXIST if file exists
+      });
+
+      // Lock acquired successfully
+      registerCleanupHandler(lockPath);
+      return true;
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+
+      // File already exists - check if it's stale
+      if (err.code === 'EEXIST') {
+        try {
+          const lockContent = fs.readFileSync(lockPath, 'utf-8');
+          const existingLock: LockData = JSON.parse(lockContent);
+
+          // Check if lock is stale
+          const lockAge = Date.now() - existingLock.timestamp;
+          if (lockAge > opts.staleTimeout) {
+            // Stale lock detected, remove it and retry immediately
+            console.warn(
+              `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`
+            );
+            fs.unlinkSync(lockPath);
+            // Don't increment attempts for stale lock removal
+            continue;
+          }
+
+          // Lock is active - check if we've exhausted retries
           if (attempts === opts.maxRetries) {
             throw new Error(
-              `Cannot acquire lock: Another Overture process (PID ${lockData.pid}) is running '${lockData.operation}' operation. Please wait or remove stale lock at: ${lockPath}`
+              `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`
             );
           }
 
-          // Retry with exponential backoff
+          // Wait and retry with exponential backoff
           attempts++;
           await sleep(delay);
-          delay *= 2; // Exponential backoff
+          delay *= 2;
           continue;
+        } catch (readError) {
+          // Lock file disappeared or is corrupt - retry
+          if ((readError as NodeJS.ErrnoException).code === 'ENOENT') {
+            continue;
+          }
+          throw readError;
         }
       }
 
-      // Create lock file
-      const lockData: LockData = {
-        pid: process.pid,
-        timestamp: Date.now(),
-        operation: opts.operation,
-      };
-
-      fs.writeFileSync(lockPath, JSON.stringify(lockData, null, 2), 'utf-8');
-
-      // Register cleanup handler
-      registerCleanupHandler(lockPath);
-
-      return true;
-    } catch (error) {
+      // Other errors (permission denied, etc.)
       if (attempts === opts.maxRetries) {
         throw error;
       }

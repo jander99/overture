@@ -6,13 +6,51 @@ import { OvertureError } from './domain/errors';
 import { initializeAdapters } from './adapters';
 
 /**
+ * Handle errors and determine exit code.
+ * Exported for testing purposes.
+ *
+ * @param error - The error to handle
+ * @returns The exit code to use
+ */
+export function handleError(error: unknown): number {
+  // Handle known Overture errors
+  if (error instanceof OvertureError) {
+    Logger.error(error.message);
+
+    // Show stack trace in debug mode
+    if (process.env.DEBUG && error.stack) {
+      Logger.debug(error.stack);
+    }
+
+    return error.exitCode;
+  }
+
+  // Handle unexpected errors
+  if (error instanceof Error) {
+    Logger.error('An unexpected error occurred');
+    Logger.error(error.message);
+
+    if (process.env.DEBUG && error.stack) {
+      Logger.debug(error.stack);
+    }
+
+    return 1;
+  }
+
+  // Handle non-Error throws
+  Logger.error('An unknown error occurred');
+  Logger.debug(String(error));
+  return 1;
+}
+
+/**
  * Main entry point for the Overture CLI.
  *
  * Initializes the Commander program and handles global error cases.
  * Errors are logged with appropriate formatting, and stack traces
  * are shown when DEBUG environment variable is set.
  */
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   try {
     // Initialize client adapters before creating the CLI
     initializeAdapters();
@@ -20,36 +58,13 @@ async function main(): Promise<void> {
     const program = createProgram();
     await program.parseAsync(process.argv);
   } catch (error) {
-    // Handle known Overture errors
-    if (error instanceof OvertureError) {
-      Logger.error(error.message);
-
-      // Show stack trace in debug mode
-      if (process.env.DEBUG && error.stack) {
-        Logger.debug(error.stack);
-      }
-
-      process.exit(error.exitCode);
-    }
-
-    // Handle unexpected errors
-    if (error instanceof Error) {
-      Logger.error('An unexpected error occurred');
-      Logger.error(error.message);
-
-      if (process.env.DEBUG && error.stack) {
-        Logger.debug(error.stack);
-      }
-
-      process.exit(1);
-    }
-
-    // Handle non-Error throws
-    Logger.error('An unknown error occurred');
-    Logger.debug(String(error));
-    process.exit(1);
+    const exitCode = handleError(error);
+    process.exit(exitCode);
   }
 }
 
-// Run the CLI
-main();
+// Run the CLI only when executed directly (not when imported for testing)
+/* istanbul ignore next */
+if (require.main === module) {
+  main();
+}

@@ -52,12 +52,12 @@ describe('Process Lock', () => {
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"pid": 12345'),
-        'utf-8'
+        { encoding: 'utf-8', flag: 'wx' }
       );
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"operation": "test-sync"'),
-        'utf-8'
+        { encoding: 'utf-8', flag: 'wx' }
       );
     });
 
@@ -81,8 +81,16 @@ describe('Process Lock', () => {
 
       mockFs.existsSync.mockImplementation((p) => {
         if (p === mockLockDir) return true; // Dir exists
-        return true; // Lock file exists
+        return false; // Lock existence determined by writeFileSync failure
       });
+
+      // Always fail with EEXIST (active lock)
+      mockFs.writeFileSync.mockImplementation(() => {
+        const err: NodeJS.ErrnoException = new Error('EEXIST');
+        err.code = 'EEXIST';
+        throw err;
+      });
+
       mockFs.readFileSync.mockReturnValue(activeLock);
 
       await expect(acquireLock({ maxRetries: 0, retryDelay: 10 })).rejects.toThrow(
@@ -97,16 +105,27 @@ describe('Process Lock', () => {
         operation: 'sync',
       });
 
-      let lockFileExists = true;
+      let lockFileRemoved = false;
       mockFs.existsSync.mockImplementation((p) => {
         if (p === mockLockDir) return true; // Dir always exists
-        if (p === mockLockPath) return lockFileExists; // Lock file existence
-        return false;
+        return false; // Lock dir check returns true, but we handle via writeFileSync
+      });
+
+      // First write fails with EEXIST (lock exists), then succeeds after stale lock removal
+      let writeAttempt = 0;
+      mockFs.writeFileSync.mockImplementation(() => {
+        writeAttempt++;
+        if (writeAttempt === 1 && !lockFileRemoved) {
+          const err: NodeJS.ErrnoException = new Error('EEXIST');
+          err.code = 'EEXIST';
+          throw err;
+        }
+        // Second attempt succeeds after stale lock is removed
       });
 
       mockFs.readFileSync.mockReturnValue(staleLock);
       mockFs.unlinkSync.mockImplementation(() => {
-        lockFileExists = false; // Simulate removal
+        lockFileRemoved = true;
       });
 
       const result = await acquireLock({ staleTimeout: 10000 });
@@ -116,7 +135,7 @@ describe('Process Lock', () => {
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"pid": 12345'),
-        'utf-8'
+        { encoding: 'utf-8', flag: 'wx' }
       );
     });
 
@@ -127,14 +146,21 @@ describe('Process Lock', () => {
         operation: 'sync',
       });
 
-      let attempts = 0;
       mockFs.existsSync.mockImplementation((p) => {
         if (p === mockLockDir) return true; // Dir exists
-        if (p === mockLockPath) {
-          attempts++;
-          return attempts <= 2; // Fail first 2 attempts, succeed on 3rd
-        }
         return false;
+      });
+
+      let writeAttempts = 0;
+      mockFs.writeFileSync.mockImplementation(() => {
+        writeAttempts++;
+        if (writeAttempts <= 2) {
+          // First 2 attempts fail with EEXIST
+          const err: NodeJS.ErrnoException = new Error('EEXIST');
+          err.code = 'EEXIST';
+          throw err;
+        }
+        // 3rd attempt succeeds
       });
 
       mockFs.readFileSync.mockReturnValue(activeLock);
@@ -143,6 +169,7 @@ describe('Process Lock', () => {
 
       expect(result).toBe(true);
       expect(mockFs.writeFileSync).toHaveBeenCalled();
+      expect(writeAttempts).toBe(3);
     });
 
     it('should use default options when not specified', async () => {
@@ -153,7 +180,7 @@ describe('Process Lock', () => {
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"operation": "sync"'),
-        'utf-8'
+        { encoding: 'utf-8', flag: 'wx' }
       );
     });
   });

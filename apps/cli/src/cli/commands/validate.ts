@@ -22,6 +22,8 @@ const VALID_CLIENT_NAMES: ClientName[] = [
   'windsurf',
   'copilot-cli',
   'jetbrains-copilot',
+  'codex',
+  'gemini-cli',
 ];
 
 /**

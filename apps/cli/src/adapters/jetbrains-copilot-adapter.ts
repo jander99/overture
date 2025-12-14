@@ -19,7 +19,7 @@
  */
 
 import * as fs from 'fs';
-import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig } from './client-adapter.interface';
+import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig, type ClientMcpServerDef } from './client-adapter.interface';
 import type { Platform, OvertureConfig } from '../domain/config.types';
 import { getJetBrainsCopilotPath, getJetBrainsCopilotWorkspacePath } from '../core/path-resolver';
 import { expandEnvVarsInObject } from '../core/env-expander';
@@ -77,7 +77,7 @@ export class JetBrainsCopilotAdapter extends BaseClientAdapter {
   }
 
   convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
-    const mcpServers: Record<string, any> = {};
+    const mcpServers: Record<string, ClientMcpServerDef> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
       // Check if should sync

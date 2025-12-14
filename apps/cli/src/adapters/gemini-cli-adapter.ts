@@ -22,6 +22,7 @@ import {
   BaseClientAdapter,
   type ConfigPathResult,
   type ClientMcpConfig,
+  type ClientMcpServerDef,
 } from './client-adapter.interface';
 import type { Platform, OvertureConfig } from '../domain/config.types';
 import { getGeminiCliPath } from '../core/path-resolver';
@@ -80,7 +81,7 @@ export class GeminiCliAdapter extends BaseClientAdapter {
     overtureConfig: OvertureConfig,
     platform: Platform
   ): ClientMcpConfig {
-    const mcpServers: Record<string, any> = {};
+    const mcpServers: Record<string, ClientMcpServerDef> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
       // Check if should sync
