@@ -16,6 +16,7 @@ import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
 import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig, type ClientMcpServerDef } from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
+import { McpError, ValidationError } from '@overture/errors';
 
 /**
  * Claude Code adapter implementation with dependency injection
@@ -60,7 +61,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 
       return parsed;
     } catch (error) {
-      throw new Error(`Failed to read Claude Code config at ${path}: ${(error as Error).message}`);
+      throw new McpError(`Failed to read Claude Code config at ${path}: ${(error as Error).message}`, this.name);
     }
   }
 
@@ -76,7 +77,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
       const content = JSON.stringify(config, null, 2);
       await this.filesystem.writeFile(path, content);
     } catch (error) {
-      throw new Error(`Failed to write Claude Code config to ${path}: ${(error as Error).message}`);
+      throw new McpError(`Failed to write Claude Code config to ${path}: ${(error as Error).message}`, this.name);
     }
   }
 
@@ -140,12 +141,12 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
       case 'win32':
         return `${env.APPDATA}/Claude/mcp.json`;
       default:
-        throw new Error(`Unsupported platform: ${platform}`);
+        throw new ValidationError(`Unsupported platform: ${platform}`);
     }
   }
 
   private getClaudeCodeProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.cwd();
+    const root = projectRoot || this.environment.env.PWD || '/';
     return `${root}/.mcp.json`;
   }
 

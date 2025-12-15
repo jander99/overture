@@ -14,6 +14,7 @@
 import type { ClientName } from '@overture/config-types';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
+import { ConfigError } from '@overture/errors';
 
 /**
  * Backup metadata
@@ -57,7 +58,7 @@ export class BackupService {
 
     // Read current config
     if (!(await this.deps.filesystem.exists(configPath))) {
-      throw new Error(`Config file not found: ${configPath}`);
+      throw new ConfigError(`Config file not found: ${configPath}`, configPath);
     }
 
     const configContent = await this.deps.filesystem.readFile(configPath);

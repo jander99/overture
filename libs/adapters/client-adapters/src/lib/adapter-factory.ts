@@ -13,6 +13,7 @@ import type { EnvironmentPort } from '@overture/ports-process';
 import { AdapterRegistry } from './adapter-registry.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.adapter.js';
 import type { ClientAdapter } from './client-adapter.interface.js';
+import { McpError } from '@overture/errors';
 
 /**
  * Create adapter registry with all client adapters registered
@@ -86,6 +87,6 @@ export function createAdapter(
       return new ClaudeCodeAdapter(filesystem, environment);
     // TODO: Add remaining adapters
     default:
-      throw new Error(`Unknown adapter: ${adapterName}`);
+      throw new McpError(`Unknown adapter: ${adapterName}`);
   }
 }

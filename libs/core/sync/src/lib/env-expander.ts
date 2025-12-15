@@ -8,6 +8,8 @@
  * @version 3.0
  */
 
+import { ConfigError } from '@overture/errors';
+
 /**
  * Expand environment variables in a string
  *
@@ -87,7 +89,7 @@ export function expandEnvVarsRecursive(
   }
 
   if (depth >= maxDepth && result !== previousResult) {
-    throw new Error(`Circular environment variable reference detected in: ${input}`);
+    throw new ConfigError(`Circular environment variable reference detected in: ${input}`);
   }
 
   return result;
