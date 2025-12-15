@@ -195,7 +195,7 @@ export class PluginExporter {
     // return plugins.filter(p => answers.selectedPlugins.includes(p.name));
     // ```
 
-    throw new Error(
+    throw new PluginError(
       'Interactive plugin selection not yet implemented. Use non-interactive mode with pluginNames option.'
     );
   }

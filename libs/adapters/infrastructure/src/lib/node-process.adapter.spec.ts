@@ -5,11 +5,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NodeProcessAdapter } from './node-process.adapter.js';
 
-// Mock Node.js child_process module
-vi.mock('node:child_process', () => ({
-  exec: vi.fn((cmd, callback) => {
-    // Mock implementation will be set in tests
-    callback(null, { stdout: '', stderr: '' });
+// Mock execa module
+vi.mock('execa', () => ({
+  default: vi.fn(async (command: string, args: string[]) => {
+    // Default mock implementation - will be overridden in tests
+    return {
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    };
   }),
 }));
 
@@ -23,11 +27,12 @@ describe('NodeProcessAdapter', () => {
 
   describe('exec', () => {
     it('should execute command with arguments', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: 'v16.14.0', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'v16.14.0',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.exec('node', ['--version']);
 
@@ -37,11 +42,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should execute command without arguments', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: 'output', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'output',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.exec('pwd');
 
@@ -50,11 +56,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle command with multiple arguments', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: 'installed lodash', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'installed lodash',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.exec('npm', ['install', 'lodash', '--save']);
 
@@ -62,16 +69,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle command failure with non-zero exit code', async () => {
-      const { exec } = await import('node:child_process');
-      const error: any = new Error('Command failed');
-      error.code = 1;
-      error.stdout = '';
-      error.stderr = 'error message';
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: 'error message',
+        exitCode: 1,
+      } as any);
 
       const result = await adapter.exec('invalid-command');
 
@@ -81,16 +84,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle command not found', async () => {
-      const { exec } = await import('node:child_process');
-      const error: any = new Error('command not found: nonexistent');
-      error.code = 127;
-      error.stdout = '';
-      error.stderr = 'command not found: nonexistent';
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: 'command not found: nonexistent',
+        exitCode: 127,
+      } as any);
 
       const result = await adapter.exec('nonexistent');
 
@@ -99,11 +98,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle command with stderr output on success', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: 'output', stderr: 'warning message' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'output',
+        stderr: 'warning message',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.exec('some-command');
 
@@ -113,11 +113,12 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle empty stdout and stderr', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: '', stderr: '' });
-        return null as any;
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.exec('silent-command');
 
@@ -126,37 +127,26 @@ describe('NodeProcessAdapter', () => {
       expect(result.stderr).toBe('');
     });
 
-    it('should default to exit code 1 if error has no code', async () => {
-      const { exec } = await import('node:child_process');
-      const error: any = new Error('Unknown error');
-      error.stdout = 'partial output';
-      error.stderr = 'error';
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+    it('should handle unexpected errors', async () => {
+      const execa = (await import('execa')).default;
+      const error = new Error('Unexpected error occurred');
+      vi.mocked(execa).mockRejectedValue(error);
 
       const result = await adapter.exec('failing-command');
 
       expect(result.exitCode).toBe(1);
-      expect(result.stdout).toBe('partial output');
-      expect(result.stderr).toBe('error');
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe('Unexpected error occurred');
     });
 
-    it('should handle error with only message (no stdout/stderr)', async () => {
-      const { exec } = await import('node:child_process');
-      const error: any = new Error('Execution failed');
-      error.code = 2;
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+    it('should handle errors with custom messages', async () => {
+      const execa = (await import('execa')).default;
+      const error = new Error('Execution failed');
+      vi.mocked(execa).mockRejectedValue(error);
 
       const result = await adapter.exec('bad-command');
 
-      expect(result.exitCode).toBe(2);
+      expect(result.exitCode).toBe(1);
       expect(result.stdout).toBe('');
       expect(result.stderr).toBe('Execution failed');
     });
@@ -169,13 +159,14 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should return true when command exists on Unix', async () => {
-      const { exec } = await import('node:child_process');
+      const execa = (await import('execa')).default;
       vi.stubGlobal('process', { ...process, platform: 'linux' });
 
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: '/usr/bin/npm', stderr: '' });
-        return null as any;
-      });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '/usr/bin/npm',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.commandExists('npm');
 
@@ -183,18 +174,14 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should return false when command does not exist on Unix', async () => {
-      const { exec } = await import('node:child_process');
+      const execa = (await import('execa')).default;
       vi.stubGlobal('process', { ...process, platform: 'darwin' });
 
-      const error: any = new Error('command not found');
-      error.code = 1;
-      error.stdout = '';
-      error.stderr = 'not found';
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: 'not found',
+        exitCode: 1,
+      } as any);
 
       const result = await adapter.commandExists('nonexistent');
 
@@ -202,13 +189,14 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should use "where" command on Windows', async () => {
-      const { exec } = await import('node:child_process');
+      const execa = (await import('execa')).default;
       vi.stubGlobal('process', { ...process, platform: 'win32' });
 
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: 'C:\\Program Files\\nodejs\\npm.cmd', stderr: '' });
-        return null as any;
-      });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'C:\\Program Files\\nodejs\\npm.cmd',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.commandExists('npm');
 
@@ -216,16 +204,14 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should return false when command does not exist on Windows', async () => {
-      const { exec } = await import('node:child_process');
+      const execa = (await import('execa')).default;
       vi.stubGlobal('process', { ...process, platform: 'win32' });
 
-      const error: any = new Error('not found');
-      error.code = 1;
-
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(error, { stdout: '', stderr: '' });
-        return null as any;
-      });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 1,
+      } as any);
 
       const result = await adapter.commandExists('missing');
 
@@ -233,10 +219,8 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should return false on exception', async () => {
-      const { exec } = await import('node:child_process');
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        throw new Error('Unexpected error');
-      });
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockRejectedValue(new Error('Unexpected error'));
 
       const result = await adapter.commandExists('npm');
 
@@ -244,13 +228,14 @@ describe('NodeProcessAdapter', () => {
     });
 
     it('should handle macOS platform', async () => {
-      const { exec } = await import('node:child_process');
+      const execa = (await import('execa')).default;
       vi.stubGlobal('process', { ...process, platform: 'darwin' });
 
-      vi.mocked(exec).mockImplementation((cmd: any, callback: any) => {
-        callback(null, { stdout: '/usr/local/bin/docker', stderr: '' });
-        return null as any;
-      });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '/usr/local/bin/docker',
+        stderr: '',
+        exitCode: 0,
+      } as any);
 
       const result = await adapter.commandExists('docker');
 
@@ -267,6 +252,129 @@ describe('NodeProcessAdapter', () => {
     it('should have all methods as functions', () => {
       expect(typeof adapter.exec).toBe('function');
       expect(typeof adapter.commandExists).toBe('function');
+    });
+  });
+
+  describe('security - command injection prevention', () => {
+    // These tests verify that execa properly prevents shell injection
+    // by treating arguments as literals, not shell commands
+
+    it('should prevent semicolon command injection', async () => {
+      const execa = (await import('execa')).default;
+      // Mock to verify arguments are passed correctly (not executed as shell)
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'hello; echo pwned', // Echo would output the literal string
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['hello; echo pwned']);
+
+      // Verify execa was called with array args (preventing shell interpretation)
+      expect(execa).toHaveBeenCalledWith('echo', ['hello; echo pwned'], expect.any(Object));
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe('hello; echo pwned');
+    });
+
+    it('should prevent backtick command substitution', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '`whoami`',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['`whoami`']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['`whoami`'], expect.any(Object));
+      expect(result.stdout).toBe('`whoami`');
+    });
+
+    it('should prevent dollar-parenthesis command substitution', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '$(pwd)',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['$(pwd)']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['$(pwd)'], expect.any(Object));
+      expect(result.stdout).toBe('$(pwd)');
+    });
+
+    it('should prevent environment variable expansion', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '$HOME',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['$HOME']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['$HOME'], expect.any(Object));
+      expect(result.stdout).toBe('$HOME');
+    });
+
+    it('should prevent pipe command execution', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'hello | cat',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['hello | cat']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['hello | cat'], expect.any(Object));
+      expect(result.stdout).toBe('hello | cat');
+    });
+
+    it('should safely handle malicious plugin names', async () => {
+      const execa = (await import('execa')).default;
+      const maliciousName = 'evil-plugin; rm -rf /';
+
+      vi.mocked(execa).mockResolvedValue({
+        stdout: maliciousName,
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', [maliciousName]);
+
+      // The entire malicious string should be a single argument
+      expect(execa).toHaveBeenCalledWith('echo', [maliciousName], expect.any(Object));
+      expect(result.stdout).toBe(maliciousName);
+    });
+
+    it('should prevent background execution with ampersand', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'hello &',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['hello &']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['hello &'], expect.any(Object));
+      expect(result.stdout).toBe('hello &');
+    });
+
+    it('should prevent file redirection', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: 'test > /tmp/pwned.txt',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const result = await adapter.exec('echo', ['test > /tmp/pwned.txt']);
+
+      expect(execa).toHaveBeenCalledWith('echo', ['test > /tmp/pwned.txt'], expect.any(Object));
+      expect(result.stdout).toBe('test > /tmp/pwned.txt');
     });
   });
 });

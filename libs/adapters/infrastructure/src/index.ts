@@ -15,7 +15,6 @@
  *   NodeProcessAdapter,
  *   NodeEnvironmentAdapter,
  *   FsUtils,
- *   ProcessExecutor,
  *   TemplateLoader
  * } from '@overture/adapters-infrastructure';
  *
@@ -35,7 +34,6 @@ export { NodeEnvironmentAdapter } from './lib/node-environment.adapter.js';
 
 // Legacy Utilities (TODO: Phase out in favor of port-based architecture)
 export { FsUtils } from './lib/fs-utils.js';
-export { ProcessExecutor } from './lib/process-executor.js';
 export { TemplateLoader } from './lib/template-loader.js';
 
 // Re-export types from ports for convenience

@@ -16,6 +16,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getLockFilePath } from './path-resolver';
+import { ConfigError } from '@overture/errors';
 
 /**
  * Lock metadata stored in lock file
@@ -124,8 +125,9 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
 
           // Lock is active - check if we've exhausted retries
           if (attempts === opts.maxRetries) {
-            throw new Error(
-              `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`
+            throw new ConfigError(
+              `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`,
+              lockPath
             );
           }
 
@@ -175,8 +177,9 @@ export function releaseLock(): void {
     const lockData: LockData = JSON.parse(lockContent);
 
     if (lockData.pid !== process.pid) {
-      throw new Error(
-        `Cannot release lock: Lock belongs to different process (PID ${lockData.pid})`
+      throw new ConfigError(
+        `Cannot release lock: Lock belongs to different process (PID ${lockData.pid})`,
+        lockPath
       );
     }
 

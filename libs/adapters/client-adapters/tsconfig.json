@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../ports/process"
+    },
+    {
       "path": "../../ports/filesystem"
     },
     {

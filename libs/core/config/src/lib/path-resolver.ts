@@ -16,6 +16,7 @@
 import type { EnvironmentPort } from '@overture/ports-process';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { Platform, ClientName } from '@overture/config-types';
+import { ValidationError, McpError } from '@overture/errors';
 
 /**
  * Path resolver service for configuration files
@@ -166,7 +167,7 @@ export class PathResolver {
           'mcp.json'
         );
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -207,7 +208,7 @@ export class PathResolver {
           'claude_desktop_config.json'
         );
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -233,7 +234,7 @@ export class PathResolver {
           'mcp.json'
         );
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -265,7 +266,7 @@ export class PathResolver {
       case 'win32':
         return this.joinPaths(homeDir, '.cursor', 'mcp.json');
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -296,7 +297,7 @@ export class PathResolver {
       case 'win32':
         return this.joinPaths(homeDir, '.codeium', 'windsurf', 'mcp_config.json');
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -323,7 +324,7 @@ export class PathResolver {
         // On Windows, always use %USERPROFILE%\.copilot
         return this.joinPaths(homeDir, '.copilot', 'mcp-config.json');
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -344,7 +345,7 @@ export class PathResolver {
       case 'win32':
         return this.joinPaths(homeDir, '.codex', 'mcp-config.json');
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -365,7 +366,7 @@ export class PathResolver {
       case 'win32':
         return this.joinPaths(homeDir, '.gemini', 'mcp-config.json');
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -396,7 +397,7 @@ export class PathResolver {
           'mcp.json'
         );
       default:
-        throw new Error(`Unsupported platform: ${targetPlatform}`);
+        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
   }
 
@@ -571,7 +572,7 @@ export class PathResolver {
       case 'gemini-cli':
         return this.getGeminiCliPath(platform);
       default:
-        throw new Error(`Unknown client: ${clientName}`);
+        throw new McpError(`Unknown client: ${clientName}`, clientName);
     }
   }
 

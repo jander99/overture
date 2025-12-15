@@ -9,9 +9,11 @@
  */
 
 import type { FilesystemPort } from '@overture/ports-filesystem';
+import type { EnvironmentPort } from '@overture/ports-process';
 import { AdapterRegistry } from './adapter-registry.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.adapter.js';
 import type { ClientAdapter } from './client-adapter.interface.js';
+import { McpError } from '@overture/errors';
 
 /**
  * Create adapter registry with all client adapters registered
@@ -20,35 +22,40 @@ import type { ClientAdapter } from './client-adapter.interface.js';
  * client adapters with dependency injection.
  *
  * @param filesystem - Filesystem port implementation
+ * @param environment - Environment port implementation
  * @returns Configured adapter registry with all adapters registered
  *
  * @example
  * ```typescript
- * import { createFilesystemAdapter } from '@overture/adapters-filesystem';
+ * import { createFilesystemAdapter, createEnvironmentAdapter } from '@overture/adapters-infrastructure';
  * import { createAdapterRegistry } from '@overture/client-adapters';
  *
  * const filesystem = createFilesystemAdapter();
- * const registry = createAdapterRegistry(filesystem);
+ * const environment = createEnvironmentAdapter();
+ * const registry = createAdapterRegistry(filesystem, environment);
  *
  * // Use registry
  * const adapter = registry.get('claude-code');
  * const config = await adapter.readConfig('/path/to/config');
  * ```
  */
-export function createAdapterRegistry(filesystem: FilesystemPort): AdapterRegistry {
+export function createAdapterRegistry(
+  filesystem: FilesystemPort,
+  environment: EnvironmentPort
+): AdapterRegistry {
   const registry = new AdapterRegistry();
 
   // Register all client adapters with DI
-  registry.register(new ClaudeCodeAdapter(filesystem));
+  registry.register(new ClaudeCodeAdapter(filesystem, environment));
   // TODO: Register remaining 8 adapters when implemented
-  // registry.register(new ClaudeDesktopAdapter(filesystem));
-  // registry.register(new VSCodeAdapter(filesystem));
-  // registry.register(new CursorAdapter(filesystem));
-  // registry.register(new WindsurfAdapter(filesystem));
-  // registry.register(new JetBrainsCopilotAdapter(filesystem));
-  // registry.register(new CopilotCliAdapter(filesystem));
-  // registry.register(new CodexAdapter(filesystem));
-  // registry.register(new GeminiCliAdapter(filesystem));
+  // registry.register(new ClaudeDesktopAdapter(filesystem, environment));
+  // registry.register(new VSCodeAdapter(filesystem, environment));
+  // registry.register(new CursorAdapter(filesystem, environment));
+  // registry.register(new WindsurfAdapter(filesystem, environment));
+  // registry.register(new JetBrainsCopilotAdapter(filesystem, environment));
+  // registry.register(new CopilotCliAdapter(filesystem, environment));
+  // registry.register(new CodexAdapter(filesystem, environment));
+  // registry.register(new GeminiCliAdapter(filesystem, environment));
 
   return registry;
 }
@@ -60,24 +67,26 @@ export function createAdapterRegistry(filesystem: FilesystemPort): AdapterRegist
  *
  * @param adapterName - Name of the adapter to create
  * @param filesystem - Filesystem port implementation
+ * @param environment - Environment port implementation
  * @returns Adapter instance
  * @throws Error if adapter name is unknown
  *
  * @example
  * ```typescript
- * const adapter = createAdapter('claude-code', filesystem);
+ * const adapter = createAdapter('claude-code', filesystem, environment);
  * const config = await adapter.readConfig('/path/to/config');
  * ```
  */
 export function createAdapter(
   adapterName: string,
-  filesystem: FilesystemPort
+  filesystem: FilesystemPort,
+  environment: EnvironmentPort
 ): ClientAdapter {
   switch (adapterName) {
     case 'claude-code':
-      return new ClaudeCodeAdapter(filesystem);
+      return new ClaudeCodeAdapter(filesystem, environment);
     // TODO: Add remaining adapters
     default:
-      throw new Error(`Unknown adapter: ${adapterName}`);
+      throw new McpError(`Unknown adapter: ${adapterName}`);
   }
 }

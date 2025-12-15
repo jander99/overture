@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FilesystemPort } from '@overture/ports-filesystem';
+import type { EnvironmentPort } from '@overture/ports-process';
 import {
   createAdapterRegistry,
   createAdapter,
@@ -29,16 +30,33 @@ function createMockFilesystem(): FilesystemPort {
   };
 }
 
+/**
+ * Create a mock environment port for testing
+ */
+function createMockEnvironment(): EnvironmentPort {
+  return {
+    platform: vi.fn(() => 'linux'),
+    homedir: vi.fn(() => '/home/user'),
+    cwd: vi.fn(() => '/home/user/project'),
+    env: {
+      HOME: '/home/user',
+      XDG_CONFIG_HOME: '/home/user/.config',
+    },
+  };
+}
+
 describe('@overture/client-adapters', () => {
   let filesystem: FilesystemPort;
+  let environment: EnvironmentPort;
 
   beforeEach(() => {
     filesystem = createMockFilesystem();
+    environment = createMockEnvironment();
   });
 
   describe('createAdapterRegistry', () => {
     it('should create registry with ClaudeCodeAdapter registered', () => {
-      const registry = createAdapterRegistry(filesystem);
+      const registry = createAdapterRegistry(filesystem, environment);
 
       expect(registry).toBeInstanceOf(AdapterRegistry);
       expect(registry.size).toBe(1); // Only ClaudeCodeAdapter for now
@@ -46,7 +64,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should inject filesystem port into adapters', () => {
-      const registry = createAdapterRegistry(filesystem);
+      const registry = createAdapterRegistry(filesystem, environment);
       const adapter = registry.get('claude-code');
 
       expect(adapter).toBeDefined();
@@ -56,14 +74,14 @@ describe('@overture/client-adapters', () => {
 
   describe('createAdapter', () => {
     it('should create ClaudeCodeAdapter with DI', () => {
-      const adapter = createAdapter('claude-code', filesystem);
+      const adapter = createAdapter('claude-code', filesystem, environment);
 
       expect(adapter).toBeInstanceOf(ClaudeCodeAdapter);
       expect(adapter.name).toBe('claude-code');
     });
 
     it('should throw for unknown adapter', () => {
-      expect(() => createAdapter('unknown-adapter' as any, filesystem)).toThrow('Unknown adapter');
+      expect(() => createAdapter('unknown-adapter' as any, filesystem, environment)).toThrow('Unknown adapter');
     });
   });
 
@@ -75,7 +93,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should register and retrieve adapter', () => {
-      const adapter = new ClaudeCodeAdapter(filesystem);
+      const adapter = new ClaudeCodeAdapter(filesystem, environment);
       registry.register(adapter);
 
       expect(registry.get('claude-code')).toBe(adapter);
@@ -83,7 +101,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should return all registered adapters', () => {
-      const adapter = new ClaudeCodeAdapter(filesystem);
+      const adapter = new ClaudeCodeAdapter(filesystem, environment);
       registry.register(adapter);
 
       const all = registry.getAll();
@@ -92,7 +110,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should return all registered names', () => {
-      const adapter = new ClaudeCodeAdapter(filesystem);
+      const adapter = new ClaudeCodeAdapter(filesystem, environment);
       registry.register(adapter);
 
       const names = registry.getAllNames();
@@ -100,7 +118,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should clear all adapters', () => {
-      const adapter = new ClaudeCodeAdapter(filesystem);
+      const adapter = new ClaudeCodeAdapter(filesystem, environment);
       registry.register(adapter);
       expect(registry.size).toBe(1);
 
@@ -109,7 +127,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should detect installed clients (integration with adapter)', () => {
-      const adapter = new ClaudeCodeAdapter(filesystem);
+      const adapter = new ClaudeCodeAdapter(filesystem, environment);
       registry.register(adapter);
 
       // Mock detectConfigPath to return non-null (client installed)
@@ -122,7 +140,7 @@ describe('@overture/client-adapters', () => {
     let registry: AdapterRegistry;
 
     beforeEach(() => {
-      registry = createAdapterRegistry(filesystem);
+      registry = createAdapterRegistry(filesystem, environment);
     });
 
     it('should return adapter for registered client', () => {
@@ -143,7 +161,7 @@ describe('@overture/client-adapters', () => {
     let adapter: ClaudeCodeAdapter;
 
     beforeEach(() => {
-      adapter = new ClaudeCodeAdapter(filesystem);
+      adapter = new ClaudeCodeAdapter(filesystem, environment);
     });
 
     it('should have correct metadata', () => {

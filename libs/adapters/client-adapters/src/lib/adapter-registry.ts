@@ -10,6 +10,7 @@
 
 import type { ClientAdapter } from './client-adapter.interface.js';
 import type { ClientName, Platform } from '@overture/config-types';
+import { McpError } from '@overture/errors';
 
 /**
  * Adapter registry
@@ -161,7 +162,7 @@ export class AdapterRegistry {
 export function getAdapterForClient(registry: AdapterRegistry, clientName: ClientName): ClientAdapter {
   const adapter = registry.get(clientName);
   if (!adapter) {
-    throw new Error(`No adapter registered for client: ${clientName}`);
+    throw new McpError(`No adapter registered for client: ${clientName}`, clientName);
   }
   return adapter;
 }

@@ -12,6 +12,9 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
+      "path": "../../ports/process/tsconfig.lib.json"
+    },
+    {
       "path": "../../ports/filesystem/tsconfig.lib.json"
     },
     {
