@@ -1,0 +1,367 @@
+/**
+ * Backup Command Tests
+ *
+ * Comprehensive tests for `overture backup` subcommands (list, restore, cleanup).
+ * Tests command options, output handling, error cases, and edge cases.
+ */
+
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createBackupCommand } from './backup';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import type { AppDependencies } from '../../composition-root';
+import type { BackupMetadata } from '@overture/sync-core';
+import { UserCancelledError } from '@overture/utils';
+
+// Mock chalk to avoid ANSI codes in test assertions
+vi.mock('chalk', () => ({
+  default: {
+    bold: { cyan: (s: string) => s },
+    gray: (s: string) => s,
+    dim: (s: string) => s,
+    cyan: (s: string) => s,
+    yellow: (s: string) => s,
+  },
+}));
+
+// Mock Prompts and ErrorHandler modules
+vi.mock('@overture/utils', async () => {
+  const actual = await vi.importActual('@overture/utils');
+  return {
+    ...actual,
+    Prompts: {
+      confirm: vi.fn(),
+    },
+    ErrorHandler: {
+      handleCommandError: vi.fn(), // Mock to prevent process.exit calls
+    },
+  };
+});
+
+describe('backup command', () => {
+  let deps: AppDependencies;
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    deps = createMockAppDependencies();
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
+  describe('backup list', () => {
+    it('should list all backups grouped by client', async () => {
+      const backups: BackupMetadata[] = [
+        {
+          client: 'claude-code',
+          timestamp: '2025-01-11T14-30-45-123Z',
+          size: 1024,
+          path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
+        },
+        {
+          client: 'claude-desktop',
+          timestamp: '2025-01-11T15-00-00-000Z',
+          size: 2048,
+          path: '/backups/claude-desktop-2025-01-11T15-00-00-000Z.json',
+        },
+      ];
+
+      vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'list']);
+
+      expect(deps.backupService.listBackups).toHaveBeenCalledWith(undefined);
+      expect(deps.output.info).toHaveBeenCalledWith('All backups:');
+      expect(deps.output.info).toHaveBeenCalledWith('Total: 2 backup(s)');
+      expect(consoleLogSpy).toHaveBeenCalledWith('claude-code:');
+      expect(consoleLogSpy).toHaveBeenCalledWith('claude-desktop:');
+    });
+
+    it('should filter backups by client', async () => {
+      const backups: BackupMetadata[] = [
+        {
+          client: 'claude-code',
+          timestamp: '2025-01-11T14-30-45-123Z',
+          size: 1024,
+          path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
+        },
+      ];
+
+      vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'list', '--client', 'claude-code']);
+
+      expect(deps.backupService.listBackups).toHaveBeenCalledWith('claude-code');
+      expect(deps.output.info).toHaveBeenCalledWith('Backups for claude-code:');
+    });
+
+    it('should warn when no backups found', async () => {
+      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'list']);
+
+      expect(deps.output.warn).toHaveBeenCalledWith('No backups found');
+    });
+
+    it('should warn when no backups found for specific client', async () => {
+      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'list', '--client', 'claude-code']);
+
+      expect(deps.output.warn).toHaveBeenCalledWith('No backups found for client: claude-code');
+    });
+  });
+
+  describe('backup restore', () => {
+    const mockBackup: BackupMetadata = {
+      client: 'claude-code',
+      timestamp: '2025-01-11T14-30-45-123Z',
+      size: 1024,
+      path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
+    };
+
+    beforeEach(() => {
+      // Setup adapter registry mock
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
+      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
+    });
+
+    it('should restore latest backup with --latest flag', async () => {
+      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+        success: true,
+        backupPath: mockBackup.path,
+        restoredPath: '/home/user/.config/claude/mcp.json',
+      });
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '--latest',
+        '--no-confirm',
+      ]);
+
+      expect(deps.backupService.getLatestBackup).toHaveBeenCalledWith('claude-code');
+      expect(deps.restoreService.restoreLatestBackup).toHaveBeenCalled();
+      expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+    });
+
+    it('should restore specific backup by timestamp', async () => {
+      vi.mocked(deps.backupService.listBackups).mockReturnValue([mockBackup]);
+      vi.mocked(deps.restoreService.restoreBackup).mockReturnValue({
+        success: true,
+        backupPath: mockBackup.path,
+        restoredPath: '/home/user/.config/claude/mcp.json',
+      });
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '2025-01-11T14-30-45-123Z',
+        '--no-confirm',
+      ]);
+
+      expect(deps.backupService.listBackups).toHaveBeenCalledWith('claude-code');
+      expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+        'claude-code',
+        '2025-01-11T14-30-45-123Z',
+        '/home/user/.config/claude/mcp.json'
+      );
+      expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+    });
+
+    it('should display backup details before restore', async () => {
+      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+        success: true,
+        backupPath: mockBackup.path,
+        restoredPath: '/home/user/.config/claude/mcp.json',
+      });
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '--latest',
+        '--no-confirm',
+      ]);
+
+      expect(deps.output.info).toHaveBeenCalledWith('Backup details:');
+      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Client: claude-code'));
+      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Size:'));
+      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Age:'));
+    });
+
+    it('should error on unknown client', async () => {
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'unknown-client',
+        '--latest',
+        '--no-confirm',
+      ]);
+
+      expect(deps.output.error).toHaveBeenCalledWith('Unknown client: unknown-client');
+      expect(deps.output.info).toHaveBeenCalledWith('Available clients:');
+    });
+
+    it('should error when no backups found for client', async () => {
+      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(null);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '--latest',
+        '--no-confirm',
+      ]);
+
+      expect(deps.output.error).toHaveBeenCalledWith('No backups found for claude-code');
+    });
+
+    it('should error when specific backup not found', async () => {
+      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '2025-01-11T14-30-45-123Z',
+        '--no-confirm',
+      ]);
+
+      expect(deps.output.error).toHaveBeenCalledWith(
+        'Backup not found: claude-code at 2025-01-11T14-30-45-123Z'
+      );
+    });
+
+    it('should exit with code 1 on restore failure', async () => {
+      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+        success: false,
+        error: 'Permission denied',
+      });
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync([
+        'node',
+        'overture',
+        'backup',
+        'restore',
+        'claude-code',
+        '--latest',
+        '--no-confirm',
+      ]);
+
+      expect(deps.output.error).toHaveBeenCalledWith('Restore failed: Permission denied');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('backup cleanup', () => {
+    beforeEach(() => {
+      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
+    });
+
+    it('should cleanup all clients by default', async () => {
+      vi.mocked(deps.backupService.listBackups)
+        .mockReturnValueOnce([
+          { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
+          { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
+        ])
+        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }])
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'cleanup']);
+
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-desktop', 10);
+      expect(deps.output.success).toHaveBeenCalledWith('Cleaned up 1 backup(s)');
+    });
+
+    it('should cleanup specific client with --client flag', async () => {
+      vi.mocked(deps.backupService.listBackups)
+        .mockReturnValueOnce([
+          { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
+          { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
+        ])
+        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--client', 'claude-code']);
+
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use custom keep count with --keep flag', async () => {
+      vi.mocked(deps.backupService.listBackups)
+        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '1', size: 100, path: '/path1' }])
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--keep', '5']);
+
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 5);
+    });
+
+    it('should error on invalid keep count', async () => {
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--keep', 'invalid']);
+
+      expect(deps.output.error).toHaveBeenCalledWith('Keep count must be a positive integer');
+    });
+
+    it('should handle no backups to cleanup', async () => {
+      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+
+      const command = createBackupCommand(deps);
+      await command.parseAsync(['node', 'overture', 'backup', 'cleanup']);
+
+      expect(deps.output.info).toHaveBeenCalledWith('No backups to clean up');
+    });
+  });
+});

@@ -95,6 +95,7 @@ export function createMockAppDependencies(): AppDependencies {
       resolveProjectConfigPath: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
       resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
+      getPlatform: vi.fn().mockReturnValue('linux' as const),
     } as any,
 
     configLoader: {
@@ -113,12 +114,20 @@ export function createMockAppDependencies(): AppDependencies {
     } as any,
 
     adapterRegistry: {
+      get: vi.fn().mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn().mockResolvedValue({}),
+        writeConfig: vi.fn().mockResolvedValue(undefined),
+        validateTransport: vi.fn().mockReturnValue(true),
+      }),
       getAdapter: vi.fn().mockReturnValue({
         name: 'claude-code',
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn().mockResolvedValue(undefined),
         validateTransport: vi.fn().mockReturnValue(true),
       }),
+      getAllNames: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
       listAdapters: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
     } as any,
 
@@ -153,14 +162,16 @@ export function createMockAppDependencies(): AppDependencies {
         backupPath: '/home/user/.config/claude/backups/2024-01-01T00-00-00.json',
         timestamp: '2024-01-01T00:00:00.000Z',
       }),
-      list: vi.fn().mockResolvedValue([]),
-      restore: vi.fn().mockResolvedValue({ success: true }),
-      delete: vi.fn().mockResolvedValue({ success: true }),
+      listBackups: vi.fn().mockReturnValue([]),
+      getLatestBackup: vi.fn().mockReturnValue(null),
+      cleanupOldBackups: vi.fn(),
+      deleteBackup: vi.fn().mockReturnValue({ success: true }),
     } as any,
 
     restoreService: {
-      restore: vi.fn().mockResolvedValue({ success: true }),
-      listBackups: vi.fn().mockResolvedValue([]),
+      restoreBackup: vi.fn().mockReturnValue({ success: true }),
+      restoreLatestBackup: vi.fn().mockReturnValue({ success: true }),
+      listBackups: vi.fn().mockReturnValue([]),
     } as any,
 
     auditService: {
