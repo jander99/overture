@@ -1,6 +1,12 @@
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import { FsUtils } from './fs-utils.js';
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export class TemplateLoader {
   private static templateDir = path.join(__dirname, '..', 'assets', 'templates');
@@ -38,4 +44,6 @@ export class TemplateLoader {
 }
 
 // Register helpers on module load
-TemplateLoader.registerHelpers();
+// NOTE: Disabled to avoid ESM/CJS compatibility issues
+// Call manually if needed: TemplateLoader.registerHelpers();
+// TemplateLoader.registerHelpers();
