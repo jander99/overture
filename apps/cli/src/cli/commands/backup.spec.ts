@@ -32,7 +32,16 @@ vi.mock('@overture/utils', async () => {
       confirm: vi.fn(),
     },
     ErrorHandler: {
-      handleCommandError: vi.fn(), // Mock to prevent process.exit calls
+      handleCommandError: vi.fn((error, context, verbose) => {
+        // Re-throw errors during tests so we can see what's failing
+        if (error && typeof error === 'object' && 'exitCode' in error) {
+          // Don't throw for expected errors with exitCode
+          return;
+        }
+        if (error instanceof Error) {
+          throw error;
+        }
+      }),
     },
   };
 });
@@ -55,6 +64,16 @@ describe('backup command', () => {
     vi.restoreAllMocks();
   });
 
+  it('should create backup command with subcommands', () => {
+    const command = createBackupCommand(deps);
+    expect(command.name()).toBe('backup');
+    const subcommands = command.commands;
+    const subcommandNames = subcommands.map((cmd) => cmd.name());
+    expect(subcommandNames).toContain('list');
+    expect(subcommandNames).toContain('restore');
+    expect(subcommandNames).toContain('cleanup');
+  });
+
   describe('backup list', () => {
     it('should list all backups grouped by client', async () => {
       const backups: BackupMetadata[] = [
@@ -75,7 +94,7 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'list']);
+      await command.parseAsync(['node', 'backup', 'list']);
 
       expect(deps.backupService.listBackups).toHaveBeenCalledWith(undefined);
       expect(deps.output.info).toHaveBeenCalledWith('All backups:');
@@ -97,7 +116,7 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'list', '--client', 'claude-code']);
+      await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
 
       expect(deps.backupService.listBackups).toHaveBeenCalledWith('claude-code');
       expect(deps.output.info).toHaveBeenCalledWith('Backups for claude-code:');
@@ -107,7 +126,7 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'list']);
+      await command.parseAsync(['node', 'backup', 'list']);
 
       expect(deps.output.warn).toHaveBeenCalledWith('No backups found');
     });
@@ -116,7 +135,7 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'list', '--client', 'claude-code']);
+      await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
 
       expect(deps.output.warn).toHaveBeenCalledWith('No backups found for client: claude-code');
     });
@@ -130,8 +149,8 @@ describe('backup command', () => {
       path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
     };
 
-    beforeEach(() => {
-      // Setup adapter registry mock
+    it('should restore latest backup with --latest flag', async () => {
+      // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
         detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
@@ -140,10 +159,6 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
-    });
-
-    it('should restore latest backup with --latest flag', async () => {
       vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
       vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
         success: true,
@@ -154,7 +169,6 @@ describe('backup command', () => {
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -168,6 +182,15 @@ describe('backup command', () => {
     });
 
     it('should restore specific backup by timestamp', async () => {
+      // Setup adapter registry mock for this test
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
       vi.mocked(deps.backupService.listBackups).mockReturnValue([mockBackup]);
       vi.mocked(deps.restoreService.restoreBackup).mockReturnValue({
         success: true,
@@ -178,7 +201,6 @@ describe('backup command', () => {
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -196,6 +218,15 @@ describe('backup command', () => {
     });
 
     it('should display backup details before restore', async () => {
+      // Setup adapter registry mock for this test
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
       vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
       vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
         success: true,
@@ -206,7 +237,6 @@ describe('backup command', () => {
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -222,11 +252,11 @@ describe('backup command', () => {
 
     it('should error on unknown client', async () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
+      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
 
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'unknown-client',
@@ -239,12 +269,20 @@ describe('backup command', () => {
     });
 
     it('should error when no backups found for client', async () => {
+      // Setup adapter registry mock for this test
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
       vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(null);
 
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -256,12 +294,20 @@ describe('backup command', () => {
     });
 
     it('should error when specific backup not found', async () => {
+      // Setup adapter registry mock for this test
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
       vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -275,6 +321,15 @@ describe('backup command', () => {
     });
 
     it('should exit with code 1 on restore failure', async () => {
+      // Setup adapter registry mock for this test
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn(),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      } as any);
+
       vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
       vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
         success: false,
@@ -284,7 +339,6 @@ describe('backup command', () => {
       const command = createBackupCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'backup',
         'restore',
         'claude-code',
@@ -309,15 +363,18 @@ describe('backup command', () => {
           { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
         .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }])
-        .mockReturnValueOnce([])
-        .mockReturnValueOnce([]);
+        .mockReturnValueOnce([
+          { client: 'claude-desktop', timestamp: '1', size: 150, path: '/path3' },
+          { client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' },
+        ])
+        .mockReturnValueOnce([{ client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' }]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'cleanup']);
+      await command.parseAsync(['node', 'backup', 'cleanup']);
 
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-desktop', 10);
-      expect(deps.output.success).toHaveBeenCalledWith('Cleaned up 1 backup(s)');
+      expect(deps.output.success).toHaveBeenCalledWith('Cleaned up 2 backup(s)');
     });
 
     it('should cleanup specific client with --client flag', async () => {
@@ -329,7 +386,7 @@ describe('backup command', () => {
         .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--client', 'claude-code']);
+      await command.parseAsync(['node', 'backup', 'cleanup', '--client', 'claude-code']);
 
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledTimes(1);
@@ -343,14 +400,14 @@ describe('backup command', () => {
         .mockReturnValueOnce([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--keep', '5']);
+      await command.parseAsync(['node', 'backup', 'cleanup', '--keep', '5']);
 
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 5);
     });
 
     it('should error on invalid keep count', async () => {
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'cleanup', '--keep', 'invalid']);
+      await command.parseAsync(['node', 'backup', 'cleanup', '--keep', 'invalid']);
 
       expect(deps.output.error).toHaveBeenCalledWith('Keep count must be a positive integer');
     });
@@ -359,7 +416,7 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'overture', 'backup', 'cleanup']);
+      await command.parseAsync(['node', 'backup', 'cleanup']);
 
       expect(deps.output.info).toHaveBeenCalledWith('No backups to clean up');
     });
