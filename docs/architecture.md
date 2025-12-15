@@ -13,9 +13,9 @@ This document covers two major aspects of Overture's architecture:
 
 **Original Vision (Part I):** Claude Code uses a multi-layered architecture where different components provide different types of guidance to the LLM. Overture will manage these components through a unified YAML-based configuration system that generates Claude Code's native JSON configurations.
 
-**Current Implementation (Part II):** Overture v0.2 focuses on multi-platform MCP server synchronization across 7 AI development clients with user global configuration, backup/restore, and intelligent conflict resolution.
+**Current Implementation (Part II):** Overture v0.2.5 focuses on multi-platform MCP server synchronization across 7 AI development clients with user global configuration, backup/restore, intelligent client detection, and system diagnostics.
 
-**Important Note:** Part I describes the *vision* for future versions (v0.3+) with enhanced plugin/skill/agent orchestration. Part II describes the *current implementation* (v0.2) which is a multi-platform MCP synchronization tool. The two parts represent different stages of the project roadmap.
+**Important Note:** Part I describes the *vision* for future versions (v0.3+) with enhanced plugin/skill/agent orchestration. Part II describes the *current implementation* (v0.2.5) which is a multi-platform MCP synchronization tool with intelligent client detection. The two parts represent different stages of the project roadmap.
 
 ---
 
@@ -925,9 +925,9 @@ Warning: Hook syntax changed in Overture 2.0
 
 # Part II: Overture v0.2 Implementation Architecture
 
-**Version:** 2.0
-**Status:** Complete (873/873 tests passing, 83%+ code coverage)
-**Date:** 2025-01-13
+**Version:** 2.5
+**Status:** Complete (911/911 tests passing, 83%+ code coverage)
+**Date:** 2025-01-17
 
 ---
 
@@ -1413,7 +1413,7 @@ User: overture sync --client claude-code
 
 ### Test Coverage
 
-- **873 tests** passing (100% pass rate)
+- **911 tests** passing (100% pass rate)
 - **32 test suites** covering all components
 - **83%+ code coverage**
 
@@ -1480,7 +1480,8 @@ apps/cli/src/
 
 - **v0.1** (2025-11-09) - Initial release with project-level config
 - **v0.2** (2025-01-13) - Multi-platform sync with user global config
+- **v0.2.5** (2025-01-17) - Intelligent client detection, system diagnostics, and version validation
 
 ---
 
-**Document Last Updated:** 2025-01-13
+**Document Last Updated:** 2025-01-17
