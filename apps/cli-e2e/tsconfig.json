@@ -7,9 +7,5 @@
     "noImplicitAny": false
   },
   "include": ["vitest.config.ts", "src/**/*.ts"],
-  "references": [
-    {
-      "path": "../cli"
-    }
-  ]
+  "references": []
 }

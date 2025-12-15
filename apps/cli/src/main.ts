@@ -64,8 +64,7 @@ export async function main(): Promise<void> {
   }
 }
 
-// Run the CLI only when executed directly (not when imported for testing)
+// Run the CLI when executed directly
+// Note: In bundled/esbuild output, just always run since this is the entry point
 /* istanbul ignore next */
-if (require.main === module) {
-  main();
-}
+main();
