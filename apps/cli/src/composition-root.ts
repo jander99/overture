@@ -83,8 +83,8 @@ export function createAppDependencies(): AppDependencies {
     filesystem,
   });
 
-  // Create adapter registry with filesystem dependency
-  const adapterRegistry = createAdapterRegistry(filesystem);
+  // Create adapter registry with filesystem and environment dependencies
+  const adapterRegistry = createAdapterRegistry(filesystem, environment);
 
   // Create plugin services
   const pluginDetector = new PluginDetector(filesystem, environment);
