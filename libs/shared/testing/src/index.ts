@@ -12,6 +12,7 @@ export * from './lib/mocks/filesystem.mock.js';
 export * from './lib/mocks/process.mock.js';
 export * from './lib/mocks/adapter.mock.js';
 export * from './lib/mocks/platform.mock.js';
+export * from './lib/mocks/sync-engine-deps.mock.js';
 
 // Fixtures
 export * from './lib/fixtures/config.fixtures.js';
