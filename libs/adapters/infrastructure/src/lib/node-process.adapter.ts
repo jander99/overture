@@ -8,7 +8,7 @@
  */
 
 import type { ProcessPort, ExecResult } from '@overture/ports-process';
-import { execa } from 'execa';
+import execa from 'execa';
 
 /**
  * Node.js implementation of ProcessPort
