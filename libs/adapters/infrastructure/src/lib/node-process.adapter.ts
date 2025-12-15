@@ -8,10 +8,7 @@
  */
 
 import type { ProcessPort, ExecResult } from '@overture/ports-process';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execAsync = promisify(exec);
+import { execa } from 'execa';
 
 /**
  * Node.js implementation of ProcessPort
@@ -51,20 +48,22 @@ export class NodeProcessAdapter implements ProcessPort {
    * ```
    */
   async exec(command: string, args: string[] = []): Promise<ExecResult> {
-    const cmd = args.length > 0 ? `${command} ${args.join(' ')}` : command;
-
     try {
-      const { stdout, stderr } = await execAsync(cmd);
+      const result = await execa(command, args, {
+        reject: false, // Don't throw on non-zero exit codes
+      });
+
       return {
-        stdout: stdout || '',
-        stderr: stderr || '',
-        exitCode: 0,
+        stdout: result.stdout || '',
+        stderr: result.stderr || '',
+        exitCode: result.exitCode ?? 0,
       };
     } catch (error: any) {
+      // Handle unexpected errors (e.g., command not found, permission denied)
       return {
-        stdout: error.stdout || '',
-        stderr: error.stderr || error.message || '',
-        exitCode: error.code || 1,
+        stdout: '',
+        stderr: error.message || '',
+        exitCode: 1,
       };
     }
   }
