@@ -24,14 +24,15 @@ export function createMcpCommand(deps: AppDependencies): Command {
     .action(async (options: { scope?: string; client?: string }) => {
       const { configLoader, output } = deps;
 
-      // Validate scope if provided
-      if (options.scope && !['global', 'project'].includes(options.scope)) {
-        output.error(`Invalid scope: "${options.scope}". Must be "global" or "project".`);
-        return;
-      }
+      try {
+        // Validate scope if provided
+        if (options.scope && !['global', 'project'].includes(options.scope)) {
+          output.error(`Invalid scope: "${options.scope}". Must be "global" or "project".`);
+          return;
+        }
 
-      // Load configs based on scope filter
-      let mcpsToDisplay: Array<{ name: string; config: any; scope: 'global' | 'project' }> = [];
+        // Load configs based on scope filter
+        let mcpsToDisplay: Array<{ name: string; config: any; scope: 'global' | 'project' }> = [];
 
       if (options.scope === 'global') {
         // Load only user config (global MCPs)
@@ -107,16 +108,19 @@ export function createMcpCommand(deps: AppDependencies): Command {
       output.info('Configured MCP Servers:');
       output.nl();
 
-      // Display each MCP with scope indicator (if not filtered)
-      for (const { name, config, scope } of mcpsToDisplay) {
-        const commandStr = `${config.command} ${config.args?.join(' ') || ''}`.trim();
-        const scopeLabel = options.scope ? '' : ` (${scope})`;
-        output.info(`  ${name}${scopeLabel}`);
-        output.info(`    Command: ${commandStr}`);
-        output.nl();
+        // Display each MCP with scope indicator (if not filtered)
+        for (const { name, config, scope } of mcpsToDisplay) {
+          const commandStr = `${config.command} ${config.args?.join(' ') || ''}`.trim();
+          const scopeLabel = options.scope ? '' : ` (${scope})`;
+          output.info(`  ${name}${scopeLabel}`);
+          output.info(`    Command: ${commandStr}`);
+          output.nl();
+        }
+      } catch (error) {
+        // Handle configuration loading errors gracefully
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        output.error(`Failed to load configuration: ${errorMessage}`);
       }
-
-      // TODO: Add error handling (Cycle 1.6)
     });
 
   // mcp enable subcommand

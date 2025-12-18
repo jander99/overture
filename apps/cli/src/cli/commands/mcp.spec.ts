@@ -443,4 +443,64 @@ describe('mcp command', () => {
       expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('filesystem'));
     });
   });
+
+  describe('mcp list - error handling (Cycle 1.6)', () => {
+    it('should handle config loading errors gracefully', async () => {
+      const configError = new Error('Failed to load configuration');
+      vi.mocked(deps.configLoader.loadUserConfig).mockRejectedValue(configError);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'list']);
+
+      // Should display error message
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load')
+      );
+    });
+
+    it('should handle missing user config gracefully', async () => {
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'list']);
+
+      // Should warn about no MCPs
+      expect(deps.output.warn).toHaveBeenCalledWith(expect.stringContaining('No MCP'));
+    });
+
+    it('should handle user config without mcp field', async () => {
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0' as const,
+        // No mcp field
+      } as any);
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+      } as any);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'list']);
+
+      // Should warn about no MCPs
+      expect(deps.output.warn).toHaveBeenCalledWith(expect.stringContaining('No MCP'));
+    });
+
+    it('should handle project config loading errors gracefully', async () => {
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {},
+      });
+
+      const configError = new Error('Failed to load project config');
+      vi.mocked(deps.configLoader.loadProjectConfig).mockRejectedValue(configError);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'list']);
+
+      // Should display error message
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load')
+      );
+    });
+  });
 });
