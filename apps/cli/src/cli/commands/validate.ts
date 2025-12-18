@@ -1,6 +1,12 @@
 import { Command } from 'commander';
 import { ConfigError, ValidationError } from '@overture/errors';
-import { getTransportWarnings, getTransportValidationSummary, type TransportWarning } from '@overture/sync-core';
+import {
+  getTransportWarnings,
+  getTransportValidationSummary,
+  getEnvVarErrors,
+  getEnvVarWarnings,
+  type TransportWarning
+} from '@overture/sync-core';
 import { ErrorHandler } from '@overture/utils';
 import type { Platform, ClientName } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
@@ -26,11 +32,6 @@ const VALID_CLIENT_NAMES: ClientName[] = [
 ];
 
 /**
- * Environment variable syntax pattern: ${VAR_NAME} or ${VAR_NAME:-default}
- */
-const ENV_VAR_PATTERN = /^\$\{[A-Z_][A-Z0-9_]*(?::-[^}]*)?\}$/;
-
-/**
  * Creates the 'validate' command for validating Overture configuration.
  *
  * Usage: overture validate [options]
@@ -39,10 +40,15 @@ const ENV_VAR_PATTERN = /^\$\{[A-Z_][A-Z0-9_]*(?::-[^}]*)?\}$/;
  * - Configuration schema (Zod validation via loadConfig)
  * - Platform names (darwin, linux, win32)
  * - Client names (installed adapters)
- * - Environment variable syntax (${VAR_NAME})
+ * - Environment variable syntax (${VAR_NAME} or ${VAR_NAME:-default})
+ * - Environment variable references (checks if vars exist for pre-expansion)
  * - Duplicate MCP names (case-insensitive)
  * - Required fields (command, transport)
- * - Transport compatibility
+ * - Transport compatibility per client
+ *
+ * Warnings:
+ * - Hardcoded values that could be secrets
+ * - Unsupported transport types for specific clients
  */
 export function createValidateCommand(deps: AppDependencies): Command {
   const { configLoader, adapterRegistry, output } = deps;
@@ -131,58 +137,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
             }
           }
 
-          // Validate environment variable syntax
-          if (mcpConfig.env) {
-            for (const [key, value] of Object.entries(mcpConfig.env)) {
-              // Check if value contains env var syntax
-              if (value.includes('${')) {
-                // Extract all ${...} patterns (including malformed ones)
-                const matches = value.match(/\$\{[^}]*\}/g);
-
-                // Check if there are unclosed ${
-                const openCount = (value.match(/\$\{/g) || []).length;
-                const closeCount = (value.match(/\}/g) || []).length;
-
-                if (openCount > closeCount) {
-                  errors.push(`MCP "${mcpName}": invalid environment variable syntax in "${key}": unclosed \${. Expected format: \${VAR_NAME} or \${VAR_NAME:-default}`);
-                } else if (matches) {
-                  // Validate each matched pattern
-                  for (const match of matches) {
-                    if (!ENV_VAR_PATTERN.test(match)) {
-                      errors.push(`MCP "${mcpName}": invalid environment variable syntax in "${key}": "${match}". Expected format: \${VAR_NAME} or \${VAR_NAME:-default}`);
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          // Validate env vars in client overrides
-          if (mcpConfig.clients?.overrides) {
-            for (const [clientName, override] of Object.entries(mcpConfig.clients.overrides)) {
-              if (override.env) {
-                for (const [key, value] of Object.entries(override.env)) {
-                  if (value && value.includes('${')) {
-                    const matches = value.match(/\$\{[^}]*\}/g);
-
-                    // Check if there are unclosed ${
-                    const openCount = (value.match(/\$\{/g) || []).length;
-                    const closeCount = (value.match(/\}/g) || []).length;
-
-                    if (openCount > closeCount) {
-                      errors.push(`MCP "${mcpName}" client override "${clientName}": invalid environment variable syntax in "${key}": unclosed \${. Expected format: \${VAR_NAME} or \${VAR_NAME:-default}`);
-                    } else if (matches) {
-                      for (const match of matches) {
-                        if (!ENV_VAR_PATTERN.test(match)) {
-                          errors.push(`MCP "${mcpName}" client override "${clientName}": invalid environment variable syntax in "${key}": "${match}". Expected format: \${VAR_NAME} or \${VAR_NAME:-default}`);
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+          // Environment variable validation is now handled separately after client determination
         }
 
         // Check for duplicate MCP names (case-insensitive)
@@ -244,19 +199,68 @@ export function createValidateCommand(deps: AppDependencies): Command {
         }
 
         // Run transport validation for each client
-        const allWarnings: TransportWarning[] = [];
+        const allTransportWarnings: TransportWarning[] = [];
         for (const clientName of clientsToValidate) {
           const adapter = adapterRegistry.get(clientName);
           if (adapter) {
             const warnings = getTransportWarnings(config.mcp, adapter);
-            allWarnings.push(...warnings);
+            allTransportWarnings.push(...warnings);
           }
         }
 
+        // Run environment variable validation for each client
+        const allEnvErrors: Array<{ client: string; error: string; suggestion?: string }> = [];
+        const allEnvWarnings: Array<{ client: string; warning: string }> = [];
+
+        for (const clientName of clientsToValidate) {
+          const adapter = adapterRegistry.get(clientName);
+          if (adapter) {
+            const envErrors = getEnvVarErrors(config, adapter);
+            const envWarnings = getEnvVarWarnings(config, adapter);
+
+            // Collect errors with client context
+            for (const error of envErrors) {
+              allEnvErrors.push({
+                client: clientName,
+                error: `[${error.mcpName}] ${error.envKey}: ${error.message}`,
+                suggestion: error.suggestion,
+              });
+            }
+
+            // Collect warnings with client context
+            for (const warning of envWarnings) {
+              allEnvWarnings.push({
+                client: clientName,
+                warning: `[${warning.mcpName}] ${warning.envKey}: ${warning.message}`,
+              });
+            }
+          }
+        }
+
+        // Display environment variable errors (fail validation)
+        if (allEnvErrors.length > 0) {
+          output.error('Environment variable validation errors:');
+          for (const { client, error, suggestion } of allEnvErrors) {
+            output.error(`  - ${client}: ${error}`);
+            if (suggestion && options.verbose) {
+              output.info(`    💡 ${suggestion}`);
+            }
+          }
+          process.exit(3);
+        }
+
         // Display transport warnings
-        if (allWarnings.length > 0) {
+        if (allTransportWarnings.length > 0) {
           output.warn('Transport compatibility warnings:');
-          allWarnings.forEach((w) => output.warn(`  - ${w.message}`));
+          allTransportWarnings.forEach((w) => output.warn(`  - ${w.message}`));
+        }
+
+        // Display environment variable warnings (don't fail validation)
+        if (allEnvWarnings.length > 0) {
+          output.warn('Environment variable warnings:');
+          for (const { client, warning } of allEnvWarnings) {
+            output.warn(`  - ${client}: ${warning}`);
+          }
         }
 
         // Show verbose summary if requested
@@ -264,7 +268,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
           const adapter = adapterRegistry.get(options.client);
           if (adapter) {
             const summary = getTransportValidationSummary(config.mcp, adapter);
-            output.info('Transport validation summary:');
+            output.info('\nTransport validation summary:');
             output.info(`  Total MCPs: ${summary.total}`);
             output.info(`  Supported: ${summary.supported}`);
             output.info(`  Unsupported: ${summary.unsupported}`);
