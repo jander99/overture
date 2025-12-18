@@ -64,7 +64,9 @@ export async function main(): Promise<void> {
   }
 }
 
-// Run the CLI when executed directly
-// Note: In bundled/esbuild output, just always run since this is the entry point
+// Run the CLI when executed directly (not when imported for testing)
+// Skip execution in test environment (NODE_ENV=test or when vitest is running)
 /* istanbul ignore next */
-main();
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  main();
+}
