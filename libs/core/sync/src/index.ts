@@ -32,6 +32,20 @@ export {
 } from './lib/transport-validator.js';
 export type { TransportValidation, TransportValidationSummary, TransportWarning } from './lib/transport-validator.js';
 
+// Environment Validator
+export {
+  extractEnvVars,
+  validateEnvVarSyntax,
+  isHardcodedValue,
+  validateMcpEnvVars,
+  getEnvVarErrors,
+  getEnvVarWarnings,
+  getEnvVarValidationSummary,
+  formatEnvVarErrors,
+  formatEnvVarWarnings
+} from './lib/environment-validator.js';
+export type { EnvVarValidation, EnvVarError, EnvVarWarning, EnvVarValidationSummary } from './lib/environment-validator.js';
+
 // Client Environment Service
 export {
   shouldExpandEnvVars,

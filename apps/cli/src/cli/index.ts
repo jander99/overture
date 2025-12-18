@@ -3,8 +3,7 @@ import type { AppDependencies } from '../composition-root';
 import { createInitCommand } from './commands/init';
 import { createSyncCommand } from './commands/sync';
 import { createValidateCommand } from './commands/validate';
-// TODO: mcp command needs to be migrated to use dependency injection
-// import { createMcpCommand } from './commands/mcp';
+import { createMcpCommand } from './commands/mcp';
 import { createPluginCommand } from './commands/plugin';
 import { createUserCommand } from './commands/user';
 import { createAuditCommand } from './commands/audit';
@@ -40,8 +39,7 @@ export function createProgram(deps: AppDependencies): Command {
   program.addCommand(createSyncCommand(deps));
   program.addCommand(createValidateCommand(deps));
   program.addCommand(createDoctorCommand(deps));
-  // TODO: mcp command needs to be migrated to use dependency injection
-  // program.addCommand(createMcpCommand(deps));
+  program.addCommand(createMcpCommand(deps));
   program.addCommand(createPluginCommand(deps));
   program.addCommand(createUserCommand(deps));
   program.addCommand(createAuditCommand(deps));

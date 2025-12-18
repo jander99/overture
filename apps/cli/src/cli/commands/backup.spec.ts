@@ -91,7 +91,7 @@ describe('backup command', () => {
         },
       ];
 
-      vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue(backups);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'list']);
@@ -113,7 +113,7 @@ describe('backup command', () => {
         },
       ];
 
-      vi.mocked(deps.backupService.listBackups).mockReturnValue(backups);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue(backups);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
@@ -123,7 +123,7 @@ describe('backup command', () => {
     });
 
     it('should warn when no backups found', async () => {
-      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'list']);
@@ -132,7 +132,7 @@ describe('backup command', () => {
     });
 
     it('should warn when no backups found for specific client', async () => {
-      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
@@ -159,8 +159,8 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.config/claude/mcp.json',
@@ -191,8 +191,8 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.listBackups).mockReturnValue([mockBackup]);
-      vi.mocked(deps.restoreService.restoreBackup).mockReturnValue({
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue([mockBackup]);
+      vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.config/claude/mcp.json',
@@ -227,8 +227,8 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.config/claude/mcp.json',
@@ -278,7 +278,7 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(null);
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(null);
 
       const command = createBackupCommand(deps);
       await command.parseAsync([
@@ -303,7 +303,7 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync([
@@ -330,8 +330,8 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockReturnValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockReturnValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
+      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
         success: false,
         error: 'Permission denied',
       });
@@ -358,16 +358,16 @@ describe('backup command', () => {
 
     it('should cleanup all clients by default', async () => {
       vi.mocked(deps.backupService.listBackups)
-        .mockReturnValueOnce([
+        .mockResolvedValueOnce([
           { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
           { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
-        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }])
-        .mockReturnValueOnce([
+        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }])
+        .mockResolvedValueOnce([
           { client: 'claude-desktop', timestamp: '1', size: 150, path: '/path3' },
           { client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' },
         ])
-        .mockReturnValueOnce([{ client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' }]);
+        .mockResolvedValueOnce([{ client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' }]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup']);
@@ -379,11 +379,11 @@ describe('backup command', () => {
 
     it('should cleanup specific client with --client flag', async () => {
       vi.mocked(deps.backupService.listBackups)
-        .mockReturnValueOnce([
+        .mockResolvedValueOnce([
           { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
           { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
-        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }]);
+        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup', '--client', 'claude-code']);
@@ -394,10 +394,10 @@ describe('backup command', () => {
 
     it('should use custom keep count with --keep flag', async () => {
       vi.mocked(deps.backupService.listBackups)
-        .mockReturnValueOnce([{ client: 'claude-code', timestamp: '1', size: 100, path: '/path1' }])
-        .mockReturnValueOnce([])
-        .mockReturnValueOnce([])
-        .mockReturnValueOnce([]);
+        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '1', size: 100, path: '/path1' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup', '--keep', '5']);
@@ -413,7 +413,7 @@ describe('backup command', () => {
     });
 
     it('should handle no backups to cleanup', async () => {
-      vi.mocked(deps.backupService.listBackups).mockReturnValue([]);
+      vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup']);

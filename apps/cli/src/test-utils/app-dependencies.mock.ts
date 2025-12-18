@@ -58,17 +58,20 @@ export function createMockAppDependencies(): AppDependencies {
     filesystem: {
       readFile: vi.fn().mockResolvedValue(''),
       writeFile: vi.fn().mockResolvedValue(undefined),
-      fileExists: vi.fn().mockResolvedValue(false),
+      fileExists: vi.fn().mockReturnValue(false),
       ensureDir: vi.fn().mockResolvedValue(undefined),
       readDir: vi.fn().mockResolvedValue([]),
       deleteFile: vi.fn().mockResolvedValue(undefined),
       copyFile: vi.fn().mockResolvedValue(undefined),
       stat: vi.fn().mockResolvedValue({ isFile: () => true, isDirectory: () => false } as any),
+      directoryExists: vi.fn().mockReturnValue(true),
+      createDirectory: vi.fn().mockReturnValue(undefined),
     },
 
     process: {
       exec: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
       commandExists: vi.fn().mockResolvedValue(true),
+      exit: vi.fn().mockImplementation(() => undefined as never),
     },
 
     environment: {
@@ -93,9 +96,14 @@ export function createMockAppDependencies(): AppDependencies {
     pathResolver: {
       resolveUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
       resolveProjectConfigPath: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
+      resolveProjectConfig: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
+      getProjectOvertureDir: vi.fn().mockReturnValue('/home/user/project/.overture'),
       resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
+      findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
+      getUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
+      getUserConfigDir: vi.fn().mockReturnValue('/home/user/.config'),
     } as any,
 
     configLoader: {
@@ -103,6 +111,7 @@ export function createMockAppDependencies(): AppDependencies {
       loadUserConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       mergeConfigs: vi.fn().mockReturnValue({ version: '1.0', mcp: {} }),
+      hasUserConfig: vi.fn().mockReturnValue(true),
     } as any,
 
     discoveryService: {
@@ -112,6 +121,13 @@ export function createMockAppDependencies(): AppDependencies {
         configPath: '/home/user/.config/claude/mcp.json',
       }),
       detectAllClients: vi.fn().mockResolvedValue([]),
+      discoverAll: vi.fn().mockResolvedValue({
+        environment: {
+          platform: 'linux' as const,
+          isWSL2: false,
+        },
+        clients: [],
+      }),
     } as any,
 
     adapterRegistry: {
@@ -130,6 +146,7 @@ export function createMockAppDependencies(): AppDependencies {
       }),
       getAllNames: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
       listAdapters: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
+      getInstalledAdapters: vi.fn().mockReturnValue([]),
     } as any,
 
     // Plugin services
@@ -146,6 +163,13 @@ export function createMockAppDependencies(): AppDependencies {
 
     pluginExporter: {
       exportPluginList: vi.fn().mockResolvedValue(undefined),
+      compareInstalledWithConfig: vi.fn().mockResolvedValue({
+        both: [],
+        installedOnly: [],
+        configOnly: [],
+      }),
+      exportAllPlugins: vi.fn().mockResolvedValue(undefined),
+      exportPlugins: vi.fn().mockResolvedValue(undefined),
     } as any,
 
     // Sync services
@@ -181,6 +205,9 @@ export function createMockAppDependencies(): AppDependencies {
         issues: [],
         warnings: [],
       }),
+      auditClient: vi.fn().mockReturnValue([]),
+      auditAllClients: vi.fn().mockReturnValue({}),
+      generateSuggestions: vi.fn().mockReturnValue([]),
     } as any,
   };
 }

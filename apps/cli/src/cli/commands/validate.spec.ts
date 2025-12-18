@@ -407,6 +407,9 @@ describe('validate command', () => {
     it('should error on invalid env var syntax', async () => {
       const config: OvertureConfig = {
         version: '1.0',
+        sync: {
+          enabledClients: ['claude-code'],
+        },
         mcp: {
           'test-mcp': {
             command: 'test-command',
@@ -419,19 +422,30 @@ describe('validate command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(config);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        needsEnvVarExpansion: () => false,
+        supportsTransport: () => true,
+      } as any);
 
       const command = createValidateCommand(deps);
 
       await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid environment variable syntax')
+        expect.stringContaining('Environment variable validation errors')
+      );
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid variable name')
       );
     });
 
     it('should error on unclosed env var syntax', async () => {
       const config: OvertureConfig = {
         version: '1.0',
+        sync: {
+          enabledClients: ['claude-code'],
+        },
         mcp: {
           'test-mcp': {
             command: 'test-command',
@@ -444,19 +458,30 @@ describe('validate command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(config);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        needsEnvVarExpansion: () => false,
+        supportsTransport: () => true,
+      } as any);
 
       const command = createValidateCommand(deps);
 
       await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('unclosed ${')
+        expect.stringContaining('Environment variable validation errors')
+      );
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Unclosed')
       );
     });
 
     it('should error on invalid env var in client overrides', async () => {
       const config: OvertureConfig = {
         version: '1.0',
+        sync: {
+          enabledClients: ['claude-code'],
+        },
         mcp: {
           'test-mcp': {
             command: 'test-command',
@@ -475,13 +500,21 @@ describe('validate command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(config);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+        name: 'claude-code',
+        needsEnvVarExpansion: () => false,
+        supportsTransport: () => true,
+      } as any);
 
       const command = createValidateCommand(deps);
 
       await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid environment variable syntax')
+        expect.stringContaining('Environment variable validation errors')
+      );
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid variable name')
       );
     });
   });
@@ -686,7 +719,7 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate', '--client', 'claude-code', '--verbose']);
 
-      expect(deps.output.info).toHaveBeenCalledWith('Transport validation summary:');
+      expect(deps.output.info).toHaveBeenCalledWith('\nTransport validation summary:');
       expect(deps.output.info).toHaveBeenCalledWith('  Total MCPs: 5');
       expect(deps.output.info).toHaveBeenCalledWith('  Supported: 4');
       expect(deps.output.info).toHaveBeenCalledWith('  Unsupported: 1');
