@@ -96,6 +96,8 @@ export function createMockAppDependencies(): AppDependencies {
     pathResolver: {
       resolveUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
       resolveProjectConfigPath: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
+      resolveProjectConfig: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
+      getProjectOvertureDir: vi.fn().mockReturnValue('/home/user/project/.overture'),
       resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
@@ -161,6 +163,13 @@ export function createMockAppDependencies(): AppDependencies {
 
     pluginExporter: {
       exportPluginList: vi.fn().mockResolvedValue(undefined),
+      compareInstalledWithConfig: vi.fn().mockResolvedValue({
+        both: [],
+        installedOnly: [],
+        configOnly: [],
+      }),
+      exportAllPlugins: vi.fn().mockResolvedValue(undefined),
+      exportPlugins: vi.fn().mockResolvedValue(undefined),
     } as any,
 
     // Sync services
