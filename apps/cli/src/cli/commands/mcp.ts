@@ -127,8 +127,50 @@ export function createMcpCommand(deps: AppDependencies): Command {
   command
     .command('enable')
     .description('Enable a disabled MCP server in project configuration')
-    .action(async () => {
-      // TODO: Implement in Cycle 1.7-1.8
+    .argument('<name>', 'Name of the MCP server to enable')
+    .action(async (name: string) => {
+      const { configLoader, pathResolver, filesystem, output } = deps;
+
+      try {
+        // Load project config
+        const cwd = process.cwd();
+        const projectConfig = await configLoader.loadProjectConfig(cwd);
+
+        // Initialize or use existing config
+        const config = projectConfig || { version: '1.0' as const, mcp: {} };
+
+        // Check if MCP exists in project config
+        if (config.mcp && config.mcp[name]) {
+          // Enable the MCP
+          config.mcp[name].enabled = true;
+        } else {
+          // MCP might be in user config, need to add it to project config
+          const userConfig = await configLoader.loadUserConfig();
+          if (userConfig?.mcp?.[name]) {
+            // Copy from user config to project config
+            if (!config.mcp) {
+              config.mcp = {};
+            }
+            config.mcp[name] = {
+              ...userConfig.mcp[name],
+              enabled: true,
+            };
+          }
+        }
+
+        // Write updated config to .overture/config.yaml
+        const configPath = pathResolver.resolveProjectConfigPath(cwd);
+        const yaml = await import('js-yaml');
+        const yamlContent = yaml.dump(config);
+        await filesystem.writeFile(configPath, yamlContent);
+
+        // Display success message
+        output.success(`MCP server "${name}" has been enabled in project configuration.`);
+      } catch (error) {
+        // Error handling will be added in Cycle 1.8
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        output.error(`Failed to enable MCP: ${errorMessage}`);
+      }
     });
 
   return command;

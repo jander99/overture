@@ -503,4 +503,124 @@ describe('mcp command', () => {
       );
     });
   });
+
+  describe('mcp enable - implementation (Cycle 1.7)', () => {
+    it('should enable disabled MCP in project config', async () => {
+      // Mock project config with disabled MCP
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+            enabled: false,
+          },
+        },
+      });
+
+      // Mock filesystem write
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue();
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should write updated config
+      expect(deps.filesystem.writeFile).toHaveBeenCalled();
+
+      // Should display success message
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('enabled')
+      );
+    });
+
+    it('should create project config if missing', async () => {
+      // Mock no project config exists
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
+
+      // Mock user config has the MCP
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+          },
+        },
+      });
+
+      // Mock pathResolver to return .overture/config.yaml path
+      vi.mocked(deps.pathResolver.resolveProjectConfigPath).mockReturnValue(
+        '.overture/config.yaml'
+      );
+
+      // Mock filesystem write
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue();
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should create new config file
+      expect(deps.filesystem.writeFile).toHaveBeenCalled();
+
+      // Should display success message
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('enabled')
+      );
+    });
+
+    it('should merge with existing project config', async () => {
+      // Mock project config with existing MCP
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+          },
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+            enabled: false,
+          },
+        },
+      });
+
+      // Mock filesystem write
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue();
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should preserve filesystem MCP in written config
+      const writeCall = vi.mocked(deps.filesystem.writeFile).mock.calls[0];
+      if (writeCall) {
+        const writtenContent = writeCall[1];
+        expect(writtenContent).toContain('filesystem');
+        expect(writtenContent).toContain('memory');
+      }
+    });
+
+    it('should display success message after enabling', async () => {
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+            enabled: false,
+          },
+        },
+      });
+
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue();
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should display success message
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringMatching(/enabled|Memory/i)
+      );
+    });
+  });
 });
