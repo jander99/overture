@@ -10,6 +10,7 @@ import {
 import { ErrorHandler } from '@overture/utils';
 import type { Platform, ClientName } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
+import { validateEnvVarReferences, getFixSuggestion } from '../../lib/validators/env-var-validator';
 
 /**
  * Valid platform names
@@ -149,6 +150,16 @@ export function createValidateCommand(deps: AppDependencies): Command {
             errors.push(`Duplicate MCP name (case-insensitive): "${name}" and "${lowerCaseNames.get(lower)}"`);
           } else {
             lowerCaseNames.set(lower, name);
+          }
+        }
+
+        // Validate environment variable security (detect hardcoded credentials)
+        const envVarValidation = validateEnvVarReferences(config);
+        if (!envVarValidation.valid) {
+          output.warn('Environment variable security warnings:');
+          envVarValidation.issues.forEach((issue) => output.warn(`  - ${issue}`));
+          if (options.verbose) {
+            output.info(getFixSuggestion(envVarValidation.issues));
           }
         }
 

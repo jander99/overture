@@ -6,6 +6,7 @@ import { OvertureConfigSchema } from '@overture/config-schema';
 import { ConfigError } from '@overture/errors';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
+import { validateEnvVarReferences, getFixSuggestion } from '../../lib/validators/env-var-validator';
 
 /**
  * Common MCP servers available for global configuration
@@ -177,6 +178,16 @@ export function createUserCommand(deps: AppDependencies): Command {
           output.error('Configuration validation failed');
           output.error(validationResult.error.message);
           process.exit(1);
+        }
+
+        // Validate environment variable security (detect hardcoded credentials)
+        const envVarValidation = validateEnvVarReferences(userConfig);
+        if (!envVarValidation.valid) {
+          output.nl();
+          output.warn('⚠️  Environment variable security warnings:');
+          envVarValidation.issues.forEach((issue) => output.warn(`  - ${issue}`));
+          output.info(getFixSuggestion(envVarValidation.issues));
+          output.nl();
         }
 
         // Confirmation
