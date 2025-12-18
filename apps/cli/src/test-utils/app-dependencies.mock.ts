@@ -139,6 +139,7 @@ export function createMockAppDependencies(): AppDependencies {
       }),
       getAllNames: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
       listAdapters: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
+      getInstalledAdapters: vi.fn().mockReturnValue([]),
     } as any,
 
     // Plugin services
@@ -190,6 +191,9 @@ export function createMockAppDependencies(): AppDependencies {
         issues: [],
         warnings: [],
       }),
+      auditClient: vi.fn().mockReturnValue([]),
+      auditAllClients: vi.fn().mockReturnValue({}),
+      generateSuggestions: vi.fn().mockReturnValue([]),
     } as any,
   };
 }
