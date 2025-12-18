@@ -28,7 +28,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
     .option('-c, --client <name>', 'Filter by client name')
     .action(async (options: { client?: ClientName }) => {
       try {
-        const backups = backupService.listBackups(options.client);
+        const backups = await backupService.listBackups(options.client);
 
         if (backups.length === 0) {
           if (options.client) {
@@ -110,7 +110,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
           let isLatest = false;
 
           if (options.latest || !timestamp) {
-            backupToRestore = backupService.getLatestBackup(client);
+            backupToRestore = await backupService.getLatestBackup(client);
             isLatest = true;
 
             if (!backupToRestore) {
@@ -118,7 +118,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
               throw Object.assign(new Error('No backups found'), { exitCode: 2 });
             }
           } else {
-            const backups = backupService.listBackups(client);
+            const backups = await backupService.listBackups(client);
             backupToRestore = backups.find((b) => b.timestamp === timestamp) || null;
 
             if (!backupToRestore) {
@@ -169,9 +169,9 @@ export function createBackupCommand(deps: AppDependencies): Command {
             : configPaths.user;
 
           // Perform restore
-          const result = isLatest
+          const result = await (isLatest
             ? restoreService.restoreLatestBackup(client, configPath)
-            : restoreService.restoreBackup(client, backupToRestore.timestamp, configPath);
+            : restoreService.restoreBackup(client, backupToRestore.timestamp, configPath));
 
           if (result.success) {
             output.success('Backup restored successfully');
@@ -210,11 +210,11 @@ export function createBackupCommand(deps: AppDependencies): Command {
         let totalDeleted = 0;
 
         for (const client of clients) {
-          const beforeCount = backupService.listBackups(client).length;
+          const beforeCount = (await backupService.listBackups(client)).length;
           if (beforeCount === 0) continue;
 
-          backupService.cleanupOldBackups(client, keepCount);
-          const afterCount = backupService.listBackups(client).length;
+          await backupService.cleanupOldBackups(client, keepCount);
+          const afterCount = (await backupService.listBackups(client)).length;
           const deleted = beforeCount - afterCount;
 
           if (deleted > 0) {
