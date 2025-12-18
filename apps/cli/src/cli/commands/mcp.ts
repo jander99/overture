@@ -141,6 +141,12 @@ export function createMcpCommand(deps: AppDependencies): Command {
 
         // Check if MCP exists in project config
         if (config.mcp && config.mcp[name]) {
+          // Check if already enabled
+          if (config.mcp[name].enabled !== false) {
+            output.warn(`MCP server "${name}" is already enabled.`);
+            return;
+          }
+
           // Enable the MCP
           config.mcp[name].enabled = true;
         } else {
@@ -155,6 +161,10 @@ export function createMcpCommand(deps: AppDependencies): Command {
               ...userConfig.mcp[name],
               enabled: true,
             };
+          } else {
+            // MCP not found in any config
+            output.error(`MCP server "${name}" not found in user or project configuration.`);
+            return;
           }
         }
 

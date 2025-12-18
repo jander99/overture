@@ -623,4 +623,85 @@ describe('mcp command', () => {
       );
     });
   });
+
+  describe('mcp enable - error handling (Cycle 1.8)', () => {
+    it('should error when MCP not found in any config', async () => {
+      // Mock no MCP in either config
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {},
+      });
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'nonexistent']);
+
+      // Should display error
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('not found')
+      );
+    });
+
+    it('should warn when MCP is already enabled', async () => {
+      // Mock project config with already enabled MCP
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+            enabled: true,
+          },
+        },
+      });
+
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue();
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should warn (or still enable, but show it was already enabled)
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('already enabled')
+      );
+    });
+
+    it('should handle config write errors gracefully', async () => {
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {
+          memory: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-memory'],
+            enabled: false,
+          },
+        },
+      });
+
+      // Mock filesystem write to fail
+      const writeError = new Error('Permission denied');
+      vi.mocked(deps.filesystem.writeFile).mockRejectedValue(writeError);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should display error
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Permission denied')
+      );
+    });
+
+    it('should handle config loading errors gracefully', async () => {
+      const loadError = new Error('Failed to load config');
+      vi.mocked(deps.configLoader.loadProjectConfig).mockRejectedValue(loadError);
+
+      const command = createMcpCommand(deps);
+      await command.parseAsync(['node', 'mcp', 'enable', 'memory']);
+
+      // Should display error
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load')
+      );
+    });
+  });
 });
