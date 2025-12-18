@@ -267,6 +267,11 @@ export function createUserCommand(deps: AppDependencies): Command {
         // Display config
         displayUserConfig(config, configPath, format as OutputFormat);
       } catch (error) {
+        // Don't handle process.exit() errors - let them propagate
+        if (error instanceof Error && error.message.startsWith('process.exit:')) {
+          throw error;
+        }
+
         if (error instanceof ConfigError) {
           output.error('Failed to load user configuration');
           output.error(error.message);

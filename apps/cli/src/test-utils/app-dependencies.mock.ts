@@ -58,12 +58,14 @@ export function createMockAppDependencies(): AppDependencies {
     filesystem: {
       readFile: vi.fn().mockResolvedValue(''),
       writeFile: vi.fn().mockResolvedValue(undefined),
-      fileExists: vi.fn().mockResolvedValue(false),
+      fileExists: vi.fn().mockReturnValue(false),
       ensureDir: vi.fn().mockResolvedValue(undefined),
       readDir: vi.fn().mockResolvedValue([]),
       deleteFile: vi.fn().mockResolvedValue(undefined),
       copyFile: vi.fn().mockResolvedValue(undefined),
       stat: vi.fn().mockResolvedValue({ isFile: () => true, isDirectory: () => false } as any),
+      directoryExists: vi.fn().mockReturnValue(true),
+      createDirectory: vi.fn().mockReturnValue(undefined),
     },
 
     process: {
@@ -98,6 +100,8 @@ export function createMockAppDependencies(): AppDependencies {
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
       findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
+      getUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
+      getUserConfigDir: vi.fn().mockReturnValue('/home/user/.config'),
     } as any,
 
     configLoader: {
@@ -105,6 +109,7 @@ export function createMockAppDependencies(): AppDependencies {
       loadUserConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       mergeConfigs: vi.fn().mockReturnValue({ version: '1.0', mcp: {} }),
+      hasUserConfig: vi.fn().mockReturnValue(true),
     } as any,
 
     discoveryService: {
