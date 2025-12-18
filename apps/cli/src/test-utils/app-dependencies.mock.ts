@@ -69,6 +69,7 @@ export function createMockAppDependencies(): AppDependencies {
     process: {
       exec: vi.fn().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 }),
       commandExists: vi.fn().mockResolvedValue(true),
+      exit: vi.fn().mockImplementation(() => undefined as never),
     },
 
     environment: {
@@ -96,6 +97,7 @@ export function createMockAppDependencies(): AppDependencies {
       resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
+      findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
     } as any,
 
     configLoader: {
@@ -112,6 +114,13 @@ export function createMockAppDependencies(): AppDependencies {
         configPath: '/home/user/.config/claude/mcp.json',
       }),
       detectAllClients: vi.fn().mockResolvedValue([]),
+      discoverAll: vi.fn().mockResolvedValue({
+        environment: {
+          platform: 'linux' as const,
+          isWSL2: false,
+        },
+        clients: [],
+      }),
     } as any,
 
     adapterRegistry: {
