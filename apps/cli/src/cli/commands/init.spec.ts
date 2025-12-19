@@ -263,4 +263,103 @@ describe('init command', () => {
       expect(writtenContent).toContain('mcp: {}');
     });
   });
+
+  describe('edge cases - special characters in paths', () => {
+    beforeEach(() => {
+      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
+      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
+    });
+
+    it('should handle project paths with spaces', async () => {
+      // Arrange
+      const pathWithSpaces = '/home/user/my project folder/.overture/config.yaml';
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(pathWithSpaces);
+      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
+        '/home/user/my project folder/.overture'
+      );
+      cwdSpy.mockReturnValue('/home/user/my project folder');
+
+      const command = createInitCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'init']);
+
+      // Assert
+      expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
+        pathWithSpaces,
+        expect.any(String)
+      );
+      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.info).toHaveBeenCalledWith(
+        `Location: ${pathWithSpaces}`
+      );
+    });
+
+    it('should handle project paths with Unicode characters', async () => {
+      // Arrange
+      const unicodePath = '/home/user/プロジェクト/.overture/config.yaml';
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(unicodePath);
+      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
+        '/home/user/プロジェクト/.overture'
+      );
+      cwdSpy.mockReturnValue('/home/user/プロジェクト');
+
+      const command = createInitCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'init']);
+
+      // Assert
+      expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
+        unicodePath,
+        expect.any(String)
+      );
+      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+    });
+
+    it('should handle project paths with emoji characters', async () => {
+      // Arrange
+      const emojiPath = '/home/user/my-app-🚀/.overture/config.yaml';
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(emojiPath);
+      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
+        '/home/user/my-app-🚀/.overture'
+      );
+      cwdSpy.mockReturnValue('/home/user/my-app-🚀');
+
+      const command = createInitCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'init']);
+
+      // Assert
+      expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
+        emojiPath,
+        expect.any(String)
+      );
+      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+    });
+
+    it('should handle paths with special characters (dashes, underscores, dots)', async () => {
+      // Arrange
+      const specialPath = '/home/user/my-app_v1.2.3/.overture/config.yaml';
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(specialPath);
+      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
+        '/home/user/my-app_v1.2.3/.overture'
+      );
+      cwdSpy.mockReturnValue('/home/user/my-app_v1.2.3');
+
+      const command = createInitCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'init']);
+
+      // Assert
+      expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
+        specialPath,
+        expect.any(String)
+      );
+      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+    });
+  });
 });

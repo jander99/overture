@@ -460,4 +460,154 @@ describe('user command', () => {
       );
     });
   });
+
+  describe('edge cases - user interaction', () => {
+    beforeEach(() => {
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue('/home/user/.config');
+      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
+      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
+    });
+
+    it('should handle Ctrl+C during MCP selection (returns undefined)', async () => {
+      // Arrange - multiSelect returns undefined when user cancels with Ctrl+C
+      // This causes an error when trying to access .length on undefined
+      vi.mocked(Prompts.multiSelect).mockResolvedValue(undefined as any);
+
+      const command = createUserCommand(deps);
+
+      // Act & Assert - exits with code 1 due to error
+      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:1');
+
+      expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('should handle extremely long MCP selection (all 8 available MCPs)', async () => {
+      // Arrange - select all available MCPs
+      vi.mocked(Prompts.multiSelect).mockResolvedValue([
+        'filesystem',
+        'memory',
+        'sequentialthinking',
+        'context7',
+        'nx',
+        'github',
+        'sqlite',
+        'postgres',
+      ]);
+      vi.mocked(Prompts.confirm).mockResolvedValue(true);
+
+      const command = createUserCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'user', 'init']);
+
+      // Assert
+      expect(deps.filesystem.writeFile).toHaveBeenCalled();
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      expect(writtenContent).toContain('filesystem');
+      expect(writtenContent).toContain('memory');
+      expect(writtenContent).toContain('sequentialthinking');
+      expect(writtenContent).toContain('context7');
+      expect(writtenContent).toContain('nx');
+      expect(writtenContent).toContain('github');
+      expect(writtenContent).toContain('sqlite');
+      expect(writtenContent).toContain('postgres');
+      expect(deps.output.success).toHaveBeenCalled();
+    });
+
+    it('should handle empty selection followed by cancellation at confirmation', async () => {
+      // Arrange - empty selection, then cancel at "continue without MCPs?" prompt
+      vi.mocked(Prompts.multiSelect).mockResolvedValue([]);
+      vi.mocked(Prompts.confirm).mockResolvedValue(false);
+
+      const command = createUserCommand(deps);
+
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:0');
+
+      expect(Prompts.confirm).toHaveBeenCalledWith(
+        expect.stringContaining('Continue without any MCP servers'),
+        false
+      );
+      expect(deps.output.info).toHaveBeenCalledWith(
+        expect.stringContaining('Configuration cancelled')
+      );
+      expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('edge cases - format options', () => {
+    beforeEach(() => {
+      vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '2.0' as const,
+        mcp: {
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+            transport: 'stdio' as const,
+          },
+        },
+      });
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+    });
+
+    it('should handle uppercase format option (JSON)', async () => {
+      const command = createUserCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'user', 'show', '--format', 'JSON']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"filesystem"')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"version"')
+      );
+    });
+
+    it('should handle uppercase format option (YAML)', async () => {
+      const command = createUserCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'user', 'show', '--format', 'YAML']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('User Global Configuration')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('filesystem')
+      );
+    });
+
+    it('should handle mixed-case format option (Json)', async () => {
+      const command = createUserCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'user', 'show', '--format', 'Json']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"filesystem"')
+      );
+    });
+
+    it('should handle mixed-case format option (Yaml)', async () => {
+      const command = createUserCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'user', 'show', '--format', 'Yaml']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('User Global Configuration')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('filesystem')
+      );
+    });
+  });
 });

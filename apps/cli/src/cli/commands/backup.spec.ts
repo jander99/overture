@@ -333,6 +333,109 @@ describe('backup command', () => {
 
       expect(deps.output.error).toHaveBeenCalledWith('Restore failed: Permission denied');
     });
+
+    describe('edge cases - timestamp formats', () => {
+      beforeEach(() => {
+        vi.mocked(deps.adapterRegistry.get).mockReturnValue({
+          name: 'claude-code',
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+          readConfig: vi.fn(),
+          writeConfig: vi.fn(),
+          validateTransport: vi.fn(),
+        } as any);
+      });
+
+      it('should handle invalid timestamp format', async () => {
+        // Arrange
+        vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
+
+        const command = createBackupCommand(deps);
+
+        // Act
+        await command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          'invalid-timestamp',
+          '--no-confirm',
+        ]);
+
+        // Assert
+        expect(deps.output.error).toHaveBeenCalledWith(
+          'Backup not found: claude-code at invalid-timestamp'
+        );
+      });
+
+      it('should handle timestamp with timezone offset (non-Z format)', async () => {
+        // Arrange - timestamp has +00:00 instead of Z
+        const invalidBackup = createMockBackupMetadata({
+          client: 'claude-code',
+          timestamp: '2025-01-11T14:30:45.123+00:00',
+        });
+
+        vi.mocked(deps.backupService.listBackups).mockResolvedValue([invalidBackup]);
+        vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
+          success: true,
+          backupPath: invalidBackup.path,
+          restoredPath: '/home/user/.config/claude/mcp.json',
+        });
+
+        const command = createBackupCommand(deps);
+
+        // Act
+        await command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          '2025-01-11T14:30:45.123+00:00',
+          '--no-confirm',
+        ]);
+
+        // Assert
+        expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+          'claude-code',
+          '2025-01-11T14:30:45.123+00:00',
+          '/home/user/.config/claude/mcp.json'
+        );
+      });
+
+      it('should handle timestamp before Unix epoch (1970-01-01)', async () => {
+        // Arrange - backup from 1969
+        const oldBackup = createMockBackupMetadata({
+          client: 'claude-code',
+          timestamp: '1969-12-31T23-59-59-999Z',
+        });
+
+        vi.mocked(deps.backupService.listBackups).mockResolvedValue([oldBackup]);
+        vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
+          success: true,
+          backupPath: oldBackup.path,
+          restoredPath: '/home/user/.config/claude/mcp.json',
+        });
+
+        const command = createBackupCommand(deps);
+
+        // Act
+        await command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          '1969-12-31T23-59-59-999Z',
+          '--no-confirm',
+        ]);
+
+        // Assert
+        expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+          'claude-code',
+          '1969-12-31T23-59-59-999Z',
+          '/home/user/.config/claude/mcp.json'
+        );
+        expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+      });
+    });
   });
 
   describe('backup cleanup', () => {
