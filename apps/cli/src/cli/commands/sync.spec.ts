@@ -16,8 +16,10 @@ describe('sync command', () => {
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    // Mock process.exit to prevent tests from actually exiting
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    // Mock process.exit to throw an error for test assertions
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit:${code}`);
+    });
     // Clear console.error to avoid Commander error output during tests
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -47,7 +49,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: undefined,
@@ -80,7 +82,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--client', 'claude-desktop']);
+      await command.parseAsync(['node', 'sync', '--client', 'claude-desktop']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: ['claude-desktop'],
@@ -100,7 +102,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--dry-run']);
+      await command.parseAsync(['node', 'sync', '--dry-run']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: undefined,
@@ -120,7 +122,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--force']);
+      await command.parseAsync(['node', 'sync', '--force']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: undefined,
@@ -139,7 +141,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--skip-plugins']);
+      await command.parseAsync(['node', 'sync', '--skip-plugins']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: undefined,
@@ -158,7 +160,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--no-skip-undetected']);
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected']);
 
       expect(deps.syncEngine.sync).toHaveBeenCalledWith({
         clients: undefined,
@@ -179,7 +181,6 @@ describe('sync command', () => {
       const command = createSyncCommand(deps);
       await command.parseAsync([
         'node',
-        'overture',
         'sync',
         '--client',
         'claude-code',
@@ -230,7 +231,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.section).toHaveBeenCalledWith('🔍 Detecting clients...');
       expect(deps.output.success).toHaveBeenCalledWith(
@@ -259,7 +260,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.skip).toHaveBeenCalledWith('cursor - not detected, skipped');
     });
@@ -282,7 +283,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.warn).toHaveBeenCalledWith(
         'windsurf - not detected but config will be generated → /home/user/.config/windsurf/mcp.json'
@@ -309,7 +310,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.section).toHaveBeenCalledWith('⚙️  Syncing configurations...');
       expect(deps.output.success).toHaveBeenCalledWith('claude-code - synchronized');
@@ -335,7 +336,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.error).toHaveBeenCalledWith('claude-code - sync failed');
     });
@@ -364,7 +365,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.section).toHaveBeenCalledWith('⚠️  Warnings:');
       expect(deps.output.warn).toHaveBeenCalledWith('  - claude-code: Invalid config found');
@@ -395,7 +396,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       // When there are no critical warnings, tips section is shown
       expect(deps.output.section).toHaveBeenCalledWith('💡 Tips:');
@@ -412,7 +413,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.section).toHaveBeenCalledWith('❌ Errors:');
       expect(deps.output.error).toHaveBeenCalledWith('  - Failed to load config');
@@ -425,20 +426,18 @@ describe('sync command', () => {
       vi.mocked(deps.syncEngine.sync).mockRejectedValue(new Error('Sync engine failure'));
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.error).toHaveBeenCalledWith('Sync failed: Sync engine failure');
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should handle unknown errors', async () => {
       vi.mocked(deps.syncEngine.sync).mockRejectedValue('Unknown error');
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.error).toHaveBeenCalledWith('Sync failed with unknown error');
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should display stack trace in debug mode', async () => {
@@ -448,7 +447,7 @@ describe('sync command', () => {
       vi.mocked(deps.syncEngine.sync).mockRejectedValue(error);
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.debug).toHaveBeenCalledWith('Stack trace here');
 
@@ -463,10 +462,9 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.error).toHaveBeenCalledWith('Sync completed with errors');
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should exit with code 0 when sync succeeds', async () => {
@@ -477,7 +475,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.success).toHaveBeenCalledWith('Sync complete!');
       // Note: Commander may call process.exit during error handling, but the test should still pass
@@ -493,7 +491,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       expect(deps.output.success).toHaveBeenCalledWith('Sync complete!');
       // Should not display sync summary section if no clients
@@ -539,7 +537,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync', '--no-skip-undetected']);
+      await command.parseAsync(['node', 'sync', '--no-skip-undetected']);
 
       // Detected and synced
       expect(deps.output.success).toHaveBeenCalledWith(
@@ -573,7 +571,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       // Should display without version
       expect(deps.output.success).toHaveBeenCalledWith(
@@ -612,7 +610,7 @@ describe('sync command', () => {
       });
 
       const command = createSyncCommand(deps);
-      await command.parseAsync(['node', 'overture', 'sync']);
+      await command.parseAsync(['node', 'sync']);
 
       // Tip should only be displayed once
       const tipCalls = vi

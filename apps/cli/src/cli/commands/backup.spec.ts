@@ -54,7 +54,9 @@ describe('backup command', () => {
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit:${code}`);
+    });
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -320,17 +322,16 @@ describe('backup command', () => {
       });
 
       const command = createBackupCommand(deps);
-      await command.parseAsync([
+      await expect(command.parseAsync([
         'node',
         'backup',
         'restore',
         'claude-code',
         '--latest',
         '--no-confirm',
-      ]);
+      ])).rejects.toThrow('process.exit:1');
 
       expect(deps.output.error).toHaveBeenCalledWith('Restore failed: Permission denied');
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
   });
 

@@ -11,7 +11,9 @@ describe('audit command', () => {
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`process.exit:${code}`);
+    });
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -91,17 +93,15 @@ describe('audit command', () => {
 
       const command = createAuditCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'audit', '--client', 'unknown-client']);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'audit', '--client', 'unknown-client'])).rejects.toThrow('process.exit:1');
 
-      // Assert
       expect(deps.output.error).toHaveBeenCalledWith(
         expect.stringContaining('Unknown client')
       );
       expect(deps.output.info).toHaveBeenCalledWith(
         expect.stringContaining('Available clients')
       );
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should handle client not installed', async () => {
@@ -335,10 +335,9 @@ describe('audit command', () => {
 
       const command = createAuditCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'audit']);
+      // Act & Assert - ErrorHandler.handleCommandError should be called, which logs and exits
+      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow('process.exit:1');
 
-      // Assert - ErrorHandler.handleCommandError should be called, which logs and exits
       // We verify that the error path was taken by checking the config loader was called
       expect(deps.configLoader.loadConfig).toHaveBeenCalled();
     });
@@ -364,10 +363,9 @@ describe('audit command', () => {
 
       const command = createAuditCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'audit', '--client', 'claude-code']);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'audit', '--client', 'claude-code'])).rejects.toThrow('process.exit:1');
 
-      // Assert
       expect(deps.auditService.auditClient).toHaveBeenCalled();
     });
 
@@ -389,10 +387,9 @@ describe('audit command', () => {
 
       const command = createAuditCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'audit']);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow('process.exit:1');
 
-      // Assert
       expect(deps.auditService.auditAllClients).toHaveBeenCalled();
     });
   });
