@@ -1,3 +1,20 @@
+/**
+ * Plugin Command Tests
+ *
+ * Comprehensive tests for the `overture plugin` command group.
+ *
+ * Test Coverage:
+ * - plugin list: Display installed plugins with filtering options
+ * - plugin export: Export plugin configurations (all or specific)
+ * - Filtering with --config-only and --installed-only flags
+ * - JSON output format
+ * - Summary statistics
+ * - Multiple plugin export with repeated --plugin flags
+ * - Error handling for nonexistent plugins
+ *
+ * @see apps/cli/src/cli/commands/plugin.ts
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { createPluginCommand } from './plugin';

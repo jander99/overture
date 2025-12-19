@@ -1,3 +1,20 @@
+/**
+ * User Command Tests
+ *
+ * Comprehensive tests for the `overture user` command group.
+ *
+ * Test Coverage:
+ * - user init: Create global configuration with MCP selection
+ * - user show: Display global configuration in YAML/JSON formats
+ * - Force overwrite with --force flag
+ * - MCP selection prompts and cancellation handling
+ * - Config directory creation
+ * - Format validation (uppercase, mixed-case, invalid)
+ * - Edge cases (Ctrl+C, large selections, special chars in paths)
+ *
+ * @see apps/cli/src/cli/commands/user.ts
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { createUserCommand } from './user';

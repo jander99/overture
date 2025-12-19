@@ -1,3 +1,19 @@
+/**
+ * Doctor Command Tests
+ *
+ * Comprehensive tests for the `overture doctor` command.
+ *
+ * Test Coverage:
+ * - Client detection and version reporting
+ * - Platform information (OS, WSL2 detection)
+ * - MCP server availability checks
+ * - Output modes (default, JSON, verbose)
+ * - Error handling for discovery failures
+ * - Edge cases (no clients, invalid formats)
+ *
+ * @see apps/cli/src/cli/commands/doctor.ts
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { createDoctorCommand } from './doctor';

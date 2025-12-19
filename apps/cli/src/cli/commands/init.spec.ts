@@ -1,3 +1,20 @@
+/**
+ * Init Command Tests
+ *
+ * Comprehensive tests for the `overture init` command.
+ *
+ * Test Coverage:
+ * - Create new project configuration at .overture/config.yaml
+ * - Force overwrite with --force flag
+ * - .overture directory creation when missing
+ * - Helpful comments and next steps in generated config
+ * - Default claude-code client enablement
+ * - Error handling (write errors, directory creation failures)
+ * - Edge cases (paths with spaces, Unicode, emoji, special chars)
+ *
+ * @see apps/cli/src/cli/commands/init.ts
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { createInitCommand } from './init';

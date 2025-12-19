@@ -1,3 +1,20 @@
+/**
+ * Audit Command Tests
+ *
+ * Comprehensive tests for the `overture audit` command.
+ *
+ * Test Coverage:
+ * - Single client auditing with --client flag
+ * - All installed clients auditing
+ * - Unmanaged MCP detection and reporting
+ * - Suggestion generation for unmanaged MCPs
+ * - Client not installed handling
+ * - Unknown client error handling
+ * - Edge cases (empty configs, large MCP lists)
+ *
+ * @see apps/cli/src/cli/commands/audit.ts
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 import { createAuditCommand } from './audit';
