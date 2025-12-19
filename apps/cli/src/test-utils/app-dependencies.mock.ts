@@ -63,7 +63,12 @@ export function createMockAppDependencies(): AppDependencies {
       readDir: vi.fn().mockResolvedValue([]),
       deleteFile: vi.fn().mockResolvedValue(undefined),
       copyFile: vi.fn().mockResolvedValue(undefined),
-      stat: vi.fn().mockResolvedValue({ isFile: () => true, isDirectory: () => false } as any),
+      stat: vi.fn().mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        size: 0,
+        mtime: new Date(),
+      }),
       directoryExists: vi.fn().mockReturnValue(true),
       createDirectory: vi.fn().mockReturnValue(undefined),
     },
@@ -104,7 +109,7 @@ export function createMockAppDependencies(): AppDependencies {
       findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
       getUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
       getUserConfigDir: vi.fn().mockReturnValue('/home/user/.config'),
-    } as any,
+    },
 
     configLoader: {
       loadConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
@@ -112,7 +117,7 @@ export function createMockAppDependencies(): AppDependencies {
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       mergeConfigs: vi.fn().mockReturnValue({ version: '1.0', mcp: {} }),
       hasUserConfig: vi.fn().mockReturnValue(true),
-    } as any,
+    },
 
     discoveryService: {
       detectClient: vi.fn().mockResolvedValue({
@@ -128,7 +133,7 @@ export function createMockAppDependencies(): AppDependencies {
         },
         clients: [],
       }),
-    } as any,
+    },
 
     adapterRegistry: {
       get: vi.fn().mockReturnValue({
@@ -147,19 +152,19 @@ export function createMockAppDependencies(): AppDependencies {
       getAllNames: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
       listAdapters: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
       getInstalledAdapters: vi.fn().mockReturnValue([]),
-    } as any,
+    },
 
     // Plugin services
     pluginDetector: {
       detectInstalledPlugins: vi.fn().mockResolvedValue([]),
       isPluginInstalled: vi.fn().mockResolvedValue(false),
-    } as any,
+    },
 
     pluginInstaller: {
       installPlugin: vi.fn().mockResolvedValue({ success: true }),
       uninstallPlugin: vi.fn().mockResolvedValue({ success: true }),
       listInstalledPlugins: vi.fn().mockResolvedValue([]),
-    } as any,
+    },
 
     pluginExporter: {
       exportPluginList: vi.fn().mockResolvedValue(undefined),
@@ -170,7 +175,7 @@ export function createMockAppDependencies(): AppDependencies {
       }),
       exportAllPlugins: vi.fn().mockResolvedValue(undefined),
       exportPlugins: vi.fn().mockResolvedValue(undefined),
-    } as any,
+    },
 
     // Sync services
     syncEngine: {
@@ -179,7 +184,7 @@ export function createMockAppDependencies(): AppDependencies {
         results: [],
         errors: [],
       }),
-    } as any,
+    },
 
     backupService: {
       backup: vi.fn().mockResolvedValue({
@@ -191,13 +196,13 @@ export function createMockAppDependencies(): AppDependencies {
       getLatestBackup: vi.fn().mockReturnValue(null),
       cleanupOldBackups: vi.fn(),
       deleteBackup: vi.fn().mockReturnValue({ success: true }),
-    } as any,
+    },
 
     restoreService: {
       restoreBackup: vi.fn().mockReturnValue({ success: true }),
       restoreLatestBackup: vi.fn().mockReturnValue({ success: true }),
       listBackups: vi.fn().mockReturnValue([]),
-    } as any,
+    },
 
     auditService: {
       audit: vi.fn().mockResolvedValue({
@@ -208,7 +213,7 @@ export function createMockAppDependencies(): AppDependencies {
       auditClient: vi.fn().mockReturnValue([]),
       auditAllClients: vi.fn().mockReturnValue({}),
       generateSuggestions: vi.fn().mockReturnValue([]),
-    } as any,
+    },
   };
 }
 
