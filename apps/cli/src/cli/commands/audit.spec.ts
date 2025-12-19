@@ -3,6 +3,7 @@ import type { SpyInstance } from 'vitest';
 import { createAuditCommand } from './audit';
 import type { AppDependencies } from '../../composition-root';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createMockAdapter } from '../../test-utils/test-fixtures';
 
 describe('audit command', () => {
   let deps: AppDependencies;
@@ -49,18 +50,11 @@ describe('audit command', () => {
         },
       };
 
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
-        detectConfigPath: vi.fn(),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      };
+      const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue(['memory', 'github']);
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue([
         'Add memory to .overture/config.yaml',
@@ -153,18 +147,11 @@ describe('audit command', () => {
         },
       };
 
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
-        detectConfigPath: vi.fn(),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      };
+      const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
 
       const command = createAuditCommand(deps);
@@ -188,13 +175,13 @@ describe('audit command', () => {
       };
 
       const mockAdapters = [
-        { name: 'claude-code', isInstalled: vi.fn().mockReturnValue(true) },
-        { name: 'vscode', isInstalled: vi.fn().mockReturnValue(true) },
+        createMockAdapter('claude-code'),
+        createMockAdapter('vscode'),
       ];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters as any);
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({
         'claude-code': ['memory'],
         'vscode': ['github'],
@@ -253,13 +240,11 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapters = [
-        { name: 'claude-code', isInstalled: vi.fn().mockReturnValue(true) },
-      ];
+      const mockAdapters = [createMockAdapter('claude-code')];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters as any);
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({});
 
       const command = createAuditCommand(deps);
@@ -285,10 +270,7 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
-      };
+      const mockAdapter = createMockAdapter('claude-code');
 
       const mockSuggestions = [
         'Add memory to .overture/config.yaml',
@@ -297,7 +279,7 @@ describe('audit command', () => {
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue(['memory', 'github']);
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(mockSuggestions);
 
@@ -324,14 +306,11 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
-      };
+      const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
 
       const command = createAuditCommand(deps);
@@ -399,13 +378,11 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapters = [
-        { name: 'claude-code', isInstalled: vi.fn().mockReturnValue(true) },
-      ];
+      const mockAdapters = [createMockAdapter('claude-code')];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters as any);
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
       vi.mocked(deps.auditService.auditAllClients).mockImplementation(() => {
         throw new Error('Audit all failed');
       });

@@ -3,6 +3,13 @@ import type { SpyInstance } from 'vitest';
 import { createDoctorCommand } from './doctor';
 import type { AppDependencies } from '../../composition-root';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import {
+  createMockDiscoveryReport,
+  createFoundClient,
+  createNotFoundClient,
+  createSkippedClient,
+  createWSL2Report,
+} from '../../test-utils/test-fixtures';
 
 describe('doctor command', () => {
   let deps: AppDependencies;
@@ -64,13 +71,7 @@ describe('doctor command', () => {
   describe('client detection', () => {
     it('should call discoveryService.discoverAll() to detect clients', async () => {
       // Arrange
-      const mockDiscoveryReport = {
-        environment: {
-          platform: 'linux' as const,
-          isWSL2: false,
-        },
-        clients: [],
-      };
+      const mockDiscoveryReport = createMockDiscoveryReport();
 
       vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
@@ -88,25 +89,18 @@ describe('doctor command', () => {
 
     it('should display found clients with versions', async () => {
       // Arrange
-      const mockDiscoveryReport = {
-        environment: {
-          platform: 'linux' as const,
-          isWSL2: false,
-        },
+      const mockDiscoveryReport = createMockDiscoveryReport({
         clients: [
-          {
-            client: 'claude-code' as const,
+          createFoundClient('claude-code', {
             detection: {
-              status: 'found' as const,
+              status: 'found',
               binaryPath: '/usr/local/bin/claude',
               version: '1.0.0',
               warnings: [],
             },
-            source: 'linux-native' as const,
-            environment: 'linux' as const,
-          },
+          }),
         ],
-      };
+      });
 
       vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
@@ -130,23 +124,9 @@ describe('doctor command', () => {
 
     it('should display not-found clients with recommendations', async () => {
       // Arrange
-      const mockDiscoveryReport = {
-        environment: {
-          platform: 'linux' as const,
-          isWSL2: false,
-        },
-        clients: [
-          {
-            client: 'vscode' as const,
-            detection: {
-              status: 'not-found' as const,
-              warnings: [],
-            },
-            source: 'linux-native' as const,
-            environment: 'linux' as const,
-          },
-        ],
-      };
+      const mockDiscoveryReport = createMockDiscoveryReport({
+        clients: [createNotFoundClient('vscode')],
+      });
 
       vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
@@ -172,23 +152,9 @@ describe('doctor command', () => {
 
     it('should display skipped clients', async () => {
       // Arrange
-      const mockDiscoveryReport = {
-        environment: {
-          platform: 'linux' as const,
-          isWSL2: false,
-        },
-        clients: [
-          {
-            client: 'cursor' as const,
-            detection: {
-              status: 'skipped' as const,
-              warnings: [],
-            },
-            source: 'linux-native' as const,
-            environment: 'linux' as const,
-          },
-        ],
-      };
+      const mockDiscoveryReport = createMockDiscoveryReport({
+        clients: [createSkippedClient('cursor')],
+      });
 
       vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
@@ -213,17 +179,7 @@ describe('doctor command', () => {
   describe('platform information', () => {
     it('should display WSL2 environment information when detected', async () => {
       // Arrange
-      const mockDiscoveryReport = {
-        environment: {
-          platform: 'linux' as const,
-          isWSL2: true,
-          wsl2Info: {
-            distroName: 'Ubuntu-22.04',
-            windowsUserProfile: '/mnt/c/Users/TestUser',
-          },
-        },
-        clients: [],
-      };
+      const mockDiscoveryReport = createWSL2Report('Ubuntu-22.04', '/mnt/c/Users/TestUser');
 
       vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);

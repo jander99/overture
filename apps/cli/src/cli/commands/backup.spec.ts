@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createBackupCommand } from './backup';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createMockBackupMetadata, createMockBackups } from '../../test-utils/test-fixtures';
 import type { AppDependencies } from '../../composition-root';
 import type { BackupMetadata } from '@overture/sync-core';
 import { UserCancelledError } from '@overture/utils';
@@ -77,18 +78,12 @@ describe('backup command', () => {
   describe('backup list', () => {
     it('should list all backups grouped by client', async () => {
       const backups: BackupMetadata[] = [
-        {
-          client: 'claude-code',
-          timestamp: '2025-01-11T14-30-45-123Z',
-          size: 1024,
-          path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
-        },
-        {
+        createMockBackupMetadata({ client: 'claude-code' }),
+        createMockBackupMetadata({
           client: 'claude-desktop',
           timestamp: '2025-01-11T15-00-00-000Z',
           size: 2048,
-          path: '/backups/claude-desktop-2025-01-11T15-00-00-000Z.json',
-        },
+        }),
       ];
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue(backups);
@@ -104,14 +99,7 @@ describe('backup command', () => {
     });
 
     it('should filter backups by client', async () => {
-      const backups: BackupMetadata[] = [
-        {
-          client: 'claude-code',
-          timestamp: '2025-01-11T14-30-45-123Z',
-          size: 1024,
-          path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
-        },
-      ];
+      const backups: BackupMetadata[] = [createMockBackupMetadata({ client: 'claude-code' })];
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue(backups);
 
@@ -142,12 +130,7 @@ describe('backup command', () => {
   });
 
   describe('backup restore', () => {
-    const mockBackup: BackupMetadata = {
-      client: 'claude-code',
-      timestamp: '2025-01-11T14-30-45-123Z',
-      size: 1024,
-      path: '/backups/claude-code-2025-01-11T14-30-45-123Z.json',
-    };
+    const mockBackup = createMockBackupMetadata({ client: 'claude-code' });
 
     it('should restore latest backup with --latest flag', async () => {
       // Setup adapter registry mock for this test
