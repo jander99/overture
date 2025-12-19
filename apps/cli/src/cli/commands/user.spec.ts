@@ -609,5 +609,27 @@ describe('user command', () => {
         expect.stringContaining('filesystem')
       );
     });
+
+    it('should error on format option with whitespace', async () => {
+      const command = createUserCommand(deps);
+
+      // Act & Assert - whitespace is not trimmed, so this is invalid
+      await expect(command.parseAsync(['node', 'user', 'show', '--format', ' JSON '])).rejects.toThrow('process.exit:1');
+
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid format')
+      );
+    });
+
+    it('should error on empty format string', async () => {
+      const command = createUserCommand(deps);
+
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'user', 'show', '--format', ''])).rejects.toThrow('process.exit:1');
+
+      expect(deps.output.error).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid format')
+      );
+    });
   });
 });
