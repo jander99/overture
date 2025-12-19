@@ -258,4 +258,61 @@ describe('plugin command', () => {
       );
     });
   });
+
+  describe('negative test cases', () => {
+    it('should handle export when both --all and --plugin flags are provided', async () => {
+      // The command allows both flags - it's up to the service to handle this case
+      vi.mocked(deps.pluginExporter.exportAllPlugins).mockResolvedValue(undefined);
+
+      const command = createPluginCommand(deps);
+
+      // Act - command executes successfully, choosing --all over --plugin
+      await command.parseAsync([
+        'node',
+        'plugin',
+        'export',
+        '--all',
+        '--plugin',
+        'python-development',
+      ]);
+
+      // Assert - --all takes precedence, so exportAllPlugins should be called
+      expect(deps.pluginExporter.exportAllPlugins).toHaveBeenCalled();
+      expect(deps.pluginExporter.exportPlugins).not.toHaveBeenCalled();
+    });
+
+    it('should handle non-existent plugin name gracefully', async () => {
+      vi.mocked(deps.pluginExporter.exportPlugins).mockRejectedValue(
+        new Error('Plugin not found: nonexistent-plugin')
+      );
+
+      const command = createPluginCommand(deps);
+
+      // Act & Assert
+      await expect(
+        command.parseAsync(['node', 'plugin', 'export', '--plugin', 'nonexistent-plugin'])
+      ).rejects.toThrow('process.exit:1');
+    });
+
+    it('should handle multiple nonexistent plugins', async () => {
+      vi.mocked(deps.pluginExporter.exportPlugins).mockRejectedValue(
+        new Error('Plugins not found: plugin1, plugin2')
+      );
+
+      const command = createPluginCommand(deps);
+
+      // Act & Assert
+      await expect(
+        command.parseAsync([
+          'node',
+          'plugin',
+          'export',
+          '--plugin',
+          'plugin1',
+          '--plugin',
+          'plugin2',
+        ])
+      ).rejects.toThrow('process.exit:1');
+    });
+  });
 });

@@ -391,4 +391,96 @@ describe('audit command', () => {
       expect(deps.auditService.auditAllClients).toHaveBeenCalled();
     });
   });
+
+  describe('negative test cases', () => {
+    beforeEach(() => {
+      vi.mocked(deps.configLoader.loadConfig).mockResolvedValue({
+        version: '1.0' as const,
+        mcp: {},
+      });
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+    });
+
+    it('should handle empty MCP configuration', async () => {
+      // Arrange - config with no MCPs
+      const mockAdapter = {
+        name: 'claude-code',
+        isInstalled: vi.fn().mockReturnValue(true),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn().mockResolvedValue({}),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      };
+
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
+
+      const command = createAuditCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'audit', '--client', 'claude-code']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('No unmanaged MCPs found')
+      );
+    });
+
+    it('should handle all clients having zero MCPs', async () => {
+      // Arrange
+      const mockAdapters = [
+        {
+          name: 'claude-code',
+          isInstalled: vi.fn().mockReturnValue(true),
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+          readConfig: vi.fn().mockResolvedValue({}),
+          writeConfig: vi.fn(),
+          validateTransport: vi.fn(),
+        },
+      ];
+
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters as any);
+      vi.mocked(deps.auditService.auditAllClients).mockReturnValue({});
+
+      const command = createAuditCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'audit']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('No unmanaged MCPs found')
+      );
+    });
+
+    it('should handle audit with very large number of unmanaged MCPs', async () => {
+      // Arrange - create a large list of unmanaged MCPs
+      const mockAdapter = {
+        name: 'claude-code',
+        isInstalled: vi.fn().mockReturnValue(true),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        readConfig: vi.fn().mockResolvedValue({}),
+        writeConfig: vi.fn(),
+        validateTransport: vi.fn(),
+      };
+
+      const largeMcpList = Array.from({ length: 50 }, (_, i) => `mcp-${i}`);
+
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.auditService.auditClient).mockReturnValue(largeMcpList);
+      vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(
+        largeMcpList.map(mcp => `Add ${mcp} to .overture/config.yaml`)
+      );
+
+      const command = createAuditCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'audit', '--client', 'claude-code']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Found 50 unmanaged MCP')
+      );
+    });
+  });
 });

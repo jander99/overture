@@ -651,4 +651,43 @@ describe('doctor command', () => {
       expect(deps.process.exit).toHaveBeenCalledWith(1);
     });
   });
+
+  describe('negative test cases', () => {
+    it('should handle discovery service returning no clients', async () => {
+      // Arrange
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue({
+        environment: {
+          platform: 'linux' as const,
+          isWSL2: false,
+        },
+        clients: [],
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert - should complete successfully even with no clients
+      expect(deps.discoveryService.discoverAll).toHaveBeenCalled();
+      // Command completes without throwing error
+    });
+
+    it('should handle invalid JSON format output errors', async () => {
+      // Arrange - mock an error in JSON formatting
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue({
+        environment: {
+          platform: 'linux' as const,
+          isWSL2: false,
+        },
+        clients: [],
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act - with invalid format option
+      await expect(command.parseAsync(['node', 'doctor', '--format', 'invalid']))
+        .rejects.toThrow();
+    });
+  });
 });
