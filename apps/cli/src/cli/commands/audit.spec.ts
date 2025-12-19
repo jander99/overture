@@ -96,11 +96,9 @@ describe('audit command', () => {
       // Act & Assert
       await expect(command.parseAsync(['node', 'audit', '--client', 'unknown-client'])).rejects.toThrow('process.exit:1');
 
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Unknown client')
-      );
+      expect(deps.output.error).toHaveBeenCalledWith('Unknown client: unknown-client');
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Available clients')
+        expect.stringContaining('Available clients:')
       );
     });
 

@@ -114,10 +114,7 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('claude-code')
-      );
-      expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('1.0.0')
+        expect.stringContaining('✓ claude-code (1.0.0)')
       );
       expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
@@ -139,10 +136,7 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('vscode')
-      );
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('not installed')
+        expect.stringContaining('✗ vscode - not installed')
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('code.visualstudio.com')
@@ -167,10 +161,7 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('cursor')
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('skipped')
+        expect.stringContaining('○ cursor - skipped')
       );
       expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
@@ -278,10 +269,7 @@ describe('doctor command', () => {
       // Assert
       expect(deps.process.commandExists).toHaveBeenCalledWith('npx');
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('filesystem')
-      );
-      expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('(found)')
+        expect.stringContaining('✓ filesystem - npx (found)')
       );
       expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
@@ -320,10 +308,7 @@ describe('doctor command', () => {
       // Assert
       expect(deps.process.commandExists).toHaveBeenCalledWith('uvx');
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('python-repl')
-      );
-      expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('(not found)')
+        expect.stringContaining('⚠ python-repl - uvx (not found)')
       );
       expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
