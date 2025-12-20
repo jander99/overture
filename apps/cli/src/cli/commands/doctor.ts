@@ -256,8 +256,16 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           }
         }
 
-        // Check MCP servers
-        const mcpConfig = projectConfig?.mcp || userConfig?.mcp || {};
+        // Check MCP servers - get sources to show where each MCP comes from
+        const mcpSources = configLoader.getMcpSources(
+          userConfig,
+          projectConfig,
+        );
+        const mergedConfig = configLoader.mergeConfigs(
+          userConfig,
+          projectConfig,
+        );
+        const mcpConfig = mergedConfig?.mcp || {};
 
         if (Object.keys(mcpConfig).length > 0) {
           if (!options.json) {
@@ -266,11 +274,13 @@ export function createDoctorCommand(deps: AppDependencies): Command {
 
           for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
             const commandExists = await process.commandExists(mcpDef.command);
+            const source = mcpSources[mcpName] || 'unknown';
 
             const mcpResult = {
               name: mcpName,
               command: mcpDef.command,
               available: commandExists,
+              source,
             };
 
             results.mcpServers.push(mcpResult);
@@ -284,13 +294,17 @@ export function createDoctorCommand(deps: AppDependencies): Command {
 
             // Console output (if not JSON mode)
             if (!options.json) {
+              const sourceTag = options.verbose
+                ? chalk.dim(` [${source}]`)
+                : '';
+
               if (commandExists) {
                 output.success(
-                  `${chalk.green('✓')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.dim('(found)')}`,
+                  `${chalk.green('✓')} ${chalk.bold(mcpName)}${sourceTag} - ${chalk.dim(mcpDef.command)} ${chalk.dim('(found)')}`,
                 );
               } else {
                 output.warn(
-                  `${chalk.yellow('⚠')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.yellow('(not found)')}`,
+                  `${chalk.yellow('⚠')} ${chalk.bold(mcpName)}${sourceTag} - ${chalk.dim(mcpDef.command)} ${chalk.yellow('(not found)')}`,
                 );
 
                 // Show recommendation

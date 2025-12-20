@@ -70,6 +70,8 @@ export interface ClientSyncResult {
   binaryDetection?: BinaryDetectionResult;
   warnings: string[];
   error?: string;
+  /** Maps MCP server names to their source ('global' or 'project') */
+  mcpSources?: Record<string, 'global' | 'project'>;
 }
 
 /**
@@ -171,6 +173,12 @@ export class SyncEngine {
         projectConfig,
       );
 
+      // Get MCP sources (user vs project)
+      const mcpSources = this.deps.configLoader.getMcpSources(
+        userConfig,
+        projectConfig,
+      );
+
       // Pass detected project root to all sync operations
       const syncOptionsWithProject: SyncOptions = {
         ...options,
@@ -228,6 +236,7 @@ export class SyncEngine {
           client,
           overtureConfig,
           syncOptionsWithProject,
+          mcpSources,
         );
         results.push(result);
 
@@ -314,6 +323,7 @@ export class SyncEngine {
     client: ClientAdapter,
     overtureConfig: OvertureConfig,
     options: SyncOptions,
+    mcpSources?: Record<string, 'global' | 'project'>,
   ): Promise<ClientSyncResult> {
     const platform = options.platform || this.deps.environment.platform();
     const warnings: string[] = [];
@@ -512,6 +522,7 @@ export class SyncEngine {
           diff,
           binaryDetection,
           warnings,
+          mcpSources,
         };
       }
 
@@ -536,6 +547,7 @@ export class SyncEngine {
         backupPath,
         binaryDetection,
         warnings,
+        mcpSources,
       };
     } catch (error) {
       return {

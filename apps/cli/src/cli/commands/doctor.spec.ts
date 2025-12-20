@@ -289,6 +289,10 @@ describe('doctor command', () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
         mockUserConfig,
       );
+      vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(mockUserConfig);
+      vi.mocked(deps.configLoader.getMcpSources).mockReturnValue({
+        filesystem: 'global',
+      });
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockResolvedValue(true);
 
@@ -334,6 +338,12 @@ describe('doctor command', () => {
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(
         mockProjectConfig,
       );
+      vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(
+        mockProjectConfig,
+      );
+      vi.mocked(deps.configLoader.getMcpSources).mockReturnValue({
+        'python-repl': 'project',
+      });
       vi.mocked(deps.process.commandExists).mockResolvedValue(false);
 
       const command = createDoctorCommand(deps);
@@ -374,6 +384,10 @@ describe('doctor command', () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
         mockUserConfig,
       );
+      vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(mockUserConfig);
+      vi.mocked(deps.configLoader.getMcpSources).mockReturnValue({
+        filesystem: 'global',
+      });
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockResolvedValue(false);
 
@@ -687,6 +701,10 @@ describe('doctor command', () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
         mockUserConfig,
       );
+      vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(mockUserConfig);
+      vi.mocked(deps.configLoader.getMcpSources).mockReturnValue({
+        filesystem: 'global',
+      });
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockRejectedValue(
         new Error('Command check failed'),

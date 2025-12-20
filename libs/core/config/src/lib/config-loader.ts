@@ -13,7 +13,10 @@
  */
 
 import * as yaml from 'js-yaml';
-import { OvertureConfigSchema, type OvertureConfig } from '@overture/config-schema';
+import {
+  OvertureConfigSchema,
+  type OvertureConfig,
+} from '@overture/config-schema';
 import { ConfigError, ValidationError } from '@overture/errors';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { PathResolver } from './path-resolver.js';
@@ -48,7 +51,7 @@ import type { PathResolver } from './path-resolver.js';
 export class ConfigLoader {
   constructor(
     private filesystem: FilesystemPort,
-    private pathResolver: PathResolver
+    private pathResolver: PathResolver,
   ) {}
 
   /**
@@ -94,7 +97,11 @@ export class ConfigLoader {
       const mcp = config.mcp as Record<string, unknown>;
 
       for (const [mcpName, mcpConfig] of Object.entries(mcp)) {
-        if (mcpConfig && typeof mcpConfig === 'object' && 'scope' in mcpConfig) {
+        if (
+          mcpConfig &&
+          typeof mcpConfig === 'object' &&
+          'scope' in mcpConfig
+        ) {
           throw new ValidationError(
             `Deprecated 'scope' field found in configuration`,
             [
@@ -103,7 +110,7 @@ export class ConfigLoader {
               `Scope is now implicit based on file location:`,
               `  - MCPs in ~/.config/overture.yml are global`,
               `  - MCPs in .overture/config.yaml are project-scoped`,
-            ]
+            ],
           );
         }
       }
@@ -149,7 +156,9 @@ export class ConfigLoader {
       if (!result.success) {
         throw new ValidationError(
           `Invalid user configuration: ${result.error.message}`,
-          result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          result.error.issues.map(
+            (issue) => `${issue.path.join('.')}: ${issue.message}`,
+          ),
         );
       }
 
@@ -187,7 +196,9 @@ export class ConfigLoader {
    * }
    * ```
    */
-  async loadProjectConfig(projectRoot?: string): Promise<OvertureConfig | null> {
+  async loadProjectConfig(
+    projectRoot?: string,
+  ): Promise<OvertureConfig | null> {
     const configPath = this.pathResolver.getProjectConfigPath(projectRoot);
 
     // Check if file exists (project config is optional)
@@ -211,7 +222,9 @@ export class ConfigLoader {
       if (!result.success) {
         throw new ValidationError(
           `Invalid project configuration: ${result.error.message}`,
-          result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          result.error.issues.map(
+            (issue) => `${issue.path.join('.')}: ${issue.message}`,
+          ),
         );
       }
 
@@ -229,6 +242,45 @@ export class ConfigLoader {
 
       throw new ConfigError(errorMessage, configPath);
     }
+  }
+
+  /**
+   * Categorize MCP servers by their source (global vs project)
+   *
+   * Returns an object mapping each MCP name to its source.
+   * When an MCP exists in both configs, project takes precedence.
+   *
+   * @param globalConfig - Global configuration
+   * @param projectConfig - Project configuration (if any)
+   * @returns Map of MCP names to their source ('global' or 'project')
+   *
+   * @example
+   * ```typescript
+   * const sources = loader.getMcpSources(globalConfig, projectConfig);
+   * // { filesystem: 'global', memory: 'global', nx-mcp: 'project' }
+   * ```
+   */
+  getMcpSources(
+    globalConfig: OvertureConfig | null,
+    projectConfig: OvertureConfig | null,
+  ): Record<string, 'global' | 'project'> {
+    const sources: Record<string, 'global' | 'project'> = {};
+
+    // Mark all global MCPs
+    if (globalConfig?.mcp) {
+      for (const mcpName of Object.keys(globalConfig.mcp)) {
+        sources[mcpName] = 'global';
+      }
+    }
+
+    // Override with project MCPs (they take precedence)
+    if (projectConfig?.mcp) {
+      for (const mcpName of Object.keys(projectConfig.mcp)) {
+        sources[mcpName] = 'project';
+      }
+    }
+
+    return sources;
   }
 
   /**
@@ -251,7 +303,10 @@ export class ConfigLoader {
    * const merged = loader.mergeConfigs(user, project);
    * ```
    */
-  mergeConfigs(userConfig: OvertureConfig, projectConfig: OvertureConfig | null): OvertureConfig {
+  mergeConfigs(
+    userConfig: OvertureConfig,
+    projectConfig: OvertureConfig | null,
+  ): OvertureConfig {
     // If no project config, return user config as-is
     if (!projectConfig) {
       return userConfig;
@@ -277,9 +332,13 @@ export class ConfigLoader {
 
     return {
       version: projectConfig.version || userConfig.version,
-      clients: Object.keys(mergedClients).length > 0 ? mergedClients : undefined,
+      clients:
+        Object.keys(mergedClients).length > 0 ? mergedClients : undefined,
       mcp: mergedMcp,
-      sync: Object.keys(mergedSync).length > 0 ? (mergedSync as OvertureConfig['sync']) : undefined,
+      sync:
+        Object.keys(mergedSync).length > 0
+          ? (mergedSync as OvertureConfig['sync'])
+          : undefined,
     };
   }
 
@@ -314,7 +373,8 @@ export class ConfigLoader {
    */
   async loadConfig(projectRoot?: string): Promise<OvertureConfig> {
     // Auto-detect project root if not provided
-    const detectedProjectRoot = projectRoot || (await this.pathResolver.findProjectRoot());
+    const detectedProjectRoot =
+      projectRoot || (await this.pathResolver.findProjectRoot());
 
     // Try to load user config (optional)
     let userConfig: OvertureConfig | null = null;
@@ -337,7 +397,7 @@ export class ConfigLoader {
     if (!userConfig && !projectConfig) {
       throw new ConfigError(
         'No configuration found. Run "overture user init" to create user config or "overture init" for project config.',
-        detectedProjectRoot || '/'
+        detectedProjectRoot || '/',
       );
     }
 

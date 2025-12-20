@@ -129,6 +129,7 @@ export function createMockAppDependencies(): AppDependencies {
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       mergeConfigs: vi.fn().mockReturnValue({ version: '1.0', mcp: {} }),
       hasUserConfig: vi.fn().mockReturnValue(true),
+      getMcpSources: vi.fn().mockReturnValue({}) as any,
     },
 
     discoveryService: {
