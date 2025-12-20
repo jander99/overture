@@ -43,6 +43,7 @@ const ALL_CLIENTS: ClientName[] = [
   'jetbrains-copilot',
   'codex',
   'gemini-cli',
+  'opencode',
 ];
 
 /**
@@ -80,8 +81,11 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           ? await configLoader.loadProjectConfig(projectRoot)
           : null;
 
+        // Get all adapters from registry
+        const adapters = ALL_CLIENTS.map((clientName) => adapterRegistry.get(clientName)).filter((adapter): adapter is import('@overture/client-adapters').ClientAdapter => adapter !== undefined);
+
         // Run discovery
-        const discoveryReport = await discoveryService.discoverAll();
+        const discoveryReport = await discoveryService.discoverAll(adapters);
 
         const results = {
           environment: {
@@ -319,11 +323,11 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           console.log('');
         }
 
-        process.exit(0);
+        // Success - return normally (main.ts handles exit code)
       } catch (error) {
         const formatted = ErrorHandler.formatError(error);
         ErrorHandler.logError(formatted);
-        process.exit(1);
+        throw error; // Re-throw to let main.ts handle exit code
       }
     });
 
@@ -350,6 +354,8 @@ function getInstallRecommendation(client: ClientName): string | null {
       'Install OpenAI Codex CLI: pip install openai-codex',
     'gemini-cli':
       'Install Gemini CLI: https://developers.google.com/gemini/cli',
+    opencode:
+      'Install OpenCode: https://opencode.ai',
   };
 
   return recommendations[client] || null;

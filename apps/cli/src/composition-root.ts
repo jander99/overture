@@ -78,9 +78,19 @@ export function createAppDependencies(): AppDependencies {
 
   // Create discovery service
   const discoveryService = createDiscoveryService({
-    process,
-    environment,
-    filesystem,
+    processPort: process,
+    environmentPort: environment,
+    fileExists: (path: string) => filesystem.existsSync(path),
+    readFile: (path: string) => filesystem.readFileSync(path, 'utf-8'),
+    readDir: (path: string) => filesystem.readdirSync(path),
+    isDirectory: (path: string) => filesystem.statSync(path).isDirectory(),
+    joinPath: (...paths: string[]) => filesystem.join(...paths),
+    expandTilde: (path: string) => {
+      if (path.startsWith('~/')) {
+        return filesystem.join(environment.homedir(), path.slice(2));
+      }
+      return path;
+    },
   });
 
   // Create adapter registry with filesystem and environment dependencies
