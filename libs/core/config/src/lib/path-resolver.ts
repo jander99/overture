@@ -529,7 +529,7 @@ export class PathResolver {
    * ```typescript
    * const dryRunPath = resolver.getDryRunOutputPath(
    *   'claude-code',
-   *   '/home/user/.config/claude/mcp.json'
+   *   '/home/user/.claude.json'
    * );
    * // Returns: 'dist/dry-run/claude-code-mcp.json'
    * ```

@@ -423,7 +423,7 @@ describe('audit command', () => {
       const mockAdapter = {
         name: 'claude-code',
         isInstalled: vi.fn().mockReturnValue(true),
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -449,7 +449,7 @@ describe('audit command', () => {
         {
           name: 'claude-code',
           isInstalled: vi.fn().mockReturnValue(true),
-          detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
           readConfig: vi.fn().mockResolvedValue({}),
           writeConfig: vi.fn(),
           validateTransport: vi.fn(),
@@ -475,7 +475,7 @@ describe('audit command', () => {
       const mockAdapter = {
         name: 'claude-code',
         isInstalled: vi.fn().mockReturnValue(true),
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),

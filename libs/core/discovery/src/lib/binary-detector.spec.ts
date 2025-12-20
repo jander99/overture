@@ -235,7 +235,7 @@ describe('BinaryDetector', () => {
       const commandExists = new Map([['claude', true]]);
 
       const fs = createMockFilesystem();
-      fs.files.set('/home/testuser/.config/claude/mcp.json', '{"mcpServers": {}}');
+      fs.files.set('/home/testuser/.claude.json', '{"mcpServers": {}}');
 
       const { fileExists, readFile } = createFilesystemFunctions(fs);
 
@@ -250,7 +250,7 @@ describe('BinaryDetector', () => {
 
       const adapter = createMockAdapter('claude-code', {
         getBinaryNames: () => ['claude'],
-        detectConfigPath: () => '/home/testuser/.config/claude/mcp.json',
+        detectConfigPath: () => '/home/testuser/.claude.json',
       });
 
       const result = await detector.detectClient(adapter, 'linux');
@@ -258,7 +258,7 @@ describe('BinaryDetector', () => {
       expect(result.status).toBe('found');
       expect(result.binaryPath).toBe('/usr/local/bin/claude');
       expect(result.version).toBe('2.1.0');
-      expect(result.configPath).toBe('/home/testuser/.config/claude/mcp.json');
+      expect(result.configPath).toBe('/home/testuser/.claude.json');
       expect(result.configValid).toBe(true);
     });
 
@@ -318,7 +318,7 @@ describe('BinaryDetector', () => {
       const commandExists = new Map([['claude', true]]);
 
       const fs = createMockFilesystem();
-      fs.files.set('/home/testuser/.config/claude/mcp.json', '{ invalid }');
+      fs.files.set('/home/testuser/.claude.json', '{ invalid }');
 
       const { fileExists, readFile } = createFilesystemFunctions(fs);
 
@@ -333,7 +333,7 @@ describe('BinaryDetector', () => {
 
       const adapter = createMockAdapter('claude-code', {
         getBinaryNames: () => ['claude'],
-        detectConfigPath: () => '/home/testuser/.config/claude/mcp.json',
+        detectConfigPath: () => '/home/testuser/.claude.json',
       });
 
       const result = await detector.detectClient(adapter, 'linux');

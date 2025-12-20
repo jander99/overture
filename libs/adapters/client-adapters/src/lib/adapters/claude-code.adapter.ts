@@ -5,7 +5,7 @@
  * Supports both user-level and project-level MCP configurations.
  *
  * Config locations:
- * - User: ~/.config/claude/mcp.json (Linux/macOS), %APPDATA%/Claude/mcp.json (Windows)
+ * - User: ~/.claude.json (all platforms)
  * - Project: ./.mcp.json
  *
  * @module adapters/claude-code.adapter

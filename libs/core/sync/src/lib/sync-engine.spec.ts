@@ -48,7 +48,7 @@ describe('SyncEngine', () => {
       name: 'claude-code' as ClientName,
       schemaRootKey: 'mcpServers',
       isInstalled: vi.fn(() => true),
-      detectConfigPath: vi.fn(() => '/home/user/.config/claude/mcp.json'),
+      detectConfigPath: vi.fn(() => '/home/user/.claude.json'),
       readConfig: vi.fn().mockResolvedValue({ mcpServers: {} }),
       writeConfig: vi.fn().mockResolvedValue(undefined),
       convertFromOverture: vi.fn((config) => ({ mcpServers: config.mcp })),
@@ -194,7 +194,7 @@ describe('SyncEngine', () => {
 
       expect(result.client).toBe('claude-code');
       expect(result.success).toBe(true);
-      expect(result.configPath).toBe('/home/user/.config/claude/mcp.json');
+      expect(result.configPath).toBe('/home/user/.claude.json');
     });
 
     it('should return error result when sync fails', async () => {
@@ -418,7 +418,7 @@ describe('SyncEngine', () => {
 
       expect(deps.backupService.backup).toHaveBeenCalledWith(
         'claude-code',
-        '/home/user/.config/claude/mcp.json'
+        '/home/user/.claude.json'
       );
       expect(result.backupPath).toContain('backup');
     });

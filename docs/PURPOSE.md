@@ -8,7 +8,7 @@ Developers using AI-assisted development tools face **configuration chaos**:
 
 - **Multiple AI tools** with separate configs:
   - Claude Desktop: `~/Library/Application Support/Claude/mcp.json`
-  - Claude Code user: `~/.config/claude/mcp.json`
+  - Claude Code user: `~/.claude.json`
   - Claude Code project: `./.mcp.json`
   - GitHub Copilot CLI: (various locations)
   - VSCode/IntelliJ Copilot: extension settings

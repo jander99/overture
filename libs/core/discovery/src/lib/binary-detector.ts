@@ -51,7 +51,7 @@ export class BinaryDetector {
    * //   status: 'found',
    * //   binaryPath: '/usr/local/bin/claude',
    * //   version: '2.1.0',
-   * //   configPath: '/Users/user/.config/claude/mcp.json',
+   * //   configPath: '/Users/user/.claude.json',
    * //   configValid: true,
    * //   warnings: []
    * // }
@@ -252,7 +252,7 @@ export class BinaryDetector {
    *
    * @example
    * ```typescript
-   * const valid = detector.validateConfigFile('/Users/user/.config/claude/mcp.json');
+   * const valid = detector.validateConfigFile('/Users/user/.claude.json');
    * // true
    * ```
    */

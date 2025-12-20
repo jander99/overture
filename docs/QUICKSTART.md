@@ -33,7 +33,7 @@ overture doctor
 **Example output:**
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
-  Config: ~/.config/claude/mcp.json (valid)
+  Config: ~/.claude.json (valid)
 
 ✗ claude-desktop - not installed
   → Install Claude Desktop: https://claude.com/download
@@ -128,7 +128,7 @@ Syncing MCP configurations...
 Client sync results:
   ✓ claude-code:
       Detected (v2.1.0): /usr/local/bin/claude
-      Config: ~/.config/claude/mcp.json (valid)
+      Config: ~/.claude.json (valid)
       Backup: ~/.config/overture/backups/claude-code/mcp.json.20250115-123456
 
   ✗ claude-desktop:
@@ -152,7 +152,7 @@ claude
 code
 
 # Check generated configs
-cat ~/.config/claude/mcp.json
+cat ~/.claude.json
 cat .mcp.json
 ```
 
@@ -213,7 +213,7 @@ Overture automatically detects and syncs to these clients:
 
 | Client | Detection | Config Location |
 |--------|-----------|----------------|
-| **Claude Code** | CLI: `claude` | `~/.config/claude/mcp.json` (user)<br>`./.mcp.json` (project) |
+| **Claude Code** | CLI: `claude` | `~/.claude.json` (user)<br>`./.mcp.json` (project) |
 | **Claude Desktop** | macOS: `/Applications/Claude.app` | `~/Library/Application Support/Claude/mcp.json` |
 | **VSCode** | CLI: `code` | `~/.vscode/extensions/.../mcp.json` |
 | **Cursor** | CLI: `cursor` | `~/.cursor/mcp.json` |

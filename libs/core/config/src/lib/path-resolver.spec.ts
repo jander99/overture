@@ -167,14 +167,14 @@ describe('PathResolver', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('linux');
 
       const result = resolver.getClaudeCodeGlobalPath();
-      expect(result).toBe('/home/user/.config/claude/mcp.json');
+      expect(result).toBe('/home/user/.claude.json');
     });
 
     it('should return ~/.config path on macOS', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('darwin');
 
       const result = resolver.getClaudeCodeGlobalPath();
-      expect(result).toBe('/home/user/.config/claude/mcp.json');
+      expect(result).toBe('/home/user/.claude.json');
     });
 
     it('should return AppData path on Windows', () => {
@@ -187,7 +187,7 @@ describe('PathResolver', () => {
 
     it('should handle platform override', () => {
       const result = resolver.getClaudeCodeGlobalPath('darwin');
-      expect(result).toBe('/home/user/.config/claude/mcp.json');
+      expect(result).toBe('/home/user/.claude.json');
     });
   });
 
@@ -284,7 +284,7 @@ describe('PathResolver', () => {
     it('should return paths for claude-code', () => {
       const result = resolver.getClientConfigPath('claude-code');
       expect(result).toEqual({
-        user: '/home/user/.config/claude/mcp.json',
+        user: '/home/user/.claude.json',
         project: '/home/user/project/.mcp.json',
       });
     });

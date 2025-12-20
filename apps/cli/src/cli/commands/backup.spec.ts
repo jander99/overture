@@ -138,7 +138,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -148,7 +148,7 @@ describe('backup command', () => {
       vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
-        restoredPath: '/home/user/.config/claude/mcp.json',
+        restoredPath: '/home/user/.claude.json',
       });
 
       const command = createBackupCommand(deps);
@@ -170,7 +170,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -180,7 +180,7 @@ describe('backup command', () => {
       vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
-        restoredPath: '/home/user/.config/claude/mcp.json',
+        restoredPath: '/home/user/.claude.json',
       });
 
       const command = createBackupCommand(deps);
@@ -197,7 +197,7 @@ describe('backup command', () => {
       expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
         'claude-code',
         '2025-01-11T14-30-45-123Z',
-        '/home/user/.config/claude/mcp.json'
+        '/home/user/.claude.json'
       );
       expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
     });
@@ -206,7 +206,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -216,7 +216,7 @@ describe('backup command', () => {
       vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
-        restoredPath: '/home/user/.config/claude/mcp.json',
+        restoredPath: '/home/user/.claude.json',
       });
 
       const command = createBackupCommand(deps);
@@ -257,7 +257,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -282,7 +282,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -309,7 +309,7 @@ describe('backup command', () => {
       // Setup adapter registry mock for this test
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn(),
@@ -338,7 +338,7 @@ describe('backup command', () => {
       beforeEach(() => {
         vi.mocked(deps.adapterRegistry.get).mockReturnValue({
           name: 'claude-code',
-          detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
           readConfig: vi.fn(),
           writeConfig: vi.fn(),
           validateTransport: vi.fn(),
@@ -378,7 +378,7 @@ describe('backup command', () => {
         vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
           success: true,
           backupPath: invalidBackup.path,
-          restoredPath: '/home/user/.config/claude/mcp.json',
+          restoredPath: '/home/user/.claude.json',
         });
 
         const command = createBackupCommand(deps);
@@ -397,7 +397,7 @@ describe('backup command', () => {
         expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
           'claude-code',
           '2025-01-11T14:30:45.123+00:00',
-          '/home/user/.config/claude/mcp.json'
+          '/home/user/.claude.json'
         );
       });
 
@@ -412,7 +412,7 @@ describe('backup command', () => {
         vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
           success: true,
           backupPath: oldBackup.path,
-          restoredPath: '/home/user/.config/claude/mcp.json',
+          restoredPath: '/home/user/.claude.json',
         });
 
         const command = createBackupCommand(deps);
@@ -431,7 +431,7 @@ describe('backup command', () => {
         expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
           'claude-code',
           '1969-12-31T23-59-59-999Z',
-          '/home/user/.config/claude/mcp.json'
+          '/home/user/.claude.json'
         );
         expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
       });

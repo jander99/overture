@@ -237,7 +237,7 @@ Skill instructions and expertise...
    - Dynamically discovered
 
 **Scope Levels (Implicit):**
-- User-global: MCPs in `~/.config/overture.yml` → synced to `~/.config/claude/mcp.json`
+- User-global: MCPs in `~/.config/overture.yml` → synced to `~/.claude.json`
 - Project: MCPs in `.overture/config.yaml` → synced to `.mcp.json`
 - Scope is determined by file location, no explicit `scope` field needed
 

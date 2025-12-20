@@ -328,8 +328,8 @@ describe('Zod Schema Validators', () => {
       const config = {
         enabled: true,
         configPath: {
-          darwin: '/Users/user/.config/claude/mcp.json',
-          linux: '/home/user/.config/claude/mcp.json',
+          darwin: '/Users/user/.claude.json',
+          linux: '/home/user/.claude.json',
           win32: 'C:\\Users\\user\\AppData\\Roaming\\Claude\\mcp.json',
         },
       };

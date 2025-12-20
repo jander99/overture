@@ -219,7 +219,7 @@ mcp:
 ### Generated Outputs
 
 **`.mcp.json`** - Claude Code project MCP configuration
-**`~/.config/claude/mcp.json`** - Claude Code user MCP configuration
+**`~/.claude.json`** - Claude Code user MCP configuration
 **`CLAUDE.md`** - Project guidance with plugin→MCP mappings
 
 ## Important Notes

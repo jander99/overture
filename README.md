@@ -16,7 +16,7 @@ Developers using AI-assisted tools face **configuration chaos**:
 
 ### Multiple AI Tools, Multiple Configs
 - **Claude Desktop** → `~/Library/Application Support/Claude/mcp.json`
-- **Claude Code** (user) → `~/.config/claude/mcp.json`
+- **Claude Code** (user) → `~/.claude.json`
 - **Claude Code** (project) → `./.mcp.json`
 - **OpenCode** → `~/.config/opencode/opencode.json`
 - **GitHub Copilot CLI** → Various locations

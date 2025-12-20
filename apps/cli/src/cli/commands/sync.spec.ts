@@ -36,11 +36,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [],
           },
@@ -207,11 +207,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [],
           },
@@ -235,7 +235,7 @@ describe('sync command', () => {
 
       expect(deps.output.section).toHaveBeenCalledWith('🔍 Detecting clients...');
       expect(deps.output.success).toHaveBeenCalledWith(
-        'claude-code (v1.0.0) → /home/user/.config/claude/mcp.json'
+        'claude-code (v1.0.0) → /home/user/.claude.json'
       );
       expect(deps.output.success).toHaveBeenCalledWith(
         'claude-desktop (v2.0.0) → /home/user/.config/Claude/mcp.json'
@@ -297,11 +297,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [],
           },
@@ -327,7 +327,7 @@ describe('sync command', () => {
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [],
           },
@@ -348,11 +348,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [
               'Invalid config found',
@@ -383,11 +383,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: ['💡 Tip: Run overture doctor for more details'],
           },
@@ -506,11 +506,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: [],
           },
@@ -541,7 +541,7 @@ describe('sync command', () => {
 
       // Detected and synced
       expect(deps.output.success).toHaveBeenCalledWith(
-        'claude-code (v1.0.0) → /home/user/.config/claude/mcp.json'
+        'claude-code (v1.0.0) → /home/user/.claude.json'
       );
       // Not detected but synced
       expect(deps.output.warn).toHaveBeenCalledWith(
@@ -558,10 +558,10 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
               // No version
             },
             warnings: [],
@@ -575,7 +575,7 @@ describe('sync command', () => {
 
       // Should display without version
       expect(deps.output.success).toHaveBeenCalledWith(
-        'claude-code → /home/user/.config/claude/mcp.json'
+        'claude-code → /home/user/.claude.json'
       );
     });
 
@@ -586,11 +586,11 @@ describe('sync command', () => {
           {
             client: 'claude-code',
             success: true,
-            configPath: '/home/user/.config/claude/mcp.json',
+            configPath: '/home/user/.claude.json',
             binaryDetection: {
               status: 'found',
               version: '1.0.0',
-              configPath: '/home/user/.config/claude/mcp.json',
+              configPath: '/home/user/.claude.json',
             },
             warnings: ['💡 Tip: Run overture doctor'],
           },

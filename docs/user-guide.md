@@ -98,7 +98,7 @@ This shows:
 **Example output:**
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
-  Config: ~/.config/claude/mcp.json (valid)
+  Config: ~/.claude.json (valid)
 
 ✗ claude-desktop - not installed
   → Install Claude Desktop: https://claude.com/download
@@ -221,7 +221,7 @@ MCP servers provide tools and integrations. There are two types:
 
 #### Global MCP Servers
 
-These are configured in your global Claude settings (`~/.config/claude/mcp.json`) and available to all projects:
+These are configured in your global Claude settings (`~/.claude.json`) and available to all projects:
 
 ```yaml
 mcp:
@@ -354,7 +354,7 @@ overture doctor --json
 **Example output:**
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
-  Config: ~/.config/claude/mcp.json (valid)
+  Config: ~/.claude.json (valid)
 
 ✗ claude-desktop - not installed
   → Install Claude Desktop: https://claude.com/download
@@ -425,7 +425,7 @@ Syncing MCP configurations...
 Client sync results:
   ✓ claude-code:
       Detected (v2.1.0): /usr/local/bin/claude
-      Config: ~/.config/claude/mcp.json (valid)
+      Config: ~/.claude.json (valid)
       Backup: ~/.config/overture/backups/claude-code/mcp.json.20250115-123456
 
   ✗ claude-desktop:
@@ -470,7 +470,7 @@ overture mcp list
 ```
 MCP Servers:
 
-Global (from ~/.config/claude/mcp.json):
+Global (from ~/.claude.json):
   ✓ filesystem
   ✓ context7
   ✓ memory

@@ -16,7 +16,7 @@ mcp:
     description: "Nx workspace management and build orchestration"
 
   # Global MCPs (referenced but not configured here)
-  # These remain in ~/.config/claude/mcp.json:
+  # These remain in ~/.claude.json:
   # - sequentialthinking: Complex problem-solving
   # - filesystem: File operations
   # - context7: Library documentation

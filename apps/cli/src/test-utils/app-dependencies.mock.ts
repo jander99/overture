@@ -103,7 +103,7 @@ export function createMockAppDependencies(): AppDependencies {
       resolveProjectConfigPath: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
       resolveProjectConfig: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
       getProjectOvertureDir: vi.fn().mockReturnValue('/home/user/project/.overture'),
-      resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+      resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
       resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
       findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
@@ -123,7 +123,7 @@ export function createMockAppDependencies(): AppDependencies {
       detectClient: vi.fn().mockResolvedValue({
         status: 'found',
         version: '1.0.0',
-        configPath: '/home/user/.config/claude/mcp.json',
+        configPath: '/home/user/.claude.json',
       }),
       detectAllClients: vi.fn().mockResolvedValue([]),
       discoverAll: vi.fn().mockResolvedValue({
@@ -138,7 +138,7 @@ export function createMockAppDependencies(): AppDependencies {
     adapterRegistry: {
       get: vi.fn().mockReturnValue({
         name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.config/claude/mcp.json'),
+        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn().mockResolvedValue(undefined),
         validateTransport: vi.fn().mockReturnValue(true),

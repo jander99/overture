@@ -107,7 +107,7 @@ export interface BinaryDetectionResult {
 
   /**
    * Config file path that was validated
-   * @example "/Users/user/.config/claude/mcp.json"
+   * @example "/Users/user/.claude.json"
    */
   configPath?: string;
 
@@ -479,7 +479,7 @@ export interface DiscoveryConfig {
  * Location: ~/.config/overture.yml
  *
  * Note: Scope is implicit based on file location.
- * - MCPs in ~/.config/overture.yml are global (synced to ~/.config/claude/mcp.json)
+ * - MCPs in ~/.config/overture.yml are global (synced to ~/.claude.json)
  * - MCPs in .overture/config.yaml are project-scoped (synced to .mcp.json)
  *
  * @example
