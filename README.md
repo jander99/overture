@@ -204,6 +204,86 @@ overture sync
 
 ---
 
+## Building from Source
+
+Want to try the latest features or contribute to Overture? Build from source:
+
+### Prerequisites
+
+- **Node.js** v18+ (v22.16+ recommended)
+- **npm** v10+
+- **Git**
+
+### Installation Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/overture.git
+cd overture
+
+# 2. Install dependencies
+npm install
+
+# 3. Build all packages
+npx nx build @overture/cli
+
+# 4. Link the CLI globally (makes 'overture' command available)
+npm link
+
+# 5. Verify installation
+overture --version
+overture doctor
+
+# Optional: Run tests to verify everything works
+npx nx test @overture/cli
+```
+
+### Development Workflow
+
+```bash
+# Run tests in watch mode during development
+npx nx test @overture/cli --watch
+
+# Run all tests with coverage
+npx nx test @overture/cli --coverage
+
+# Build for production
+npx nx build @overture/cli --configuration=production
+
+# Lint code
+npx nx lint @overture/cli
+```
+
+### Uninstalling
+
+```bash
+# Unlink the globally installed CLI
+npm unlink
+
+# Or install the published version instead
+npm install -g @overture/cli
+```
+
+### Troubleshooting
+
+**Command not found after `npm link`:**
+- Verify npm global bin directory is in your PATH:
+  ```bash
+  npm bin -g
+  echo $PATH
+  ```
+- Manually add to PATH if needed (add to `~/.bashrc` or `~/.zshrc`):
+  ```bash
+  export PATH="$(npm bin -g):$PATH"
+  ```
+
+**Build errors:**
+- Clear Nx cache: `npx nx reset`
+- Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
+- Ensure Node.js version is v18+: `node --version`
+
+---
+
 ## Example: Python Backend Project
 
 ```yaml
