@@ -51,13 +51,13 @@ export interface ConfigDiff {
  *
  * @param oldConfig - Existing client configuration
  * @param newConfig - New client configuration to apply
- * @param rootKey - Root key for MCP servers ('mcpServers' or 'servers')
+ * @param rootKey - Root key for MCP servers ('mcpServers', 'servers', or 'mcp')
  * @returns Detailed diff information
  */
 export function generateDiff(
   oldConfig: ClientMcpConfig,
   newConfig: ClientMcpConfig,
-  rootKey: 'mcpServers' | 'servers' = 'mcpServers'
+  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers'
 ): ConfigDiff {
   const oldServers = oldConfig[rootKey] || {};
   const newServers = newConfig[rootKey] || {};

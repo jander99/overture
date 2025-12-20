@@ -96,6 +96,13 @@ export const WINDOWS_DEFAULT_PATHS: Record<
     ],
     configPath: '.gemini/mcp-config.json',
   },
+  opencode: {
+    binaryPaths: [
+      'AppData/Roaming/npm/opencode.cmd',
+      '.local/bin/opencode.exe',
+    ],
+    configPath: '.config/opencode/opencode.json',
+  },
 };
 
 /**
