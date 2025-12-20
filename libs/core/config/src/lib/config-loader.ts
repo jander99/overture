@@ -120,7 +120,8 @@ export class ConfigLoader {
   /**
    * Load user global configuration
    *
-   * Reads and validates configuration from ~/.config/overture.yml
+   * Reads and validates configuration from ~/.config/overture/config.yml
+   * Falls back to legacy path ~/.config/overture.yml for backward compatibility
    *
    * @returns User configuration object
    * @throws {ConfigError} If file cannot be read or parsed
@@ -133,11 +134,20 @@ export class ConfigLoader {
    * ```
    */
   async loadUserConfig(): Promise<OvertureConfig> {
-    const configPath = this.pathResolver.getUserConfigPath();
+    const newConfigPath = this.pathResolver.getUserConfigPath();
+    const legacyConfigPath = this.pathResolver.getLegacyUserConfigPath();
+    
+    let configPath = newConfigPath;
+    let isLegacyPath = false;
 
-    // Check if file exists
-    if (!(await this.filesystem.exists(configPath))) {
-      throw new ConfigError(`User config file not found`, configPath);
+    // Check new path first, then fall back to legacy path
+    if (await this.filesystem.exists(newConfigPath)) {
+      configPath = newConfigPath;
+    } else if (await this.filesystem.exists(legacyConfigPath)) {
+      configPath = legacyConfigPath;
+      isLegacyPath = true;
+    } else {
+      throw new ConfigError(`User config file not found`, newConfigPath);
     }
 
     try {
@@ -159,6 +169,19 @@ export class ConfigLoader {
           result.error.issues.map(
             (issue) => `${issue.path.join('.')}: ${issue.message}`,
           ),
+        );
+      }
+
+      // Show deprecation warning if using legacy path
+      if (isLegacyPath && typeof process !== 'undefined' && process.stderr) {
+        const newPath = newConfigPath.replace(this.pathResolver.getHomeDir(), '~');
+        const oldPath = legacyConfigPath.replace(this.pathResolver.getHomeDir(), '~');
+        process.stderr.write(
+          `\n⚠️  DEPRECATION WARNING: Using legacy config path\n` +
+          `   Old path: ${oldPath}\n` +
+          `   New path: ${newPath}\n` +
+          `   Please move your config file to the new location.\n` +
+          `   Run: mkdir -p ~/.config/overture && mv ${oldPath} ${newPath}\n\n`
         );
       }
 
@@ -227,6 +250,7 @@ export class ConfigLoader {
           ),
         );
       }
+
 
       return result.data;
     } catch (error) {

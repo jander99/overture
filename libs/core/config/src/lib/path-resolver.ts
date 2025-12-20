@@ -124,13 +124,35 @@ export class PathResolver {
    * Get user global Overture configuration path
    *
    * Returns platform-specific path for user global config:
-   * - Linux: $XDG_CONFIG_HOME/overture.yml or ~/.config/overture.yml
-   * - macOS: ~/.config/overture.yml
-   * - Windows: %USERPROFILE%\.config\overture.yml
+   * - Linux: $XDG_CONFIG_HOME/overture/config.yml or ~/.config/overture/config.yml
+   * - macOS: ~/.config/overture/config.yml
+   * - Windows: %USERPROFILE%\.config\overture\config.yml
    *
    * @returns User config file path
    */
   getUserConfigPath(): string {
+    const platform = this.getPlatform();
+
+    if (platform === 'linux') {
+      return this.joinPaths(this.getXdgConfigHome(), 'overture', 'config.yml');
+    }
+
+    // macOS and Windows both use ~/.config/overture
+    return this.joinPaths(
+      this.getHomeDir(),
+      '.config',
+      'overture',
+      'config.yml',
+    );
+  }
+
+  /**
+   * Get legacy user global configuration path (for backward compatibility)
+   *
+   * @deprecated Use getUserConfigPath() instead
+   * @returns Legacy user config file path (overture.yml)
+   */
+  getLegacyUserConfigPath(): string {
     const platform = this.getPlatform();
 
     if (platform === 'linux') {
