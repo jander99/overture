@@ -179,6 +179,7 @@ export class SyncEngine {
       const targetClients = options.clients || [
         'claude-code',
         'claude-desktop',
+        'opencode',
         'vscode',
         'cursor',
         'windsurf',
