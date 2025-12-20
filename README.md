@@ -227,21 +227,41 @@ npm install
 # 3. Build all packages
 npx nx build @overture/cli
 
-# 4. Link the CLI globally (makes 'overture' command available)
+# 4. Run the CLI (choose one option):
+
+# Option A: Run from built output (recommended for development)
+node dist/apps/cli/main.js --version
+node dist/apps/cli/main.js doctor
+
+# Option B: Install globally (only needed for testing global install experience)
 # IMPORTANT: Must be run from apps/cli directory, not workspace root
 cd apps/cli
 npm link
 cd ../..
-
-# 5. Verify installation
 overture --version
 overture doctor
 
-# Optional: Run tests to verify everything works
+# 5. Run tests to verify everything works
 npx nx test @overture/cli
 ```
 
 ### Development Workflow
+
+**Running the CLI during development:**
+
+```bash
+# Build and run (after making changes)
+npx nx build @overture/cli
+node dist/apps/cli/main.js --version
+node dist/apps/cli/main.js sync --dry-run
+
+# Watch mode: Auto-rebuild on file changes
+npx nx watch --projects=@overture/cli -- npx nx build @overture/cli
+# In another terminal:
+node dist/apps/cli/main.js doctor
+```
+
+**Testing and quality:**
 
 ```bash
 # Run tests in watch mode during development
@@ -257,10 +277,17 @@ npx nx build @overture/cli --configuration=production
 npx nx lint @overture/cli
 ```
 
+**Why run from `dist/` instead of `npm link`?**
+- ✅ No global installation needed - run from workspace
+- ✅ Can pass any arguments directly: `node dist/apps/cli/main.js <any args>`
+- ✅ Works with Nx watch mode for auto-rebuild
+- ✅ No PATH or symlink issues
+- ✅ Faster iteration (no install step)
+
 ### Uninstalling
 
 ```bash
-# Unlink the globally installed CLI
+# Only needed if you used 'npm link' (Option B above)
 cd apps/cli
 npm unlink
 cd ../..
@@ -268,6 +295,8 @@ cd ../..
 # Or install the published version instead
 npm install -g @overture/cli
 ```
+
+**Note:** If you only used `nx serve` for development, no uninstall is needed.
 
 ### Troubleshooting
 
