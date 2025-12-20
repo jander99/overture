@@ -17,7 +17,7 @@ After adding, removing, or modifying MCP servers in your `overture.yml` or `.ove
 
 Before testing, ensure:
 
-- [ ] You've saved your changes to `~/.config/overture.yml` or `.overture/config.yaml`
+- [ ] You've saved your changes to `~/.config/overture/config.yml` or `.overture/config.yaml`
 - [ ] You've run `overture validate` to check for configuration errors
 - [ ] You've run `overture sync` to update all client configurations
 - [ ] You've noted which MCP servers you added/modified/removed

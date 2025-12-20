@@ -56,7 +56,7 @@ mcp:
 
 A comprehensive user-level configuration with global MCPs and client settings.
 
-**File:** `~/.config/overture.yml`
+**File:** `~/.config/overture/config.yml`
 
 ```yaml
 version: "1.0"
@@ -889,7 +889,7 @@ mcp:
 ## Best Practices
 
 ### 1. Organize MCPs by File Location (Implicit Scoping)
-- Global MCPs in `~/.config/overture.yml` for MCPs used across all projects (filesystem, memory, github)
+- Global MCPs in `~/.config/overture/config.yml` for MCPs used across all projects (filesystem, memory, github)
 - Project-specific MCPs in `.overture/config.yaml` for project-specific MCPs (databases, language servers)
 - Note: As of Overture v2.0, the `scope` field has been removed. Scope is implicit based on file location.
 

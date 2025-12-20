@@ -36,8 +36,8 @@ Source: `libs/adapters/client-adapters/src/lib/adapters/opencode.adapter.ts:193`
 
 ### Overture Configuration
 - **User (Global):**
-  - Linux: `$XDG_CONFIG_HOME/overture.yml` (or `~/.config/overture.yml` if XDG_CONFIG_HOME not set)
-  - macOS/Windows: `~/.config/overture.yml`
+  - Linux: `$XDG_CONFIG_HOME/overture.yml` (or `~/.config/overture/config.yml` if XDG_CONFIG_HOME not set)
+  - macOS/Windows: `~/.config/overture/config.yml`
 - **Project (Repo):** `./.overture/config.yaml`
 
 Source: `libs/core/config/src/lib/path-resolver.ts:127-146`
@@ -153,7 +153,7 @@ grep -r "\.claude\.json" . \
 - ✅ **Claude Desktop**: Uses `~/.config/Claude/` on Linux (capital C) - this is correct
 - ✅ **OpenCode**: Uses `~/.config/opencode/opencode.json` - this is correct
 - ✅ **Copilot CLI**: Uses `~/.copilot/mcp-config.json` - this is correct
-- ✅ **Overture**: Uses `~/.config/overture.yml` - this is correct
+- ✅ **Overture**: Uses `~/.config/overture/config.yml` - this is correct
 
 ### Note on Platform Differences
 - **Claude Desktop** uses different paths per platform (Library/Application Support on macOS, .config on Linux, AppData on Windows)
@@ -174,7 +174,7 @@ grep -r "\.claude\.json" . \
 | OpenCode | User | — | `~/.config/opencode/opencode.json` ✅ |
 | OpenCode | Project | — | `./opencode.json` ✅ |
 | Copilot CLI | User | — | `~/.copilot/mcp-config.json` ✅ |
-| Overture | User | — | `~/.config/overture.yml` ✅ |
+| Overture | User | — | `~/.config/overture/config.yml` ✅ |
 | Overture | Project | — | `./.overture/config.yaml` ✅ |
 
 ---

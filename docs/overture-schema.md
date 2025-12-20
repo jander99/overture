@@ -9,7 +9,7 @@ Overture bridges Claude Code plugins and MCP servers by:
 
 ## Configuration Files
 
-### Global Configuration: `~/.config/overture.yml`
+### Global Configuration: `~/.config/overture/config.yml`
 
 Defines user-level preferences and globally available MCP servers.
 
@@ -115,7 +115,7 @@ mcp_server_name:
 ```
 
 **Note:** Scope is implicit based on file location:
-- MCPs in `~/.config/overture.yml` are global (synced to `~/.claude.json`)
+- MCPs in `~/.config/overture/config.yml` are global (synced to `~/.claude.json`)
 - MCPs in `.overture/config.yaml` are project-scoped (synced to `.mcp.json`)
 
 ## Generated CLAUDE.md Structure
@@ -164,7 +164,7 @@ interface McpServerConfig {
   env?: Record<string, string>;
   enabled?: boolean;        // default: true
   // Note: Scope is implicit based on file location
-  //  - ~/.config/overture.yml → global
+  //  - ~/.config/overture/config.yml → global
   //  - .overture/config.yaml → project
 }
 ```

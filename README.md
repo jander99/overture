@@ -41,10 +41,10 @@ Developers using AI-assisted tools face **configuration chaos**:
 
 **Single source of truth across all AI tools.**
 
-Declare MCP servers once in `~/.config/overture.yml`. Sync everywhere.
+Declare MCP servers once in `~/.config/overture/config.yml`. Sync everywhere.
 
 ```yaml
-# ~/.config/overture.yml - Your canonical AI config
+# ~/.config/overture/config.yml - Your canonical AI config
 mcp:
   github:
     command: mcp-server-github
@@ -67,7 +67,7 @@ overture sync
 **Smart deduplication:** Project configs reference global MCPs without redefining them.
 
 ```yaml
-# my-project/.overture.yml
+# my-project/.overture/config.yaml
 mcp:
   github:
 
@@ -76,7 +76,7 @@ mcp:
     args: [mcp-server-python-repl]
 ```
 
-**Dotfiles integration:** Commit `~/.config/overture.yml` to your dotfiles repo. New machine? `overture sync` and you're ready.
+**Dotfiles integration:** Commit `~/.config/overture/config.yml` to your dotfiles repo. New machine? `overture sync` and you're ready.
 
 ---
 
@@ -85,12 +85,12 @@ mcp:
 **User global + project-specific plugins with smart precedence.**
 
 ```yaml
-# ~/.config/overture.yml
+# ~/.config/overture/config.yml
 plugins:
   python-development:
     marketplace: claude-code-workflows
 
-# my-project/.overture.yml
+# my-project/.overture/config.yaml
 plugins:
   python-development:
 
@@ -105,7 +105,7 @@ overture sync
 → Updates CLAUDE.md: "Active plugins for this project: [...]"
 ```
 
-**Team alignment:** Commit `.overture.yml` to project repos. New team members run `overture sync` and get the exact plugin setup.
+**Team alignment:** Commit `.overture/config.yaml` to project repos. New team members run `overture sync` and get the exact plugin setup.
 
 ---
 
@@ -116,7 +116,7 @@ overture sync
 Move beyond "here's what we found via grep" to **actionable AI guidance**.
 
 ```yaml
-# .overture.yml
+# .overture/config.yaml
 documentation:
   workflows:
     - name: 'TDD with AI assistance'
@@ -193,7 +193,7 @@ overture sync
 
 **What v0.2.5 includes:**
 
-- ✅ User global configuration (`~/.config/overture.yml`)
+- ✅ User global configuration (`~/.config/overture/config.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
 - ✅ Multi-platform sync (3 production-ready clients: Claude Code, Copilot CLI, OpenCode)
 - ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, and validates configs
@@ -536,7 +536,7 @@ overture backup cleanup [--dry-run]
 
 ### v0.2 - Multi-Platform MCP Manager ✅ COMPLETE
 
-- [x] User global config (`~/.config/overture.yml`)
+- [x] User global config (`~/.config/overture/config.yml`)
 - [x] User/project precedence and deduplication
 - [x] Multi-platform adapters (initial 8 clients)
 - [x] Config audit: `overture audit`
@@ -652,11 +652,11 @@ my-project/
 
 **Configuration Harmony:**
 
-- Declare config ONCE in `~/.config/overture.yml`
+- Declare config ONCE in `~/.config/overture/config.yml`
 - `overture sync` updates ALL platforms automatically
 - Project configs reference globals (no duplication)
 - Intelligent JSON patching for OpenCode (preserves custom agents, commands, themes)
-- Commit `.overture.yml` to version control
+- Commit `.overture/config.yaml` to version control
 - Team members get consistent setup
 
 **Claude's perspective:**

@@ -239,7 +239,7 @@ Overture automatically detects and syncs to these clients:
 # Create user global config
 overture user init
 
-# Edit ~/.config/overture.yml
+# Edit ~/.config/overture/config.yml
 # MCPs here are available to all projects
 ```
 

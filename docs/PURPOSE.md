@@ -39,7 +39,7 @@ Project-generated `CLAUDE.md` files are minimal:
 **Overture v0.2.5 is a comprehensive multi-platform MCP configuration orchestrator with intelligent client detection.**
 
 Currently implemented (911/911 tests passing, 83%+ coverage):
-- ✅ User global config (`~/.config/overture.yml`)
+- ✅ User global config (`~/.config/overture/config.yml`)
 - ✅ Project-level config (`.overture/config.yaml`)
 - ✅ User/project config merging with proper precedence
 - ✅ Multi-platform sync for 7 AI development clients
@@ -70,7 +70,7 @@ Currently implemented (911/911 tests passing, 83%+ coverage):
 **Problem:** MCP servers configured inconsistently across multiple AI tools and config levels.
 
 **Solution:**
-- **Single source of truth:** `~/.config/overture.yml` (user global) + `.overture.yml` (project)
+- **Single source of truth:** `~/.config/overture/config.yml` (user global) + `.overture/config.yaml` (project)
 - **Multi-platform sync:** Generate configs for Claude Desktop, Claude Code, Copilot CLI, VSCode, IntelliJ
 - **Smart precedence:** User global MCPs override project duplicates (no duplication)
 - **Format adapters:** Translate Overture config → platform-specific formats
@@ -79,7 +79,7 @@ Currently implemented (911/911 tests passing, 83%+ coverage):
 **Example workflow:**
 ```bash
 # User declares canonical MCP config once
-~/.config/overture.yml:
+~/.config/overture/config.yml:
   github: { command: mcp-github }
   memory: { command: mcp-memory }
 
@@ -95,7 +95,7 @@ overture sync
 → Updates Copilot configs (if installed)
 ```
 
-**Dotfiles integration:** Commit `~/.config/overture.yml` to dotfiles repo for machine portability.
+**Dotfiles integration:** Commit `~/.config/overture/config.yml` to dotfiles repo for machine portability.
 
 #### Pillar 2: Claude Code Plugin Lifecycle Manager
 
@@ -109,7 +109,7 @@ overture sync
 
 **Example:**
 ```yaml
-# User global: ~/.config/overture.yml
+# User global: ~/.config/overture/config.yml
 plugins:
   python-development:
     marketplace: claude-code-workflows
@@ -144,7 +144,7 @@ plugins:
 
 **Example configuration:**
 ```yaml
-# .overture.yml
+# .overture/config.yaml
 documentation:
   workflows:
     - name: "TDD with AI assistance"
@@ -225,7 +225,7 @@ This creates a learning loop where each library researched enriches the project 
    - VSCode/IntelliJ Copilot (if config exposed)
 
 4. **Dotfiles integration:**
-   - `~/.config/overture.yml` can be version-controlled
+   - `~/.config/overture/config.yml` can be version-controlled
    - Machine portability
 
 ### ❌ Out of Scope
@@ -251,7 +251,7 @@ This creates a learning loop where each library researched enriches the project 
 **Status:** ✅ COMPLETE (98%+ test coverage)
 
 ### Phase 2: Multi-Platform MCP Manager (v0.2)
-- [x] User global config: `~/.config/overture.yml`
+- [x] User global config: `~/.config/overture/config.yml`
 - [x] User/project precedence and deduplication
 - [x] Multi-platform adapters:
   - [x] Claude Desktop
@@ -350,12 +350,12 @@ This creates a learning loop where each library researched enriches the project 
 Overture succeeds when:
 
 1. **Configuration simplicity:**
-   - Developers declare config ONCE in `~/.config/overture.yml`
+   - Developers declare config ONCE in `~/.config/overture/config.yml`
    - `overture sync` updates ALL AI tool configs automatically
    - No manual editing of platform-specific config files
 
 2. **Team alignment:**
-   - Teams commit `.overture.yml` to repos
+   - Teams commit `.overture/config.yaml` to repos
    - New team members run `overture sync` and get consistent setup
    - AI tool usage patterns documented and shared
 
@@ -367,7 +367,7 @@ Overture succeeds when:
 4. **Ecosystem adoption:**
    - Plugin authors include recommended MCP configs in docs
    - MCP server authors provide Overture config snippets
-   - "Just add this to your .overture.yml" becomes common pattern
+   - "Just add this to your .overture/config.yaml" becomes common pattern
 
 ## Non-Goals (Important!)
 

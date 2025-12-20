@@ -237,7 +237,7 @@ Skill instructions and expertise...
    - Dynamically discovered
 
 **Scope Levels (Implicit):**
-- User-global: MCPs in `~/.config/overture.yml` → synced to `~/.claude.json`
+- User-global: MCPs in `~/.config/overture/config.yml` → synced to `~/.claude.json`
 - Project: MCPs in `.overture/config.yaml` → synced to `.mcp.json`
 - Scope is determined by file location, no explicit `scope` field needed
 
@@ -935,7 +935,7 @@ Warning: Hook syntax changed in Overture 2.0
 
 Overture v0.2 introduces multi-platform MCP server synchronization across multiple AI development clients. The architecture supports:
 
-- **User global configuration** (`~/.config/overture.yml`)
+- **User global configuration** (`~/.config/overture/config.yml`)
 - **Multiple client adapters** (7 clients: Claude Code, Claude Desktop, Cursor, Windsurf, VSCode, Copilot CLI, JetBrains)
 - **Client-aware environment variable expansion**
 - **Transport validation** and client-specific schema conversion
@@ -969,7 +969,7 @@ Each AI client has its own adapter implementing a common `ClientAdapter` interfa
 
 User configuration is declarative YAML with version control:
 
-- **Single source of truth**: `~/.config/overture.yml` defines all MCPs and client settings
+- **Single source of truth**: `~/.config/overture/config.yml` defines all MCPs and client settings
 - **MCP-centric design**: MCPs are defined once, synced to multiple clients with exclusions
 - **Precedence model**: Project config overrides user global config
 
@@ -1206,7 +1206,7 @@ The sync engine orchestrates multi-client synchronization:
 ```
 ┌─────────────────────────────────────────┐
 │ 1. Load Configuration                   │
-│    - User global (~/.config/overture.yml)│
+│    - User global (~/.config/overture/config.yml)│
 │    - Project (./.overture/config.yaml)  │
 │    - Merge with precedence              │
 └──────────────┬──────────────────────────┘
@@ -1296,7 +1296,7 @@ class AuditService {
 ### User vs Project
 
 ```yaml
-# ~/.config/overture.yml (User Global)
+# ~/.config/overture/config.yml (User Global)
 mcp:
   github:
     command: mcp-server-github
