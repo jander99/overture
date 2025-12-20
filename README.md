@@ -676,6 +676,7 @@ my-project/
 - **[Purpose & Vision](docs/PURPOSE.md)** - Detailed vision, scope, and roadmap
 - **[Configuration Schema](docs/overture-schema.md)** - Full configuration reference
 - **[Examples](docs/examples.md)** - Complete examples for different project types
+- **[Testing MCP Changes](docs/testing-mcp-changes.md)** - Step-by-step guide for validating MCP configurations across all clients
 
 ### Developer Guides
 
