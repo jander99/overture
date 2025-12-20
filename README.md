@@ -6,6 +6,8 @@
 
 Declare your AI tool setup once. Sync everywhere. Work better together.
 
+> **✨ What's New (December 2024):** OpenCode integration is here! Overture now supports OpenCode with intelligent JSON patching that preserves your custom agents, commands, permissions, and themes while managing MCP servers. [See Example 7: Hybrid Claude Code + OpenCode Setup](./docs/examples.md#example-7-opencode--claude-code-hybrid-setup)
+
 ---
 
 ## The Problem
@@ -16,8 +18,9 @@ Developers using AI-assisted tools face **configuration chaos**:
 - **Claude Desktop** → `~/Library/Application Support/Claude/mcp.json`
 - **Claude Code** (user) → `~/.config/claude/mcp.json`
 - **Claude Code** (project) → `./.mcp.json`
+- **OpenCode** → `~/.config/opencode/opencode.json`
 - **GitHub Copilot CLI** → Various locations
-- **VSCode/IntelliJ Copilot** → Extension settings
+- **VSCode/IntelliJ/Cursor/Windsurf** → Extension settings
 
 ### The Pain Points
 - ❌ Same MCP server configured in 3 different places, 3 different ways
@@ -56,6 +59,7 @@ overture sync
 → Updates Claude Desktop config
 → Updates Claude Code user config
 → Updates Claude Code project .mcp.json (only unique MCPs)
+→ Updates OpenCode config (preserves custom agents/commands)
 → Updates Copilot configs (if installed)
 ```
 
@@ -160,7 +164,7 @@ npm install -g @overture/cli
 
 # Check which AI clients are installed
 overture doctor
-# → Detects installed clients (Claude Code, Claude Desktop, VSCode, etc.)
+# → Detects installed clients (Claude Code, OpenCode, Claude Desktop, VSCode, etc.)
 # → Shows version information
 # → Validates existing config files
 # → Lists available MCP commands
@@ -188,9 +192,10 @@ overture sync
 **What v0.2.5 includes:**
 - ✅ User global configuration (`~/.config/overture.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
-- ✅ Multi-platform sync (7 clients supported)
+- ✅ Multi-platform sync (8 clients supported including OpenCode)
 - ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, and validates configs
 - ✅ **Diagnostics command** (`overture doctor`) - Comprehensive system diagnostics
+- ✅ **OpenCode JSON patching** - Preserves custom agents, commands, permissions, and themes
 - ✅ Config audit and consolidation
 - ✅ Backup/restore system
 - ✅ Plugin installation and management
@@ -382,6 +387,7 @@ overture backup cleanup [--dry-run]
 - [x] Multi-platform adapters:
   - [x] Claude Desktop
   - [x] Claude Code (user + project config)
+  - [x] OpenCode (with JSON patching)
   - [x] Cursor IDE
   - [x] Windsurf IDE
   - [x] VSCode Copilot
@@ -485,6 +491,7 @@ my-project/
 - Declare config ONCE in `~/.config/overture.yml`
 - `overture sync` updates ALL platforms automatically
 - Project configs reference globals (no duplication)
+- Intelligent JSON patching for OpenCode (preserves custom agents, commands, themes)
 - Commit `.overture.yml` to version control
 - Team members get consistent setup
 
@@ -503,6 +510,9 @@ my-project/
 - **[Purpose & Vision](docs/PURPOSE.md)** - Detailed vision, scope, and roadmap
 - **[Configuration Schema](docs/overture-schema.md)** - Full configuration reference
 - **[Examples](docs/examples.md)** - Complete examples for different project types
+
+### Developer Guides
+- **[How To: Add a New CLI Client](docs/howtos/add-new-cli-client.md)** - Step-by-step guide for integrating new AI coding CLIs (using OpenCode as example)
 
 ### Project Documentation
 - **[Implementation Plan](docs/implementation-plan.md)** - Development milestones
@@ -638,6 +648,7 @@ Contributions welcome!
 - Documentation improvements
 - Bug fixes and feature requests
 - Feature enhancements
+- Adding support for new AI coding CLIs (see [How To: Add a New CLI Client](docs/howtos/add-new-cli-client.md))
 
 ---
 
