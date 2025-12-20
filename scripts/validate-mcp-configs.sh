@@ -19,60 +19,141 @@ echo
 
 # Check Claude Code config
 echo "2. Checking Claude Code config..."
+USER_FOUND=0
+PROJECT_FOUND=0
+
+# User config
 if [ -f ~/.claude.json ]; then
   if jq empty ~/.claude.json 2>/dev/null; then
-    echo "   ✅ ~/.claude.json is valid JSON"
+    echo "   ✅ User: ~/.claude.json is valid JSON"
     MCP_COUNT=$(jq -r '.mcpServers | keys | length' ~/.claude.json)
-    echo "   MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' ~/.claude.json)"
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' ~/.claude.json)"
+    USER_FOUND=1
   else
-    echo "   ❌ ~/.claude.json has JSON errors"
+    echo "   ❌ User: ~/.claude.json has JSON errors"
   fi
 else
-  echo "   ⚠️  ~/.claude.json not found"
+  echo "   ⚠️  User: ~/.claude.json not found"
+fi
+
+# Project config
+if [ -f .mcp.json ]; then
+  if jq empty .mcp.json 2>/dev/null; then
+    echo "   ✅ Project: ./.mcp.json is valid JSON"
+    MCP_COUNT=$(jq -r '.mcpServers | keys | length' .mcp.json)
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' .mcp.json)"
+    PROJECT_FOUND=1
+  else
+    echo "   ❌ Project: ./.mcp.json has JSON errors"
+  fi
+else
+  echo "   ℹ️  Project: ./.mcp.json not found (user config will be used)"
+fi
+
+if [ $USER_FOUND -eq 0 ] && [ $PROJECT_FOUND -eq 0 ]; then
+  echo "   ⚠️  No Claude Code configs found"
 fi
 echo
 
 # Check Copilot CLI config
 echo "3. Checking Copilot CLI config..."
+USER_FOUND=0
+PROJECT_FOUND=0
+
+# User config
 if [ -f ~/.config/github-copilot/mcp.json ]; then
   if jq empty ~/.config/github-copilot/mcp.json 2>/dev/null; then
-    echo "   ✅ ~/.config/github-copilot/mcp.json is valid JSON"
+    echo "   ✅ User: ~/.config/github-copilot/mcp.json is valid JSON"
     MCP_COUNT=$(jq -r '.mcpServers | keys | length' ~/.config/github-copilot/mcp.json)
-    echo "   MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' ~/.config/github-copilot/mcp.json)"
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' ~/.config/github-copilot/mcp.json)"
     
     # Check GitHub MCP is excluded
     if jq -e '.mcpServers.github' ~/.config/github-copilot/mcp.json >/dev/null 2>&1; then
-      echo "   ⚠️  WARNING: 'github' MCP found in config"
-      echo "      (Copilot CLI bundles GitHub MCP - Overture should exclude it)"
+      echo "      ⚠️  WARNING: 'github' MCP found (should be excluded)"
     else
-      echo "   ✅ 'github' MCP properly excluded (Copilot CLI bundles it)"
+      echo "      ✅ 'github' MCP properly excluded"
     fi
+    USER_FOUND=1
   else
-    echo "   ❌ ~/.config/github-copilot/mcp.json has JSON errors"
+    echo "   ❌ User: ~/.config/github-copilot/mcp.json has JSON errors"
   fi
 else
-  echo "   ⚠️  ~/.config/github-copilot/mcp.json not found"
+  echo "   ⚠️  User: ~/.config/github-copilot/mcp.json not found"
+fi
+
+# Project config
+if [ -f .github/mcp.json ]; then
+  if jq empty .github/mcp.json 2>/dev/null; then
+    echo "   ✅ Project: ./.github/mcp.json is valid JSON"
+    MCP_COUNT=$(jq -r '.mcpServers | keys | length' .github/mcp.json)
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcpServers | keys | join(", ")' .github/mcp.json)"
+    
+    # Check GitHub MCP is excluded
+    if jq -e '.mcpServers.github' .github/mcp.json >/dev/null 2>&1; then
+      echo "      ⚠️  WARNING: 'github' MCP found (should be excluded)"
+    else
+      echo "      ✅ 'github' MCP properly excluded"
+    fi
+    PROJECT_FOUND=1
+  else
+    echo "   ❌ Project: ./.github/mcp.json has JSON errors"
+  fi
+else
+  echo "   ℹ️  Project: ./.github/mcp.json not found (user config will be used)"
+fi
+
+if [ $USER_FOUND -eq 0 ] && [ $PROJECT_FOUND -eq 0 ]; then
+  echo "   ⚠️  No Copilot CLI configs found"
 fi
 echo
 
 # Check OpenCode config
 echo "4. Checking OpenCode config..."
+USER_FOUND=0
+PROJECT_FOUND=0
+
+# User config
 if [ -f ~/.config/opencode/opencode.json ]; then
   if jq empty ~/.config/opencode/opencode.json 2>/dev/null; then
-    echo "   ✅ ~/.config/opencode/opencode.json is valid JSON"
+    echo "   ✅ User: ~/.config/opencode/opencode.json is valid JSON"
     MCP_COUNT=$(jq -r '.mcp | keys | length' ~/.config/opencode/opencode.json)
-    echo "   MCP Servers ($MCP_COUNT): $(jq -r '.mcp | keys | join(", ")' ~/.config/opencode/opencode.json)"
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcp | keys | join(", ")' ~/.config/opencode/opencode.json)"
     
     # Check for enabled field
     DISABLED_COUNT=$(jq -r '[.mcp[] | select(.enabled == false)] | length' ~/.config/opencode/opencode.json)
     if [ "$DISABLED_COUNT" -gt 0 ]; then
-      echo "   ⚠️  $DISABLED_COUNT MCP server(s) disabled in config"
+      echo "      ⚠️  $DISABLED_COUNT MCP server(s) disabled"
     fi
+    USER_FOUND=1
   else
-    echo "   ❌ ~/.config/opencode/opencode.json has JSON errors"
+    echo "   ❌ User: ~/.config/opencode/opencode.json has JSON errors"
   fi
 else
-  echo "   ⚠️  ~/.config/opencode/opencode.json not found"
+  echo "   ⚠️  User: ~/.config/opencode/opencode.json not found"
+fi
+
+# Project config
+if [ -f opencode.json ]; then
+  if jq empty opencode.json 2>/dev/null; then
+    echo "   ✅ Project: ./opencode.json is valid JSON"
+    MCP_COUNT=$(jq -r '.mcp | keys | length' opencode.json)
+    echo "      MCP Servers ($MCP_COUNT): $(jq -r '.mcp | keys | join(", ")' opencode.json)"
+    
+    # Check for enabled field
+    DISABLED_COUNT=$(jq -r '[.mcp[] | select(.enabled == false)] | length' opencode.json)
+    if [ "$DISABLED_COUNT" -gt 0 ]; then
+      echo "      ⚠️  $DISABLED_COUNT MCP server(s) disabled"
+    fi
+    PROJECT_FOUND=1
+  else
+    echo "   ❌ Project: ./opencode.json has JSON errors"
+  fi
+else
+  echo "   ℹ️  Project: ./opencode.json not found (user config will be used)"
+fi
+
+if [ $USER_FOUND -eq 0 ] && [ $PROJECT_FOUND -eq 0 ]; then
+  echo "   ⚠️  No OpenCode configs found"
 fi
 echo
 
