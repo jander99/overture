@@ -407,6 +407,43 @@ overture backup cleanup [--dry-run]
   - [x] "Warn but allow" approach (generate configs even if client not detected)
 - [x] 911 tests passing (100%), 83%+ code coverage
 
+### v0.3 - OpenCode Integration 🚧 IN PROGRESS
+- [x] **Phase 1: Foundation** ✅ COMPLETE
+  - [x] OpenCodeAdapter implementation with JSON patching
+  - [x] Format translation (command+args array, env→environment, ${VAR}→{env:VAR})
+  - [x] Platform-specific path detection
+  - [x] 39 tests with 96.72% coverage
+  - [x] GitHub issue templates (bug, feature, OpenCode integration)
+  - [x] README comparison matrix updated
+  - [x] Example 7: Hybrid Claude Code + OpenCode setup
+- [ ] **Phase 2: Sync Integration**
+  - [ ] Add OpenCode to `overture sync` command
+  - [ ] Implement `--client opencode` filter
+  - [ ] Add `--preserve-manual` flag
+  - [ ] Add `--merge-strategy` option
+  - [ ] Integration tests for multi-client sync
+- [ ] **Phase 3: AGENTS.md Generation**
+  - [ ] AGENTS.md generator (equivalent to CLAUDE.md)
+  - [ ] HTML comment marker preservation
+  - [ ] Plugin→MCP mapping section
+  - [ ] Workflow instructions section
+- [ ] **Phase 4: Advanced Features**
+  - [ ] Audit command for manual MCPs
+  - [ ] MCP list filtering by client
+  - [ ] Validation for opencode.json
+  - [ ] Backup/restore for OpenCode configs
+- [ ] **Phase 5: OpenCode-Specific Features**
+  - [ ] Remote MCP server support
+  - [ ] OAuth configuration translation
+  - [ ] Permission mapping
+  - [ ] Agent configuration management
+
+**Phase 1 Deliverables:**
+- OpenCodeAdapter: `libs/adapters/client-adapters/src/lib/adapters/opencode.adapter.ts`
+- Tests: 39 test cases, 96.72% coverage
+- Docs: [OpenCode Integration Research](./docs/archive/opencode-integration-research-2025-12-18.md)
+- Example: [Hybrid Setup](./docs/examples.md#example-7-opencode--claude-code-hybrid-setup)
+
 ---
 
 ## Configuration Structure
@@ -570,7 +607,7 @@ This comparison uses Claude Code as the baseline and compares features across ma
 - Variable substitution: `{env:VAR}`, `{file:path}`
 - OAuth support for remote MCP servers
 
-> **Note:** Overture can manage MCP configurations for both Claude Code and OpenCode simultaneously. See [OpenCode Integration Research](./docs/opencode-integration-research.md) for details on hybrid setups.
+> **Note:** Overture can manage MCP configurations for both Claude Code and OpenCode simultaneously. See [OpenCode Integration Research](./docs/archive/opencode-integration-research-2025-12-18.md) for details on hybrid setups.
 
 ### MCP Adoption Timeline
 
@@ -612,4 +649,4 @@ MIT
 
 ## Status
 
-**Current:** v0.2.5 - Intelligent Client Detection complete (911/911 tests passing, 83%+ code coverage)
+**Current:** v0.3 - OpenCode Integration Phase 1 complete (OpenCodeAdapter with 39 tests, 96.72% coverage)
