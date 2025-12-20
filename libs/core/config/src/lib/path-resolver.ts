@@ -149,26 +149,16 @@ export class PathResolver {
   /**
    * Get Claude Code global configuration path
    *
+   * According to official Claude Code docs (https://code.claude.com/docs/en/mcp.md),
+   * Claude Code reads MCP configuration from ~/.claude.json (user scope), not
+   * from XDG_CONFIG_HOME or other platform-specific locations.
+   *
    * @param platform - Target platform (defaults to current platform)
-   * @returns Claude Code global config path
+   * @returns Claude Code global config path (~/.claude.json)
    */
   getClaudeCodeGlobalPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
-
-    switch (targetPlatform) {
-      case 'linux':
-        return this.joinPaths(this.getXdgConfigHome(), 'claude', 'mcp.json');
-      case 'darwin':
-        return this.joinPaths(this.getHomeDir(), '.config', 'claude', 'mcp.json');
-      case 'win32':
-        return this.joinPaths(
-          this.environment.env.APPDATA || this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
-          'Claude',
-          'mcp.json'
-        );
-      default:
-        throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
-    }
+    // Claude Code uses ~/.claude.json on all platforms for user-scope MCP config
+    return this.joinPaths(this.getHomeDir(), '.claude.json');
   }
 
   /**

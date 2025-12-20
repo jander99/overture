@@ -16,7 +16,7 @@ import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
 import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig, type ClientMcpServerDef } from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
-import { McpError, ValidationError } from '@overture/errors';
+import { McpError } from '@overture/errors';
 
 /**
  * Claude Code adapter implementation with dependency injection
@@ -130,19 +130,11 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 
   // Helper methods for path construction (could be moved to path-resolver utility)
   private getClaudeCodeGlobalPath(platform: Platform): string {
-    // Simplified - in production, use path-resolver utility
+    // According to official Claude Code docs (https://code.claude.com/docs/en/mcp.md),
+    // Claude Code reads MCP configuration from ~/.claude.json on all platforms
     const env = this.environment.env;
-
-    switch (platform) {
-      case 'linux':
-        return `${env.XDG_CONFIG_HOME || `${env.HOME}/.config`}/claude/mcp.json`;
-      case 'darwin':
-        return `${env.HOME}/.config/claude/mcp.json`;
-      case 'win32':
-        return `${env.APPDATA}/Claude/mcp.json`;
-      default:
-        throw new ValidationError(`Unsupported platform: ${platform}`);
-    }
+    const homeDir = env.HOME || env.USERPROFILE || '/';
+    return `${homeDir}/.claude.json`;
   }
 
   private getClaudeCodeProjectPath(projectRoot?: string): string {
