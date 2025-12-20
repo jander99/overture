@@ -14,8 +14,7 @@
 
 import { Command } from 'commander';
 import * as os from 'os';
-import type { Platform, ClientName, DiscoveryConfig } from '@overture/config-types';
-import { BinaryDetector } from '@overture/discovery-core';
+import type { Platform, ClientName } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
 import chalk from 'chalk';
 import type { AppDependencies } from '../../composition-root';
@@ -47,6 +46,23 @@ const ALL_CLIENTS: ClientName[] = [
 ];
 
 /**
+ * Validate if a config file exists and contains valid JSON
+ */
+async function validateConfigFile(filepath: string, filesystem: any): Promise<boolean> {
+  try {
+    const fileExists = await filesystem.exists(filepath);
+    if (!fileExists) {
+      return false;
+    }
+    const content = await filesystem.readFile(filepath);
+    JSON.parse(content);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Creates the 'doctor' command for system diagnostics.
  *
  * Usage: overture doctor [options]
@@ -58,7 +74,7 @@ const ALL_CLIENTS: ClientName[] = [
  * - MCP server command availability
  */
 export function createDoctorCommand(deps: AppDependencies): Command {
-  const { discoveryService, output, adapterRegistry, configLoader, pathResolver, process } = deps;
+  const { discoveryService, output, adapterRegistry, configLoader, pathResolver, process, filesystem } = deps;
   const command = new Command('doctor');
 
   command
@@ -70,7 +86,6 @@ export function createDoctorCommand(deps: AppDependencies): Command {
     .action(async (options) => {
       try {
         const platform = getCurrentPlatform();
-        const detector = new BinaryDetector();
 
         // Detect project root
         const projectRoot = pathResolver.findProjectRoot();
@@ -133,7 +148,7 @@ export function createDoctorCommand(deps: AppDependencies): Command {
               : configPath?.user || undefined;
 
           const configValid = configPathStr
-            ? detector.validateConfigFile(configPathStr)
+            ? await validateConfigFile(configPathStr, filesystem)
             : false;
 
           const clientResult = {
