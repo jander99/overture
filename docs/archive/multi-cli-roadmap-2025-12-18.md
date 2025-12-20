@@ -1,5 +1,13 @@
 # Multi-CLI Support Roadmap
 
+> **⚠️ DEPRECATION NOTICE**
+>
+> As of Overture v0.3.0 (December 2025), the multi-CLI expansion roadmap has been **revised to focus on 3 production-ready clients**: **Claude Code**, **GitHub Copilot CLI**, and **OpenCode**.
+>
+> This roadmap document described plans for supporting 10+ AI CLI clients. The project direction has shifted to provide **best-in-class support for 3 carefully selected clients** rather than broad but shallow support for many clients.
+>
+> **Last updated:** 2025-12-18 | **Status:** ARCHIVED | **New direction:** v0.3+ focuses on quality over quantity
+
 > Implementation plan for Overture to support Claude Code, OpenAI Codex CLI, GitHub Copilot CLI, and Google Gemini CLI
 
 **Created:** December 2025
@@ -12,12 +20,12 @@
 
 Overture currently supports Claude Code as its primary target. This roadmap expands support to all major AI coding CLIs:
 
-| CLI | Vendor | MCP Support | Context File | Status |
-|-----|--------|-------------|--------------|--------|
-| Claude Code | Anthropic | Full | CLAUDE.md | ✅ Supported |
-| Codex CLI | OpenAI | Full | AGENTS.md | 🔴 Planned |
-| Copilot CLI | GitHub | Full | .github/agents/ | 🔴 Planned |
-| Gemini CLI | Google | Full | GEMINI.md | 🔴 Planned |
+| CLI         | Vendor    | MCP Support | Context File    | Status       |
+| ----------- | --------- | ----------- | --------------- | ------------ |
+| Claude Code | Anthropic | Full        | CLAUDE.md       | ✅ Supported |
+| Codex CLI   | OpenAI    | Full        | AGENTS.md       | 🔴 Planned   |
+| Copilot CLI | GitHub    | Full        | .github/agents/ | 🔴 Planned   |
+| Gemini CLI  | Google    | Full        | GEMINI.md       | 🔴 Planned   |
 
 **Key Insight:** All major CLIs now support MCP (Model Context Protocol) as of 2025, making Overture's MCP-centric approach universally applicable.
 
@@ -58,25 +66,26 @@ These features establish basic support for all four CLIs.
 ```typescript
 // New detection targets
 interface CLIDetection {
-  'codex': {
-    binary: 'codex',
-    configPath: '~/.codex/',
-    contextFile: 'AGENTS.md'
-  },
+  codex: {
+    binary: 'codex';
+    configPath: '~/.codex/';
+    contextFile: 'AGENTS.md';
+  };
   'copilot-cli': {
-    binary: 'copilot',  // @github/copilot npm package
-    configPath: '~/.copilot/',
-    contextFile: '.github/agents/'
-  },
+    binary: 'copilot'; // @github/copilot npm package
+    configPath: '~/.copilot/';
+    contextFile: '.github/agents/';
+  };
   'gemini-cli': {
-    binary: 'gemini',
-    configPath: '~/.gemini/',
-    contextFile: 'GEMINI.md'
-  }
+    binary: 'gemini';
+    configPath: '~/.gemini/';
+    contextFile: 'GEMINI.md';
+  };
 }
 ```
 
 **Tasks:**
+
 - [ ] Add binary detection for `codex`, `copilot`, `gemini`
 - [ ] Detect version information for each CLI
 - [ ] Validate CLI-specific config file formats
@@ -87,11 +96,13 @@ interface CLIDetection {
 Generate context files compatible with OpenAI Codex CLI.
 
 **Research Needed:**
+
 - [ ] Document exact AGENTS.md format expected by Codex
 - [ ] Identify Codex-specific sections and conventions
 - [ ] Determine how Codex handles MCP server references
 
 **Implementation:**
+
 - [ ] Create `AgentsMdGenerator` class
 - [ ] Map Overture config to AGENTS.md sections
 - [ ] Include MCP server guidance
@@ -102,11 +113,13 @@ Generate context files compatible with OpenAI Codex CLI.
 Generate context files compatible with Gemini CLI.
 
 **Research Needed:**
+
 - [ ] Document exact GEMINI.md format (if exists)
 - [ ] Identify Gemini-specific features (Google Search grounding)
 - [ ] Understand 1M token context implications
 
 **Implementation:**
+
 - [ ] Create `GeminiMdGenerator` class
 - [ ] Include Google Search grounding configuration
 - [ ] Optimize for large context window
@@ -117,6 +130,7 @@ Generate context files compatible with Gemini CLI.
 Generate custom agent definitions for `.github/agents/`.
 
 **Format Example:**
+
 ```yaml
 # .github/agents/python-expert.yml
 name: python-expert
@@ -133,6 +147,7 @@ mcp_servers:
 ```
 
 **Tasks:**
+
 - [ ] Research exact `.github/agents/` YAML schema
 - [ ] Create `CopilotAgentGenerator` class
 - [ ] Map Overture plugin definitions to Copilot agents
@@ -146,13 +161,13 @@ Single source of truth that transpiles to all context file formats.
 # .overture/config.yaml
 context:
   # Project description (appears in all context files)
-  description: "FastAPI backend service for user management"
+  description: 'FastAPI backend service for user management'
 
   # Coding conventions (transpiled per CLI)
   conventions:
-    - "Use pytest with fixtures for testing"
-    - "Follow PEP 8 and use type hints"
-    - "API responses use Pydantic models"
+    - 'Use pytest with fixtures for testing'
+    - 'Follow PEP 8 and use type hints'
+    - 'API responses use Pydantic models'
 
   # CLI-specific overrides
   overrides:
@@ -161,10 +176,11 @@ context:
       include_full_api_specs: true
     codex:
       # Codex-specific instructions
-      code_review_focus: ["security", "performance"]
+      code_review_focus: ['security', 'performance']
 ```
 
 **Tasks:**
+
 - [ ] Design unified context schema
 - [ ] Create transpilation logic for each CLI format
 - [ ] Handle CLI-specific features gracefully
@@ -184,14 +200,14 @@ Define agent personas that work across CLIs (where supported).
 # .overture/config.yaml
 agents:
   api-reviewer:
-    description: "Reviews API endpoint implementations"
+    description: 'Reviews API endpoint implementations'
     prompt: |
       You are an API design expert. Review endpoints for
       REST best practices, security, and performance.
     mcps: [filesystem, context7]
 
   security-auditor:
-    description: "Security-focused code reviewer"
+    description: 'Security-focused code reviewer'
     prompt: |
       You are a security expert. Look for OWASP Top 10
       vulnerabilities and suggest fixes.
@@ -204,6 +220,7 @@ agents:
 | api-reviewer | Plugin agent | .github/agents/api-reviewer.yml | AGENTS.md section | GEMINI.md section |
 
 **Tasks:**
+
 - [ ] Design agent definition schema
 - [ ] Implement transpilation to Copilot agent YAML
 - [ ] Include agents in CLAUDE.md plugin guidance
@@ -214,6 +231,7 @@ agents:
 Track and manage custom slash commands.
 
 **Current Support:**
+
 - Claude Code: `.claude/commands/*.md`
 - Amazon Q: Slash commands (different format)
 - Others: Not supported
@@ -222,7 +240,7 @@ Track and manage custom slash commands.
 # .overture/config.yaml
 commands:
   review-pr:
-    description: "Review a pull request"
+    description: 'Review a pull request'
     template: |
       Analyze PR #$ARGUMENTS for:
       1. Code quality issues
@@ -232,6 +250,7 @@ commands:
 ```
 
 **Tasks:**
+
 - [ ] Create command registry in Overture config
 - [ ] Generate `.claude/commands/` from registry
 - [ ] Track CLI compatibility per command
@@ -242,6 +261,7 @@ commands:
 Unified hook definition for CLIs that support automation.
 
 **Current Support:**
+
 - Claude Code: Pre/post tool execution hooks
 - Amazon Q: Context hooks
 - Others: Not supported
@@ -252,16 +272,17 @@ hooks:
   pre-commit:
     trigger: before_tool
     tool: Bash
-    pattern: "git commit"
-    command: "npm run lint && npm test"
+    pattern: 'git commit'
+    command: 'npm run lint && npm test'
 
   format-on-save:
     trigger: after_tool
     tool: Write
-    command: "prettier --write $FILE"
+    command: 'prettier --write $FILE'
 ```
 
 **Tasks:**
+
 - [ ] Design unified hook schema
 - [ ] Transpile to Claude Code hook format
 - [ ] Transpile to Amazon Q context hook format
@@ -285,6 +306,7 @@ Legend: ✅ Native | ~Agent = Custom agent equivalent | ❌ Not available
 ```
 
 **Tasks:**
+
 - [ ] Create plugin capability database
 - [ ] Map Claude plugins to Copilot partner agents
 - [ ] Generate parity report command
@@ -304,10 +326,10 @@ Configure which memory MCP server to use per project.
 # .overture/config.yaml
 memory:
   # Which memory MCP to use
-  server: memory-mcp  # or: ccmem, mcp-memory-service, openai-memory
+  server: memory-mcp # or: ccmem, mcp-memory-service, openai-memory
 
   # Memory scope
-  scope: project  # or: global, both
+  scope: project # or: global, both
 
   # Auto-persist important discoveries
   auto_persist: true
@@ -320,6 +342,7 @@ memory:
 ```
 
 **Tasks:**
+
 - [ ] Add memory configuration to schema
 - [ ] Include memory server in generated MCP configs
 - [ ] Generate memory usage guidance in context files
@@ -333,28 +356,29 @@ Define workflows once, generate CLI-specific guidance.
 # .overture/config.yaml
 workflows:
   tdd:
-    name: "Test-Driven Development"
-    trigger: "When writing or modifying tests"
+    name: 'Test-Driven Development'
+    trigger: 'When writing or modifying tests'
     steps:
-      - action: "Look up testing patterns"
+      - action: 'Look up testing patterns'
         mcp: context7
-        details: "Search for pytest best practices"
-      - action: "Check existing test patterns"
+        details: 'Search for pytest best practices'
+      - action: 'Check existing test patterns'
         mcp: memory
-        details: "Retrieve project test conventions"
-      - action: "Write failing test"
+        details: 'Retrieve project test conventions'
+      - action: 'Write failing test'
         mcp: filesystem
-      - action: "Implement minimal code"
+      - action: 'Implement minimal code'
         mcp: filesystem
-      - action: "Run tests"
+      - action: 'Run tests'
         mcp: python-repl
-      - action: "Refactor"
+      - action: 'Refactor'
         mcp: ruff
 ```
 
 **Generated Output:**
 
 For CLAUDE.md:
+
 ```markdown
 ## Workflow: Test-Driven Development
 
@@ -369,6 +393,7 @@ For CLAUDE.md:
 ```
 
 For Copilot agent:
+
 ```yaml
 # .github/agents/tdd-coach.yml
 name: tdd-coach
@@ -381,6 +406,7 @@ prompt: |
 ```
 
 **Tasks:**
+
 - [ ] Design workflow definition schema
 - [ ] Generate workflow sections in CLAUDE.md
 - [ ] Generate workflow-focused Copilot agents
@@ -396,19 +422,23 @@ Generate CLI-specific instructions for session management.
 ## Session Management
 
 ### Resuming Work
+
 - **Claude Code:** Run `/init` to reload project context
 - **Codex:** Run `codex resume` to continue last session
 - **Copilot:** Session history preserved automatically
 - **Gemini:** Conversation history available in CLI
 
 ### Persisting Discoveries
+
 Use the configured memory MCP (memory-mcp) to store:
+
 - Architectural decisions
 - Code patterns discovered
 - Troubleshooting solutions
 ```
 
 **Tasks:**
+
 - [ ] Create session management templates per CLI
 - [ ] Include in generated context files
 - [ ] Document memory persistence strategies
@@ -418,12 +448,12 @@ Use the configured memory MCP (memory-mcp) to store:
 
 Recommend strategies based on CLI context limits.
 
-| CLI | Context Window | Strategy |
-|-----|---------------|----------|
-| Claude Code | ~200K tokens | Standard context files |
-| Codex | ~200K tokens | Standard context files |
-| Copilot | ~200K tokens | Standard context files |
-| Gemini | 1M tokens | Include full API specs, extended examples |
+| CLI         | Context Window | Strategy                                  |
+| ----------- | -------------- | ----------------------------------------- |
+| Claude Code | ~200K tokens   | Standard context files                    |
+| Codex       | ~200K tokens   | Standard context files                    |
+| Copilot     | ~200K tokens   | Standard context files                    |
+| Gemini      | 1M tokens      | Include full API specs, extended examples |
 
 ```yaml
 # .overture/config.yaml
@@ -441,6 +471,7 @@ context:
 ```
 
 **Tasks:**
+
 - [ ] Add context optimization settings
 - [ ] Generate expanded content for Gemini
 - [ ] Generate summarized content for others
@@ -463,9 +494,9 @@ Configure cloud sandbox settings for CLIs that support them.
 cloud:
   codex:
     enabled: true
-    environment: "python-3.12"
+    environment: 'python-3.12'
     preinstall:
-      - "pip install -r requirements.txt"
+      - 'pip install -r requirements.txt'
     sandbox_permissions:
       network: limited
       filesystem: project_only
@@ -474,10 +505,11 @@ cloud:
     coding_agent:
       enabled: true
       auto_pr: true
-      branch_prefix: "copilot/"
+      branch_prefix: 'copilot/'
 ```
 
 **Tasks:**
+
 - [ ] Research Codex Cloud configuration options
 - [ ] Research Copilot Coding Agent configuration
 - [ ] Add cloud configuration to schema
@@ -503,6 +535,7 @@ code_review:
 ```
 
 **Tasks:**
+
 - [ ] Add code review configuration
 - [ ] Generate review guidance in context files
 - [ ] Configure Codex code review settings
@@ -517,17 +550,18 @@ Configure team collaboration features.
 integrations:
   slack:
     enabled: true
-    channel: "#dev-ai-assistant"
+    channel: '#dev-ai-assistant'
     notify_on:
       - task_complete
       - pr_ready
 
   github:
     auto_issue: true
-    label_prefix: "ai-generated"
+    label_prefix: 'ai-generated'
 ```
 
 **Tasks:**
+
 - [ ] Research Codex Slack integration
 - [ ] Research Copilot GitHub integration
 - [ ] Add integration configuration
@@ -552,6 +586,7 @@ Migration complete! Review AGENTS.md for accuracy.
 ```
 
 **Tasks:**
+
 - [ ] Create migration command
 - [ ] Map features between CLIs
 - [ ] Handle unsupported features gracefully
@@ -567,6 +602,7 @@ Migration complete! Review AGENTS.md for accuracy.
 **Focus:** Basic support for all four CLIs
 
 **Deliverables:**
+
 - [ ] CLI detection for Codex, Copilot CLI, Gemini CLI
 - [ ] AGENTS.md generator
 - [ ] GEMINI.md generator
@@ -576,6 +612,7 @@ Migration complete! Review AGENTS.md for accuracy.
 - [ ] Documentation for multi-CLI setup
 
 **Success Criteria:**
+
 - User can run `overture sync` and get valid context files for all installed CLIs
 - Each context file includes MCP guidance
 - CLI detection works reliably
@@ -586,6 +623,7 @@ Migration complete! Review AGENTS.md for accuracy.
 **Focus:** Custom agents and extensibility
 
 **Deliverables:**
+
 - [ ] Custom agent definition schema
 - [ ] Full Copilot agent generation
 - [ ] Slash command registry
@@ -594,6 +632,7 @@ Migration complete! Review AGENTS.md for accuracy.
 - [ ] Partner agent catalog
 
 **Success Criteria:**
+
 - User can define agents once, generate for multiple CLIs
 - Slash commands sync to supported CLIs
 - Clear visibility into feature parity
@@ -604,6 +643,7 @@ Migration complete! Review AGENTS.md for accuracy.
 **Focus:** Cross-session context and workflow portability
 
 **Deliverables:**
+
 - [ ] Memory server configuration
 - [ ] Workflow definition schema
 - [ ] Workflow transpilation to all formats
@@ -612,6 +652,7 @@ Migration complete! Review AGENTS.md for accuracy.
 - [ ] Memory scope management
 
 **Success Criteria:**
+
 - Workflows defined once, work across CLIs
 - Memory strategy consistent across CLIs
 - Context optimized per CLI capabilities
@@ -622,6 +663,7 @@ Migration complete! Review AGENTS.md for accuracy.
 **Focus:** Team features and advanced integrations
 
 **Deliverables:**
+
 - [ ] Cloud execution configuration
 - [ ] Code review integration
 - [ ] Team integrations (Slack, GitHub)
@@ -629,6 +671,7 @@ Migration complete! Review AGENTS.md for accuracy.
 - [ ] Cross-CLI analytics
 
 **Success Criteria:**
+
 - Teams can share AI configurations
 - Easy migration between CLIs
 - Full feature utilization per CLI
@@ -677,6 +720,7 @@ Comprehensive research was conducted across all major AI CLIs to unblock v0.3 im
 ### Research Impact Summary
 
 **Implementation Readiness:**
+
 - ✅ AGENTS.md generator can be implemented immediately
 - ✅ GEMINI.md generator spec complete with caching strategy
 - ✅ Copilot agent generator requires two-tier output (agents + MCP docs)
@@ -684,6 +728,7 @@ Comprehensive research was conducted across all major AI CLIs to unblock v0.3 im
 - ✅ Memory feature roadmap ready for v0.5
 
 **Key Architectural Insights:**
+
 - **Single Format Advantage:** AGENTS.md as universal standard simplifies v0.3
 - **Gemini's Unique Capabilities:** 1M context + caching enables "include everything" strategy
 - **Copilot's Constraint:** Org-level MCP config requires documentation generation
@@ -741,6 +786,7 @@ Research completed on 2025-12-14. See above section for findings.
 **Decision:** Overture generates configuration files and documentation. It does not wrap, proxy, or execute CLI commands.
 
 **Rationale:**
+
 - Each CLI has its own execution model
 - Users should interact directly with their preferred CLI
 - Reduces complexity and potential breakage
@@ -751,6 +797,7 @@ Research completed on 2025-12-14. See above section for findings.
 **Decision:** When a feature isn't supported by a CLI, Overture warns but continues.
 
 **Rationale:**
+
 - Users may have multiple CLIs installed
 - Some features are CLI-specific by design
 - Better UX than hard failures
@@ -761,6 +808,7 @@ Research completed on 2025-12-14. See above section for findings.
 **Decision:** Custom sections in generated context files are preserved during regeneration.
 
 **Rationale:**
+
 - Users add project-specific notes
 - Regeneration shouldn't lose work
 - Already implemented for CLAUDE.md
@@ -772,18 +820,18 @@ Research completed on 2025-12-14. See above section for findings.
 
 Reference matrix from README.md research:
 
-| Feature | Claude Code | Codex | Copilot CLI | Gemini CLI |
-|---------|-------------|-------|-------------|------------|
-| MCP Client | ✅ | ✅ | ✅ | ✅ |
-| MCP Server | ✅ | ❌ | ❌ | ❌ |
-| Context File | CLAUDE.md | AGENTS.md | .github/agents/ | GEMINI.md |
-| Plugins | ✅ | ❌ | Custom Agents | ❌ |
-| Hooks | ✅ | ❌ | ❌ | ❌ |
-| Slash Commands | ✅ | ❌ | ❌ | ❌ |
-| Session Resume | /init | codex resume | Auto | Auto |
-| Cloud Execution | ❌ | ✅ | ✅ | ❌ |
-| Context Window | ~200K | ~200K | ~200K | 1M |
+| Feature         | Claude Code | Codex        | Copilot CLI     | Gemini CLI |
+| --------------- | ----------- | ------------ | --------------- | ---------- |
+| MCP Client      | ✅          | ✅           | ✅              | ✅         |
+| MCP Server      | ✅          | ❌           | ❌              | ❌         |
+| Context File    | CLAUDE.md   | AGENTS.md    | .github/agents/ | GEMINI.md  |
+| Plugins         | ✅          | ❌           | Custom Agents   | ❌         |
+| Hooks           | ✅          | ❌           | ❌              | ❌         |
+| Slash Commands  | ✅          | ❌           | ❌              | ❌         |
+| Session Resume  | /init       | codex resume | Auto            | Auto       |
+| Cloud Execution | ❌          | ✅           | ✅              | ❌         |
+| Context Window  | ~200K       | ~200K        | ~200K           | 1M         |
 
 ---
 
-*This document will be updated as research progresses and implementation begins.*
+_This document will be updated as research progresses and implementation begins._

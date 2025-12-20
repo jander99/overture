@@ -31,13 +31,14 @@ When you work with Claude Code, you might install plugins like `python-developme
 
 Overture acts as a multi-platform configuration orchestrator that:
 
-1. **Detects installed AI clients** - Automatically finds Claude Code, Claude Desktop, VSCode, Cursor, and other tools
+1. **Detects installed AI clients** - Automatically finds Claude Code, GitHub Copilot CLI, and OpenCode
 2. **Connects plugins to their tools** - Declares which MCP servers each plugin should use
 3. **Generates configs for all platforms** - Syncs to all detected clients (Claude Desktop, Claude Code, VSCode, etc.)
 4. **Validates your setup** - Checks that required tools and clients are available
 5. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer
 
 **New in v0.2.5:**
+
 - **Intelligent client detection** - Knows what's installed and where
 - **System diagnostics** - `overture doctor` command shows health status
 - **Version tracking** - Captures client versions automatically
@@ -90,21 +91,26 @@ overture doctor
 ```
 
 This shows:
+
 - Which AI clients are installed (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
 - Client versions and locations
 - Config file validity
 - Available MCP commands
 
 **Example output:**
+
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
   Config: ~/.claude.json (valid)
 
-✗ claude-desktop - not installed
-  → Install Claude Desktop: https://claude.com/download
+✓ copilot-cli (v1.2.0) - /usr/local/bin/copilot
+  Config: ~/.copilot/mcp-config.json (valid)
+  Note: GitHub MCP excluded (bundled by default)
 
-✓ vscode - /usr/bin/code
-  Config: ~/.vscode/mcp.json (valid)
+✓ opencode (v0.3.0) - /usr/local/bin/opencode
+  Config: ~/.config/opencode/opencode.json (valid)
+
+All 3 supported clients detected!
 ```
 
 Use `overture doctor --verbose` for detailed warnings, or `overture doctor --json` for machine-readable output.
@@ -123,7 +129,7 @@ overture init
 This creates a `.overture/config.yaml` file with basic configuration:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-project
@@ -142,6 +148,7 @@ overture init --type python-backend
 ```
 
 Available project types:
+
 - `python-backend` - Python backend with FastAPI/Django
 - `java-spring` - Java Spring Boot application
 - `frontend-react` - React frontend application
@@ -159,6 +166,7 @@ overture sync
 ```
 
 This command:
+
 - Installs any configured plugins
 - Generates `.mcp.json` with MCP server configuration
 - Creates `CLAUDE.md` with guidance for Claude
@@ -166,6 +174,7 @@ This command:
 ### 4. Start Using Claude
 
 Open your project in Claude Code. Claude will now:
+
 - Have access to the plugins you configured
 - Know which MCP servers to use with each plugin
 - Follow the guidance in `CLAUDE.md` for better tool selection
@@ -177,7 +186,7 @@ The heart of Overture is the `.overture/config.yaml` file. This section explains
 ### Basic Structure
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 # Project information
 project:
@@ -230,7 +239,6 @@ mcp:
   memory:
 ```
 
-
 #### Project MCP Servers
 
 These are specific to your project:
@@ -261,7 +269,7 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 Overture will substitute `${GITHUB_TOKEN}` with the actual value from your environment.
@@ -274,17 +282,18 @@ You can disable plugins or MCP servers without removing them:
 plugins:
   testing:
     marketplace: claude-code-workflows
-    enabled: false  # Plugin won't be installed
+    enabled: false # Plugin won't be installed
     mcps: [filesystem]
 
 mcp:
   postgres:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
-    enabled: false  # MCP won't be configured
+    enabled: false # MCP won't be configured
 ```
 
 This is useful for:
+
 - Temporarily disabling expensive or slow tools
 - Keeping configuration for tools you use occasionally
 - Testing with different tool combinations
@@ -300,9 +309,11 @@ overture init [--type <project-type>]
 ```
 
 **Options:**
+
 - `--type <project-type>`: Initialize with a specific project template
 
 **Examples:**
+
 ```bash
 # Basic initialization
 overture init
@@ -315,6 +326,7 @@ overture init --type frontend-react
 ```
 
 **What it does:**
+
 - Creates `.overture/config.yaml` with starter configuration
 - Uses project-specific templates if `--type` is specified
 - Won't overwrite existing configuration
@@ -328,10 +340,12 @@ overture doctor [--json] [--verbose]
 ```
 
 **Options:**
+
 - `--json`: Output results as JSON for automation
 - `--verbose`: Show detailed warnings and recommendations
 
 **Examples:**
+
 ```bash
 # Basic diagnostics
 overture doctor
@@ -344,6 +358,7 @@ overture doctor --json
 ```
 
 **What it shows:**
+
 1. **Installed AI clients** - Which clients are detected (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
 2. **Version information** - Client versions extracted from --version flags
 3. **Config file locations** - Where each client's MCP config is located
@@ -352,6 +367,7 @@ overture doctor --json
 6. **Installation recommendations** - Guidance for missing clients or tools
 
 **Example output:**
+
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
   Config: ~/.claude.json (valid)
@@ -370,6 +386,7 @@ Summary:
 ```
 
 **When to use:**
+
 - **Before initial setup** - See what's already installed
 - **Troubleshooting** - Diagnose why sync isn't working
 - **Team onboarding** - New members check requirements
@@ -384,11 +401,13 @@ overture sync [--dry-run] [--client <name>] [--force]
 ```
 
 **Options:**
+
 - `--dry-run`: Preview changes without writing files (writes to dist/ for inspection)
 - `--client <name>`: Sync only to specific client (e.g., claude-code, vscode)
 - `--force`: Force sync even with validation warnings
 
 **Examples:**
+
 ```bash
 # Standard sync to all detected clients
 overture sync
@@ -404,6 +423,7 @@ overture sync --force
 ```
 
 **What it does:**
+
 1. Detects installed AI clients (Claude Code, Claude Desktop, VSCode, etc.)
 2. Reads `.overture/config.yaml`
 3. Installs enabled plugins via `claude plugin install`
@@ -413,12 +433,14 @@ overture sync --force
 7. Preserves custom sections in existing `CLAUDE.md`
 
 **When to run:**
+
 - After editing `.overture/config.yaml`
 - After cloning a repository with Overture configuration
 - When switching branches that have different configurations
 - After installing a new AI client
 
 **Example output (v0.2.5):**
+
 ```
 Syncing MCP configurations...
 
@@ -426,13 +448,20 @@ Client sync results:
   ✓ claude-code:
       Detected (v2.1.0): /usr/local/bin/claude
       Config: ~/.claude.json (valid)
-      Backup: ~/.config/overture/backups/claude-code/mcp.json.20250115-123456
+      Backup: ~/.config/overture/backups/claude-code/mcp.json.20250120-143022
 
-  ✗ claude-desktop:
-      Not detected (config will still be generated)
-      Config: ~/Library/Application Support/Claude/mcp.json
+  ✓ copilot-cli:
+      Detected (v1.2.0): /usr/local/bin/copilot
+      Config: ~/.copilot/mcp-config.json (valid)
+      Note: Excluded 'github' MCP (bundled by Copilot CLI)
+      Backup: ~/.config/overture/backups/copilot-cli/mcp-config.json.20250120-143022
 
-Sync complete!
+  ✓ opencode:
+      Detected (v0.3.0): /usr/local/bin/opencode
+      Config: ~/.config/opencode/opencode.json (valid)
+      Backup: ~/.config/overture/backups/opencode/opencode.json.20250120-143022
+
+Sync complete! 3/3 clients configured successfully.
 ```
 
 ### `overture enable mcp`
@@ -444,6 +473,7 @@ overture enable mcp <name>
 ```
 
 **Examples:**
+
 ```bash
 # Enable the postgres MCP server
 overture enable mcp postgres
@@ -453,6 +483,7 @@ overture enable mcp playwright
 ```
 
 **What it does:**
+
 1. Sets `enabled: true` in `.overture/config.yaml` for the specified MCP
 2. Regenerates `.mcp.json` and `CLAUDE.md`
 
@@ -467,6 +498,7 @@ overture mcp list
 ```
 
 **Example output:**
+
 ```
 MCP Servers:
 
@@ -488,6 +520,7 @@ Legend:
 ```
 
 **What it shows:**
+
 - Global vs project-scoped servers
 - Enabled/disabled status
 - Which plugins use each MCP server
@@ -502,12 +535,14 @@ overture validate
 ```
 
 **What it checks:**
+
 1. **Schema validation** - Ensures `.overture/config.yaml` follows the correct format
 2. **MCP command availability** - Checks if MCP commands exist on your system PATH
 3. **Reference integrity** - Warns if plugins reference MCP servers that aren't defined
 4. **Plugin marketplace** - Verifies marketplace names are valid
 
 **Example output:**
+
 ```
 Validating configuration...
 
@@ -520,6 +555,7 @@ Summary: 2 warnings, 1 error
 ```
 
 **Exit codes:**
+
 - `0` - Validation passed (may have warnings)
 - `1` - Validation failed with errors
 
@@ -539,7 +575,7 @@ overture init --type python-backend
 This creates a `.overture/config.yaml` with Python-specific plugins:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-fastapi-project
@@ -614,7 +650,7 @@ mcp:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
     env:
-      POSTGRES_URL: "${DATABASE_URL}"
+      POSTGRES_URL: '${DATABASE_URL}'
     enabled: false
 ```
 
@@ -653,7 +689,7 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 #### Step 3: Set Your GitHub Token
@@ -688,6 +724,7 @@ git push
 ```
 
 **What NOT to commit:**
+
 - `.mcp.json` - This is generated locally
 - `CLAUDE.md` - This is generated, but you may want to commit custom sections
 - Environment variables or secrets
@@ -786,12 +823,13 @@ mcp:
 
 ```yaml
 project:
-  name: string           # Project name (required)
-  type: string          # Project type (optional)
-  description: string   # Project description (optional)
+  name: string # Project name (required)
+  type: string # Project type (optional)
+  description: string # Project description (optional)
 ```
 
 **Project Types:**
+
 - `python-backend` - Python backend service
 - `java-spring` - Java Spring Boot application
 - `frontend-react` - React frontend application
@@ -803,12 +841,13 @@ project:
 ```yaml
 plugins:
   <plugin-name>:
-    marketplace: string    # Marketplace name (required)
-    enabled: boolean      # Enable/disable plugin (default: true)
-    mcps: string[]       # MCP servers this plugin uses (required)
+    marketplace: string # Marketplace name (required)
+    enabled: boolean # Enable/disable plugin (default: true)
+    mcps: string[] # MCP servers this plugin uses (required)
 ```
 
 **Common Plugins:**
+
 - `python-development` - Python language support and tooling
 - `javascript-typescript` - JavaScript/TypeScript support
 - `backend-development` - Backend architecture and API design
@@ -822,33 +861,39 @@ plugins:
 ```yaml
 mcp:
   <mcp-name>:
-    command: string              # Executable command (required for project scope)
-    args: string[]              # Command arguments (optional)
-    env: map<string, string>    # Environment variables (optional)
-    enabled: boolean            # Enable/disable (default: true)
+    command: string # Executable command (required for project scope)
+    args: string[] # Command arguments (optional)
+    env: map<string, string> # Environment variables (optional)
+    enabled: boolean # Enable/disable (default: true)
 ```
 
 **Common MCP Servers:**
 
 **Python:**
+
 - `python-repl` - Execute Python code
 - `ruff` - Python linting and formatting
 
 **JavaScript/TypeScript:**
+
 - Check https://github.com/modelcontextprotocol/servers for available Node.js MCPs
 
 **Databases:**
+
 - `sqlite` - SQLite database queries (via mcp-server-sqlite)
 - `postgres` - PostgreSQL database access (via mcp-server-postgres)
 
 **DevOps:**
+
 - Check https://github.com/modelcontextprotocol/servers for Docker/K8s MCPs
 
 **Version Control:**
+
 - `github` - GitHub API access
 - `gitlab` - GitLab API access
 
 **Universal:**
+
 - `filesystem` - File operations (usually global)
 - `context7` - Documentation retrieval (usually global)
 - `memory` - Cross-conversation memory (usually global)
@@ -862,8 +907,8 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
-      API_URL: "${GITHUB_API_URL:-https://api.github.com}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
+      API_URL: '${GITHUB_API_URL:-https://api.github.com}'
 ```
 
 You can provide defaults using `${VAR:-default}` syntax.
@@ -875,6 +920,7 @@ You can provide defaults using `${VAR:-default}` syntax.
 **Problem:** Changes to `.overture/config.yaml` don't take effect.
 
 **Solution:**
+
 ```bash
 overture sync
 ```
@@ -888,6 +934,7 @@ You must run `sync` after editing the configuration to regenerate `.mcp.json` an
 **Solution:**
 
 1. Check if the command is installed:
+
    ```bash
    which uvx
    # or
@@ -895,6 +942,7 @@ You must run `sync` after editing the configuration to regenerate `.mcp.json` an
    ```
 
 2. Install missing commands:
+
    ```bash
    # For uvx (Python tools)
    pip install uv
@@ -915,11 +963,13 @@ You must run `sync` after editing the configuration to regenerate `.mcp.json` an
 **Solution:**
 
 1. Check if Claude CLI is installed:
+
    ```bash
    claude --version
    ```
 
 2. Try installing the plugin manually:
+
    ```bash
    claude plugin install <plugin-name>@<marketplace>
    ```
@@ -935,16 +985,19 @@ You must run `sync` after editing the configuration to regenerate `.mcp.json` an
 **Solution:**
 
 1. Ensure the variable is set:
+
    ```bash
    echo $GITHUB_TOKEN
    ```
 
 2. Set the variable in your shell:
+
    ```bash
    export GITHUB_TOKEN="your-token-here"
    ```
 
 3. Add to your shell profile for persistence:
+
    ```bash
    echo 'export GITHUB_TOKEN="your-token-here"' >> ~/.bashrc
    source ~/.bashrc
@@ -974,6 +1027,7 @@ mcp:
 ```
 
 Then run:
+
 ```bash
 overture sync
 ```
@@ -990,7 +1044,8 @@ Add your custom content in this section:
 
 ```markdown
 ---
-*Auto-generated by Overture. Manual edits below will be preserved.*
+
+_Auto-generated by Overture. Manual edits below will be preserved._
 
 <!-- overture:custom -->
 
@@ -1012,22 +1067,28 @@ Content outside these markers will be regenerated on each sync.
 Common schema errors:
 
 1. **Missing required field:**
+
    ```
    Error: plugins.python-development.marketplace is required
    ```
+
    Add the missing field:
+
    ```yaml
    plugins:
      python-development:
-       marketplace: claude-code-workflows  # Add this
+       marketplace: claude-code-workflows # Add this
        mcps: [python-repl]
    ```
 
 2. **Invalid scope value:**
+
    ```
    Error: mcp.python-repl.scope must be 'global' or 'project'
    ```
+
    Fix the scope value:
+
    ```yaml
    mcp:
      python-repl:
@@ -1040,9 +1101,9 @@ Common schema errors:
    Check your indentation (use spaces, not tabs):
    ```yaml
    plugins:
-     python-development:    # 2 spaces
-       marketplace: test    # 4 spaces
-       mcps: [test]        # 4 spaces
+     python-development: # 2 spaces
+       marketplace: test # 4 spaces
+       mcps: [test] # 4 spaces
    ```
 
 ### Getting Help
@@ -1062,7 +1123,7 @@ If you're still having trouble:
 A minimal Python project setup:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: python-scripts
@@ -1083,6 +1144,7 @@ mcp:
 ```
 
 **What you get:**
+
 - Python development expertise from Claude
 - Ability to execute Python code via `python-repl`
 - File operations via `filesystem`
@@ -1092,7 +1154,7 @@ mcp:
 A comprehensive setup for a full-stack project:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: fullstack-app
@@ -1153,6 +1215,7 @@ mcp:
 ```
 
 **What you get:**
+
 - Full backend and frontend development support
 - Database design and query capabilities
 - Testing expertise
@@ -1164,7 +1227,7 @@ mcp:
 For TypeScript monorepos managed with Nx:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-monorepo
@@ -1195,10 +1258,11 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 **What you get:**
+
 - TypeScript development support
 - Nx workspace management
 - Testing capabilities across the monorepo
@@ -1210,7 +1274,7 @@ mcp:
 Use disabled MCPs to maintain different configurations:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: production-api
@@ -1249,19 +1313,21 @@ mcp:
     command: docker
     args: [run, -i, --rm, mcp-postgres]
     env:
-      POSTGRES_URL: "${DATABASE_URL}"
+      POSTGRES_URL: '${DATABASE_URL}'
     enabled: false
 ```
 
 **Usage:**
 
 Development (default):
+
 ```bash
 overture sync
 # Uses SQLite for local development
 ```
 
 Production access:
+
 ```bash
 export DATABASE_URL="postgresql://..."
 overture enable mcp postgres
@@ -1281,6 +1347,7 @@ Now that you understand Overture, try these next steps:
 5. **Learn more** - Check out the schema documentation and examples
 
 For more detailed information:
+
 - Configuration schema: `docs/overture-schema.md`
 - Example configurations: `docs/examples.md`
 - Project README: `README.md`
