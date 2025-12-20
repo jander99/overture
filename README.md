@@ -497,32 +497,32 @@ my-project/
 
 This comparison uses Claude Code as the baseline and compares features across major AI coding CLIs as of December 2025.
 
-| Feature | Claude Code | OpenAI Codex | GitHub Copilot CLI | Gemini CLI | Cursor CLI | Windsurf | Amazon Q CLI |
-|---------|-------------|--------------|-------------------|------------|------------|----------|--------------|
+| Feature | Claude Code | OpenAI Codex | GitHub Copilot CLI | Gemini CLI | Cursor CLI | Windsurf | Amazon Q CLI | OpenCode |
+|---------|-------------|--------------|-------------------|------------|------------|----------|--------------|----------|
 | **Core Capabilities** |
-| MCP Client Support | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
-| MCP Server Mode | ✅ `claude mcp serve` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Subagents/Task Delegation | ✅ Built-in | ✅ Via `/delegate` | ✅ Via `/delegate` | ✅ ReAct loop | ✅ Agent mode | ✅ Cascade | ✅ Agent mode |
-| Background/Async Tasks | ✅ Task tool | ✅ Cloud sandbox | ✅ Coding agent | ❌ | ✅ Background agents | ❌ | ✅ Background |
+| MCP Client Support | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| MCP Server Mode | ✅ `claude mcp serve` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Subagents/Task Delegation | ✅ Built-in | ✅ Via `/delegate` | ✅ Via `/delegate` | ✅ ReAct loop | ✅ Agent mode | ✅ Cascade | ✅ Agent mode | ✅ Subagent system |
+| Background/Async Tasks | ✅ Task tool | ✅ Cloud sandbox | ✅ Coding agent | ❌ | ✅ Background agents | ❌ | ✅ Background | ❌ |
 | **Memory & Context** |
-| Session Persistence | ✅ `/init`, CLAUDE.md | ✅ `codex resume` | ✅ Session history | ✅ Conversation history | ✅ `cursor resume` | ✅ Auto-save | ✅ `q chat --resume` |
-| Cross-Session Memory | ✅ Via MCP servers | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Built-in Memories | ✅ Auto-Memories | ✅ Via MCP |
-| Project Context Files | ✅ CLAUDE.md | ✅ AGENTS.md | ✅ `.github/agents/` | ✅ GEMINI.md | ✅ `.cursorrules` | ✅ Rules | ✅ Context files |
-| Context Window | ~200K tokens | ~200K tokens | ~200K tokens | 1M tokens | ~200K tokens | ~200K tokens | ~200K tokens |
+| Session Persistence | ✅ `/init`, CLAUDE.md | ✅ `codex resume` | ✅ Session history | ✅ Conversation history | ✅ `cursor resume` | ✅ Auto-save | ✅ `q chat --resume` | ✅ `/init`, AGENTS.md |
+| Cross-Session Memory | ✅ Via MCP servers | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Built-in Memories | ✅ Auto-Memories | ✅ Via MCP | ✅ Via MCP servers |
+| Project Context Files | ✅ CLAUDE.md | ✅ AGENTS.md | ✅ `.github/agents/` | ✅ GEMINI.md | ✅ `.cursorrules` | ✅ Rules | ✅ Context files | ✅ AGENTS.md |
+| Context Window | ~200K tokens | ~200K tokens | ~200K tokens | 1M tokens | ~200K tokens | ~200K tokens | ~200K tokens | ~200K tokens |
 | **Extensibility** |
-| Hooks/Automation | ✅ Pre/post hooks | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Context hooks |
-| Custom Slash Commands | ✅ `.claude/commands/` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Slash commands |
-| Plugin System | ✅ `claude plugin` | ❌ | ✅ Custom agents | ❌ | ✅ Extensions | ✅ Extensions | ❌ |
+| Hooks/Automation | ✅ Pre/post hooks | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Context hooks | ❌ |
+| Custom Slash Commands | ✅ `.claude/commands/` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Slash commands | ✅ `.opencode/command/` |
+| Plugin System | ✅ `claude plugin` | ❌ | ✅ Custom agents | ❌ | ✅ Extensions | ✅ Extensions | ❌ | ❌ |
 | **Development Features** |
-| Code Review | ✅ Via commands | ✅ Built-in | ✅ Built-in | ✅ Agent mode | ✅ Built-in | ✅ Built-in | ✅ Built-in |
-| Web Search | ✅ Built-in | ✅ Built-in | ✅ Via GitHub | ✅ Google Search | ✅ Via MCP | ✅ Built-in | ✅ Built-in |
-| File Operations | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools |
-| Git Integration | ✅ Native | ✅ Native | ✅ Deep GitHub | ✅ Native | ✅ Native | ✅ Native | ✅ AWS CodeCommit |
+| Code Review | ✅ Via commands | ✅ Built-in | ✅ Built-in | ✅ Agent mode | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Via commands |
+| Web Search | ✅ Built-in | ✅ Built-in | ✅ Via GitHub | ✅ Google Search | ✅ Via MCP | ✅ Built-in | ✅ Built-in | ❌ Via MCP |
+| File Operations | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools |
+| Git Integration | ✅ Native | ✅ Native | ✅ Deep GitHub | ✅ Native | ✅ Native | ✅ Native | ✅ AWS CodeCommit | ✅ Native |
 | **Platform & Access** |
-| Open Source | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ (transitioning) |
-| Free Tier | ❌ | ✅ (with Plus) | ❌ | ✅ 1000 req/day | ❌ | ✅ Limited | ✅ Free tier |
-| IDE Integration | ✅ VS Code, JetBrains | ✅ VS Code, Cursor | ✅ VS Code, JetBrains | ✅ VS Code | ✅ Native IDE | ✅ Native IDE | ✅ VS Code, JetBrains |
-| Cloud Execution | ❌ Local only | ✅ Codex Cloud | ✅ Coding agent | ❌ Local only | ❌ Local only | ❌ Local only | ✅ AWS integration |
+| Open Source | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ (transitioning) | ✅ |
+| Free Tier | ❌ | ✅ (with Plus) | ❌ | ✅ 1000 req/day | ❌ | ✅ Limited | ✅ Free tier | ✅ Full |
+| IDE Integration | ✅ VS Code, JetBrains | ✅ VS Code, Cursor | ✅ VS Code, JetBrains | ✅ VS Code | ✅ Native IDE | ✅ Native IDE | ✅ VS Code, JetBrains | ✅ VS Code, Desktop |
+| Cloud Execution | ❌ Local only | ✅ Codex Cloud | ✅ Coding agent | ❌ Local only | ❌ Local only | ❌ Local only | ✅ AWS integration | ❌ Local only |
 
 ### Key Differentiators
 
@@ -561,6 +561,16 @@ This comparison uses Claude Code as the baseline and compares features across ma
 - Deep AWS service integration
 - Transitioning to Kiro CLI
 - Context hooks for dynamic context injection
+
+**OpenCode** ([docs](https://opencode.ai/docs/))
+- Open-source AI coding agent with comprehensive configuration
+- Granular permissions system (ask/allow/deny per tool/command)
+- Per-agent tool and permission customization
+- Rich configuration with agents, commands, themes, and rules
+- Variable substitution: `{env:VAR}`, `{file:path}`
+- OAuth support for remote MCP servers
+
+> **Note:** Overture can manage MCP configurations for both Claude Code and OpenCode simultaneously. See [OpenCode Integration Research](./docs/opencode-integration-research.md) for details on hybrid setups.
 
 ### MCP Adoption Timeline
 
