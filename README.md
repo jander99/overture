@@ -228,7 +228,10 @@ npm install
 npx nx build @overture/cli
 
 # 4. Link the CLI globally (makes 'overture' command available)
+# IMPORTANT: Must be run from apps/cli directory, not workspace root
+cd apps/cli
 npm link
+cd ../..
 
 # 5. Verify installation
 overture --version
@@ -258,7 +261,9 @@ npx nx lint @overture/cli
 
 ```bash
 # Unlink the globally installed CLI
+cd apps/cli
 npm unlink
+cd ../..
 
 # Or install the published version instead
 npm install -g @overture/cli
