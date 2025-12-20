@@ -25,6 +25,8 @@ import type { OutputPort } from '@overture/ports-output';
 import type { DiscoveryService } from '@overture/discovery-core';
 import type { AdapterRegistry } from '@overture/client-adapters';
 import type { SyncEngine } from '@overture/sync-core';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 /**
  * Application dependencies container.
@@ -76,20 +78,33 @@ export function createAppDependencies(): AppDependencies {
   const pathResolver = new PathResolver(environment, filesystem);
   const configLoader = new ConfigLoader(filesystem, pathResolver);
 
-  // Create discovery service
+  // Create discovery service (requires sync fs functions for BinaryDetector)
   const discoveryService = createDiscoveryService({
     processPort: process,
     environmentPort: environment,
-    fileExists: (path: string) => filesystem.existsSync(path),
-    readFile: (path: string) => filesystem.readFileSync(path, 'utf-8'),
-    readDir: (path: string) => filesystem.readdirSync(path),
-    isDirectory: (path: string) => filesystem.statSync(path).isDirectory(),
-    joinPath: (...paths: string[]) => filesystem.join(...paths),
-    expandTilde: (path: string) => {
-      if (path.startsWith('~/')) {
-        return filesystem.join(environment.homedir(), path.slice(2));
+    fileExists: (filepath: string) => {
+      try {
+        fs.accessSync(filepath);
+        return true;
+      } catch {
+        return false;
       }
-      return path;
+    },
+    readFile: (filepath: string) => fs.readFileSync(filepath, 'utf-8'),
+    readDir: (dirpath: string) => fs.readdirSync(dirpath),
+    isDirectory: (filepath: string) => {
+      try {
+        return fs.statSync(filepath).isDirectory();
+      } catch {
+        return false;
+      }
+    },
+    joinPath: (...paths: string[]) => path.join(...paths),
+    expandTilde: (filepath: string) => {
+      if (filepath.startsWith('~/')) {
+        return path.join(environment.homedir(), filepath.slice(2));
+      }
+      return filepath;
     },
   });
 
