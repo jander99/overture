@@ -8,7 +8,12 @@
  * @version 3.0 - Hexagonal Architecture with Dependency Injection
  */
 
-import type { Platform, ClientName, TransportType, OvertureConfig } from '@overture/config-types';
+import type {
+  Platform,
+  ClientName,
+  TransportType,
+  OvertureConfig,
+} from '@overture/config-types';
 
 /**
  * Client MCP configuration format
@@ -33,6 +38,7 @@ export interface ClientMcpServerDef {
   type?: TransportType | 'local'; // VS Code requires "type" field; 'local' for Copilot
   url?: string; // For HTTP transport
   tools?: string[]; // For Copilot CLI
+  enabled?: boolean; // For OpenCode
 }
 
 /**
@@ -40,7 +46,10 @@ export interface ClientMcpServerDef {
  *
  * Some clients support both user and project-level configs.
  */
-export type ConfigPathResult = string | { user: string; project: string } | null;
+export type ConfigPathResult =
+  | string
+  | { user: string; project: string }
+  | null;
 
 /**
  * Client adapter interface
@@ -124,7 +133,10 @@ export interface ClientAdapter {
    * @param platform - Target platform
    * @returns Client-specific config ready to write
    */
-  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig;
+  convertFromOverture(
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): ClientMcpConfig;
 
   /**
    * Check if client supports a transport type
@@ -235,10 +247,16 @@ export abstract class BaseClientAdapter implements ClientAdapter {
   abstract readonly name: ClientName;
   abstract readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';
 
-  abstract detectConfigPath(platform: Platform, projectRoot?: string): ConfigPathResult;
+  abstract detectConfigPath(
+    platform: Platform,
+    projectRoot?: string,
+  ): ConfigPathResult;
   abstract readConfig(path: string): Promise<ClientMcpConfig>;
   abstract writeConfig(path: string, config: ClientMcpConfig): Promise<void>;
-  abstract convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig;
+  abstract convertFromOverture(
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): ClientMcpConfig;
   abstract supportsTransport(transport: TransportType): boolean;
   abstract needsEnvVarExpansion(): boolean;
 
@@ -280,7 +298,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
    */
   protected shouldSyncMcp(
     mcpConfig: OvertureConfig['mcp'][string],
-    platform: Platform
+    platform: Platform,
   ): boolean {
     // Check platform exclusions
     if (mcpConfig.platforms?.exclude?.includes(platform)) {
@@ -293,7 +311,10 @@ export abstract class BaseClientAdapter implements ClientAdapter {
     }
 
     // Check client inclusions (whitelist)
-    if (mcpConfig.clients?.include && !mcpConfig.clients.include.includes(this.name)) {
+    if (
+      mcpConfig.clients?.include &&
+      !mcpConfig.clients.include.includes(this.name)
+    ) {
       return false;
     }
 
@@ -325,7 +346,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
    */
   protected buildServerConfig(
     mcpConfig: OvertureConfig['mcp'][string],
-    platform: Platform
+    platform: Platform,
   ): {
     command: string;
     args: string[];

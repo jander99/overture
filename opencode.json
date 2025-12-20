@@ -2,31 +2,31 @@
   "mcp": {
     "filesystem": {
       "type": "local",
+      "enabled": true,
       "command": [
         "npx",
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "/home"
-      ],
-      "enabled": true
+      ]
     },
     "memory": {
       "type": "local",
+      "enabled": true,
       "command": [
         "npx",
         "-y",
         "@modelcontextprotocol/server-memory"
-      ],
-      "enabled": true
+      ]
     },
     "nx-mcp": {
       "type": "local",
+      "enabled": true,
       "command": [
         "npx",
         "nx",
         "mcp"
-      ],
-      "enabled": true
+      ]
     }
   },
   "$schema": "https://opencode.ai/config.json"

@@ -14,7 +14,12 @@
 
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
-import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig, type ClientMcpServerDef } from '../client-adapter.interface.js';
+import {
+  BaseClientAdapter,
+  type ConfigPathResult,
+  type ClientMcpConfig,
+  type ClientMcpServerDef,
+} from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
 import { McpError, ValidationError } from '@overture/errors';
 
@@ -27,7 +32,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
   constructor(
     private readonly filesystem: FilesystemPort,
-    private readonly environment: EnvironmentPort
+    private readonly environment: EnvironmentPort,
   ) {
     super();
   }
@@ -59,7 +64,10 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
       return parsed;
     } catch (error) {
-      throw new McpError(`Failed to read OpenCode config at ${path}: ${(error as Error).message}`, this.name);
+      throw new McpError(
+        `Failed to read OpenCode config at ${path}: ${(error as Error).message}`,
+        this.name,
+      );
     }
   }
 
@@ -101,11 +109,17 @@ export class OpenCodeAdapter extends BaseClientAdapter {
       const content = JSON.stringify(merged, null, 2);
       await this.filesystem.writeFile(path, content);
     } catch (error) {
-      throw new McpError(`Failed to write OpenCode config to ${path}: ${(error as Error).message}`, this.name);
+      throw new McpError(
+        `Failed to write OpenCode config to ${path}: ${(error as Error).message}`,
+        this.name,
+      );
     }
   }
 
-  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
+  convertFromOverture(
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): ClientMcpConfig {
     const mcp: Record<string, ClientMcpServerDef> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
@@ -130,7 +144,8 @@ export class OpenCodeAdapter extends BaseClientAdapter {
         command: serverConfig.command,
         args: serverConfig.args,
         type: 'local',
-        // Store enabled and environment as additional properties for OpenCode
+        enabled: true,
+        // Store environment as additional property for OpenCode
         ...(environment && { env: environment }),
       };
     }
@@ -171,7 +186,9 @@ export class OpenCodeAdapter extends BaseClientAdapter {
    * @param env - Environment variables from Overture config
    * @returns Translated environment variables
    */
-  private translateEnvVars(env: Record<string, string>): Record<string, string> {
+  private translateEnvVars(
+    env: Record<string, string>,
+  ): Record<string, string> {
     const translated: Record<string, string> = {};
 
     for (const [key, value] of Object.entries(env)) {
@@ -207,7 +224,10 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
   private getDirname(filePath: string): string {
     // Cross-platform dirname (handles both / and \)
-    const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+    const lastSlash = Math.max(
+      filePath.lastIndexOf('/'),
+      filePath.lastIndexOf('\\'),
+    );
     return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
   }
 }
