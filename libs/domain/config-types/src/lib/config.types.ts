@@ -42,7 +42,8 @@ export type ClientName =
   | 'copilot-cli'
   | 'jetbrains-copilot'
   | 'codex'
-  | 'gemini-cli';
+  | 'gemini-cli'
+  | 'opencode';
 
 /**
  * Detection environment types

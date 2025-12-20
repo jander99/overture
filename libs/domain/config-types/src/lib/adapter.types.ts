@@ -31,8 +31,9 @@ export interface ClientAdapter {
    * Root key for MCP servers in client config
    * - Most clients: "mcpServers"
    * - VS Code: "servers"
+   * - OpenCode: "mcp"
    */
-  readonly schemaRootKey: 'mcpServers' | 'servers';
+  readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';
 
   /**
    * Detect client config file path(s)

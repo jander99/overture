@@ -54,6 +54,7 @@ export {
 
 // Individual adapters (for specialized use cases)
 export { ClaudeCodeAdapter } from './lib/adapters/claude-code.adapter.js';
+export { OpenCodeAdapter } from './lib/adapters/opencode.adapter.js';
 // TODO: Export remaining adapters when implemented
 // export { ClaudeDesktopAdapter } from './lib/adapters/claude-desktop.adapter.js';
 // export { VSCodeAdapter } from './lib/adapters/vscode.adapter.js';

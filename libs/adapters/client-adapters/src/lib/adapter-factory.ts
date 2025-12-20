@@ -12,6 +12,7 @@ import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
 import { AdapterRegistry } from './adapter-registry.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.adapter.js';
+import { OpenCodeAdapter } from './adapters/opencode.adapter.js';
 import type { ClientAdapter } from './client-adapter.interface.js';
 import { McpError } from '@overture/errors';
 
@@ -47,7 +48,8 @@ export function createAdapterRegistry(
 
   // Register all client adapters with DI
   registry.register(new ClaudeCodeAdapter(filesystem, environment));
-  // TODO: Register remaining 8 adapters when implemented
+  registry.register(new OpenCodeAdapter(filesystem, environment));
+  // TODO: Register remaining 7 adapters when implemented
   // registry.register(new ClaudeDesktopAdapter(filesystem, environment));
   // registry.register(new VSCodeAdapter(filesystem, environment));
   // registry.register(new CursorAdapter(filesystem, environment));
@@ -85,6 +87,8 @@ export function createAdapter(
   switch (adapterName) {
     case 'claude-code':
       return new ClaudeCodeAdapter(filesystem, environment);
+    case 'opencode':
+      return new OpenCodeAdapter(filesystem, environment);
     // TODO: Add remaining adapters
     default:
       throw new McpError(`Unknown adapter: ${adapterName}`);

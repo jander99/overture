@@ -11,6 +11,7 @@ import {
   createAdapterRegistry,
   createAdapter,
   ClaudeCodeAdapter,
+  OpenCodeAdapter,
   AdapterRegistry,
   getAdapterForClient,
 } from '../index.js';
@@ -55,12 +56,13 @@ describe('@overture/client-adapters', () => {
   });
 
   describe('createAdapterRegistry', () => {
-    it('should create registry with ClaudeCodeAdapter registered', () => {
+    it('should create registry with ClaudeCodeAdapter and OpenCodeAdapter registered', () => {
       const registry = createAdapterRegistry(filesystem, environment);
 
       expect(registry).toBeInstanceOf(AdapterRegistry);
-      expect(registry.size).toBe(1); // Only ClaudeCodeAdapter for now
+      expect(registry.size).toBe(2); // ClaudeCodeAdapter and OpenCodeAdapter
       expect(registry.has('claude-code')).toBe(true);
+      expect(registry.has('opencode')).toBe(true);
     });
 
     it('should inject filesystem port into adapters', () => {

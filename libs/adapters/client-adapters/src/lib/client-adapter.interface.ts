@@ -61,8 +61,9 @@ export interface ClientAdapter {
    * Root key for MCP servers in client config
    * - Most clients: "mcpServers"
    * - VS Code: "servers"
+   * - OpenCode: "mcp"
    */
-  readonly schemaRootKey: 'mcpServers' | 'servers';
+  readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';
 
   /**
    * Detect client config file path(s)
@@ -232,7 +233,7 @@ export interface ClientAdapter {
  */
 export abstract class BaseClientAdapter implements ClientAdapter {
   abstract readonly name: ClientName;
-  abstract readonly schemaRootKey: 'mcpServers' | 'servers';
+  abstract readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';
 
   abstract detectConfigPath(platform: Platform, projectRoot?: string): ConfigPathResult;
   abstract readConfig(path: string): Promise<ClientMcpConfig>;
