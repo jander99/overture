@@ -62,7 +62,7 @@ export class DiscoveryService {
       deps.processPort,
       deps.environmentPort,
       deps.fileExists,
-      deps.readFile
+      deps.readFile,
     );
 
     this.wsl2Detector = new WSL2Detector(
@@ -72,7 +72,7 @@ export class DiscoveryService {
       deps.readFile,
       deps.readDir,
       deps.isDirectory,
-      deps.joinPath
+      deps.joinPath,
     );
   }
 
@@ -96,8 +96,7 @@ export class DiscoveryService {
   async discoverAll(adapters: ClientAdapter[]): Promise<DiscoveryReport> {
     const platform = this.deps.environmentPort.platform() as Platform;
     const wsl2Info = await this.detectEnvironment();
-    const isWSL2 =
-      wsl2Info.isWSL2 && (this.config.wsl2_auto_detect !== false);
+    const isWSL2 = wsl2Info.isWSL2 && this.config.wsl2_auto_detect !== false;
 
     const clients: ClientDiscoveryResult[] = [];
     let wsl2Detections = 0;
@@ -106,7 +105,7 @@ export class DiscoveryService {
       const result = await this.discoverClient(
         adapter,
         platform,
-        isWSL2 ? wsl2Info : undefined
+        isWSL2 ? wsl2Info : undefined,
       );
       clients.push(result);
 
@@ -138,13 +137,18 @@ export class DiscoveryService {
    * @param adapter - Client adapter to discover
    * @returns Discovery result for the client
    */
-  async discoverByAdapter(adapter: ClientAdapter): Promise<ClientDiscoveryResult> {
+  async discoverByAdapter(
+    adapter: ClientAdapter,
+  ): Promise<ClientDiscoveryResult> {
     const platform = this.deps.environmentPort.platform() as Platform;
     const wsl2Info = await this.detectEnvironment();
-    const isWSL2 =
-      wsl2Info.isWSL2 && (this.config.wsl2_auto_detect !== false);
+    const isWSL2 = wsl2Info.isWSL2 && this.config.wsl2_auto_detect !== false;
 
-    return this.discoverClient(adapter, platform, isWSL2 ? wsl2Info : undefined);
+    return this.discoverClient(
+      adapter,
+      platform,
+      isWSL2 ? wsl2Info : undefined,
+    );
   }
 
   /**
@@ -163,7 +167,7 @@ export class DiscoveryService {
   async discoverClient(
     adapter: ClientAdapter,
     platform: Platform,
-    wsl2Info?: WSL2EnvironmentInfo
+    wsl2Info?: WSL2EnvironmentInfo,
   ): Promise<ClientDiscoveryResult> {
     // Check if discovery is disabled for this client
     const clientOverride = this.config.clients?.[adapter.name];
@@ -184,7 +188,7 @@ export class DiscoveryService {
       const overrideResult = await this.detectFromOverride(
         adapter,
         clientOverride,
-        platform
+        platform,
       );
       if (overrideResult.detection.status === 'found') {
         return overrideResult;
@@ -195,7 +199,7 @@ export class DiscoveryService {
     // Standard native detection
     const nativeResult = await this.binaryDetector.detectClient(
       adapter,
-      platform
+      platform,
     );
 
     if (nativeResult.status === 'found') {
@@ -262,8 +266,12 @@ export class DiscoveryService {
    */
   private async detectFromOverride(
     adapter: ClientAdapter,
-    override: { binary_path?: string; config_path?: string; app_bundle_path?: string },
-    platform: Platform
+    override: {
+      binary_path?: string;
+      config_path?: string;
+      app_bundle_path?: string;
+    },
+    platform: Platform,
   ): Promise<ClientDiscoveryResult> {
     const binaryPath = override.binary_path
       ? this.deps.expandTilde(override.binary_path)
@@ -330,7 +338,7 @@ export class DiscoveryService {
    */
   private async detectViaWSL2(
     adapter: ClientAdapter,
-    wsl2Info: WSL2EnvironmentInfo
+    wsl2Info: WSL2EnvironmentInfo,
   ): Promise<ClientDiscoveryResult | null> {
     const windowsProfile = wsl2Info.windowsUserProfile;
     if (!windowsProfile) {
@@ -338,12 +346,13 @@ export class DiscoveryService {
     }
 
     // Check for WSL2 config override
-    const wsl2ConfigPath = this.config.wsl2?.windows_config_paths?.[adapter.name];
+    const wsl2ConfigPath =
+      this.config.wsl2?.windows_config_paths?.[adapter.name];
 
     // Get Windows installation paths to check
     const windowsPaths = this.wsl2Detector.getWindowsInstallPaths(
       adapter.name,
-      windowsProfile
+      windowsProfile,
     );
 
     // Add custom WSL2 binary paths from config
@@ -385,7 +394,10 @@ export class DiscoveryService {
     }
 
     // Check for app bundles (GUI apps)
-    const appBundlePaths = this.getWindowsAppBundlePaths(adapter.name, windowsProfile);
+    const appBundlePaths = this.getWindowsAppBundlePaths(
+      adapter.name,
+      windowsProfile,
+    );
     for (const appPath of appBundlePaths) {
       if (this.deps.fileExists(appPath)) {
         const configPath =
@@ -422,28 +434,13 @@ export class DiscoveryService {
    */
   private getWindowsAppBundlePaths(
     client: ClientName,
-    windowsProfile: string
+    windowsProfile: string,
   ): string[] {
     const paths: string[] = [];
 
     // GUI application paths
-    const guiAppPaths: Partial<Record<ClientName, string[]>> = {
-      'claude-desktop': [
-        `${windowsProfile}/AppData/Local/Programs/Claude/Claude.exe`,
-        '/mnt/c/Program Files/Claude/Claude.exe',
-      ],
-      vscode: [
-        `${windowsProfile}/AppData/Local/Programs/Microsoft VS Code/Code.exe`,
-        '/mnt/c/Program Files/Microsoft VS Code/Code.exe',
-      ],
-      cursor: [
-        `${windowsProfile}/AppData/Local/Programs/cursor/Cursor.exe`,
-        `${windowsProfile}/AppData/Local/cursor/Cursor.exe`,
-      ],
-      windsurf: [
-        `${windowsProfile}/AppData/Local/Programs/windsurf/Windsurf.exe`,
-      ],
-    };
+    // Note: All currently supported clients (claude-code, copilot-cli, opencode) are CLI-only
+    const guiAppPaths: Partial<Record<ClientName, string[]>> = {};
 
     if (guiAppPaths[client]) {
       paths.push(...guiAppPaths[client]!);
@@ -489,7 +486,7 @@ export class DiscoveryService {
  */
 export function createDiscoveryService(
   deps: DiscoveryServiceDeps,
-  config?: DiscoveryConfig
+  config?: DiscoveryConfig,
 ): DiscoveryService {
   return new DiscoveryService(deps, config);
 }
