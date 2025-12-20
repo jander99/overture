@@ -99,15 +99,27 @@ export function createMockAppDependencies(): AppDependencies {
 
     // Core services
     pathResolver: {
-      resolveUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
-      resolveProjectConfigPath: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
-      resolveProjectConfig: vi.fn().mockReturnValue('/home/user/project/.overture/config.yaml'),
-      getProjectOvertureDir: vi.fn().mockReturnValue('/home/user/project/.overture'),
+      resolveUserConfigPath: vi
+        .fn()
+        .mockReturnValue('/home/user/.config/overture.yml'),
+      resolveProjectConfigPath: vi
+        .fn()
+        .mockReturnValue('/home/user/project/.overture/config.yaml'),
+      resolveProjectConfig: vi
+        .fn()
+        .mockReturnValue('/home/user/project/.overture/config.yaml'),
+      getProjectOvertureDir: vi
+        .fn()
+        .mockReturnValue('/home/user/project/.overture'),
       resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-      resolveProjectMcpPath: vi.fn().mockReturnValue('/home/user/project/.mcp.json'),
+      resolveProjectMcpPath: vi
+        .fn()
+        .mockReturnValue('/home/user/project/.mcp.json'),
       getPlatform: vi.fn().mockReturnValue('linux' as const),
       findProjectRoot: vi.fn().mockReturnValue('/home/user/project'),
-      getUserConfigPath: vi.fn().mockReturnValue('/home/user/.config/overture.yml'),
+      getUserConfigPath: vi
+        .fn()
+        .mockReturnValue('/home/user/.config/overture.yml'),
       getUserConfigDir: vi.fn().mockReturnValue('/home/user/.config'),
     },
 
@@ -149,8 +161,12 @@ export function createMockAppDependencies(): AppDependencies {
         writeConfig: vi.fn().mockResolvedValue(undefined),
         validateTransport: vi.fn().mockReturnValue(true),
       }),
-      getAllNames: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
-      listAdapters: vi.fn().mockReturnValue(['claude-code', 'claude-desktop']),
+      getAllNames: vi
+        .fn()
+        .mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
+      listAdapters: vi
+        .fn()
+        .mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
       getInstalledAdapters: vi.fn().mockReturnValue([]),
     },
 
@@ -196,7 +212,8 @@ export function createMockAppDependencies(): AppDependencies {
     backupService: {
       backup: vi.fn().mockResolvedValue({
         success: true,
-        backupPath: '/home/user/.config/claude/backups/2024-01-01T00-00-00.json',
+        backupPath:
+          '/home/user/.config/claude/backups/2024-01-01T00-00-00.json',
         timestamp: '2024-01-01T00:00:00.000Z',
       }),
       listBackups: vi.fn().mockReturnValue([]),
@@ -240,7 +257,7 @@ export function createMockAppDependencies(): AppDependencies {
  * ```
  */
 export function createMockAppDependenciesWithOverrides(
-  overrides: Partial<AppDependencies>
+  overrides: Partial<AppDependencies>,
 ): AppDependencies {
   const defaults = createMockAppDependencies();
   return {

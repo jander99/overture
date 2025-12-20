@@ -26,7 +26,10 @@ import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
 
 import { filterMcpsForClient } from './exclusion-filter.js';
-import { getTransportWarnings, hasTransportIssues } from './transport-validator.js';
+import {
+  getTransportWarnings,
+  hasTransportIssues,
+} from './transport-validator.js';
 import { expandEnvVarsInClientConfig } from './client-env-service.js';
 import { generateDiff } from './config-diff.js';
 import { getUnmanagedMcps } from './mcp-detector.js';
@@ -153,7 +156,8 @@ export class SyncEngine {
 
     try {
       // Auto-detect project root if not provided
-      const detectedProjectRoot = options.projectRoot || this.deps.pathResolver.findProjectRoot();
+      const detectedProjectRoot =
+        options.projectRoot || this.deps.pathResolver.findProjectRoot();
 
       // Load configurations
       const userConfig = await this.deps.configLoader.loadUserConfig();
@@ -162,7 +166,10 @@ export class SyncEngine {
         : null;
 
       // Merge configs (project overrides user)
-      const overtureConfig = this.deps.configLoader.mergeConfigs(userConfig, projectConfig);
+      const overtureConfig = this.deps.configLoader.mergeConfigs(
+        userConfig,
+        projectConfig,
+      );
 
       // Pass detected project root to all sync operations
       const syncOptionsWithProject: SyncOptions = {
@@ -174,7 +181,11 @@ export class SyncEngine {
       let pluginSyncResult: PluginSyncResult | undefined;
       if (!options.skipPlugins) {
         try {
-          pluginSyncResult = await this.syncPlugins(userConfig, projectConfig, syncOptionsWithProject);
+          pluginSyncResult = await this.syncPlugins(
+            userConfig,
+            projectConfig,
+            syncOptionsWithProject,
+          );
         } catch (error) {
           // Log plugin sync errors but don't fail the entire sync
           const errorMsg = `Plugin sync failed: ${(error as Error).message}`;
@@ -186,13 +197,8 @@ export class SyncEngine {
       // Determine which clients to sync
       const targetClients = options.clients || [
         'claude-code',
-        'claude-desktop',
-        'opencode',
-        'vscode',
-        'cursor',
-        'windsurf',
         'copilot-cli',
-        'jetbrains-copilot',
+        'opencode',
       ];
 
       // Get client adapters
@@ -218,7 +224,11 @@ export class SyncEngine {
       // Sync to each client
       const results: ClientSyncResult[] = [];
       for (const client of clients) {
-        const result = await this.syncToClient(client, overtureConfig, syncOptionsWithProject);
+        const result = await this.syncToClient(
+          client,
+          overtureConfig,
+          syncOptionsWithProject,
+        );
         results.push(result);
 
         // Collect warnings and errors
@@ -238,8 +248,11 @@ export class SyncEngine {
         const pluginNames = Object.keys(configuredPlugins);
 
         // Calculate plugins to install
-        const installedPlugins = await this.deps.pluginDetector.detectInstalledPlugins();
-        const installedSet = new Set(installedPlugins.map((p) => `${p.name}@${p.marketplace}`));
+        const installedPlugins =
+          await this.deps.pluginDetector.detectInstalledPlugins();
+        const installedSet = new Set(
+          installedPlugins.map((p) => `${p.name}@${p.marketplace}`),
+        );
         const toInstall: Array<{ name: string; marketplace: string }> = [];
 
         for (const name of pluginNames) {
@@ -278,15 +291,20 @@ export class SyncEngine {
   /**
    * Sync to a single client (convenience method)
    */
-  async syncClient(client: ClientName, options: SyncOptions = {}): Promise<ClientSyncResult> {
+  async syncClient(
+    client: ClientName,
+    options: SyncOptions = {},
+  ): Promise<ClientSyncResult> {
     const result = await this.syncClients({ ...options, clients: [client] });
-    return result.results[0] || {
-      client,
-      success: false,
-      configPath: '',
-      warnings: result.warnings,
-      error: result.errors[0] || 'Unknown error',
-    };
+    return (
+      result.results[0] || {
+        client,
+        success: false,
+        configPath: '',
+        warnings: result.warnings,
+        error: result.errors[0] || 'Unknown error',
+      }
+    );
   }
 
   /**
@@ -295,7 +313,7 @@ export class SyncEngine {
   private async syncToClient(
     client: ClientAdapter,
     overtureConfig: OvertureConfig,
-    options: SyncOptions
+    options: SyncOptions,
   ): Promise<ClientSyncResult> {
     const platform = options.platform || this.deps.environment.platform();
     const warnings: string[] = [];
@@ -307,12 +325,15 @@ export class SyncEngine {
         options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
 
       if (!skipDetection) {
-        binaryDetection = await this.deps.binaryDetector.detectClient(client, platform);
+        binaryDetection = await this.deps.binaryDetector.detectClient(
+          client,
+          platform,
+        );
 
         // Add version info to warnings if detected
         if (binaryDetection.status === 'found' && binaryDetection.version) {
           warnings.push(
-            `${client.name} detected: ${binaryDetection.version}${binaryDetection.binaryPath ? ` at ${binaryDetection.binaryPath}` : ''}`
+            `${client.name} detected: ${binaryDetection.version}${binaryDetection.binaryPath ? ` at ${binaryDetection.binaryPath}` : ''}`,
           );
         }
 
@@ -336,7 +357,7 @@ export class SyncEngine {
         // If binary not found but skipUndetected is false, add warning but continue
         if (binaryDetection.status === 'not-found') {
           warnings.push(
-            `${client.name} binary/application not detected on system. Generating config anyway.`
+            `${client.name} binary/application not detected on system. Generating config anyway.`,
           );
         }
       } else {
@@ -359,7 +380,10 @@ export class SyncEngine {
       }
 
       // Detect config path
-      const configPathResult = client.detectConfigPath(platform, options.projectRoot);
+      const configPathResult = client.detectConfigPath(
+        platform,
+        options.projectRoot,
+      );
 
       if (!configPathResult) {
         return {
@@ -378,8 +402,8 @@ export class SyncEngine {
         typeof configPathResult === 'string'
           ? configPathResult
           : inProject && configPathResult.project
-          ? configPathResult.project
-          : configPathResult.user;
+            ? configPathResult.project
+            : configPathResult.user;
 
       if (!configPath) {
         return {
@@ -393,7 +417,10 @@ export class SyncEngine {
       }
 
       // Check for transport issues on ALL MCPs (before filtering)
-      const transportWarnings = getTransportWarnings(overtureConfig.mcp, client);
+      const transportWarnings = getTransportWarnings(
+        overtureConfig.mcp,
+        client,
+      );
       if (transportWarnings.length > 0) {
         warnings.push(...transportWarnings.map((w) => w.message));
 
@@ -410,7 +437,11 @@ export class SyncEngine {
       }
 
       // Filter MCPs for this client
-      const filteredMcps = filterMcpsForClient(overtureConfig.mcp, client, platform);
+      const filteredMcps = filterMcpsForClient(
+        overtureConfig.mcp,
+        client,
+        platform,
+      );
 
       // Read existing config (if exists)
       let oldConfig: ClientMcpConfig | null = null;
@@ -425,10 +456,17 @@ export class SyncEngine {
         ...overtureConfig,
         mcp: filteredMcps,
       };
-      let newConfig = client.convertFromOverture(filteredOvertureConfig, platform);
+      let newConfig = client.convertFromOverture(
+        filteredOvertureConfig,
+        platform,
+      );
 
       // Apply environment variable expansion if client needs it
-      newConfig = expandEnvVarsInClientConfig(newConfig, client, this.deps.environment.env);
+      newConfig = expandEnvVarsInClientConfig(
+        newConfig,
+        client,
+        this.deps.environment.env,
+      );
 
       // Preserve manually-added MCPs (not in Overture config)
       if (oldConfig) {
@@ -445,18 +483,25 @@ export class SyncEngine {
           // Warn user about preserved MCPs
           const unmanagedNames = Object.keys(unmanagedMcps);
           warnings.push(
-            `Preserving ${unmanagedNames.length} manually-added MCP${unmanagedNames.length === 1 ? '' : 's'}: ${unmanagedNames.join(', ')}`
+            `Preserving ${unmanagedNames.length} manually-added MCP${unmanagedNames.length === 1 ? '' : 's'}: ${unmanagedNames.join(', ')}`,
           );
-          warnings.push(`💡 Tip: Add these to .overture/config.yaml to manage with Overture`);
+          warnings.push(
+            `💡 Tip: Add these to .overture/config.yaml to manage with Overture`,
+          );
         }
       }
 
       // Generate diff
-      const diff = oldConfig ? generateDiff(oldConfig, newConfig, client.schemaRootKey) : null;
+      const diff = oldConfig
+        ? generateDiff(oldConfig, newConfig, client.schemaRootKey)
+        : null;
 
       // Dry run - write to dist/ directory for debugging
       if (options.dryRun) {
-        const dryRunPath = this.deps.pathResolver.getDryRunOutputPath(client.name, configPath);
+        const dryRunPath = this.deps.pathResolver.getDryRunOutputPath(
+          client.name,
+          configPath,
+        );
         await this.ensureDistDirectory();
         await client.writeConfig(dryRunPath, newConfig);
 
@@ -472,7 +517,7 @@ export class SyncEngine {
 
       // Backup existing config (if exists and file actually exists on disk)
       let backupPath: string | undefined;
-      if (oldConfig && await this.deps.filesystem.exists(configPath)) {
+      if (oldConfig && (await this.deps.filesystem.exists(configPath))) {
         try {
           backupPath = this.deps.backupService.backup(client.name, configPath);
         } catch (error) {
@@ -510,14 +555,19 @@ export class SyncEngine {
   private async syncPlugins(
     userConfig: OvertureConfig | null,
     projectConfig: OvertureConfig | null,
-    options: SyncOptions
+    options: SyncOptions,
   ): Promise<PluginSyncResult> {
     const dryRun = options.dryRun ?? false;
 
     // Warn if plugins found in project config
-    if (projectConfig?.plugins && Object.keys(projectConfig.plugins).length > 0) {
+    if (
+      projectConfig?.plugins &&
+      Object.keys(projectConfig.plugins).length > 0
+    ) {
       const pluginNames = Object.keys(projectConfig.plugins).join(', ');
-      this.deps.output.warn('⚠️  Warning: Plugin configuration found in project config');
+      this.deps.output.warn(
+        '⚠️  Warning: Plugin configuration found in project config',
+      );
       this.deps.output.warn(`    Plugins found: ${pluginNames}`);
       this.deps.output.warn('    Claude Code plugins are installed globally');
       this.deps.output.warn('    Move to ~/.config/overture.yml');
@@ -538,10 +588,13 @@ export class SyncEngine {
     }
 
     // Detect installed plugins
-    const installedPlugins = await this.deps.pluginDetector.detectInstalledPlugins();
+    const installedPlugins =
+      await this.deps.pluginDetector.detectInstalledPlugins();
 
     // Build set of installed plugin keys (name@marketplace)
-    const installedSet = new Set(installedPlugins.map((p) => `${p.name}@${p.marketplace}`));
+    const installedSet = new Set(
+      installedPlugins.map((p) => `${p.name}@${p.marketplace}`),
+    );
 
     // Calculate missing plugins
     const missingPlugins: Array<{ name: string; marketplace: string }> = [];
@@ -560,13 +613,15 @@ export class SyncEngine {
 
     // Show sync status
     if (dryRun) {
-      this.deps.output.info('\n🔍 DRY RUN: Syncing plugins from user config...');
+      this.deps.output.info(
+        '\n🔍 DRY RUN: Syncing plugins from user config...',
+      );
     } else {
       this.deps.output.info('\n🔍 Syncing plugins from user config...');
     }
 
     this.deps.output.info(
-      `📋 Found ${pluginNames.length} plugins in config, ${installedPlugins.length} already installed`
+      `📋 Found ${pluginNames.length} plugins in config, ${installedPlugins.length} already installed`,
     );
 
     // No missing plugins - skip
@@ -581,14 +636,20 @@ export class SyncEngine {
     }
 
     // Install missing plugins
-    this.deps.output.info(`\n Installing ${missingPlugins.length} missing plugins:`);
+    this.deps.output.info(
+      `\n Installing ${missingPlugins.length} missing plugins:`,
+    );
 
     const results: InstallationResult[] = [];
 
     for (const { name, marketplace } of missingPlugins) {
-      const result = await this.deps.pluginInstaller.installPlugin(name, marketplace, {
-        dryRun,
-      });
+      const result = await this.deps.pluginInstaller.installPlugin(
+        name,
+        marketplace,
+        {
+          dryRun,
+        },
+      );
       results.push(result);
     }
 
@@ -598,7 +659,7 @@ export class SyncEngine {
 
     // Show summary
     this.deps.output.info(
-      `\n📦 Plugin sync: ${installed} installed, ${skippedPlugins.length} skipped, ${failed} failed\n`
+      `\n📦 Plugin sync: ${installed} installed, ${skippedPlugins.length} skipped, ${failed} failed\n`,
     );
 
     // Show failures if any
@@ -627,7 +688,10 @@ export class SyncEngine {
    * Ensure dist/ directory exists for dry-run output
    */
   private async ensureDistDirectory(): Promise<void> {
-    const distPath = this.deps.pathResolver.getDryRunOutputPath('claude-code' as ClientName, '/temp/config.json');
+    const distPath = this.deps.pathResolver.getDryRunOutputPath(
+      'claude-code' as ClientName,
+      '/temp/config.json',
+    );
     const distDir = distPath.substring(0, distPath.lastIndexOf('/'));
 
     if (!(await this.deps.filesystem.exists(distDir))) {
