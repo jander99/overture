@@ -49,7 +49,9 @@ describe('doctor command', () => {
 
     it('should have a description', () => {
       const command = createDoctorCommand(deps);
-      expect(command.description()).toBe('Check system for installed clients and MCP servers');
+      expect(command.description()).toBe(
+        'Check system for installed clients and MCP servers',
+      );
     });
 
     it('should support --json option', () => {
@@ -89,7 +91,9 @@ describe('doctor command', () => {
       // Arrange
       const mockDiscoveryReport = createMockDiscoveryReport();
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
 
@@ -100,7 +104,6 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.discoveryService.discoverAll).toHaveBeenCalled();
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should display found clients with versions', async () => {
@@ -118,7 +121,9 @@ describe('doctor command', () => {
         ],
       });
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -130,18 +135,19 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('✓ claude-code (1.0.0)')
+        expect.stringContaining('✓ claude-code (1.0.0)'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should display not-found clients with recommendations', async () => {
       // Arrange
       const mockDiscoveryReport = createMockDiscoveryReport({
-        clients: [createNotFoundClient('vscode')],
+        clients: [createNotFoundClient('copilot-cli')],
       });
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
 
@@ -152,21 +158,22 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('✗ vscode - not installed')
+        expect.stringContaining('✗ copilot-cli - not installed'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('code.visualstudio.com')
+        expect.stringContaining('npm install -g @github/copilot'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should display skipped clients', async () => {
       // Arrange
       const mockDiscoveryReport = createMockDiscoveryReport({
-        clients: [createSkippedClient('cursor')],
+        clients: [createSkippedClient('opencode')],
       });
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
 
@@ -177,18 +184,22 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('○ cursor - skipped')
+        expect.stringContaining('○ opencode - skipped'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
   });
 
   describe('platform information', () => {
     it('should display WSL2 environment information when detected', async () => {
       // Arrange
-      const mockDiscoveryReport = createWSL2Report('Ubuntu-22.04', '/mnt/c/Users/TestUser');
+      const mockDiscoveryReport = createWSL2Report(
+        'Ubuntu-22.04',
+        '/mnt/c/Users/TestUser',
+      );
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
 
@@ -199,12 +210,11 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('WSL2')
+        expect.stringContaining('WSL2'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Ubuntu-22.04')
+        expect.stringContaining('Ubuntu-22.04'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should show WSL2 Windows client detections', async () => {
@@ -233,7 +243,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -245,9 +257,8 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('[WSL2: Windows]')
+        expect.stringContaining('[WSL2: Windows]'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
   });
 
@@ -272,8 +283,12 @@ describe('doctor command', () => {
         },
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
-      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockUserConfig);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
+        mockUserConfig,
+      );
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockResolvedValue(true);
 
@@ -285,9 +300,8 @@ describe('doctor command', () => {
       // Assert
       expect(deps.process.commandExists).toHaveBeenCalledWith('npx');
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('✓ filesystem - npx (found)')
+        expect.stringContaining('✓ filesystem - npx (found)'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should check MCP server command availability from project config', async () => {
@@ -310,10 +324,16 @@ describe('doctor command', () => {
         },
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
-      vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue('/test/project');
-      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(mockProjectConfig);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(
+        '/test/project',
+      );
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(
+        mockProjectConfig,
+      );
       vi.mocked(deps.process.commandExists).mockResolvedValue(false);
 
       const command = createDoctorCommand(deps);
@@ -324,9 +344,8 @@ describe('doctor command', () => {
       // Assert
       expect(deps.process.commandExists).toHaveBeenCalledWith('uvx');
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('⚠ python-repl - uvx (not found)')
+        expect.stringContaining('⚠ python-repl - uvx (not found)'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should display MCP installation recommendations for missing commands', async () => {
@@ -349,8 +368,12 @@ describe('doctor command', () => {
         },
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
-      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockUserConfig);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
+        mockUserConfig,
+      );
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockResolvedValue(false);
 
@@ -361,9 +384,8 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('https://docs.astral.sh/uv/')
+        expect.stringContaining('https://docs.astral.sh/uv/'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
   });
 
@@ -390,7 +412,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -402,17 +426,16 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"environment"')
+        expect.stringContaining('"environment"'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"clients"')
+        expect.stringContaining('"clients"'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"summary"')
+        expect.stringContaining('"summary"'),
       );
       // Should not call output methods in JSON mode
       expect(deps.output.info).not.toHaveBeenCalled();
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should include summary metrics in JSON output', async () => {
@@ -445,7 +468,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -457,12 +482,11 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"clientsDetected"')
+        expect.stringContaining('"clientsDetected"'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"clientsMissing"')
+        expect.stringContaining('"clientsMissing"'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
   });
 
@@ -492,7 +516,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -504,12 +530,11 @@ describe('doctor command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Windows path:')
+        expect.stringContaining('Windows path:'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('C:\\Program Files\\VSCode\\code.exe')
+        expect.stringContaining('C:\\Program Files\\VSCode\\code.exe'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should show client warnings in verbose mode', async () => {
@@ -525,7 +550,10 @@ describe('doctor command', () => {
             detection: {
               status: 'found' as const,
               binaryPath: '/usr/bin/claude',
-              warnings: ['Version could not be determined', 'Config file not found'],
+              warnings: [
+                'Version could not be determined',
+                'Config file not found',
+              ],
             },
             source: 'linux-native' as const,
             environment: 'linux' as const,
@@ -533,7 +561,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -545,12 +575,11 @@ describe('doctor command', () => {
 
       // Assert
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Version could not be determined')
+        expect.stringContaining('Version could not be determined'),
       );
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Config file not found')
+        expect.stringContaining('Config file not found'),
       );
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
 
     it('should not show warnings in non-verbose mode', async () => {
@@ -574,7 +603,9 @@ describe('doctor command', () => {
         ],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
@@ -586,7 +617,6 @@ describe('doctor command', () => {
 
       // Assert - warn should not be called for client warnings (only MCP warnings)
       expect(deps.output.warn).not.toHaveBeenCalled();
-      expect(deps.process.exit).toHaveBeenCalledWith(0);
     });
   });
 
@@ -594,16 +624,15 @@ describe('doctor command', () => {
     it('should handle discoveryService.discoverAll() errors', async () => {
       // Arrange
       vi.mocked(deps.discoveryService.discoverAll).mockRejectedValue(
-        new Error('Discovery failed')
+        new Error('Discovery failed'),
       );
 
       const command = createDoctorCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'doctor']);
-
-      // Assert
-      expect(deps.process.exit).toHaveBeenCalledWith(1);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'doctor'])).rejects.toThrow(
+        'Discovery failed',
+      );
     });
 
     it('should handle config loading errors', async () => {
@@ -616,19 +645,20 @@ describe('doctor command', () => {
         clients: [],
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
       vi.mocked(deps.configLoader.loadUserConfig).mockRejectedValue(
-        new Error('Config load failed')
+        new Error('Config load failed'),
       );
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
 
       const command = createDoctorCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'doctor']);
-
-      // Assert
-      expect(deps.process.exit).toHaveBeenCalledWith(1);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'doctor'])).rejects.toThrow(
+        'Config load failed',
+      );
     });
 
     it('should handle MCP command check errors', async () => {
@@ -651,20 +681,23 @@ describe('doctor command', () => {
         },
       };
 
-      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(mockDiscoveryReport);
-      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockUserConfig);
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(
+        mockUserConfig,
+      );
       vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
       vi.mocked(deps.process.commandExists).mockRejectedValue(
-        new Error('Command check failed')
+        new Error('Command check failed'),
       );
 
       const command = createDoctorCommand(deps);
 
-      // Act
-      await command.parseAsync(['node', 'doctor']);
-
-      // Assert
-      expect(deps.process.exit).toHaveBeenCalledWith(1);
+      // Act & Assert
+      await expect(command.parseAsync(['node', 'doctor'])).rejects.toThrow(
+        'Command check failed',
+      );
     });
   });
 
@@ -702,8 +735,9 @@ describe('doctor command', () => {
       const command = createDoctorCommand(deps);
 
       // Act - with invalid format option
-      await expect(command.parseAsync(['node', 'doctor', '--format', 'invalid']))
-        .rejects.toThrow();
+      await expect(
+        command.parseAsync(['node', 'doctor', '--format', 'invalid']),
+      ).rejects.toThrow();
     });
   });
 });
