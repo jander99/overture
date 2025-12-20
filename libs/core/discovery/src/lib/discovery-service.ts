@@ -469,6 +469,15 @@ export class DiscoveryService {
   getConfig(): DiscoveryConfig {
     return this.config;
   }
+
+  /**
+   * Get the binary detector instance
+   *
+   * @returns BinaryDetector instance used by this discovery service
+   */
+  getBinaryDetector(): BinaryDetector {
+    return this.binaryDetector;
+  }
 }
 
 /**

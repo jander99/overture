@@ -78,7 +78,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         };
 
         // Run sync via injected sync engine
-        const result = await syncEngine.sync(syncOptions);
+        const result = await syncEngine.syncClients(syncOptions);
 
         // ==================== Phase 1: Detection Summary ====================
         output.section('🔍 Detecting clients...');

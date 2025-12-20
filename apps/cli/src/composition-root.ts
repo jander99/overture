@@ -122,11 +122,59 @@ export function createAppDependencies(): AppDependencies {
   );
 
   // Create sync services
-  const backupService = new BackupService(filesystem, output);
+  const backupService = new BackupService({
+    filesystem,
+    output,
+    getBackupDir: () => pathResolver.getBackupDir(),
+  });
   const restoreService = new RestoreService(filesystem, output);
   const auditService = new AuditService(filesystem, output);
 
   // Create sync engine with all dependencies
+  // Note: SyncEngine needs synchronous findProjectRoot(), but PathResolver's is async
+  // Create an adapter that provides both methods synchronously
+  const pathResolverAdapter = {
+    findProjectRoot: (): string | null => {
+      // Synchronous version of findProjectRoot
+      let currentDir = environment.env.PWD || '/';
+      const root = '/';
+
+      while (currentDir !== root) {
+        const configPath = path.join(currentDir, '.overture', 'config.yaml');
+
+        // Check if .overture/config.yaml exists at this level (sync check)
+        try {
+          fs.accessSync(configPath);
+          return currentDir;
+        } catch {
+          // Not found, continue
+        }
+
+        // Move up one directory
+        const parentDir = path.dirname(currentDir);
+
+        // Prevent infinite loop if dirname returns same path
+        if (parentDir === currentDir) {
+          break;
+        }
+
+        currentDir = parentDir;
+      }
+
+      // Check root directory as last resort
+      const rootConfigPath = path.join(root, '.overture', 'config.yaml');
+      try {
+        fs.accessSync(rootConfigPath);
+        return root;
+      } catch {
+        return null;
+      }
+    },
+    getDryRunOutputPath: (clientName: string, originalPath: string): string => {
+      return pathResolver.getDryRunOutputPath(clientName as any, originalPath);
+    },
+  };
+
   const syncEngine = createSyncEngine({
     filesystem,
     process,
@@ -135,9 +183,10 @@ export function createAppDependencies(): AppDependencies {
     configLoader,
     adapterRegistry,
     pluginInstaller,
-    discoveryService,
+    pluginDetector,
+    binaryDetector: discoveryService.getBinaryDetector(),
     backupService,
-    auditService,
+    pathResolver: pathResolverAdapter,
   });
 
   return {

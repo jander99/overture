@@ -433,9 +433,9 @@ export class SyncEngine {
         };
       }
 
-      // Backup existing config (if exists)
+      // Backup existing config (if exists and file actually exists on disk)
       let backupPath: string | undefined;
-      if (oldConfig) {
+      if (oldConfig && await this.deps.filesystem.exists(configPath)) {
         try {
           backupPath = this.deps.backupService.backup(client.name, configPath);
         } catch (error) {

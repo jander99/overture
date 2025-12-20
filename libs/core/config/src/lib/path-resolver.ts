@@ -526,6 +526,34 @@ export class PathResolver {
   }
 
   /**
+   * Get dry-run output path for a client config
+   *
+   * Returns a path in the dist/ directory for dry-run mode output.
+   * This allows users to preview changes without modifying actual config files.
+   *
+   * @param clientName - Name of the client
+   * @param originalPath - Original config path
+   * @returns Path in dist/ directory for dry-run output
+   *
+   * @example
+   * ```typescript
+   * const dryRunPath = resolver.getDryRunOutputPath(
+   *   'claude-code',
+   *   '/home/user/.config/claude/mcp.json'
+   * );
+   * // Returns: 'dist/dry-run/claude-code-mcp.json'
+   * ```
+   */
+  getDryRunOutputPath(clientName: ClientName, originalPath: string): string {
+    // Extract filename from original path
+    const parts = originalPath.split('/');
+    const filename = parts[parts.length - 1] || 'config.json';
+
+    // Create dry-run path in dist/ directory
+    return this.joinPaths('dist', 'dry-run', `${clientName}-${filename}`);
+  }
+
+  /**
    * Get client config path by client name
    *
    * Unified function to get config path for any supported client.
