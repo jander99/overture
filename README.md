@@ -216,6 +216,8 @@ Want to try the latest features or contribute to Overture? Build from source:
 
 ### Installation Steps
 
+**Quick Install (recommended):**
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/yourusername/overture.git
@@ -224,26 +226,49 @@ cd overture
 # 2. Install dependencies
 npm install
 
-# 3. Build all packages
+# 3. Run the install script (builds + links globally)
+./scripts/install-dev.sh
+```
+
+**Manual Install:**
+
+```bash
+# 1. Clone and install dependencies (same as above)
+git clone https://github.com/yourusername/overture.git
+cd overture
+npm install
+
+# 2. Build all packages
 npx nx build @overture/cli
 
-# 4. Install the CLI globally for testing (makes 'overture' command available)
+# 3. Install the CLI globally for testing
 # IMPORTANT: Must be run from apps/cli directory, not workspace root
 cd apps/cli
 npm link
 cd ../..
 
-# 5. Verify installation - test it like a user would
+# 4. Verify installation
 overture --version
 overture doctor
 
-# 6. Run tests to verify everything works
+# 5. Run tests to verify everything works
 npx nx test @overture/cli
 ```
 
 ### Development Workflow
 
-**After making code changes:**
+**Quick Rebuild (recommended):**
+
+```bash
+# After making code changes, rebuild and relink
+./scripts/install-dev.sh
+
+# Test immediately
+overture doctor
+overture sync --dry-run
+```
+
+**Manual Rebuild:**
 
 ```bash
 # Rebuild the CLI (npm link will automatically use the updated code)
@@ -280,6 +305,14 @@ npx nx lint @overture/cli
 - No need to re-run `npm link` after each build
 
 ### Uninstalling
+
+**Quick Uninstall (recommended):**
+
+```bash
+./scripts/uninstall-dev.sh
+```
+
+**Manual Uninstall:**
 
 ```bash
 # When done developing, unlink the local version
