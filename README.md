@@ -18,7 +18,7 @@ Developers using AI-assisted tools face **configuration chaos**:
 
 - **Claude Code** (user) → `~/.claude.json`
 - **Claude Code** (project) → `./.mcp.json`
-- **GitHub Copilot CLI** (user) → `~/.copilot/mcp-config.json`
+- **GitHub Copilot CLI** (user) → `~/.config/github-copilot/mcp.json`
 - **GitHub Copilot CLI** (project) → `./.github/mcp.json`
 - **OpenCode** → `~/.config/opencode/opencode.json` and `./opencode.json`
 
@@ -741,7 +741,7 @@ This comparison focuses on the 3 CLI clients supported by Overture as of v0.3.0 
 | Free Tier                 | ❌ Subscription         | ❌ Subscription                      | ✅ Full                            |
 | IDE Integration           | ✅ VS Code, JetBrains   | ✅ VS Code, JetBrains                | ✅ VS Code, Desktop                |
 | **MCP Configuration**     |
-| User Config Path          | `~/.claude.json`        | `~/.copilot/mcp-config.json`         | `~/.config/opencode/opencode.json` |
+| User Config Path          | `~/.claude.json`        | `~/.config/github-copilot/mcp.json`  | `~/.config/opencode/opencode.json` |
 | Project Config Path       | `./.mcp.json`           | `./.github/mcp.json`                 | `./opencode.json`                  |
 | Schema Root Key           | `mcpServers`            | `mcpServers`                         | `mcp`                              |
 | Env Var Support           | ✅ Native `${VAR}`      | ✅ Native `${VAR}`                   | ✅ `{env:VAR}` syntax              |

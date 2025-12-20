@@ -104,7 +104,7 @@ This shows:
   Config: ~/.claude.json (valid)
 
 ✓ copilot-cli (v1.2.0) - /usr/local/bin/copilot
-  Config: ~/.copilot/mcp-config.json (valid)
+  Config: ~/.config/github-copilot/mcp.json (valid)
   Note: GitHub MCP excluded (bundled by default)
 
 ✓ opencode (v0.3.0) - /usr/local/bin/opencode
@@ -452,9 +452,9 @@ Client sync results:
 
   ✓ copilot-cli:
       Detected (v1.2.0): /usr/local/bin/copilot
-      Config: ~/.copilot/mcp-config.json (valid)
+      Config: ~/.config/github-copilot/mcp.json (valid)
       Note: Excluded 'github' MCP (bundled by Copilot CLI)
-      Backup: ~/.config/overture/backups/copilot-cli/mcp-config.json.20250120-143022
+      Backup: ~/.config/overture/backups/copilot-cli/mcp.json.20250120-143022
 
   ✓ opencode:
       Detected (v0.3.0): /usr/local/bin/opencode

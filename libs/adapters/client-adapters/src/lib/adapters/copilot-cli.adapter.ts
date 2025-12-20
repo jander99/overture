@@ -141,10 +141,10 @@ export class CopilotCliAdapter extends BaseClientAdapter {
       case 'darwin':
       case 'linux': {
         const configBase = env.XDG_CONFIG_HOME || `${homeDir}/.config`;
-        return `${configBase}/.copilot/mcp-config.json`;
+        return `${configBase}/github-copilot/mcp.json`;
       }
       case 'win32': {
-        return `${homeDir}\\.copilot\\mcp-config.json`;
+        return `${homeDir}\\.config\\github-copilot\\mcp.json`;
       }
       default:
         throw new McpError(`Unsupported platform: ${platform}`, this.name);

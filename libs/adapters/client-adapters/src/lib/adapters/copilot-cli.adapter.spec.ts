@@ -60,13 +60,13 @@ describe('CopilotCliAdapter', () => {
   describe('detectConfigPath', () => {
     it('should detect Linux user path', () => {
       const result = adapter.detectConfigPath('linux');
-      expect(result.user).toBe('/home/user/.config/.copilot/mcp-config.json');
+      expect(result.user).toBe('/home/user/.config/github-copilot/mcp.json');
       expect(result.project).toBe('/home/user/project/.github/mcp.json');
     });
 
     it('should detect macOS user path', () => {
       const result = adapter.detectConfigPath('darwin');
-      expect(result.user).toBe('/home/user/.config/.copilot/mcp-config.json');
+      expect(result.user).toBe('/home/user/.config/github-copilot/mcp.json');
       expect(result.project).toBe('/home/user/project/.github/mcp.json');
     });
 
@@ -74,14 +74,16 @@ describe('CopilotCliAdapter', () => {
       environment.env.HOME = undefined;
       environment.env.USERPROFILE = 'C:\\Users\\user';
       const result = adapter.detectConfigPath('win32');
-      expect(result.user).toBe('C:\\Users\\user\\.copilot\\mcp-config.json');
+      expect(result.user).toBe(
+        'C:\\Users\\user\\.config\\github-copilot\\mcp.json',
+      );
       expect(result.project).toBe('/home/user/project/.github/mcp.json');
     });
 
     it('should use XDG_CONFIG_HOME when set', () => {
       environment.env.XDG_CONFIG_HOME = '/custom/config';
       const result = adapter.detectConfigPath('linux');
-      expect(result.user).toBe('/custom/config/.copilot/mcp-config.json');
+      expect(result.user).toBe('/custom/config/github-copilot/mcp.json');
     });
 
     it('should use custom project root', () => {

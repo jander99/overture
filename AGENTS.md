@@ -233,7 +233,7 @@ mcp:
 **`.mcp.json`** - Claude Code project MCP configuration
 **`~/.claude.json`** - Claude Code user MCP configuration
 **`.github/mcp.json`** - GitHub Copilot CLI project MCP configuration
-**`~/.copilot/mcp-config.json`** - Copilot CLI user MCP configuration
+**`~/.config/github-copilot/mcp.json`** - Copilot CLI user MCP configuration
 **`opencode.json`** - OpenCode project MCP configuration
 **`~/.config/opencode/opencode.json`** - OpenCode user MCP configuration
 **`CLAUDE.md`** - Project guidance with plugin→MCP mappings
