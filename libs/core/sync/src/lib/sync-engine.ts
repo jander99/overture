@@ -51,6 +51,8 @@ export interface SyncOptions {
   skipPlugins?: boolean;
   /** Skip clients that are not detected on system (default: true) */
   skipUndetected?: boolean;
+  /** Show detailed output including diffs, plugin plans, and all warnings */
+  detail?: boolean;
 }
 
 /**
@@ -75,6 +77,11 @@ export interface SyncResult {
   results: ClientSyncResult[];
   warnings: string[];
   errors: string[];
+  pluginSyncDetails?: {
+    configured: number;
+    installed: number;
+    toInstall: Array<{ name: string; marketplace: string }>;
+  };
 }
 
 /**
@@ -164,9 +171,10 @@ export class SyncEngine {
       };
 
       // 1. Sync plugins first (before MCP sync)
+      let pluginSyncResult: PluginSyncResult | undefined;
       if (!options.skipPlugins) {
         try {
-          await this.syncPlugins(userConfig, projectConfig, syncOptionsWithProject);
+          pluginSyncResult = await this.syncPlugins(userConfig, projectConfig, syncOptionsWithProject);
         } catch (error) {
           // Log plugin sync errors but don't fail the entire sync
           const errorMsg = `Plugin sync failed: ${(error as Error).message}`;
@@ -222,11 +230,39 @@ export class SyncEngine {
 
       const success = results.every((r) => r.success);
 
+      // Build plugin sync details for detail mode
+      let pluginSyncDetails: SyncResult['pluginSyncDetails'];
+      if (options.detail && pluginSyncResult) {
+        // Get plugins from user config to calculate "to install"
+        const configuredPlugins = userConfig?.plugins || {};
+        const pluginNames = Object.keys(configuredPlugins);
+
+        // Calculate plugins to install
+        const installedPlugins = await this.deps.pluginDetector.detectInstalledPlugins();
+        const installedSet = new Set(installedPlugins.map((p) => `${p.name}@${p.marketplace}`));
+        const toInstall: Array<{ name: string; marketplace: string }> = [];
+
+        for (const name of pluginNames) {
+          const config = configuredPlugins[name];
+          const key = `${name}@${config.marketplace}`;
+          if (!installedSet.has(key)) {
+            toInstall.push({ name, marketplace: config.marketplace });
+          }
+        }
+
+        pluginSyncDetails = {
+          configured: pluginNames.length,
+          installed: pluginSyncResult.skipped,
+          toInstall,
+        };
+      }
+
       return {
         success,
         results,
         warnings,
         errors,
+        pluginSyncDetails,
       };
     } catch (error) {
       errors.push((error as Error).message);

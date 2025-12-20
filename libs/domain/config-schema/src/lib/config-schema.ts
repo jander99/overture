@@ -31,20 +31,19 @@ export const ScopeSchema = z.enum(['global', 'project']);
  */
 export const ClientNameSchema = z.enum([
   'claude-code',
-  'claude-desktop',
-  'vscode',
-  'cursor',
-  'windsurf',
   'copilot-cli',
-  'jetbrains-copilot',
-  'codex',
-  'gemini-cli',
+  'opencode',
 ]);
 
 /**
  * Detection environment schema (Platform + WSL2)
  */
-export const DetectionEnvironmentSchema = z.enum(['darwin', 'linux', 'win32', 'wsl2']);
+export const DetectionEnvironmentSchema = z.enum([
+  'darwin',
+  'linux',
+  'win32',
+  'wsl2',
+]);
 
 /**
  * Merge strategy schema
@@ -57,7 +56,10 @@ export const MergeStrategySchema = z.enum(['append', 'replace']);
  */
 const EnvVarPatternSchema = z
   .string()
-  .regex(/^[^$]*(\$\{[A-Z_][A-Z0-9_]*(:-.+)?\}[^$]*)*$/, 'Invalid environment variable syntax');
+  .regex(
+    /^[^$]*(\$\{[A-Z_][A-Z0-9_]*(:-.+)?\}[^$]*)*$/,
+    'Invalid environment variable syntax',
+  );
 
 /**
  * MCP Server Override Schema
@@ -78,148 +80,172 @@ const McpServerOverrideSchema = z.object({
  *
  * Validates MCP server definitions with required transport field.
  */
-export const McpServerConfigSchema = z.object({
-  command: z.string().min(1, 'Command is required'),
-  args: z.array(z.string()).default([]),
-  env: z.record(z.string(), EnvVarPatternSchema).default({}),
-  transport: TransportTypeSchema, // REQUIRED in v2.0
-  version: z.string().optional(), // Optional, defaults to "latest"
-  enabled: z.boolean().optional(), // Allow disabling MCPs
-  description: z.string().optional(), // Human-readable description
-  clients: z
-    .object({
-      exclude: z.array(ClientNameSchema).optional(),
-      include: z.array(ClientNameSchema).optional(),
-      overrides: z.record(z.string(), McpServerOverrideSchema).optional(),
-    })
-    .strict()
-    .optional()
-    .refine(
-      (data) => {
-        // Ensure exclude and include are mutually exclusive
-        if (data && data.exclude && data.include) {
-          return false;
-        }
-        return true;
-      },
-      {
-        message: 'Cannot specify both "exclude" and "include" - use one or the other',
-      }
-    ),
-  platforms: z
-    .object({
-      exclude: z.array(PlatformSchema).optional(),
-      commandOverrides: z.record(z.string(), z.string()).optional(),
-      argsOverrides: z.record(z.string(), z.array(z.string())).optional(),
-    })
-    .strict()
-    .optional(),
-  metadata: z
-    .object({
-      description: z.string().optional(),
-      homepage: z.string().url().optional(),
-      tags: z.array(z.string()).optional(),
-    })
-    .strict()
-    .optional(),
-}).strict(); // Reject unknown fields like 'scope'
+export const McpServerConfigSchema = z
+  .object({
+    command: z.string().min(1, 'Command is required'),
+    args: z.array(z.string()).default([]),
+    env: z.record(z.string(), EnvVarPatternSchema).default({}),
+    transport: TransportTypeSchema, // REQUIRED in v2.0
+    version: z.string().optional(), // Optional, defaults to "latest"
+    enabled: z.boolean().optional(), // Allow disabling MCPs
+    description: z.string().optional(), // Human-readable description
+    clients: z
+      .object({
+        exclude: z.array(ClientNameSchema).optional(),
+        include: z.array(ClientNameSchema).optional(),
+        overrides: z.record(z.string(), McpServerOverrideSchema).optional(),
+      })
+      .strict()
+      .optional()
+      .refine(
+        (data) => {
+          // Ensure exclude and include are mutually exclusive
+          if (data && data.exclude && data.include) {
+            return false;
+          }
+          return true;
+        },
+        {
+          message:
+            'Cannot specify both "exclude" and "include" - use one or the other',
+        },
+      ),
+    platforms: z
+      .object({
+        exclude: z.array(PlatformSchema).optional(),
+        commandOverrides: z.record(z.string(), z.string()).optional(),
+        argsOverrides: z.record(z.string(), z.array(z.string())).optional(),
+      })
+      .strict()
+      .optional(),
+    metadata: z
+      .object({
+        description: z.string().optional(),
+        homepage: z.string().url().optional(),
+        tags: z.array(z.string()).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict(); // Reject unknown fields like 'scope'
 
 /**
  * Client Configuration Schema
  */
-export const ClientConfigSchema = z.object({
-  enabled: z.boolean().default(true),
-  configPath: z.union([z.string(), z.record(PlatformSchema, z.string())]).optional(),
-  maxServers: z.number().int().positive().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-}).strict();
+export const ClientConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    configPath: z
+      .union([z.string(), z.record(PlatformSchema, z.string())])
+      .optional(),
+    maxServers: z.number().int().positive().optional(),
+    settings: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
 /**
  * Sync Options Schema
  */
-export const SyncOptionsSchema = z.object({
-  backup: z.boolean().default(true),
-  backupDir: z.string().default('~/.config/overture/backups'),
-  backupRetention: z.number().int().positive().default(10),
-  mergeStrategy: MergeStrategySchema.default('append'),
-  autoDetectClients: z.boolean().default(true),
-  enabledClients: z.array(ClientNameSchema).optional(),
-  skipBinaryDetection: z.boolean().default(false),
-}).strict();
+export const SyncOptionsSchema = z
+  .object({
+    backup: z.boolean().default(true),
+    backupDir: z.string().default('~/.config/overture/backups'),
+    backupRetention: z.number().int().positive().default(10),
+    mergeStrategy: MergeStrategySchema.default('append'),
+    autoDetectClients: z.boolean().default(true),
+    enabledClients: z.array(ClientNameSchema).optional(),
+    skipBinaryDetection: z.boolean().default(false),
+    detail: z.boolean().default(false),
+  })
+  .strict();
 
 /**
  * Project Configuration Schema
  *
  * Metadata about the project using Overture.
  */
-export const ProjectConfigSchema = z.object({
-  name: z.string().min(1, 'Project name is required'),
-  type: z.string().optional(),
-  description: z.string().optional(),
-}).strict();
+export const ProjectConfigSchema = z
+  .object({
+    name: z.string().min(1, 'Project name is required'),
+    type: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .strict();
 
 /**
  * Plugin Configuration Schema
  *
  * Configuration for Claude Code plugins.
  */
-export const PluginConfigSchema = z.object({
-  marketplace: z.string().min(1, 'Marketplace name is required'),
-  enabled: z.boolean().default(true),
-  mcps: z.array(z.string()).default([]),
-}).strict();
+export const PluginConfigSchema = z
+  .object({
+    marketplace: z.string().min(1, 'Marketplace name is required'),
+    enabled: z.boolean().default(true),
+    mcps: z.array(z.string()).default([]),
+  })
+  .strict();
 
 /**
  * Client Discovery Override Schema
  *
  * Per-client override configuration for discovery.
  */
-export const ClientDiscoveryOverrideSchema = z.object({
-  binary_path: z.string().optional(),
-  config_path: z.string().optional(),
-  app_bundle_path: z.string().optional(),
-  enabled: z.boolean().optional(),
-}).strict();
+export const ClientDiscoveryOverrideSchema = z
+  .object({
+    binary_path: z.string().optional(),
+    config_path: z.string().optional(),
+    app_bundle_path: z.string().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .strict();
 
 /**
  * WSL2 Configuration Schema
  *
  * Configuration for WSL2 environment detection.
  */
-export const WSL2ConfigSchema = z.object({
-  windows_user_profile: z.string().optional(),
-  windows_binary_paths: z.array(z.string()).optional(),
-  windows_config_paths: z.record(ClientNameSchema, z.string()).optional(),
-}).strict();
+export const WSL2ConfigSchema = z
+  .object({
+    windows_user_profile: z.string().optional(),
+    windows_binary_paths: z.array(z.string()).optional(),
+    windows_config_paths: z.record(ClientNameSchema, z.string()).optional(),
+  })
+  .strict();
 
 /**
  * Discovery Configuration Schema
  *
  * Settings for CLI/tool discovery and detection.
  */
-export const DiscoveryConfigSchema = z.object({
-  enabled: z.boolean().default(true),
-  timeout: z.number().int().positive().default(5000),
-  wsl2_auto_detect: z.boolean().default(true),
-  environment: DetectionEnvironmentSchema.optional(),
-  clients: z.record(ClientNameSchema, ClientDiscoveryOverrideSchema).optional(),
-  wsl2: WSL2ConfigSchema.optional(),
-}).strict();
+export const DiscoveryConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    timeout: z.number().int().positive().default(5000),
+    wsl2_auto_detect: z.boolean().default(true),
+    environment: DetectionEnvironmentSchema.optional(),
+    clients: z
+      .record(ClientNameSchema, ClientDiscoveryOverrideSchema)
+      .optional(),
+    wsl2: WSL2ConfigSchema.optional(),
+  })
+  .strict();
 
 /**
  * Main Overture v2.0 Configuration Schema
  *
  * Validates the complete user or project configuration file.
  */
-export const OvertureConfigSchema = z.object({
-  version: z.string().regex(/^\d+\.\d+$/, 'Version must be in format "X.Y"'),
-  project: ProjectConfigSchema.optional(),
-  plugins: z.record(z.string(), PluginConfigSchema).optional(),
-  clients: z.record(z.string(), ClientConfigSchema).optional(),
-  mcp: z.record(z.string(), McpServerConfigSchema),
-  sync: SyncOptionsSchema.optional(),
-  discovery: DiscoveryConfigSchema.optional(),
-}).strict(); // Reject unknown fields at top level
+export const OvertureConfigSchema = z
+  .object({
+    version: z.string().regex(/^\d+\.\d+$/, 'Version must be in format "X.Y"'),
+    project: ProjectConfigSchema.optional(),
+    plugins: z.record(z.string(), PluginConfigSchema).optional(),
+    clients: z.record(z.string(), ClientConfigSchema).optional(),
+    mcp: z.record(z.string(), McpServerConfigSchema),
+    sync: SyncOptionsSchema.optional(),
+    discovery: DiscoveryConfigSchema.optional(),
+  })
+  .strict(); // Reject unknown fields at top level
 
 /**
  * Client MCP Server Definition Schema
@@ -237,9 +263,12 @@ export const ClientMcpServerDefSchema = z.object({
 /**
  * Client MCP Configuration Schema (Generated)
  *
- * Schema for client-specific config files (e.g., .mcp.json, claude_desktop_config.json).
+ * Schema for client-specific config files (e.g., .mcp.json, opencode.json, mcp-config.json).
  */
-export const ClientMcpConfigSchema = z.record(z.string(), z.record(z.string(), ClientMcpServerDefSchema));
+export const ClientMcpConfigSchema = z.record(
+  z.string(),
+  z.record(z.string(), ClientMcpServerDefSchema),
+);
 
 /**
  * Sync Result Schemas
@@ -342,6 +371,8 @@ export type ValidationWarning = z.infer<typeof ValidationWarningSchema>;
 export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 export type ProcessLock = z.infer<typeof ProcessLockSchema>;
 export type DetectionEnvironment = z.infer<typeof DetectionEnvironmentSchema>;
-export type ClientDiscoveryOverride = z.infer<typeof ClientDiscoveryOverrideSchema>;
+export type ClientDiscoveryOverride = z.infer<
+  typeof ClientDiscoveryOverrideSchema
+>;
 export type WSL2Config = z.infer<typeof WSL2ConfigSchema>;
 export type DiscoveryConfig = z.infer<typeof DiscoveryConfigSchema>;

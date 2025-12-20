@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import type { AppDependencies } from '../../composition-root';
 import type { ClientName } from '@overture/config-types';
+import { formatDiff } from '@overture/sync-core';
 
 /**
  * Determines if a warning is critical and should be displayed.
@@ -46,7 +47,7 @@ function isCriticalWarning(warning: string): boolean {
  * @returns Configured Commander Command instance
  */
 export function createSyncCommand(deps: AppDependencies): Command {
-  const { syncEngine, output } = deps;
+  const { syncEngine, output, configLoader, pathResolver } = deps;
   const command = new Command('sync');
 
   command
@@ -56,8 +57,21 @@ export function createSyncCommand(deps: AppDependencies): Command {
     .option('--force', 'Force sync even if validation warnings exist')
     .option('--skip-plugins', 'Skip plugin installation, only sync MCPs')
     .option('--no-skip-undetected', 'Generate configs even for clients not detected on system')
+    .option('--detail', 'Show detailed output including diffs, plugin plans, and all warnings')
     .action(async (options) => {
       try {
+        // Load config to determine detail mode default
+        let detailMode = options.detail || false;
+        try {
+          const projectRoot = pathResolver.findProjectRoot();
+          const userConfig = await configLoader.loadUserConfig();
+          const projectConfig = projectRoot ? await configLoader.loadProjectConfig(projectRoot) : null;
+          const overtureConfig = configLoader.mergeConfigs(userConfig, projectConfig);
+          detailMode = options.detail ?? overtureConfig.sync?.detail ?? false;
+        } catch {
+          // Config load failed, use CLI flag or false
+        }
+
         // Show dry-run indicator
         if (options.dryRun) {
           output.info('Running in dry-run mode - no changes will be made');
@@ -75,6 +89,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           skipPlugins: options.skipPlugins || false,
           skipUndetected: options.skipUndetected !== false, // Default to true (becomes false only when --no-skip-undetected is used)
           clients: options.client ? [options.client as ClientName] : undefined,
+          detail: detailMode,
         };
 
         // Run sync via injected sync engine
@@ -114,6 +129,25 @@ export function createSyncCommand(deps: AppDependencies): Command {
           output.skip(`${clientResult.client} - not detected, skipped`);
         }
 
+        // ==================== Phase 1.5: Plugin Sync Plan (detail mode) ====================
+        if (detailMode && result.pluginSyncDetails) {
+          const details = result.pluginSyncDetails;
+          output.section('📦 Plugin Sync Plan:');
+          output.nl();
+          output.info(`  Configured: ${details.configured} plugins`);
+          output.info(`  Already installed: ${details.installed}`);
+
+          if (details.toInstall.length > 0) {
+            output.info(`  To install: ${details.toInstall.length}`);
+            for (const plugin of details.toInstall) {
+              output.info(`    - ${plugin.name}@${plugin.marketplace}`);
+            }
+          } else {
+            output.success(`  ✅ All plugins already installed`);
+          }
+          output.nl();
+        }
+
         // ==================== Phase 2: Sync Summary ====================
         const syncedClients = [...detectedClients, ...undetectedButSyncedClients];
         if (syncedClients.length > 0) {
@@ -123,17 +157,26 @@ export function createSyncCommand(deps: AppDependencies): Command {
           for (const clientResult of syncedClients) {
             if (clientResult.success) {
               output.success(`${clientResult.client} - synchronized`);
+
+              // Show diff in detail mode
+              if (detailMode && clientResult.diff && clientResult.diff.hasChanges) {
+                output.nl();
+                const diffOutput = formatDiff(clientResult.diff, clientResult.client);
+                console.log(diffOutput);  // Use console.log to preserve formatting
+                output.nl();
+              }
             } else {
               output.error(`${clientResult.client} - sync failed`);
             }
           }
         }
 
-        // ==================== Phase 3: Critical Warnings Only ====================
+        // ==================== Phase 3: Warnings ====================
         const criticalWarnings: Array<{ client: string; warning: string }> = [];
+        const informationalWarnings: Array<{ client: string; warning: string }> = [];
         const tips: Set<string> = new Set();
 
-        // Collect critical warnings from client results (not global to avoid duplication)
+        // Collect warnings from client results
         for (const clientResult of result.results) {
           for (const warning of clientResult.warnings) {
             // Extract tips separately
@@ -142,26 +185,48 @@ export function createSyncCommand(deps: AppDependencies): Command {
               continue;
             }
 
-            if (isCriticalWarning(warning)) {
-              criticalWarnings.push({
-                client: clientResult.client,
-                warning: warning,
-              });
+            if (detailMode) {
+              // Detail mode: categorize all warnings
+              if (isCriticalWarning(warning)) {
+                criticalWarnings.push({ client: clientResult.client, warning });
+              } else {
+                informationalWarnings.push({ client: clientResult.client, warning });
+              }
+            } else {
+              // Normal mode: only critical warnings
+              if (isCriticalWarning(warning)) {
+                criticalWarnings.push({ client: clientResult.client, warning });
+              }
             }
           }
         }
 
-        // Show critical warnings if any exist
-        if (criticalWarnings.length > 0) {
+        // Display warnings
+        if (criticalWarnings.length > 0 || informationalWarnings.length > 0) {
           output.section('⚠️  Warnings:');
-          for (const item of criticalWarnings) {
-            output.warn(`  - ${item.client}: ${item.warning}`);
+
+          if (criticalWarnings.length > 0) {
+            if (detailMode && informationalWarnings.length > 0) {
+              output.nl();
+              output.warn('Critical:');
+            }
+            for (const item of criticalWarnings) {
+              output.warn(`  - ${item.client}: ${item.warning}`);
+            }
+          }
+
+          if (detailMode && informationalWarnings.length > 0) {
+            output.nl();
+            output.info('Informational:');
+            for (const item of informationalWarnings) {
+              output.info(`  - ${item.client}: ${item.warning}`);
+            }
           }
         }
 
         // Show unique tips at the end if any exist
         if (tips.size > 0) {
-          if (criticalWarnings.length === 0) {
+          if (criticalWarnings.length === 0 && informationalWarnings.length === 0) {
             output.section('💡 Tips:');
           } else {
             output.nl();
@@ -176,6 +241,17 @@ export function createSyncCommand(deps: AppDependencies): Command {
           output.section('❌ Errors:');
           for (const error of result.errors) {
             output.error(`  - ${error}`);
+          }
+        }
+
+        // ==================== Phase 4: Backup Info (detail mode) ====================
+        if (detailMode) {
+          const backups = result.results.filter(r => r.backupPath);
+          if (backups.length > 0) {
+            output.section('💾 Backups:');
+            for (const clientResult of backups) {
+              output.info(`  ${clientResult.client}: ${clientResult.backupPath}`);
+            }
           }
         }
 

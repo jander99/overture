@@ -44,7 +44,7 @@ import { ValidationError, McpError } from '@overture/errors';
 export class PathResolver {
   constructor(
     private environment: EnvironmentPort,
-    private filesystem: FilesystemPort
+    private filesystem: FilesystemPort,
   ) {}
 
   /**
@@ -87,7 +87,10 @@ export class PathResolver {
    * @returns XDG config directory path
    */
   getXdgConfigHome(): string {
-    return this.environment.env.XDG_CONFIG_HOME || this.joinPaths(this.getHomeDir(), '.config');
+    return (
+      this.environment.env.XDG_CONFIG_HOME ||
+      this.joinPaths(this.getHomeDir(), '.config')
+    );
   }
 
   /**
@@ -99,7 +102,10 @@ export class PathResolver {
    * @returns XDG data directory path
    */
   getXdgDataHome(): string {
-    return this.environment.env.XDG_DATA_HOME || this.joinPaths(this.getHomeDir(), '.local', 'share');
+    return (
+      this.environment.env.XDG_DATA_HOME ||
+      this.joinPaths(this.getHomeDir(), '.local', 'share')
+    );
   }
 
   /**
@@ -188,14 +194,25 @@ export class PathResolver {
 
     switch (targetPlatform) {
       case 'darwin':
-        return this.joinPaths(this.getHomeDir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+        return this.joinPaths(
+          this.getHomeDir(),
+          'Library',
+          'Application Support',
+          'Claude',
+          'claude_desktop_config.json',
+        );
       case 'linux':
-        return this.joinPaths(this.getXdgConfigHome(), 'Claude', 'claude_desktop_config.json');
+        return this.joinPaths(
+          this.getXdgConfigHome(),
+          'Claude',
+          'claude_desktop_config.json',
+        );
       case 'win32':
         return this.joinPaths(
-          this.environment.env.APPDATA || this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
+          this.environment.env.APPDATA ||
+            this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
           'Claude',
-          'claude_desktop_config.json'
+          'claude_desktop_config.json',
         );
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
@@ -213,15 +230,28 @@ export class PathResolver {
 
     switch (targetPlatform) {
       case 'darwin':
-        return this.joinPaths(this.getHomeDir(), 'Library', 'Application Support', 'Code', 'User', 'mcp.json');
-      case 'linux':
-        return this.joinPaths(this.getXdgConfigHome(), 'Code', 'User', 'mcp.json');
-      case 'win32':
         return this.joinPaths(
-          this.environment.env.APPDATA || this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
+          this.getHomeDir(),
+          'Library',
+          'Application Support',
           'Code',
           'User',
-          'mcp.json'
+          'mcp.json',
+        );
+      case 'linux':
+        return this.joinPaths(
+          this.getXdgConfigHome(),
+          'Code',
+          'User',
+          'mcp.json',
+        );
+      case 'win32':
+        return this.joinPaths(
+          this.environment.env.APPDATA ||
+            this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
+          'Code',
+          'User',
+          'mcp.json',
         );
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
@@ -285,7 +315,12 @@ export class PathResolver {
       case 'darwin':
       case 'linux':
       case 'win32':
-        return this.joinPaths(homeDir, '.codeium', 'windsurf', 'mcp_config.json');
+        return this.joinPaths(
+          homeDir,
+          '.codeium',
+          'windsurf',
+          'mcp_config.json',
+        );
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
@@ -373,18 +408,31 @@ export class PathResolver {
       case 'darwin':
         // TODO: Research macOS path for JetBrains Copilot plugin
         // Placeholder based on typical JetBrains structure
-        return this.joinPaths(this.getHomeDir(), 'Library', 'Application Support', 'github-copilot', 'intellij', 'mcp.json');
+        return this.joinPaths(
+          this.getHomeDir(),
+          'Library',
+          'Application Support',
+          'github-copilot',
+          'intellij',
+          'mcp.json',
+        );
       case 'linux':
         // TODO: Research Linux path for JetBrains Copilot plugin
         // Placeholder based on XDG conventions
-        return this.joinPaths(this.getXdgConfigHome(), 'github-copilot', 'intellij', 'mcp.json');
+        return this.joinPaths(
+          this.getXdgConfigHome(),
+          'github-copilot',
+          'intellij',
+          'mcp.json',
+        );
       case 'win32':
         // Confirmed path from user
         return this.joinPaths(
-          this.environment.env.LOCALAPPDATA || this.joinPaths(this.getHomeDir(), 'AppData', 'Local'),
+          this.environment.env.LOCALAPPDATA ||
+            this.joinPaths(this.getHomeDir(), 'AppData', 'Local'),
           'github-copilot',
           'intellij',
-          'mcp.json'
+          'mcp.json',
         );
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
@@ -433,10 +481,19 @@ export class PathResolver {
     const platform = this.getPlatform();
 
     if (platform === 'linux') {
-      return this.joinPaths(this.getXdgConfigHome(), 'overture', 'overture.lock');
+      return this.joinPaths(
+        this.getXdgConfigHome(),
+        'overture',
+        'overture.lock',
+      );
     }
 
-    return this.joinPaths(this.getHomeDir(), '.config', 'overture', 'overture.lock');
+    return this.joinPaths(
+      this.getHomeDir(),
+      '.config',
+      'overture',
+      'overture.lock',
+    );
   }
 
   /**
@@ -462,7 +519,9 @@ export class PathResolver {
    * ```
    */
   async findProjectRoot(startDir?: string): Promise<string | null> {
-    let currentDir = this.resolvePath(startDir || this.environment.env.PWD || '/');
+    let currentDir = this.resolvePath(
+      startDir || this.environment.env.PWD || '/',
+    );
     const root = this.parsePathRoot(currentDir);
 
     while (currentDir !== root) {
@@ -556,7 +615,7 @@ export class PathResolver {
   getClientConfigPath(
     clientName: ClientName,
     platform?: Platform,
-    projectRoot?: string
+    projectRoot?: string,
   ): string | { user: string; project: string } {
     switch (clientName) {
       case 'claude-code':
@@ -564,31 +623,14 @@ export class PathResolver {
           user: this.getClaudeCodeGlobalPath(platform),
           project: this.getClaudeCodeProjectPath(projectRoot),
         };
-      case 'claude-desktop':
-        return this.getClaudeDesktopPath(platform);
-      case 'vscode':
-        return {
-          user: this.getVSCodeGlobalPath(platform),
-          project: this.getVSCodeWorkspacePath(projectRoot),
-        };
-      case 'cursor':
-        return {
-          user: this.getCursorGlobalPath(platform),
-          project: this.getCursorProjectPath(projectRoot),
-        };
-      case 'windsurf':
-        return this.getWindsurfPath(platform);
       case 'copilot-cli':
         return this.getCopilotCliPath(platform);
-      case 'jetbrains-copilot':
-        return {
-          user: this.getJetBrainsCopilotPath(platform),
-          project: this.getJetBrainsCopilotWorkspacePath(projectRoot),
-        };
-      case 'codex':
-        return this.getCodexPath(platform);
-      case 'gemini-cli':
-        return this.getGeminiCliPath(platform);
+      case 'opencode':
+        // OpenCode adapter handles its own path detection
+        throw new McpError(
+          `Use OpenCodeAdapter.detectConfigPath() instead`,
+          clientName,
+        );
       default:
         throw new McpError(`Unknown client: ${clientName}`, clientName);
     }

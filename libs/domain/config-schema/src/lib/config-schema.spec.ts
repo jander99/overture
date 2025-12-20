@@ -64,17 +64,20 @@ describe('Zod Schema Validators', () => {
   describe('ClientNameSchema', () => {
     it('should accept all valid client names', () => {
       expect(ClientNameSchema.parse('claude-code')).toBe('claude-code');
-      expect(ClientNameSchema.parse('claude-desktop')).toBe('claude-desktop');
-      expect(ClientNameSchema.parse('vscode')).toBe('vscode');
-      expect(ClientNameSchema.parse('cursor')).toBe('cursor');
-      expect(ClientNameSchema.parse('windsurf')).toBe('windsurf');
       expect(ClientNameSchema.parse('copilot-cli')).toBe('copilot-cli');
-      expect(ClientNameSchema.parse('jetbrains-copilot')).toBe('jetbrains-copilot');
+      expect(ClientNameSchema.parse('opencode')).toBe('opencode');
     });
 
     it('should reject invalid client names', () => {
       expect(() => ClientNameSchema.parse('vim')).toThrow();
       expect(() => ClientNameSchema.parse('emacs')).toThrow();
+      expect(() => ClientNameSchema.parse('claude-desktop')).toThrow();
+      expect(() => ClientNameSchema.parse('vscode')).toThrow();
+      expect(() => ClientNameSchema.parse('cursor')).toThrow();
+      expect(() => ClientNameSchema.parse('windsurf')).toThrow();
+      expect(() => ClientNameSchema.parse('jetbrains-copilot')).toThrow();
+      expect(() => ClientNameSchema.parse('codex')).toThrow();
+      expect(() => ClientNameSchema.parse('gemini-cli')).toThrow();
     });
   });
 
@@ -128,7 +131,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withArgs);
-      expect(result.args).toEqual(['-y', '@modelcontextprotocol/server-filesystem']);
+      expect(result.args).toEqual([
+        '-y',
+        '@modelcontextprotocol/server-filesystem',
+      ]);
     });
 
     it('should accept env object with variable expansion syntax', () => {
@@ -160,24 +166,24 @@ describe('Zod Schema Validators', () => {
       const withExclusions = {
         ...validMcpConfig,
         clients: {
-          exclude: ['copilot-cli', 'windsurf'],
+          exclude: ['copilot-cli', 'opencode'],
         },
       };
 
       const result = McpServerConfigSchema.parse(withExclusions);
-      expect(result.clients?.exclude).toEqual(['copilot-cli', 'windsurf']);
+      expect(result.clients?.exclude).toEqual(['copilot-cli', 'opencode']);
     });
 
     it('should accept client inclusions', () => {
       const withInclusions = {
         ...validMcpConfig,
         clients: {
-          include: ['claude-code', 'cursor'],
+          include: ['claude-code', 'opencode'],
         },
       };
 
       const result = McpServerConfigSchema.parse(withInclusions);
-      expect(result.clients?.include).toEqual(['claude-code', 'cursor']);
+      expect(result.clients?.include).toEqual(['claude-code', 'opencode']);
     });
 
     it('should reject both exclude and include', () => {
@@ -197,12 +203,12 @@ describe('Zod Schema Validators', () => {
         ...validMcpConfig,
         clients: {
           overrides: {
-            'vscode': {
+            'copilot-cli': {
               transport: 'http' as const,
             },
-            'cursor': {
+            opencode: {
               env: {
-                CUSTOM_TOKEN: '${CURSOR_TOKEN}',
+                CUSTOM_TOKEN: '${OPENCODE_TOKEN}',
               },
             },
           },
@@ -210,8 +216,12 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withOverrides);
-      expect(result.clients?.overrides?.vscode?.transport).toBe('http');
-      expect(result.clients?.overrides?.cursor?.env?.CUSTOM_TOKEN).toBe('${CURSOR_TOKEN}');
+      expect(result.clients?.overrides?.['copilot-cli']?.transport).toBe(
+        'http',
+      );
+      expect(result.clients?.overrides?.opencode?.env?.CUSTOM_TOKEN).toBe(
+        '${OPENCODE_TOKEN}',
+      );
     });
 
     it('should accept platform exclusions', () => {
@@ -252,7 +262,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withArgsOverrides);
-      expect(result.platforms?.argsOverrides?.win32).toEqual(['-m', 'mcp_server']);
+      expect(result.platforms?.argsOverrides?.win32).toEqual([
+        '-m',
+        'mcp_server',
+      ]);
     });
 
     it('should accept metadata', () => {
@@ -389,7 +402,7 @@ describe('Zod Schema Validators', () => {
         backupRetention: 5,
         mergeStrategy: 'replace' as const,
         autoDetectClients: false,
-        enabledClients: ['claude-code', 'cursor'] as const,
+        enabledClients: ['claude-code', 'opencode'] as const,
       };
 
       const result = SyncOptionsSchema.parse(options);
@@ -443,8 +456,12 @@ describe('Zod Schema Validators', () => {
     });
 
     it('should accept valid version formats', () => {
-      expect(OvertureConfigSchema.parse({ ...validConfig, version: '2.0' })).toBeDefined();
-      expect(OvertureConfigSchema.parse({ ...validConfig, version: '10.99' })).toBeDefined();
+      expect(
+        OvertureConfigSchema.parse({ ...validConfig, version: '2.0' }),
+      ).toBeDefined();
+      expect(
+        OvertureConfigSchema.parse({ ...validConfig, version: '10.99' }),
+      ).toBeDefined();
     });
 
     it('should require mcp field', () => {
@@ -460,7 +477,7 @@ describe('Zod Schema Validators', () => {
           'claude-code': {
             enabled: true,
           },
-          'vscode': {
+          opencode: {
             enabled: false,
           },
         },
@@ -468,7 +485,7 @@ describe('Zod Schema Validators', () => {
 
       const result = OvertureConfigSchema.parse(withClients);
       expect(result.clients?.['claude-code']?.enabled).toBe(true);
-      expect(result.clients?.['vscode']?.enabled).toBe(false);
+      expect(result.clients?.opencode?.enabled).toBe(false);
     });
 
     it('should accept sync options', () => {
@@ -492,10 +509,10 @@ describe('Zod Schema Validators', () => {
           'claude-code': {
             enabled: true,
           },
-          'claude-desktop': {
+          'copilot-cli': {
             enabled: true,
           },
-          'vscode': {
+          opencode: {
             enabled: false,
           },
         },

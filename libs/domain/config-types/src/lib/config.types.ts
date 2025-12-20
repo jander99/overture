@@ -33,17 +33,7 @@ export type Scope = 'global' | 'project';
 /**
  * Supported AI client names
  */
-export type ClientName =
-  | 'claude-code'
-  | 'claude-desktop'
-  | 'vscode'
-  | 'cursor'
-  | 'windsurf'
-  | 'copilot-cli'
-  | 'jetbrains-copilot'
-  | 'codex'
-  | 'gemini-cli'
-  | 'opencode';
+export type ClientName = 'claude-code' | 'copilot-cli' | 'opencode';
 
 /**
  * Detection environment types

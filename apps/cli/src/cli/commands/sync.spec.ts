@@ -30,7 +30,7 @@ describe('sync command', () => {
 
   describe('basic functionality', () => {
     it('should sync all clients by default', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -45,25 +45,27 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: undefined,
         dryRun: false,
         force: false,
         skipPlugins: false,
         skipUndetected: true,
+        detail: false,
       });
       expect(deps.output.success).toHaveBeenCalledWith('Sync complete!');
       // Note: Commander may call process.exit during error handling, but the test should still pass
     });
 
     it('should sync specific client when --client is provided', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -78,103 +80,114 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync', '--client', 'claude-desktop']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: ['claude-desktop'],
         dryRun: false,
         force: false,
         skipPlugins: false,
         skipUndetected: true,
+        detail: false,
       });
       expect(deps.output.info).toHaveBeenCalledWith('Syncing for client: claude-desktop');
     });
 
     it('should enable dry-run mode when --dry-run is provided', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync', '--dry-run']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: undefined,
         dryRun: true,
         force: false,
         skipPlugins: false,
         skipUndetected: true,
+        detail: false,
       });
       expect(deps.output.info).toHaveBeenCalledWith('Running in dry-run mode - no changes will be made');
     });
 
     it('should enable force mode when --force is provided', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync', '--force']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: undefined,
         dryRun: false,
         force: true,
         skipPlugins: false,
         skipUndetected: true,
+        detail: false,
       });
     });
 
     it('should skip plugins when --skip-plugins is provided', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync', '--skip-plugins']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: undefined,
         dryRun: false,
         force: false,
         skipPlugins: true,
         skipUndetected: true,
+        detail: false,
       });
     });
 
     it('should sync undetected clients when --no-skip-undetected is provided', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
       const command = createSyncCommand(deps);
       await command.parseAsync(['node', 'sync', '--no-skip-undetected']);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: undefined,
         dryRun: false,
         force: false,
         skipPlugins: false,
         skipUndetected: false,
+        detail: false,
       });
     });
 
     it('should combine multiple options correctly', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
@@ -189,19 +202,20 @@ describe('sync command', () => {
         '--skip-plugins',
       ]);
 
-      expect(deps.syncEngine.sync).toHaveBeenCalledWith({
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith({
         clients: ['claude-code'],
         dryRun: true,
         force: true,
         skipPlugins: true,
         skipUndetected: true,
+        detail: false,
       });
     });
   });
 
   describe('output handling', () => {
     it('should display detection summary for detected clients', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -227,6 +241,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -243,7 +258,7 @@ describe('sync command', () => {
     });
 
     it('should display detection summary for skipped clients', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -256,6 +271,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -266,7 +282,7 @@ describe('sync command', () => {
     });
 
     it('should display warning for undetected but synced clients', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -279,6 +295,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -291,7 +308,7 @@ describe('sync command', () => {
     });
 
     it('should display sync summary for synced clients', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -306,6 +323,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -317,7 +335,7 @@ describe('sync command', () => {
     });
 
     it('should display error message for failed sync', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -332,6 +350,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -342,7 +361,7 @@ describe('sync command', () => {
     });
 
     it('should display critical warnings only', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -361,6 +380,7 @@ describe('sync command', () => {
             ],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -377,7 +397,7 @@ describe('sync command', () => {
     });
 
     it('should display tips separately from warnings', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -392,6 +412,7 @@ describe('sync command', () => {
             warnings: ['💡 Tip: Run overture doctor for more details'],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -406,9 +427,10 @@ describe('sync command', () => {
     });
 
     it('should display global errors', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: false,
         results: [],
+        warnings: [],
         errors: ['Failed to load config', 'Missing required field'],
       });
 
@@ -423,7 +445,7 @@ describe('sync command', () => {
 
   describe('error handling', () => {
     it('should handle sync engine errors gracefully', async () => {
-      vi.mocked(deps.syncEngine.sync).mockRejectedValue(new Error('Sync engine failure'));
+      vi.mocked(deps.syncEngine.syncClients).mockRejectedValue(new Error('Sync engine failure'));
 
       const command = createSyncCommand(deps);
       await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
@@ -432,7 +454,7 @@ describe('sync command', () => {
     });
 
     it('should handle unknown errors', async () => {
-      vi.mocked(deps.syncEngine.sync).mockRejectedValue('Unknown error');
+      vi.mocked(deps.syncEngine.syncClients).mockRejectedValue('Unknown error');
 
       const command = createSyncCommand(deps);
       await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
@@ -444,7 +466,7 @@ describe('sync command', () => {
       process.env.DEBUG = '1';
       const error = new Error('Test error');
       error.stack = 'Stack trace here';
-      vi.mocked(deps.syncEngine.sync).mockRejectedValue(error);
+      vi.mocked(deps.syncEngine.syncClients).mockRejectedValue(error);
 
       const command = createSyncCommand(deps);
       await expect(command.parseAsync(['node', 'sync'])).rejects.toThrow('process.exit:1');
@@ -455,9 +477,10 @@ describe('sync command', () => {
     });
 
     it('should exit with code 1 when sync fails', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: false,
         results: [],
+        warnings: [],
         errors: ['Sync failed'],
       });
 
@@ -468,9 +491,10 @@ describe('sync command', () => {
     });
 
     it('should exit with code 0 when sync succeeds', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
@@ -484,9 +508,10 @@ describe('sync command', () => {
 
   describe('edge cases', () => {
     it('should handle no detected clients', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
       });
 
@@ -500,7 +525,7 @@ describe('sync command', () => {
     });
 
     it('should handle mixed detection results', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -533,6 +558,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -552,7 +578,7 @@ describe('sync command', () => {
     });
 
     it('should handle clients without version information', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -567,6 +593,7 @@ describe('sync command', () => {
             warnings: [],
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -580,7 +607,7 @@ describe('sync command', () => {
     });
 
     it('should deduplicate tips', async () => {
-      vi.mocked(deps.syncEngine.sync).mockResolvedValue({
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [
           {
@@ -606,6 +633,7 @@ describe('sync command', () => {
             warnings: ['💡 Tip: Run overture doctor'], // Same tip
           },
         ],
+        warnings: [],
         errors: [],
       });
 
@@ -617,6 +645,136 @@ describe('sync command', () => {
         .mocked(deps.output.info)
         .mock.calls.filter((call) => call[0].includes('💡 Tip:'));
       expect(tipCalls).toHaveLength(1);
+    });
+  });
+
+  describe('detail mode', () => {
+    it('should pass detail option when --detail flag is provided', async () => {
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
+        success: true,
+        results: [],
+        warnings: [],
+        warnings: [],
+        errors: [],
+      });
+
+      const command = createSyncCommand(deps);
+      await command.parseAsync(['node', 'sync', '--detail']);
+
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          detail: true,
+        })
+      );
+    });
+
+    it('should show plugin sync details when detail mode is enabled', async () => {
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
+        success: true,
+        results: [],
+        warnings: [],
+        warnings: [],
+        errors: [],
+        pluginSyncDetails: {
+          configured: 3,
+          installed: 1,
+          toInstall: [
+            { name: 'plugin-a', marketplace: 'marketplace-1' },
+            { name: 'plugin-b', marketplace: 'marketplace-2' },
+          ],
+        },
+      });
+
+      const command = createSyncCommand(deps);
+      await command.parseAsync(['node', 'sync', '--detail']);
+
+      expect(deps.output.section).toHaveBeenCalledWith('📦 Plugin Sync Plan:');
+      expect(deps.output.info).toHaveBeenCalledWith('  Configured: 3 plugins');
+      expect(deps.output.info).toHaveBeenCalledWith('  Already installed: 1');
+      expect(deps.output.info).toHaveBeenCalledWith('  To install: 2');
+      expect(deps.output.info).toHaveBeenCalledWith('    - plugin-a@marketplace-1');
+      expect(deps.output.info).toHaveBeenCalledWith('    - plugin-b@marketplace-2');
+    });
+
+    it('should show all informational warnings in detail mode', async () => {
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '/home/user/.claude.json',
+            warnings: [
+              'claude-code detected: 1.0.0',
+              'Invalid configuration detected',
+            ],
+          },
+        ],
+        warnings: [],
+        warnings: [],
+        errors: [],
+      });
+
+      const command = createSyncCommand(deps);
+      await command.parseAsync(['node', 'sync', '--detail']);
+
+      expect(deps.output.warn).toHaveBeenCalledWith('Critical:');
+      expect(deps.output.warn).toHaveBeenCalledWith('  - claude-code: Invalid configuration detected');
+      expect(deps.output.info).toHaveBeenCalledWith('Informational:');
+      expect(deps.output.info).toHaveBeenCalledWith('  - claude-code: claude-code detected: 1.0.0');
+    });
+
+    it('should show backup paths in detail mode', async () => {
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
+        success: true,
+        results: [
+          {
+            client: 'claude-code',
+            success: true,
+            configPath: '/home/user/.claude.json',
+            backupPath: '/home/user/.config/overture/backups/claude-code-2024-01-01.json',
+            warnings: [],
+          },
+          {
+            client: 'claude-desktop',
+            success: true,
+            configPath: '/home/user/.config/Claude/mcp.json',
+            backupPath: '/home/user/.config/overture/backups/claude-desktop-2024-01-01.json',
+            warnings: [],
+          },
+        ],
+        warnings: [],
+        warnings: [],
+        errors: [],
+      });
+
+      const command = createSyncCommand(deps);
+      await command.parseAsync(['node', 'sync', '--detail']);
+
+      expect(deps.output.section).toHaveBeenCalledWith('💾 Backups:');
+      expect(deps.output.info).toHaveBeenCalledWith('  claude-code: /home/user/.config/overture/backups/claude-code-2024-01-01.json');
+      expect(deps.output.info).toHaveBeenCalledWith('  claude-desktop: /home/user/.config/overture/backups/claude-desktop-2024-01-01.json');
+    });
+
+    it('should work with --dry-run and --detail together', async () => {
+      vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
+        success: true,
+        results: [],
+        warnings: [],
+        warnings: [],
+        errors: [],
+      });
+
+      const command = createSyncCommand(deps);
+      await command.parseAsync(['node', 'sync', '--dry-run', '--detail']);
+
+      expect(deps.syncEngine.syncClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dryRun: true,
+          detail: true,
+        })
+      );
+      expect(deps.output.info).toHaveBeenCalledWith('Running in dry-run mode - no changes will be made');
     });
   });
 });

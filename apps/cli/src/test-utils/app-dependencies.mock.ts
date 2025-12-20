@@ -179,10 +179,17 @@ export function createMockAppDependencies(): AppDependencies {
 
     // Sync services
     syncEngine: {
-      sync: vi.fn().mockResolvedValue({
+      syncClients: vi.fn().mockResolvedValue({
         success: true,
         results: [],
+        warnings: [],
         errors: [],
+      }),
+      syncClient: vi.fn().mockResolvedValue({
+        client: 'claude-code',
+        success: true,
+        configPath: '/home/user/.claude.json',
+        warnings: [],
       }),
     },
 

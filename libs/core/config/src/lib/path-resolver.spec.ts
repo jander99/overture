@@ -177,12 +177,14 @@ describe('PathResolver', () => {
       expect(result).toBe('/home/user/.claude.json');
     });
 
-    it('should return AppData path on Windows', () => {
+    it('should return ~/.claude.json on Windows (same as other platforms)', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('win32');
-      mockEnvironment.env.APPDATA = 'C:/Users/user/AppData/Roaming';
+      mockEnvironment.env.HOME = undefined as any;
+      mockEnvironment.env.USERPROFILE = 'C:/Users/user';
+      vi.mocked(mockEnvironment.homedir).mockReturnValue('C:/Users/user');
 
       const result = resolver.getClaudeCodeGlobalPath();
-      expect(result).toBe('C:/Users/user/AppData/Roaming/Claude/mcp.json');
+      expect(result).toBe('C:/Users/user/.claude.json');
     });
 
     it('should handle platform override', () => {
@@ -222,7 +224,9 @@ describe('PathResolver', () => {
         return path === '/home/user/project/.overture/config.yaml';
       });
 
-      const result = await resolver.findProjectRoot('/home/user/project/src/deep');
+      const result = await resolver.findProjectRoot(
+        '/home/user/project/src/deep',
+      );
       expect(result).toBe('/home/user/project');
     });
 
@@ -289,23 +293,18 @@ describe('PathResolver', () => {
       });
     });
 
-    it('should return path for claude-desktop', () => {
-      vi.mocked(mockEnvironment.platform).mockReturnValue('darwin');
-      const result = resolver.getClientConfigPath('claude-desktop');
-      expect(result).toBe('/home/user/Library/Application Support/Claude/claude_desktop_config.json');
-    });
+    it('should throw for removed clients', () => {
+      expect(() => {
+        resolver.getClientConfigPath('claude-desktop' as any);
+      }).toThrow('Unknown client: claude-desktop');
 
-    it('should return paths for vscode', () => {
-      const result = resolver.getClientConfigPath('vscode');
-      expect(result).toEqual({
-        user: '/home/user/.config/Code/User/mcp.json',
-        project: '/home/user/project/.vscode/mcp.json',
-      });
-    });
+      expect(() => {
+        resolver.getClientConfigPath('vscode' as any);
+      }).toThrow('Unknown client: vscode');
 
-    it('should return path for windsurf', () => {
-      const result = resolver.getClientConfigPath('windsurf');
-      expect(result).toBe('/home/user/.codeium/windsurf/mcp_config.json');
+      expect(() => {
+        resolver.getClientConfigPath('windsurf' as any);
+      }).toThrow('Unknown client: windsurf');
     });
 
     it('should throw for unknown client', () => {
