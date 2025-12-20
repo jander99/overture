@@ -15,13 +15,23 @@ function isCriticalWarning(warning: string): boolean {
   const warningLower = warning.toLowerCase();
 
   // Include critical warnings
-  const criticalKeywords = ['invalid', 'error', 'failed', 'permission', 'denied'];
+  const criticalKeywords = [
+    'invalid',
+    'error',
+    'failed',
+    'permission',
+    'denied',
+  ];
   if (criticalKeywords.some((keyword) => warningLower.includes(keyword))) {
     return true;
   }
 
   // Exclude informational warnings
-  const informationalKeywords = ['detected:', 'not detected on system', 'will still be generated'];
+  const informationalKeywords = [
+    'detected:',
+    'not detected on system',
+    'will still be generated',
+  ];
   if (informationalKeywords.some((keyword) => warningLower.includes(keyword))) {
     return false;
   }
@@ -53,11 +63,20 @@ export function createSyncCommand(deps: AppDependencies): Command {
   command
     .description('Sync MCP configuration to AI clients')
     .option('--dry-run', 'Preview changes without writing files')
-    .option('--client <name>', 'Sync only for specific client (e.g., claude-code, claude-desktop)')
+    .option(
+      '--client <name>',
+      'Sync only for specific client (e.g., claude-code, claude-desktop)',
+    )
     .option('--force', 'Force sync even if validation warnings exist')
     .option('--skip-plugins', 'Skip plugin installation, only sync MCPs')
-    .option('--no-skip-undetected', 'Generate configs even for clients not detected on system')
-    .option('--detail', 'Show detailed output including diffs, plugin plans, and all warnings')
+    .option(
+      '--no-skip-undetected',
+      'Generate configs even for clients not detected on system',
+    )
+    .option(
+      '--detail',
+      'Show detailed output including diffs, plugin plans, and all warnings',
+    )
     .action(async (options) => {
       try {
         // Load config to determine detail mode default
@@ -65,8 +84,13 @@ export function createSyncCommand(deps: AppDependencies): Command {
         try {
           const projectRoot = pathResolver.findProjectRoot();
           const userConfig = await configLoader.loadUserConfig();
-          const projectConfig = projectRoot ? await configLoader.loadProjectConfig(projectRoot) : null;
-          const overtureConfig = configLoader.mergeConfigs(userConfig, projectConfig);
+          const projectConfig = projectRoot
+            ? await configLoader.loadProjectConfig(projectRoot)
+            : null;
+          const overtureConfig = configLoader.mergeConfigs(
+            userConfig,
+            projectConfig,
+          );
           detailMode = options.detail ?? overtureConfig.sync?.detail ?? false;
         } catch {
           // Config load failed, use CLI flag or false
@@ -101,19 +125,23 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Separate clients by detection status and whether they were actually skipped
         const detectedClients = result.results.filter(
-          (r) => r.binaryDetection?.status === 'found'
+          (r) => r.binaryDetection?.status === 'found',
         );
         const actuallySkippedClients = result.results.filter(
-          (r) => r.error === 'Skipped - client not detected on system'
+          (r) => r.error === 'Skipped - client not detected on system',
         );
         const undetectedButSyncedClients = result.results.filter(
-          (r) => r.binaryDetection?.status === 'not-found' && r.error !== 'Skipped - client not detected on system'
+          (r) =>
+            r.binaryDetection?.status === 'not-found' &&
+            r.error !== 'Skipped - client not detected on system',
         );
 
         // Show detected clients
         for (const clientResult of detectedClients) {
           const detection = clientResult.binaryDetection!;
-          const versionStr = detection.version ? ` (v${detection.version})` : '';
+          const versionStr = detection.version
+            ? ` (v${detection.version})`
+            : '';
           const configPath = detection.configPath || clientResult.configPath;
           output.success(`${clientResult.client}${versionStr} → ${configPath}`);
         }
@@ -121,7 +149,9 @@ export function createSyncCommand(deps: AppDependencies): Command {
         // Show undetected but synced clients (when --no-skip-undetected is used)
         for (const clientResult of undetectedButSyncedClients) {
           const configPath = clientResult.configPath;
-          output.warn(`${clientResult.client} - not detected but config will be generated → ${configPath}`);
+          output.warn(
+            `${clientResult.client} - not detected but config will be generated → ${configPath}`,
+          );
         }
 
         // Show actually skipped clients
@@ -149,7 +179,10 @@ export function createSyncCommand(deps: AppDependencies): Command {
         }
 
         // ==================== Phase 2: Sync Summary ====================
-        const syncedClients = [...detectedClients, ...undetectedButSyncedClients];
+        const syncedClients = [
+          ...detectedClients,
+          ...undetectedButSyncedClients,
+        ];
         if (syncedClients.length > 0) {
           output.section('⚙️  Syncing configurations...');
           output.nl();
@@ -159,10 +192,56 @@ export function createSyncCommand(deps: AppDependencies): Command {
               output.success(`${clientResult.client} - synchronized`);
 
               // Show diff in detail mode
-              if (detailMode && clientResult.diff && clientResult.diff.hasChanges) {
+              if (
+                detailMode &&
+                clientResult.diff &&
+                clientResult.diff.hasChanges
+              ) {
                 output.nl();
-                const diffOutput = formatDiff(clientResult.diff, clientResult.client);
-                console.log(diffOutput);  // Use console.log to preserve formatting
+
+                // Show MCP sources if available
+                if (clientResult.mcpSources) {
+                  const globalMcps: string[] = [];
+                  const projectMcps: string[] = [];
+
+                  // Categorize MCPs by source
+                  for (const [mcpName, source] of Object.entries(
+                    clientResult.mcpSources,
+                  )) {
+                    if (source === 'global') {
+                      globalMcps.push(mcpName);
+                    } else {
+                      projectMcps.push(mcpName);
+                    }
+                  }
+
+                  output.info(
+                    `Configuration changes for ${clientResult.client}:`,
+                  );
+                  output.nl();
+
+                  if (globalMcps.length > 0) {
+                    output.info(`Global MCPs (${globalMcps.length}):`);
+                    for (const mcpName of globalMcps.sort()) {
+                      output.info(`  ~ ${mcpName}`);
+                    }
+                    output.nl();
+                  }
+
+                  if (projectMcps.length > 0) {
+                    output.info(`Project MCPs (${projectMcps.length}):`);
+                    for (const mcpName of projectMcps.sort()) {
+                      output.info(`  ~ ${mcpName}`);
+                    }
+                    output.nl();
+                  }
+                }
+
+                const diffOutput = formatDiff(
+                  clientResult.diff,
+                  clientResult.client,
+                );
+                console.log(diffOutput); // Use console.log to preserve formatting
                 output.nl();
               }
             } else {
@@ -173,7 +252,10 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // ==================== Phase 3: Warnings ====================
         const criticalWarnings: Array<{ client: string; warning: string }> = [];
-        const informationalWarnings: Array<{ client: string; warning: string }> = [];
+        const informationalWarnings: Array<{
+          client: string;
+          warning: string;
+        }> = [];
         const tips: Set<string> = new Set();
 
         // Collect warnings from client results
@@ -190,7 +272,10 @@ export function createSyncCommand(deps: AppDependencies): Command {
               if (isCriticalWarning(warning)) {
                 criticalWarnings.push({ client: clientResult.client, warning });
               } else {
-                informationalWarnings.push({ client: clientResult.client, warning });
+                informationalWarnings.push({
+                  client: clientResult.client,
+                  warning,
+                });
               }
             } else {
               // Normal mode: only critical warnings
@@ -226,7 +311,10 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show unique tips at the end if any exist
         if (tips.size > 0) {
-          if (criticalWarnings.length === 0 && informationalWarnings.length === 0) {
+          if (
+            criticalWarnings.length === 0 &&
+            informationalWarnings.length === 0
+          ) {
             output.section('💡 Tips:');
           } else {
             output.nl();
@@ -246,11 +334,13 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // ==================== Phase 4: Backup Info (detail mode) ====================
         if (detailMode) {
-          const backups = result.results.filter(r => r.backupPath);
+          const backups = result.results.filter((r) => r.backupPath);
           if (backups.length > 0) {
             output.section('💾 Backups:');
             for (const clientResult of backups) {
-              output.info(`  ${clientResult.client}: ${clientResult.backupPath}`);
+              output.info(
+                `  ${clientResult.client}: ${clientResult.backupPath}`,
+              );
             }
           }
         }
