@@ -32,23 +32,15 @@ function getCurrentPlatform(): Platform {
 /**
  * All client names
  */
-const ALL_CLIENTS: ClientName[] = [
-  'claude-code',
-  'claude-desktop',
-  'vscode',
-  'cursor',
-  'windsurf',
-  'copilot-cli',
-  'jetbrains-copilot',
-  'codex',
-  'gemini-cli',
-  'opencode',
-];
+const ALL_CLIENTS: ClientName[] = ['claude-code', 'copilot-cli', 'opencode'];
 
 /**
  * Validate if a config file exists and contains valid JSON
  */
-async function validateConfigFile(filepath: string, filesystem: any): Promise<boolean> {
+async function validateConfigFile(
+  filepath: string,
+  filesystem: any,
+): Promise<boolean> {
   try {
     const fileExists = await filesystem.exists(filepath);
     if (!fileExists) {
@@ -74,7 +66,15 @@ async function validateConfigFile(filepath: string, filesystem: any): Promise<bo
  * - MCP server command availability
  */
 export function createDoctorCommand(deps: AppDependencies): Command {
-  const { discoveryService, output, adapterRegistry, configLoader, pathResolver, process, filesystem } = deps;
+  const {
+    discoveryService,
+    output,
+    adapterRegistry,
+    configLoader,
+    pathResolver,
+    process,
+    filesystem,
+  } = deps;
   const command = new Command('doctor');
 
   command
@@ -97,7 +97,14 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           : null;
 
         // Get all adapters from registry
-        const adapters = ALL_CLIENTS.map((clientName) => adapterRegistry.get(clientName)).filter((adapter): adapter is import('@overture/client-adapters').ClientAdapter => adapter !== undefined);
+        const adapters = ALL_CLIENTS.map((clientName) =>
+          adapterRegistry.get(clientName),
+        ).filter(
+          (
+            adapter,
+          ): adapter is import('@overture/client-adapters').ClientAdapter =>
+            adapter !== undefined,
+        );
 
         // Run discovery
         const discoveryReport = await discoveryService.discoverAll(adapters);
@@ -124,9 +131,13 @@ export function createDoctorCommand(deps: AppDependencies): Command {
         // Show environment info (if not JSON mode)
         if (!options.json && discoveryReport.environment.isWSL2) {
           output.info(chalk.bold('\nEnvironment:\n'));
-          console.log(`  Platform: ${chalk.cyan('WSL2')} (${discoveryReport.environment.wsl2Info?.distroName || 'Unknown'})`);
+          console.log(
+            `  Platform: ${chalk.cyan('WSL2')} (${discoveryReport.environment.wsl2Info?.distroName || 'Unknown'})`,
+          );
           if (discoveryReport.environment.wsl2Info?.windowsUserProfile) {
-            console.log(`  Windows User: ${chalk.dim(discoveryReport.environment.wsl2Info.windowsUserProfile)}`);
+            console.log(
+              `  Windows User: ${chalk.dim(discoveryReport.environment.wsl2Info.windowsUserProfile)}`,
+            );
           }
           console.log('');
         }
@@ -141,7 +152,10 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           const detection = clientDiscovery.detection;
           const adapter = adapterRegistry.get(clientName);
 
-          const configPath = adapter?.detectConfigPath(platform, projectRoot || undefined);
+          const configPath = adapter?.detectConfigPath(
+            platform,
+            projectRoot || undefined,
+          );
           const configPathStr =
             typeof configPath === 'string'
               ? configPath
@@ -192,27 +206,26 @@ export function createDoctorCommand(deps: AppDependencies): Command {
               const pathStr = detection.binaryPath || detection.appBundlePath;
 
               // Show WSL2 tag for Windows detections
-              const wsl2Tag = clientDiscovery.source === 'wsl2-fallback'
-                ? chalk.cyan(' [WSL2: Windows]')
-                : '';
+              const wsl2Tag =
+                clientDiscovery.source === 'wsl2-fallback'
+                  ? chalk.cyan(' [WSL2: Windows]')
+                  : '';
 
               output.success(
-                `${chalk.green('✓')} ${chalk.bold(clientName)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`
+                `${chalk.green('✓')} ${chalk.bold(clientName)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`,
               );
 
               if (configPathStr) {
                 const configStatus = configValid
                   ? chalk.green('valid')
                   : chalk.yellow('invalid');
-                console.log(
-                  `  Config: ${configPathStr} (${configStatus})`
-                );
+                console.log(`  Config: ${configPathStr} (${configStatus})`);
               }
 
               // Show Windows path for WSL2 detections
               if (clientDiscovery.windowsPath && options.verbose) {
                 console.log(
-                  `  ${chalk.dim('Windows path:')} ${chalk.dim(clientDiscovery.windowsPath)}`
+                  `  ${chalk.dim('Windows path:')} ${chalk.dim(clientDiscovery.windowsPath)}`,
                 );
               }
 
@@ -224,7 +237,7 @@ export function createDoctorCommand(deps: AppDependencies): Command {
               }
             } else if (detection.status === 'not-found') {
               output.error(
-                `${chalk.red('✗')} ${chalk.bold(clientName)} - not installed`
+                `${chalk.red('✗')} ${chalk.bold(clientName)} - not installed`,
               );
 
               // Show recommendation
@@ -235,7 +248,7 @@ export function createDoctorCommand(deps: AppDependencies): Command {
             } else {
               // Skipped
               console.log(
-                `${chalk.gray('○')} ${chalk.bold(clientName)} - ${chalk.dim('skipped')}`
+                `${chalk.gray('○')} ${chalk.bold(clientName)} - ${chalk.dim('skipped')}`,
               );
             }
 
@@ -273,19 +286,21 @@ export function createDoctorCommand(deps: AppDependencies): Command {
             if (!options.json) {
               if (commandExists) {
                 output.success(
-                  `${chalk.green('✓')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.dim('(found)')}`
+                  `${chalk.green('✓')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.dim('(found)')}`,
                 );
               } else {
                 output.warn(
-                  `${chalk.yellow('⚠')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.yellow('(not found)')}`
+                  `${chalk.yellow('⚠')} ${chalk.bold(mcpName)} - ${chalk.dim(mcpDef.command)} ${chalk.yellow('(not found)')}`,
                 );
 
                 // Show recommendation
                 const recommendation = getMcpInstallRecommendation(
-                  mcpDef.command
+                  mcpDef.command,
                 );
                 if (recommendation) {
-                  console.log(`  ${chalk.dim('→')} ${chalk.dim(recommendation)}`);
+                  console.log(
+                    `  ${chalk.dim('→')} ${chalk.dim(recommendation)}`,
+                  );
                 }
               }
             }
@@ -301,36 +316,36 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           console.log('');
           output.info(chalk.bold('Summary:\n'));
           console.log(
-            `  Clients detected: ${chalk.green(results.summary.clientsDetected)} / ${ALL_CLIENTS.length}`
+            `  Clients detected: ${chalk.green(results.summary.clientsDetected)} / ${ALL_CLIENTS.length}`,
           );
           console.log(
-            `  Clients missing:  ${chalk.red(results.summary.clientsMissing)}`
+            `  Clients missing:  ${chalk.red(results.summary.clientsMissing)}`,
           );
 
           // Show WSL2 detections if any
           if (results.summary.wsl2Detections > 0) {
             console.log(
-              `  WSL2 detections:  ${chalk.cyan(results.summary.wsl2Detections)}`
+              `  WSL2 detections:  ${chalk.cyan(results.summary.wsl2Detections)}`,
             );
           }
 
           console.log(
-            `  Configs valid:    ${chalk.green(results.summary.configsValid)}`
+            `  Configs valid:    ${chalk.green(results.summary.configsValid)}`,
           );
           if (results.summary.configsInvalid > 0) {
             console.log(
-              `  Configs invalid:  ${chalk.yellow(results.summary.configsInvalid)}`
+              `  Configs invalid:  ${chalk.yellow(results.summary.configsInvalid)}`,
             );
           }
 
           if (results.mcpServers.length > 0) {
             console.log('');
             console.log(
-              `  MCP commands available: ${chalk.green(results.summary.mcpCommandsAvailable)} / ${results.mcpServers.length}`
+              `  MCP commands available: ${chalk.green(results.summary.mcpCommandsAvailable)} / ${results.mcpServers.length}`,
             );
             if (results.summary.mcpCommandsMissing > 0) {
               console.log(
-                `  MCP commands missing:   ${chalk.yellow(results.summary.mcpCommandsMissing)}`
+                `  MCP commands missing:   ${chalk.yellow(results.summary.mcpCommandsMissing)}`,
               );
             }
           }
@@ -354,23 +369,9 @@ export function createDoctorCommand(deps: AppDependencies): Command {
  */
 function getInstallRecommendation(client: ClientName): string | null {
   const recommendations: Record<ClientName, string> = {
-    'claude-code':
-      'Install Claude Code CLI: https://claude.com/claude-code',
-    'claude-desktop':
-      'Install Claude Desktop: https://claude.com/download',
-    vscode: 'Install VS Code: https://code.visualstudio.com',
-    cursor: 'Install Cursor: https://cursor.com',
-    windsurf: 'Install Windsurf: https://codeium.com/windsurf',
-    'copilot-cli':
-      'Install GitHub Copilot CLI: npm install -g @github/copilot',
-    'jetbrains-copilot':
-      'Install JetBrains IDE with GitHub Copilot plugin',
-    codex:
-      'Install OpenAI Codex CLI: pip install openai-codex',
-    'gemini-cli':
-      'Install Gemini CLI: https://developers.google.com/gemini/cli',
-    opencode:
-      'Install OpenCode: https://opencode.ai',
+    'claude-code': 'Install Claude Code CLI: https://claude.com/claude-code',
+    'copilot-cli': 'Install GitHub Copilot CLI: npm install -g @github/copilot',
+    opencode: 'Install OpenCode: https://opencode.ai',
   };
 
   return recommendations[client] || null;

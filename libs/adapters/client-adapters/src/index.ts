@@ -47,20 +47,9 @@ export {
 } from './lib/adapter-registry.js';
 
 // Factory
-export {
-  createAdapterRegistry,
-  createAdapter,
-} from './lib/adapter-factory.js';
+export { createAdapterRegistry, createAdapter } from './lib/adapter-factory.js';
 
 // Individual adapters (for specialized use cases)
 export { ClaudeCodeAdapter } from './lib/adapters/claude-code.adapter.js';
+export { CopilotCliAdapter } from './lib/adapters/copilot-cli.adapter.js';
 export { OpenCodeAdapter } from './lib/adapters/opencode.adapter.js';
-// TODO: Export remaining adapters when implemented
-// export { ClaudeDesktopAdapter } from './lib/adapters/claude-desktop.adapter.js';
-// export { VSCodeAdapter } from './lib/adapters/vscode.adapter.js';
-// export { CursorAdapter } from './lib/adapters/cursor.adapter.js';
-// export { WindsurfAdapter } from './lib/adapters/windsurf.adapter.js';
-// export { JetBrainsCopilotAdapter } from './lib/adapters/jetbrains-copilot.adapter.js';
-// export { CopilotCliAdapter } from './lib/adapters/copilot-cli.adapter.js';
-// export { CodexAdapter } from './lib/adapters/codex.adapter.js';
-// export { GeminiCliAdapter } from './lib/adapters/gemini-cli.adapter.js';

@@ -12,6 +12,7 @@ import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
 import { AdapterRegistry } from './adapter-registry.js';
 import { ClaudeCodeAdapter } from './adapters/claude-code.adapter.js';
+import { CopilotCliAdapter } from './adapters/copilot-cli.adapter.js';
 import { OpenCodeAdapter } from './adapters/opencode.adapter.js';
 import type { ClientAdapter } from './client-adapter.interface.js';
 import { McpError } from '@overture/errors';
@@ -42,22 +43,14 @@ import { McpError } from '@overture/errors';
  */
 export function createAdapterRegistry(
   filesystem: FilesystemPort,
-  environment: EnvironmentPort
+  environment: EnvironmentPort,
 ): AdapterRegistry {
   const registry = new AdapterRegistry();
 
   // Register all client adapters with DI
   registry.register(new ClaudeCodeAdapter(filesystem, environment));
+  registry.register(new CopilotCliAdapter(filesystem, environment));
   registry.register(new OpenCodeAdapter(filesystem, environment));
-  // TODO: Register remaining 7 adapters when implemented
-  // registry.register(new ClaudeDesktopAdapter(filesystem, environment));
-  // registry.register(new VSCodeAdapter(filesystem, environment));
-  // registry.register(new CursorAdapter(filesystem, environment));
-  // registry.register(new WindsurfAdapter(filesystem, environment));
-  // registry.register(new JetBrainsCopilotAdapter(filesystem, environment));
-  // registry.register(new CopilotCliAdapter(filesystem, environment));
-  // registry.register(new CodexAdapter(filesystem, environment));
-  // registry.register(new GeminiCliAdapter(filesystem, environment));
 
   return registry;
 }
@@ -82,14 +75,15 @@ export function createAdapterRegistry(
 export function createAdapter(
   adapterName: string,
   filesystem: FilesystemPort,
-  environment: EnvironmentPort
+  environment: EnvironmentPort,
 ): ClientAdapter {
   switch (adapterName) {
     case 'claude-code':
       return new ClaudeCodeAdapter(filesystem, environment);
+    case 'copilot-cli':
+      return new CopilotCliAdapter(filesystem, environment);
     case 'opencode':
       return new OpenCodeAdapter(filesystem, environment);
-    // TODO: Add remaining adapters
     default:
       throw new McpError(`Unknown adapter: ${adapterName}`);
   }

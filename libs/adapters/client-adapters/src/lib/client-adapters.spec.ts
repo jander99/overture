@@ -56,12 +56,13 @@ describe('@overture/client-adapters', () => {
   });
 
   describe('createAdapterRegistry', () => {
-    it('should create registry with ClaudeCodeAdapter and OpenCodeAdapter registered', () => {
+    it('should create registry with all 3 client adapters registered', () => {
       const registry = createAdapterRegistry(filesystem, environment);
 
       expect(registry).toBeInstanceOf(AdapterRegistry);
-      expect(registry.size).toBe(2); // ClaudeCodeAdapter and OpenCodeAdapter
+      expect(registry.size).toBe(3); // ClaudeCodeAdapter, CopilotCliAdapter, and OpenCodeAdapter
       expect(registry.has('claude-code')).toBe(true);
+      expect(registry.has('copilot-cli')).toBe(true);
       expect(registry.has('opencode')).toBe(true);
     });
 
@@ -83,7 +84,9 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should throw for unknown adapter', () => {
-      expect(() => createAdapter('unknown-adapter' as any, filesystem, environment)).toThrow('Unknown adapter');
+      expect(() =>
+        createAdapter('unknown-adapter' as any, filesystem, environment),
+      ).toThrow('Unknown adapter');
     });
   });
 
@@ -153,9 +156,9 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should throw for unregistered client', () => {
-      expect(() => getAdapterForClient(registry, 'unknown-client' as any)).toThrow(
-        'No adapter registered for client: unknown-client'
-      );
+      expect(() =>
+        getAdapterForClient(registry, 'unknown-client' as any),
+      ).toThrow('No adapter registered for client: unknown-client');
     });
   });
 
@@ -215,9 +218,13 @@ describe('@overture/client-adapters', () => {
       });
 
       it('should read and parse existing config', async () => {
-        const mockConfig = { mcpServers: { test: { command: 'test', args: [] } } };
+        const mockConfig = {
+          mcpServers: { test: { command: 'test', args: [] } },
+        };
         vi.mocked(filesystem.exists).mockResolvedValue(true);
-        vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(mockConfig));
+        vi.mocked(filesystem.readFile).mockResolvedValue(
+          JSON.stringify(mockConfig),
+        );
 
         const config = await adapter.readConfig('/test/path.json');
 
@@ -239,7 +246,7 @@ describe('@overture/client-adapters', () => {
         vi.mocked(filesystem.readFile).mockResolvedValue('invalid json');
 
         await expect(adapter.readConfig('/test/path.json')).rejects.toThrow(
-          'Failed to read Claude Code config'
+          'Failed to read Claude Code config',
         );
       });
     });
@@ -253,10 +260,12 @@ describe('@overture/client-adapters', () => {
         const config = { mcpServers: {} };
         await adapter.writeConfig('/test/dir/config.json', config);
 
-        expect(filesystem.mkdir).toHaveBeenCalledWith('/test/dir', { recursive: true });
+        expect(filesystem.mkdir).toHaveBeenCalledWith('/test/dir', {
+          recursive: true,
+        });
         expect(filesystem.writeFile).toHaveBeenCalledWith(
           '/test/dir/config.json',
-          JSON.stringify(config, null, 2)
+          JSON.stringify(config, null, 2),
         );
       });
 
@@ -270,7 +279,7 @@ describe('@overture/client-adapters', () => {
         expect(filesystem.mkdir).not.toHaveBeenCalled();
         expect(filesystem.writeFile).toHaveBeenCalledWith(
           '/test/dir/config.json',
-          JSON.stringify(config, null, 2)
+          JSON.stringify(config, null, 2),
         );
       });
     });
@@ -290,7 +299,10 @@ describe('@overture/client-adapters', () => {
           },
         };
 
-        const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
+        const clientConfig = adapter.convertFromOverture(
+          overtureConfig,
+          'linux',
+        );
 
         expect(clientConfig).toEqual({
           mcpServers: {
@@ -319,7 +331,10 @@ describe('@overture/client-adapters', () => {
           },
         };
 
-        const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
+        const clientConfig = adapter.convertFromOverture(
+          overtureConfig,
+          'linux',
+        );
 
         expect(clientConfig).toEqual({ mcpServers: {} });
       });
@@ -340,7 +355,10 @@ describe('@overture/client-adapters', () => {
           },
         };
 
-        const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
+        const clientConfig = adapter.convertFromOverture(
+          overtureConfig,
+          'linux',
+        );
 
         expect(clientConfig).toEqual({ mcpServers: {} });
       });

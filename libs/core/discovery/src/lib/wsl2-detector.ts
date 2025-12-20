@@ -43,58 +43,12 @@ export const WINDOWS_DEFAULT_PATHS: Record<
     ],
     configPath: 'AppData/Roaming/Claude/mcp.json',
   },
-  'claude-desktop': {
-    binaryPaths: [
-      'AppData/Local/Programs/Claude/Claude.exe',
-      'AppData/Local/Claude/Claude.exe',
-    ],
-    configPath: 'AppData/Roaming/Claude/claude_desktop_config.json',
-  },
-  vscode: {
-    binaryPaths: [
-      'AppData/Local/Programs/Microsoft VS Code/Code.exe',
-      'AppData/Local/Programs/Microsoft VS Code/bin/code.cmd',
-    ],
-    configPath: 'AppData/Roaming/Code/User/mcp.json',
-  },
-  cursor: {
-    binaryPaths: [
-      'AppData/Local/Programs/cursor/Cursor.exe',
-      'AppData/Local/cursor/Cursor.exe',
-    ],
-    configPath: '.cursor/mcp.json',
-  },
-  windsurf: {
-    binaryPaths: [
-      'AppData/Local/Programs/windsurf/Windsurf.exe',
-      '.codeium/windsurf/Windsurf.exe',
-    ],
-    configPath: '.codeium/windsurf/mcp_config.json',
-  },
   'copilot-cli': {
     binaryPaths: [
       'AppData/Roaming/npm/copilot.cmd',
       'AppData/Roaming/npm/github-copilot-cli.cmd',
     ],
     configPath: '.copilot/mcp-config.json',
-  },
-  'jetbrains-copilot': {
-    binaryPaths: [],
-    configPath: 'AppData/Local/github-copilot/intellij/mcp.json',
-  },
-  codex: {
-    binaryPaths: [
-      'AppData/Roaming/npm/codex.cmd',
-      '.local/bin/codex.exe',
-    ],
-    configPath: '.codex/mcp-config.json',
-  },
-  'gemini-cli': {
-    binaryPaths: [
-      'AppData/Roaming/npm/gemini.cmd',
-      '.local/bin/gemini.exe',
-    ],
-    configPath: '.gemini/mcp-config.json',
   },
   opencode: {
     binaryPaths: [
@@ -120,7 +74,7 @@ export class WSL2Detector {
     private readonly readFile: (path: string) => string,
     private readonly readDir: (path: string) => string[],
     private readonly isDirectory: (path: string) => boolean,
-    private readonly joinPath: (...paths: string[]) => string
+    private readonly joinPath: (...paths: string[]) => string,
   ) {}
 
   /**
@@ -232,8 +186,8 @@ export class WSL2Detector {
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error('timeout')),
-            WSL2_DETECTION_TIMEOUT
-          )
+            WSL2_DETECTION_TIMEOUT,
+          ),
         ),
       ]);
 
@@ -352,7 +306,7 @@ export class WSL2Detector {
    */
   getWindowsInstallPaths(
     client: ClientName,
-    windowsUserProfile: string
+    windowsUserProfile: string,
   ): string[] {
     const paths: string[] = [];
     const defaults = WINDOWS_DEFAULT_PATHS[client];
@@ -368,12 +322,12 @@ export class WSL2Detector {
 
     // Add Program Files paths
     paths.push(
-      ...defaults.binaryPaths
+      ...(defaults.binaryPaths
         .map((p) => {
           if (p.includes('AppData')) return null;
           return this.joinPath('/mnt/c/Program Files', p);
         })
-        .filter(Boolean) as string[]
+        .filter(Boolean) as string[]),
     );
 
     return paths;
@@ -388,7 +342,7 @@ export class WSL2Detector {
    */
   getWindowsConfigPath(
     client: ClientName,
-    windowsUserProfile: string
+    windowsUserProfile: string,
   ): string | undefined {
     const defaults = WINDOWS_DEFAULT_PATHS[client];
 
@@ -428,7 +382,7 @@ export function createWSL2Detector(
   readFile: (path: string) => string,
   readDir: (path: string) => string[],
   isDirectory: (path: string) => boolean,
-  joinPath: (...paths: string[]) => string
+  joinPath: (...paths: string[]) => string,
 ): WSL2Detector {
   return new WSL2Detector(
     processPort,
@@ -437,6 +391,6 @@ export function createWSL2Detector(
     readFile,
     readDir,
     isDirectory,
-    joinPath
+    joinPath,
   );
 }

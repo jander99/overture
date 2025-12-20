@@ -1,9 +1,18 @@
 # MCP Configuration Format Differences Analysis
 
+> **⚠️ DEPRECATION NOTICE**
+>
+> As of Overture v0.3.0 (December 2025), only **3 clients** are supported: **Claude Code**, **GitHub Copilot CLI**, and **OpenCode**.
+>
+> This document contains historical research for 7 additional clients (Claude Desktop, VS Code, Cursor, Windsurf, JetBrains, Codex CLI, Gemini CLI) that are **no longer supported**. The MCP format analysis for these clients is preserved for reference but is not maintained.
+>
+> **Last updated:** 2025-12-14 | **Status:** ARCHIVED | **Supported clients:** 3/10
+
 **Research Date:** 2025-12-14
 **Status:** Complete
 **Version:** v1
 **Related Documents:**
+
 - `/home/jeff/workspaces/ai/overture/docs/multi-cli-roadmap.md`
 - `/home/jeff/workspaces/ai/overture/docs/architecture.md`
 - `/home/jeff/workspaces/ai/overture/apps/cli/src/adapters/`
@@ -39,19 +48,20 @@ This research analyzed MCP server configuration format differences across 7+ AI 
 
 ### 1.1 Complete Client × Field Compatibility Matrix
 
-| Field | Claude Code | Claude Desktop | VS Code | Cursor | Windsurf | Copilot CLI | JetBrains |
-|-------|-------------|----------------|---------|--------|----------|-------------|-----------|
-| **Root Key** | `mcpServers` | `mcpServers` | `servers` | `mcpServers` | `mcpServers` | `mcpServers` | `servers` |
-| **command** | ✅ Required | ✅ Required | ✅ Required | ✅ Required | ✅ Required | ✅ Required | ✅ Required |
-| **args** | ✅ Optional | ✅ Optional | ✅ Optional | ✅ Optional | ✅ Optional | ✅ Optional | ✅ Optional |
-| **env** | ✅ Native expansion | ✅ Native expansion | ⚠️ Pre-expand | ⚠️ Pre-expand | ⚠️ Pre-expand | ✅ Native | ⚠️ Pre-expand |
-| **disabled** | ✅ Supported | ✅ Supported | ❌ Not supported | ✅ Supported | ✅ Supported | ✅ Supported | ❌ Not supported |
-| **description** | ✅ Optional | ✅ Optional | ❌ Ignored | ✅ Optional | ✅ Optional | ✅ Optional | ❌ Ignored |
-| **Transport: stdio** | ✅ Full support | ⚠️ Free: yes, Paid: yes | ✅ Full support | ✅ Full support | ✅ Full support | ✅ Full support | ✅ Full support |
-| **Transport: http** | ✅ Full support | ⚠️ Free: no, Paid: yes | ✅ Full support | ✅ Full support | ✅ Full support | ✅ Full support | ⚠️ Limited |
-| **Transport: sse** | ✅ Full support | ⚠️ Free: no, Paid: yes | ✅ Full support | ✅ Full support | ✅ Full support | ✅ Full support | ⚠️ Limited |
+| Field                | Claude Code         | Claude Desktop          | VS Code          | Cursor          | Windsurf        | Copilot CLI     | JetBrains        |
+| -------------------- | ------------------- | ----------------------- | ---------------- | --------------- | --------------- | --------------- | ---------------- |
+| **Root Key**         | `mcpServers`        | `mcpServers`            | `servers`        | `mcpServers`    | `mcpServers`    | `mcpServers`    | `servers`        |
+| **command**          | ✅ Required         | ✅ Required             | ✅ Required      | ✅ Required     | ✅ Required     | ✅ Required     | ✅ Required      |
+| **args**             | ✅ Optional         | ✅ Optional             | ✅ Optional      | ✅ Optional     | ✅ Optional     | ✅ Optional     | ✅ Optional      |
+| **env**              | ✅ Native expansion | ✅ Native expansion     | ⚠️ Pre-expand    | ⚠️ Pre-expand   | ⚠️ Pre-expand   | ✅ Native       | ⚠️ Pre-expand    |
+| **disabled**         | ✅ Supported        | ✅ Supported            | ❌ Not supported | ✅ Supported    | ✅ Supported    | ✅ Supported    | ❌ Not supported |
+| **description**      | ✅ Optional         | ✅ Optional             | ❌ Ignored       | ✅ Optional     | ✅ Optional     | ✅ Optional     | ❌ Ignored       |
+| **Transport: stdio** | ✅ Full support     | ⚠️ Free: yes, Paid: yes | ✅ Full support  | ✅ Full support | ✅ Full support | ✅ Full support | ✅ Full support  |
+| **Transport: http**  | ✅ Full support     | ⚠️ Free: no, Paid: yes  | ✅ Full support  | ✅ Full support | ✅ Full support | ✅ Full support | ⚠️ Limited       |
+| **Transport: sse**   | ✅ Full support     | ⚠️ Free: no, Paid: yes  | ✅ Full support  | ✅ Full support | ✅ Full support | ✅ Full support | ⚠️ Limited       |
 
 **Legend:**
+
 - ✅ Full support
 - ⚠️ Partial support or restrictions
 - ❌ Not supported
@@ -59,6 +69,7 @@ This research analyzed MCP server configuration format differences across 7+ AI 
 ### 1.2 Root Key Differences
 
 **Most Clients (Claude Code, Claude Desktop, Cursor, Windsurf, Copilot):**
+
 ```json
 {
   "mcpServers": {
@@ -71,6 +82,7 @@ This research analyzed MCP server configuration format differences across 7+ AI 
 ```
 
 **VS Code & JetBrains:**
+
 ```json
 {
   "servers": {
@@ -83,6 +95,7 @@ This research analyzed MCP server configuration format differences across 7+ AI 
 ```
 
 **Overture Adapter Solution:**
+
 ```typescript
 export interface ClientAdapter {
   readonly schemaRootKey: 'mcpServers' | 'servers';
@@ -102,6 +115,7 @@ export class VscodeAdapter implements ClientAdapter {
 ### 1.3 Environment Variable Expansion
 
 **Native Expansion (Claude Code, Claude Desktop, Copilot):**
+
 ```json
 {
   "mcpServers": {
@@ -119,6 +133,7 @@ export class VscodeAdapter implements ClientAdapter {
 Client performs expansion at runtime: `${GITHUB_TOKEN}` → actual token value.
 
 **Pre-Expansion Required (VS Code, Cursor, Windsurf, JetBrains):**
+
 ```json
 {
   "servers": {
@@ -134,6 +149,7 @@ Client performs expansion at runtime: `${GITHUB_TOKEN}` → actual token value.
 ```
 
 **Overture Adapter Solution:**
+
 ```typescript
 export interface ClientAdapter {
   needsEnvVarExpansion(): boolean;
@@ -172,19 +188,20 @@ export class VscodeAdapter implements ClientAdapter {
 
 ### 2.1 Transport Type Comparison
 
-| Client | stdio | http | sse | Notes |
-|--------|-------|------|-----|-------|
-| **Claude Code** | ✅ Full | ✅ Full | ✅ Full | All transports fully supported |
-| **Claude Desktop** | ✅ Free+Paid | ⚠️ Paid only | ⚠️ Paid only | Free tier restricted to stdio |
-| **VS Code** | ✅ Full | ✅ Full | ✅ Full | Extension handles all types |
-| **Cursor** | ✅ Full | ✅ Full | ✅ Full | Forked VS Code, same support |
-| **Windsurf** | ✅ Full | ✅ Full | ✅ Full | Based on VS Code architecture |
-| **Copilot CLI** | ✅ Full | ✅ Full | ✅ Full | GitHub infrastructure |
-| **JetBrains** | ✅ Full | ⚠️ Experimental | ⚠️ Experimental | Plugin limitations |
+| Client             | stdio        | http            | sse             | Notes                          |
+| ------------------ | ------------ | --------------- | --------------- | ------------------------------ |
+| **Claude Code**    | ✅ Full      | ✅ Full         | ✅ Full         | All transports fully supported |
+| **Claude Desktop** | ✅ Free+Paid | ⚠️ Paid only    | ⚠️ Paid only    | Free tier restricted to stdio  |
+| **VS Code**        | ✅ Full      | ✅ Full         | ✅ Full         | Extension handles all types    |
+| **Cursor**         | ✅ Full      | ✅ Full         | ✅ Full         | Forked VS Code, same support   |
+| **Windsurf**       | ✅ Full      | ✅ Full         | ✅ Full         | Based on VS Code architecture  |
+| **Copilot CLI**    | ✅ Full      | ✅ Full         | ✅ Full         | GitHub infrastructure          |
+| **JetBrains**      | ✅ Full      | ⚠️ Experimental | ⚠️ Experimental | Plugin limitations             |
 
 ### 2.2 Transport Type Examples
 
 **stdio (Standard Input/Output):**
+
 ```json
 {
   "mcpServers": {
@@ -198,6 +215,7 @@ export class VscodeAdapter implements ClientAdapter {
 ```
 
 **http (HTTP Server):**
+
 ```json
 {
   "mcpServers": {
@@ -210,6 +228,7 @@ export class VscodeAdapter implements ClientAdapter {
 ```
 
 **sse (Server-Sent Events):**
+
 ```json
 {
   "mcpServers": {
@@ -254,6 +273,7 @@ export class JetbrainsAdapter implements ClientAdapter {
 ```
 
 **Overture Validation:**
+
 ```typescript
 export class McpConfigValidator {
   validate(config: OvertureConfig, clientType: string): ValidationResult {
@@ -266,7 +286,7 @@ export class McpConfigValidator {
       if (!adapter.supportsTransport(transport)) {
         errors.push(
           `MCP server "${name}" uses transport "${transport}" which is not supported by ${clientType}.\n` +
-          `Supported transports: ${this.getSupportedTransports(adapter).join(', ')}`
+            `Supported transports: ${this.getSupportedTransports(adapter).join(', ')}`,
         );
       }
     }
@@ -283,6 +303,7 @@ export class McpConfigValidator {
 ### 3.1 Platform-Specific Path Formats
 
 **Unix/Linux/macOS (Claude Code, VS Code, most clients):**
+
 ```json
 {
   "mcpServers": {
@@ -295,6 +316,7 @@ export class McpConfigValidator {
 ```
 
 **Windows (all clients, but format differs):**
+
 ```json
 {
   "mcpServers": {
@@ -309,6 +331,7 @@ export class McpConfigValidator {
 ### 3.2 Home Directory Expansion
 
 **Claude Code (native tilde expansion):**
+
 ```json
 {
   "mcpServers": {
@@ -320,6 +343,7 @@ export class McpConfigValidator {
 ```
 
 **VS Code/JetBrains (requires explicit expansion):**
+
 ```json
 {
   "servers": {
@@ -331,6 +355,7 @@ export class McpConfigValidator {
 ```
 
 **Overture Adapter Solution:**
+
 ```typescript
 export interface ClientAdapter {
   resolveCommand(command: string): string;
@@ -394,6 +419,7 @@ export class PlatformUtils {
 ### 4.1 Adapter Interface
 
 **From `apps/cli/src/adapters/client-adapter.interface.ts`:**
+
 ```typescript
 export interface ClientAdapter {
   /**
@@ -431,13 +457,14 @@ export interface ClientAdapter {
 ### 4.2 Base Adapter Implementation
 
 **From `apps/cli/src/adapters/base-client.adapter.ts`:**
+
 ```typescript
 export abstract class BaseClientAdapter implements ClientAdapter {
   abstract readonly schemaRootKey: 'mcpServers' | 'servers';
 
   constructor(
     protected readonly filesystem: FilesystemPort,
-    protected readonly environment: EnvironmentPort
+    protected readonly environment: EnvironmentPort,
   ) {}
 
   needsEnvVarExpansion(): boolean {
@@ -452,11 +479,12 @@ export abstract class BaseClientAdapter implements ClientAdapter {
 
   transformConfig(config: McpServerConfig): unknown {
     const transformed: Record<string, unknown> = {
-      [this.schemaRootKey]: {}
+      [this.schemaRootKey]: {},
     };
 
     for (const [name, serverConfig] of Object.entries(config.servers)) {
-      transformed[this.schemaRootKey][name] = this.transformServer(serverConfig);
+      transformed[this.schemaRootKey][name] =
+        this.transformServer(serverConfig);
     }
 
     return transformed;
@@ -464,7 +492,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
 
   protected transformServer(server: ServerConfig): unknown {
     const transformed: Record<string, unknown> = {
-      command: this.resolveCommand(server.command)
+      command: this.resolveCommand(server.command),
     };
 
     if (server.args) {
@@ -506,6 +534,7 @@ export abstract class BaseClientAdapter implements ClientAdapter {
 ### 4.3 Claude Code Adapter
 
 **From `apps/cli/src/adapters/claude-code.adapter.ts`:**
+
 ```typescript
 export class ClaudeCodeAdapter extends BaseClientAdapter {
   readonly schemaRootKey = 'mcpServers' as const;
@@ -516,8 +545,9 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
     }
 
     // User-level: ~/.config/claude/settings.json
-    const configDir = this.environment.getVariable('XDG_CONFIG_HOME')
-      || this.filesystem.join(this.environment.getHome(), '.config');
+    const configDir =
+      this.environment.getVariable('XDG_CONFIG_HOME') ||
+      this.filesystem.join(this.environment.getHome(), '.config');
 
     return this.filesystem.join(configDir, 'claude', 'settings.json');
   }
@@ -532,6 +562,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 ### 4.4 VS Code Adapter
 
 **From `apps/cli/src/adapters/vscode.adapter.ts`:**
+
 ```typescript
 export class VscodeAdapter extends BaseClientAdapter {
   readonly schemaRootKey = 'servers' as const; // Different from Claude!
@@ -554,7 +585,7 @@ export class VscodeAdapter extends BaseClientAdapter {
         this.environment.getVariable('APPDATA'),
         'Code',
         'User',
-        'mcp.json'
+        'mcp.json',
       );
     } else if (platform === 'darwin') {
       return this.filesystem.join(
@@ -563,20 +594,23 @@ export class VscodeAdapter extends BaseClientAdapter {
         'Application Support',
         'Code',
         'User',
-        'mcp.json'
+        'mcp.json',
       );
     } else {
-      return this.filesystem.join(homeDir, '.config', 'Code', 'User', 'mcp.json');
+      return this.filesystem.join(
+        homeDir,
+        '.config',
+        'Code',
+        'User',
+        'mcp.json',
+      );
     }
   }
 
   protected resolveCommand(command: string): string {
     // Expand ~ to home directory
     if (command.startsWith('~/')) {
-      return this.filesystem.join(
-        this.environment.getHome(),
-        command.slice(2)
-      );
+      return this.filesystem.join(this.environment.getHome(), command.slice(2));
     }
     return command;
   }
@@ -586,6 +620,7 @@ export class VscodeAdapter extends BaseClientAdapter {
 ### 4.5 Cursor Adapter
 
 **From `apps/cli/src/adapters/cursor.adapter.ts`:**
+
 ```typescript
 export class CursorAdapter extends BaseClientAdapter {
   readonly schemaRootKey = 'mcpServers' as const;
@@ -604,7 +639,7 @@ export class CursorAdapter extends BaseClientAdapter {
         this.environment.getVariable('APPDATA'),
         'Cursor',
         'User',
-        'mcp.json'
+        'mcp.json',
       );
     } else if (platform === 'darwin') {
       return this.filesystem.join(
@@ -613,10 +648,16 @@ export class CursorAdapter extends BaseClientAdapter {
         'Application Support',
         'Cursor',
         'User',
-        'mcp.json'
+        'mcp.json',
       );
     } else {
-      return this.filesystem.join(homeDir, '.config', 'Cursor', 'User', 'mcp.json');
+      return this.filesystem.join(
+        homeDir,
+        '.config',
+        'Cursor',
+        'User',
+        'mcp.json',
+      );
     }
   }
 
@@ -633,26 +674,48 @@ export class CursorAdapter extends BaseClientAdapter {
 ### 5.1 Registry Implementation
 
 **From `apps/cli/src/adapters/client-adapter.registry.ts`:**
+
 ```typescript
 export class ClientAdapterRegistry {
   private adapters: Map<string, ClientAdapter> = new Map();
 
   constructor(
     private readonly filesystem: FilesystemPort,
-    private readonly environment: EnvironmentPort
+    private readonly environment: EnvironmentPort,
   ) {
     this.registerDefaultAdapters();
   }
 
   private registerDefaultAdapters(): void {
     // Register all built-in adapters
-    this.register('claude-code', new ClaudeCodeAdapter(this.filesystem, this.environment));
-    this.register('claude-desktop', new ClaudeDesktopAdapter(this.filesystem, this.environment));
-    this.register('vscode', new VscodeAdapter(this.filesystem, this.environment));
-    this.register('cursor', new CursorAdapter(this.filesystem, this.environment));
-    this.register('windsurf', new WindsurfAdapter(this.filesystem, this.environment));
-    this.register('copilot-cli', new CopilotCliAdapter(this.filesystem, this.environment));
-    this.register('jetbrains', new JetbrainsAdapter(this.filesystem, this.environment));
+    this.register(
+      'claude-code',
+      new ClaudeCodeAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'claude-desktop',
+      new ClaudeDesktopAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'vscode',
+      new VscodeAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'cursor',
+      new CursorAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'windsurf',
+      new WindsurfAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'copilot-cli',
+      new CopilotCliAdapter(this.filesystem, this.environment),
+    );
+    this.register(
+      'jetbrains',
+      new JetbrainsAdapter(this.filesystem, this.environment),
+    );
   }
 
   register(clientType: string, adapter: ClientAdapter): void {
@@ -665,7 +728,7 @@ export class ClientAdapterRegistry {
     if (!adapter) {
       throw new Error(
         `No adapter found for client type: ${clientType}\n` +
-        `Available clients: ${Array.from(this.adapters.keys()).join(', ')}`
+          `Available clients: ${Array.from(this.adapters.keys()).join(', ')}`,
       );
     }
 
@@ -685,13 +748,13 @@ export class ClientAdapterRegistry {
       supportsTransports: {
         stdio: adapter.supportsTransport('stdio'),
         http: adapter.supportsTransport('http'),
-        sse: adapter.supportsTransport('sse')
+        sse: adapter.supportsTransport('sse'),
       },
       needsEnvVarExpansion: adapter.needsEnvVarExpansion(),
       configPaths: {
         project: adapter.getConfigPath('project'),
-        user: adapter.getConfigPath('user')
-      }
+        user: adapter.getConfigPath('user'),
+      },
     };
   }
 }
@@ -701,19 +764,17 @@ export class ClientAdapterRegistry {
 
 ```typescript
 export class McpConfigGenerator {
-  constructor(
-    private readonly registry: ClientAdapterRegistry
-  ) {}
+  constructor(private readonly registry: ClientAdapterRegistry) {}
 
   async generateForClient(
     config: OvertureConfig,
-    clientType: string
+    clientType: string,
   ): Promise<GeneratedConfig> {
     const adapter = this.registry.getAdapter(clientType);
 
     // Transform Overture config to client-specific format
     const transformed = adapter.transformConfig({
-      servers: config.mcp
+      servers: config.mcp,
     });
 
     // Get output path
@@ -721,11 +782,13 @@ export class McpConfigGenerator {
 
     return {
       path: outputPath,
-      content: JSON.stringify(transformed, null, 2)
+      content: JSON.stringify(transformed, null, 2),
     };
   }
 
-  async generateForAllClients(config: OvertureConfig): Promise<GeneratedConfig[]> {
+  async generateForAllClients(
+    config: OvertureConfig,
+  ): Promise<GeneratedConfig[]> {
     const clients = this.registry.getSupportedClients();
     const results: GeneratedConfig[] = [];
 
@@ -744,50 +807,50 @@ export class McpConfigGenerator {
 
 ### 6.1 Project-Level Paths
 
-| Client | Project Config Path | Notes |
-|--------|---------------------|-------|
-| **Claude Code** | `.mcp.json` | Root of project |
-| **Claude Desktop** | `.mcp.json` | Same as Claude Code |
-| **VS Code** | `.vscode/mcp.json` | VS Code settings directory |
-| **Cursor** | `.cursor/mcp.json` | Cursor settings directory |
-| **Windsurf** | `.windsurf/mcp.json` | Windsurf settings directory |
-| **Copilot CLI** | `.github/mcp.json` | GitHub directory convention |
-| **JetBrains** | `.idea/mcp.json` | IntelliJ IDEA settings |
+| Client             | Project Config Path  | Notes                       |
+| ------------------ | -------------------- | --------------------------- |
+| **Claude Code**    | `.mcp.json`          | Root of project             |
+| **Claude Desktop** | `.mcp.json`          | Same as Claude Code         |
+| **VS Code**        | `.vscode/mcp.json`   | VS Code settings directory  |
+| **Cursor**         | `.cursor/mcp.json`   | Cursor settings directory   |
+| **Windsurf**       | `.windsurf/mcp.json` | Windsurf settings directory |
+| **Copilot CLI**    | `.github/mcp.json`   | GitHub directory convention |
+| **JetBrains**      | `.idea/mcp.json`     | IntelliJ IDEA settings      |
 
 ### 6.2 User-Level Paths
 
 **macOS:**
 
-| Client | User Config Path |
-|--------|------------------|
-| Claude Code | `~/Library/Application Support/Claude/settings.json` |
-| Claude Desktop | `~/Library/Application Support/Claude/settings.json` |
-| VS Code | `~/Library/Application Support/Code/User/mcp.json` |
-| Cursor | `~/Library/Application Support/Cursor/User/mcp.json` |
-| Windsurf | `~/Library/Application Support/Windsurf/User/mcp.json` |
-| JetBrains | `~/Library/Application Support/JetBrains/[IDE]/mcp.json` |
+| Client         | User Config Path                                         |
+| -------------- | -------------------------------------------------------- |
+| Claude Code    | `~/Library/Application Support/Claude/settings.json`     |
+| Claude Desktop | `~/Library/Application Support/Claude/settings.json`     |
+| VS Code        | `~/Library/Application Support/Code/User/mcp.json`       |
+| Cursor         | `~/Library/Application Support/Cursor/User/mcp.json`     |
+| Windsurf       | `~/Library/Application Support/Windsurf/User/mcp.json`   |
+| JetBrains      | `~/Library/Application Support/JetBrains/[IDE]/mcp.json` |
 
 **Linux:**
 
-| Client | User Config Path |
-|--------|------------------|
-| Claude Code | `~/.config/claude/settings.json` |
-| Claude Desktop | `~/.config/claude/settings.json` |
-| VS Code | `~/.config/Code/User/mcp.json` |
-| Cursor | `~/.config/Cursor/User/mcp.json` |
-| Windsurf | `~/.config/Windsurf/User/mcp.json` |
-| JetBrains | `~/.config/JetBrains/[IDE]/mcp.json` |
+| Client         | User Config Path                     |
+| -------------- | ------------------------------------ |
+| Claude Code    | `~/.config/claude/settings.json`     |
+| Claude Desktop | `~/.config/claude/settings.json`     |
+| VS Code        | `~/.config/Code/User/mcp.json`       |
+| Cursor         | `~/.config/Cursor/User/mcp.json`     |
+| Windsurf       | `~/.config/Windsurf/User/mcp.json`   |
+| JetBrains      | `~/.config/JetBrains/[IDE]/mcp.json` |
 
 **Windows:**
 
-| Client | User Config Path |
-|--------|------------------|
-| Claude Code | `%APPDATA%\Claude\settings.json` |
-| Claude Desktop | `%APPDATA%\Claude\settings.json` |
-| VS Code | `%APPDATA%\Code\User\mcp.json` |
-| Cursor | `%APPDATA%\Cursor\User\mcp.json` |
-| Windsurf | `%APPDATA%\Windsurf\User\mcp.json` |
-| JetBrains | `%APPDATA%\JetBrains\[IDE]\mcp.json` |
+| Client         | User Config Path                     |
+| -------------- | ------------------------------------ |
+| Claude Code    | `%APPDATA%\Claude\settings.json`     |
+| Claude Desktop | `%APPDATA%\Claude\settings.json`     |
+| VS Code        | `%APPDATA%\Code\User\mcp.json`       |
+| Cursor         | `%APPDATA%\Cursor\User\mcp.json`     |
+| Windsurf       | `%APPDATA%\Windsurf\User\mcp.json`   |
+| JetBrains      | `%APPDATA%\JetBrains\[IDE]\mcp.json` |
 
 ---
 
@@ -799,7 +862,7 @@ export class McpConfigGenerator {
 export class TransportValidator {
   validate(
     mcpConfig: McpServerConfig,
-    adapter: ClientAdapter
+    adapter: ClientAdapter,
   ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -809,14 +872,14 @@ export class TransportValidator {
 
       if (!adapter.supportsTransport(transport)) {
         errors.push(
-          `MCP server "${name}" uses unsupported transport "${transport}"`
+          `MCP server "${name}" uses unsupported transport "${transport}"`,
         );
       }
 
       // Warn about Claude Desktop free tier limitations
       if (adapter instanceof ClaudeDesktopAdapter && transport !== 'stdio') {
         warnings.push(
-          `MCP server "${name}" uses transport "${transport}" which may not work on Claude Desktop free tier`
+          `MCP server "${name}" uses transport "${transport}" which may not work on Claude Desktop free tier`,
         );
       }
     }
@@ -824,7 +887,7 @@ export class TransportValidator {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 }
@@ -836,7 +899,7 @@ export class TransportValidator {
 export class EnvironmentValidator {
   validate(
     mcpConfig: McpServerConfig,
-    adapter: ClientAdapter
+    adapter: ClientAdapter,
   ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -856,7 +919,7 @@ export class EnvironmentValidator {
           // Check if variable is set
           if (varName && !process.env[varName]) {
             errors.push(
-              `MCP server "${name}" references undefined environment variable: ${varName}`
+              `MCP server "${name}" references undefined environment variable: ${varName}`,
             );
           }
         }
@@ -864,7 +927,7 @@ export class EnvironmentValidator {
         // Warn about security implications
         if (!hasVariableRef && envValue.length > 50) {
           warnings.push(
-            `MCP server "${name}" has hardcoded value for ${envKey} (${envValue.length} chars). Consider using environment variable.`
+            `MCP server "${name}" has hardcoded value for ${envKey} (${envValue.length} chars). Consider using environment variable.`,
           );
         }
       }
@@ -873,7 +936,7 @@ export class EnvironmentValidator {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 }
@@ -886,36 +949,27 @@ export class McpConfigValidator {
   constructor(
     private readonly transportValidator: TransportValidator,
     private readonly envValidator: EnvironmentValidator,
-    private readonly registry: ClientAdapterRegistry
+    private readonly registry: ClientAdapterRegistry,
   ) {}
 
-  validate(
-    config: OvertureConfig,
-    clientType: string
-  ): ValidationResult {
+  validate(config: OvertureConfig, clientType: string): ValidationResult {
     const adapter = this.registry.getAdapter(clientType);
 
     // Combine all validation results
     const transportResult = this.transportValidator.validate(
       { servers: config.mcp },
-      adapter
+      adapter,
     );
 
     const envResult = this.envValidator.validate(
       { servers: config.mcp },
-      adapter
+      adapter,
     );
 
     return {
       valid: transportResult.valid && envResult.valid,
-      errors: [
-        ...transportResult.errors,
-        ...envResult.errors
-      ],
-      warnings: [
-        ...transportResult.warnings,
-        ...envResult.warnings
-      ]
+      errors: [...transportResult.errors, ...envResult.errors],
+      warnings: [...transportResult.warnings, ...envResult.warnings],
     };
   }
 
@@ -1002,7 +1056,9 @@ describe('ClientAdapters', () => {
       const vscodeAdapter = new VscodeAdapter(mockFs, mockEnv);
 
       expect(claudeAdapter.getConfigPath('project')).toContain('.mcp.json');
-      expect(vscodeAdapter.getConfigPath('project')).toContain('.vscode/mcp.json');
+      expect(vscodeAdapter.getConfigPath('project')).toContain(
+        '.vscode/mcp.json',
+      );
     });
 
     it('should resolve user paths per platform', () => {
@@ -1010,7 +1066,9 @@ describe('ClientAdapters', () => {
 
       // Mock macOS
       process.platform = 'darwin';
-      expect(adapter.getConfigPath('user')).toContain('Library/Application Support');
+      expect(adapter.getConfigPath('user')).toContain(
+        'Library/Application Support',
+      );
 
       // Mock Linux
       process.platform = 'linux';
@@ -1053,6 +1111,7 @@ overture clients list
 ### 8.3 Future Extensibility
 
 **Plugin System for Custom Adapters:**
+
 ```typescript
 // Custom adapter for new CLI
 export class CustomCliAdapter extends BaseClientAdapter {
@@ -1066,6 +1125,7 @@ registry.register('custom-cli', new CustomCliAdapter(fs, env));
 ```
 
 **Configuration:**
+
 ```yaml
 # .overture/config.yaml
 clients:
@@ -1092,16 +1152,19 @@ clients:
 ### 9.2 Recommendations for Overture v0.3
 
 **Priority 1: Enhance Validation**
+
 - Add transport validation per client
 - Validate env var references
 - Warn about platform-specific issues
 
 **Priority 2: Improve Error Messages**
+
 - Detailed errors with client-specific guidance
 - Suggest fixes (e.g., "Use stdio instead of http for JetBrains")
 - Link to client documentation
 
 **Priority 3: Multi-Client Testing**
+
 - Test generated configs with real CLI binaries
 - E2E tests for each adapter
 - Validation test suite
@@ -1109,21 +1172,25 @@ clients:
 ### 9.3 Implementation Roadmap
 
 **Week 1: Enhanced Validation**
+
 - Implement `TransportValidator`
 - Implement `EnvironmentValidator`
 - Add comprehensive error messages
 
 **Week 2: Testing**
+
 - Unit tests for all adapters (>90% coverage)
 - Integration tests with mock CLIs
 - E2E tests with real binaries (where possible)
 
 **Week 3: Documentation**
+
 - Per-client compatibility guides
 - Migration guides (e.g., VS Code → Claude Code)
 - Troubleshooting documentation
 
 **Week 4: Polish & Release**
+
 - CLI command improvements
 - User feedback iteration
 - v0.3 release
@@ -1132,4 +1199,4 @@ clients:
 
 **End of Research Document**
 
-*This analysis confirms that MCP configuration format is remarkably consistent across 7+ AI CLIs, with only schema root key and environment variable expansion as major differences. Overture's adapter architecture is well-suited to handle these variations through simple per-client transformations.*
+_This analysis confirms that MCP configuration format is remarkably consistent across 7+ AI CLIs, with only schema root key and environment variable expansion as major differences. Overture's adapter architecture is well-suited to handle these variations through simple per-client transformations._

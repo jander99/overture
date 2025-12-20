@@ -15,14 +15,15 @@ Declare your AI tool setup once. Sync everywhere. Work better together.
 Developers using AI-assisted tools face **configuration chaos**:
 
 ### Multiple AI Tools, Multiple Configs
-- **Claude Desktop** → `~/Library/Application Support/Claude/mcp.json`
+
 - **Claude Code** (user) → `~/.claude.json`
 - **Claude Code** (project) → `./.mcp.json`
-- **OpenCode** → `~/.config/opencode/opencode.json`
-- **GitHub Copilot CLI** → Various locations
-- **VSCode/IntelliJ/Cursor/Windsurf** → Extension settings
+- **GitHub Copilot CLI** (user) → `~/.copilot/mcp-config.json`
+- **GitHub Copilot CLI** (project) → `./.github/mcp.json`
+- **OpenCode** → `~/.config/opencode/opencode.json` and `./opencode.json`
 
 ### The Pain Points
+
 - ❌ Same MCP server configured in 3 different places, 3 different ways
 - ❌ Outdated configs from experiments lingering everywhere
 - ❌ Install `python-development` plugin → manually configure `python-repl` MCP separately
@@ -48,7 +49,7 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 
   memory:
     command: mcp-server-memory
@@ -118,16 +119,16 @@ Move beyond "here's what we found via grep" to **actionable AI guidance**.
 # .overture.yml
 documentation:
   workflows:
-    - name: "TDD with AI assistance"
-      trigger: "When writing tests"
+    - name: 'TDD with AI assistance'
+      trigger: 'When writing tests'
       instructions: |
         1. Use context7 MCP to look up testing library best practices
         2. Use memory MCP to check previous test patterns in this project
         3. Use python-repl MCP to validate test assertions
         4. Store new patterns in memory for future reference
 
-    - name: "API implementation with research"
-      trigger: "When implementing API endpoints"
+    - name: 'API implementation with research'
+      trigger: 'When implementing API endpoints'
       instructions: |
         1. Use context7 to fetch latest FastAPI documentation
         2. Use memory to retrieve project API design patterns
@@ -137,12 +138,13 @@ documentation:
   agent_mcp_mappings:
     python-development:python-pro:
       mcps:
-        memory: "Persist architectural decisions and patterns discovered"
-        context7: "Always look up latest library docs before implementing"
-        python-repl: "Validate complex logic before committing"
+        memory: 'Persist architectural decisions and patterns discovered'
+        context7: 'Always look up latest library docs before implementing'
+        python-repl: 'Validate complex logic before committing'
 ```
 
 **Generated CLAUDE.md includes:**
+
 - Active plugins for this project
 - Global vs project MCPs
 - **Workflow instructions that orchestrate multiple MCPs together**
@@ -164,7 +166,7 @@ npm install -g @overture/cli
 
 # Check which AI clients are installed
 overture doctor
-# → Detects installed clients (Claude Code, OpenCode, Claude Desktop, VSCode, etc.)
+# → Detects installed clients (Claude Code, Copilot CLI, OpenCode)
 # → Shows version information
 # → Validates existing config files
 # → Lists available MCP commands
@@ -190,9 +192,10 @@ overture sync
 ```
 
 **What v0.2.5 includes:**
+
 - ✅ User global configuration (`~/.config/overture.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
-- ✅ Multi-platform sync (8 clients supported including OpenCode)
+- ✅ Multi-platform sync (3 production-ready clients: Claude Code, Copilot CLI, OpenCode)
 - ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, and validates configs
 - ✅ **Diagnostics command** (`overture doctor`) - Comprehensive system diagnostics
 - ✅ **OpenCode JSON patching** - Preserves custom agents, commands, permissions, and themes
@@ -299,6 +302,7 @@ npx nx lint @overture/cli
 ```
 
 **How npm link works:**
+
 - Creates a symlink from global `overture` → `apps/cli/bin/overture`
 - The bin script runs `dist/apps/cli/main.js`
 - After rebuilding, changes are immediately available via `overture` command
@@ -327,6 +331,7 @@ npm install -g @overture/cli
 ### Troubleshooting
 
 **Command not found after `npm link`:**
+
 - Verify npm global bin directory is in your PATH:
   ```bash
   npm bin -g
@@ -338,6 +343,7 @@ npm install -g @overture/cli
   ```
 
 **Build errors:**
+
 - Clear Nx cache: `npx nx reset`
 - Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
 - Ensure Node.js version is v18+: `node --version`
@@ -348,7 +354,7 @@ npm install -g @overture/cli
 
 ```yaml
 # .overture/config.yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-fastapi-backend
@@ -385,6 +391,7 @@ overture sync
 ```
 
 **Generated `.mcp.json`:**
+
 ```json
 {
   "mcpServers": {
@@ -404,16 +411,21 @@ overture sync
 ```
 
 **Generated `CLAUDE.md`** includes plugin→MCP mappings:
+
 ```markdown
 ## Active Plugins
+
 - python-development
 - backend-development
 
 ## MCP Servers
+
 ### Global: filesystem
+
 ### Project: python-repl, ruff, docker
 
 ## Plugin-to-MCP Mappings
+
 When using python-development → use python-repl, ruff, filesystem
 When using backend-development → use filesystem, docker
 ```
@@ -428,7 +440,7 @@ When using backend-development → use filesystem, docker
 # Check which AI clients are installed
 overture doctor
 # Shows:
-# - Installed clients (Claude Code, Claude Desktop, VSCode, Cursor, etc.)
+# - Installed clients (Claude Code, Copilot CLI, OpenCode)
 # - Version information for each client
 # - Config file locations and validity
 # - Available MCP server commands
@@ -514,6 +526,7 @@ overture backup cleanup [--dry-run]
 ## Roadmap
 
 ### v0.1 - Foundation ✅ COMPLETE
+
 - [x] Project-level config for Claude Code
 - [x] Plugin installation via Claude CLI
 - [x] Basic .mcp.json generation
@@ -522,22 +535,26 @@ overture backup cleanup [--dry-run]
 - [x] 98%+ test coverage
 
 ### v0.2 - Multi-Platform MCP Manager ✅ COMPLETE
+
 - [x] User global config (`~/.config/overture.yml`)
 - [x] User/project precedence and deduplication
-- [x] Multi-platform adapters:
-  - [x] Claude Desktop
-  - [x] Claude Code (user + project config)
-  - [x] OpenCode (with JSON patching)
-  - [x] Cursor IDE
-  - [x] Windsurf IDE
-  - [x] VSCode Copilot
-  - [x] Copilot CLI
-  - [x] JetBrains Copilot
+- [x] Multi-platform adapters (initial 8 clients)
 - [x] Config audit: `overture audit`
 - [x] Backup/restore: `overture backup`
 - [x] Multi-client sync engine
 
+### v0.3 - Streamlined Production Architecture ✅ COMPLETE
+
+- [x] Focused on 3 production-ready clients:
+  - [x] Claude Code (user + project config)
+  - [x] GitHub Copilot CLI (user + project config)
+  - [x] OpenCode (with JSON patching)
+- [x] GitHub MCP exclusion for Copilot CLI (bundled by default)
+- [x] Simplified binary detection and sync engine
+- [x] Comprehensive test coverage (384 tests, 83%+ coverage)
+
 ### v0.2.5 - Intelligent Client Detection ✅ COMPLETE
+
 - [x] Binary detection service
   - [x] Detect CLI binaries in PATH
   - [x] Detect GUI application bundles
@@ -554,6 +571,7 @@ overture backup cleanup [--dry-run]
 - [x] 911 tests passing (100%), 83%+ code coverage
 
 ### v0.3 - OpenCode Integration 🚧 IN PROGRESS
+
 - [x] **Phase 1: Foundation** ✅ COMPLETE
   - [x] OpenCodeAdapter implementation with JSON patching
   - [x] Format translation (command+args array, env→environment, ${VAR}→{env:VAR})
@@ -585,6 +603,7 @@ overture backup cleanup [--dry-run]
   - [ ] Agent configuration management
 
 **Phase 1 Deliverables:**
+
 - OpenCodeAdapter: `libs/adapters/client-adapters/src/lib/adapters/opencode.adapter.ts`
 - Tests: 39 test cases, 96.72% coverage
 - Docs: [OpenCode Integration Research](./docs/archive/opencode-integration-research-2025-12-18.md)
@@ -613,21 +632,26 @@ my-project/
 ## Why Overture?
 
 ### Without Overture
+
 **Configuration Hell:**
+
 - Install `python-development` plugin manually
 - Separately configure `python-repl` MCP in `.mcp.json`
-- Repeat for Claude Desktop, Copilot, etc.
+- Repeat for Copilot CLI, OpenCode, etc.
 - Duplicate config across similar projects
 - No guidance for Claude on which tools to use together
 - Config drift across machines
 
 **Claude's perspective:**
+
 - ❌ Doesn't know which MCPs work best with which plugins
 - ❌ No workflow orchestration guidance
 - ❌ Trial and error to discover tool combinations
 
 ### With Overture
+
 **Configuration Harmony:**
+
 - Declare config ONCE in `~/.config/overture.yml`
 - `overture sync` updates ALL platforms automatically
 - Project configs reference globals (no duplication)
@@ -636,6 +660,7 @@ my-project/
 - Team members get consistent setup
 
 **Claude's perspective:**
+
 - ✅ Reads CLAUDE.md and knows which MCPs to use
 - ✅ Has workflow instructions: "context7 → memory → python-repl"
 - ✅ Better AI assistance through better guidance
@@ -647,18 +672,22 @@ my-project/
 ## Documentation
 
 ### User Guides
+
 - **[Purpose & Vision](docs/PURPOSE.md)** - Detailed vision, scope, and roadmap
 - **[Configuration Schema](docs/overture-schema.md)** - Full configuration reference
 - **[Examples](docs/examples.md)** - Complete examples for different project types
 
 ### Developer Guides
+
 - **[How To: Add a New CLI Client](docs/howtos/add-new-cli-client.md)** - Step-by-step guide for integrating new AI coding CLIs (using OpenCode as example)
 
 ### Project Documentation
+
 - **[Implementation Plan](docs/implementation-plan.md)** - Development milestones
 - **[Related Projects](docs/related-projects.md)** - Ecosystem analysis
 
 ### Design & Research
+
 - **[Architecture Research](docs/architecture.md)** - Claude Code architecture deep-dive
 
 ---
@@ -682,74 +711,59 @@ my-project/
 
 ## AI Coding CLI Comparison Matrix
 
-This comparison uses Claude Code as the baseline and compares features across major AI coding CLIs as of December 2025.
+This comparison focuses on the 3 CLI clients supported by Overture as of v0.3.0 (December 2025).
 
-| Feature | Claude Code | OpenAI Codex | GitHub Copilot CLI | Gemini CLI | Cursor CLI | Windsurf | Amazon Q CLI | OpenCode |
-|---------|-------------|--------------|-------------------|------------|------------|----------|--------------|----------|
-| **Core Capabilities** |
-| MCP Client Support | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
-| MCP Server Mode | ✅ `claude mcp serve` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Subagents/Task Delegation | ✅ Built-in | ✅ Via `/delegate` | ✅ Via `/delegate` | ✅ ReAct loop | ✅ Agent mode | ✅ Cascade | ✅ Agent mode | ✅ Subagent system |
-| Background/Async Tasks | ✅ Task tool | ✅ Cloud sandbox | ✅ Coding agent | ❌ | ✅ Background agents | ❌ | ✅ Background | ❌ |
-| **Memory & Context** |
-| Session Persistence | ✅ `/init`, CLAUDE.md | ✅ `codex resume` | ✅ Session history | ✅ Conversation history | ✅ `cursor resume` | ✅ Auto-save | ✅ `q chat --resume` | ✅ `/init`, AGENTS.md |
-| Cross-Session Memory | ✅ Via MCP servers | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Built-in Memories | ✅ Auto-Memories | ✅ Via MCP | ✅ Via MCP servers |
-| Project Context Files | ✅ CLAUDE.md | ✅ AGENTS.md | ✅ `.github/agents/` | ✅ GEMINI.md | ✅ `.cursorrules` | ✅ Rules | ✅ Context files | ✅ AGENTS.md |
-| Context Window | ~200K tokens | ~200K tokens | ~200K tokens | 1M tokens | ~200K tokens | ~200K tokens | ~200K tokens | ~200K tokens |
-| **Extensibility** |
-| Hooks/Automation | ✅ Pre/post hooks | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Context hooks | ❌ |
-| Custom Slash Commands | ✅ `.claude/commands/` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Slash commands | ✅ `.opencode/command/` |
-| Plugin System | ✅ `claude plugin` | ❌ | ✅ Custom agents | ❌ | ✅ Extensions | ✅ Extensions | ❌ | ❌ |
-| **Development Features** |
-| Code Review | ✅ Via commands | ✅ Built-in | ✅ Built-in | ✅ Agent mode | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Via commands |
-| Web Search | ✅ Built-in | ✅ Built-in | ✅ Via GitHub | ✅ Google Search | ✅ Via MCP | ✅ Built-in | ✅ Built-in | ❌ Via MCP |
-| File Operations | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools | ✅ Native tools |
-| Git Integration | ✅ Native | ✅ Native | ✅ Deep GitHub | ✅ Native | ✅ Native | ✅ Native | ✅ AWS CodeCommit | ✅ Native |
-| **Platform & Access** |
-| Open Source | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ (transitioning) | ✅ |
-| Free Tier | ❌ | ✅ (with Plus) | ❌ | ✅ 1000 req/day | ❌ | ✅ Limited | ✅ Free tier | ✅ Full |
-| IDE Integration | ✅ VS Code, JetBrains | ✅ VS Code, Cursor | ✅ VS Code, JetBrains | ✅ VS Code | ✅ Native IDE | ✅ Native IDE | ✅ VS Code, JetBrains | ✅ VS Code, Desktop |
-| Cloud Execution | ❌ Local only | ✅ Codex Cloud | ✅ Coding agent | ❌ Local only | ❌ Local only | ❌ Local only | ✅ AWS integration | ❌ Local only |
+### Supported Clients
+
+| Feature                   | Claude Code             | GitHub Copilot CLI                   | OpenCode                           |
+| ------------------------- | ----------------------- | ------------------------------------ | ---------------------------------- |
+| **Core Capabilities**     |
+| MCP Client Support        | ✅ Full                 | ✅ Full                              | ✅ Full                            |
+| MCP Server Mode           | ✅ `claude mcp serve`   | ❌                                   | ❌                                 |
+| Subagents/Task Delegation | ✅ Built-in Task tool   | ✅ Via `/delegate`                   | ✅ Subagent system                 |
+| Background/Async Tasks    | ✅ Task tool            | ✅ Coding agent                      | ❌                                 |
+| **Memory & Context**      |
+| Session Persistence       | ✅ `/init`, CLAUDE.md   | ✅ Session history                   | ✅ `/init`, AGENTS.md              |
+| Cross-Session Memory      | ✅ Via MCP servers      | ✅ Via MCP                           | ✅ Via MCP servers                 |
+| Project Context Files     | ✅ CLAUDE.md, .mcp.json | ✅ .github/agents/, .github/mcp.json | ✅ AGENTS.md, opencode.json        |
+| Context Window            | ~200K tokens            | ~200K tokens                         | ~200K tokens                       |
+| **Extensibility**         |
+| Hooks/Automation          | ✅ Pre/post hooks       | ❌                                   | ❌                                 |
+| Custom Slash Commands     | ✅ `.claude/commands/`  | ❌                                   | ✅ `.opencode/command/`            |
+| Plugin System             | ✅ `claude plugin`      | ✅ Custom agents                     | ❌                                 |
+| **Development Features**  |
+| Code Review               | ✅ Via commands         | ✅ Built-in                          | ✅ Via commands                    |
+| Web Search                | ✅ Built-in             | ✅ Via GitHub                        | ✅ Via MCP                         |
+| File Operations           | ✅ Native tools         | ✅ Native tools                      | ✅ Native tools                    |
+| Git Integration           | ✅ Native               | ✅ Deep GitHub                       | ✅ Native                          |
+| **Platform & Access**     |
+| Open Source               | ❌                      | ❌                                   | ✅                                 |
+| Free Tier                 | ❌ Subscription         | ❌ Subscription                      | ✅ Full                            |
+| IDE Integration           | ✅ VS Code, JetBrains   | ✅ VS Code, JetBrains                | ✅ VS Code, Desktop                |
+| **MCP Configuration**     |
+| User Config Path          | `~/.claude.json`        | `~/.copilot/mcp-config.json`         | `~/.config/opencode/opencode.json` |
+| Project Config Path       | `./.mcp.json`           | `./.github/mcp.json`                 | `./opencode.json`                  |
+| Schema Root Key           | `mcpServers`            | `mcpServers`                         | `mcp`                              |
+| Env Var Support           | ✅ Native `${VAR}`      | ✅ Native `${VAR}`                   | ✅ `{env:VAR}` syntax              |
+| Special Behavior          | None                    | **Excludes 'github' MCP** (bundled)  | JSON patching support              |
 
 ### Key Differentiators
 
 **Claude Code** ([docs](https://docs.anthropic.com/en/docs/claude-code))
+
 - Only CLI that can run as both MCP client AND server
 - Rich plugin ecosystem with hooks for automation
 - Project-scoped configuration via `.mcp.json`
 
-**OpenAI Codex CLI** ([GitHub](https://github.com/openai/codex))
-- Cloud sandbox execution for isolated tasks
-- Integrated code review with GPT-5-Codex
-- Slack integration for team delegation
-
 **GitHub Copilot CLI** ([docs](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli))
+
 - Deep GitHub integration (PRs, issues, repos)
 - Partner-built agents (Terraform, MongoDB, etc.)
+- **Built-in GitHub MCP** - Overture automatically excludes 'github' MCP to prevent conflicts
 - `/delegate` for async background work
 
-**Gemini CLI** ([GitHub](https://github.com/google-gemini/gemini-cli))
-- 1M token context window
-- Google Search grounding built-in
-- Generous free tier (1000 requests/day)
-
-**Cursor CLI** ([docs](https://cursor.com/cli))
-- Built-in persistent memory system
-- Browser integration via MCP
-- Permission controls via `cli-config.json`
-
-**Windsurf** ([docs](https://docs.windsurf.com))
-- Cascade agent with built-in planning
-- Auto-generate memories from conversations
-- Turbo mode for auto-executing commands
-- Gartner Magic Quadrant Leader 2025
-
-**Amazon Q Developer CLI** ([GitHub](https://github.com/aws/amazon-q-developer-cli))
-- Deep AWS service integration
-- Transitioning to Kiro CLI
-- Context hooks for dynamic context injection
-
 **OpenCode** ([docs](https://opencode.ai/docs/))
+
 - Open-source AI coding agent with comprehensive configuration
 - Granular permissions system (ask/allow/deny per tool/command)
 - Per-agent tool and permission customization
@@ -757,14 +771,15 @@ This comparison uses Claude Code as the baseline and compares features across ma
 - Variable substitution: `{env:VAR}`, `{file:path}`
 - OAuth support for remote MCP servers
 
-> **Note:** Overture can manage MCP configurations for both Claude Code and OpenCode simultaneously. See [OpenCode Integration Research](./docs/archive/opencode-integration-research-2025-12-18.md) for details on hybrid setups.
+> **Note:** Overture v0.3+ focuses on these 3 production-ready clients. Previous versions supported 8 clients (including Claude Desktop, VS Code, Cursor, Windsurf, JetBrains). See [Migration Notes](#migration-from-v02x-to-v03) for upgrade guidance.
 
-### MCP Adoption Timeline
+### Why These 3 Clients?
 
-The Model Context Protocol has become the standard for AI tool extensibility:
-- **March 2025**: OpenAI adopted MCP across ChatGPT
-- **April 2025**: Google confirmed MCP support for Gemini
-- **2025**: All major CLIs now support MCP as clients
+**Claude Code** - Industry-leading capabilities, robust MCP support, rich ecosystem  
+**Copilot CLI** - Deep GitHub integration, enterprise adoption, strong community  
+**OpenCode** - Open-source, highly configurable, community-driven development
+
+These clients represent the best-in-class options for AI-assisted development with MCP support
 
 ---
 
@@ -785,6 +800,7 @@ See [docs/related-projects.md](docs/related-projects.md) for detailed ecosystem 
 Contributions welcome!
 
 **Focus areas:**
+
 - Documentation improvements
 - Bug fixes and feature requests
 - Feature enhancements
