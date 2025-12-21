@@ -88,7 +88,7 @@ export function createMockAdapter(
     isDetected?: boolean;
     configPath?: string;
     config?: Record<string, any>;
-  } = {}
+  } = {},
 ): MockClientAdapter {
   const adapter: MockClientAdapter = {
     name,
@@ -138,7 +138,7 @@ export function createMockAdapter(
  */
 export function createDetectedAdapter(
   name: string,
-  config: Record<string, any> = {}
+  config: Record<string, any> = {},
 ): MockClientAdapter {
   return createMockAdapter(name, {
     enabled: true,
@@ -219,7 +219,7 @@ export function resetAdapterHistory(adapter: MockClientAdapter): void {
  * ```
  */
 export function getLastWrittenConfig(
-  adapter: MockClientAdapter
+  adapter: MockClientAdapter,
 ): Record<string, any> | undefined {
   if (adapter.writeHistory.length === 0) {
     return undefined;

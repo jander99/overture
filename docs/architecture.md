@@ -15,7 +15,7 @@ This document covers two major aspects of Overture's architecture:
 
 **Current Implementation (Part II):** Overture v0.2.5 focuses on multi-platform MCP server synchronization across 7 AI development clients with user global configuration, backup/restore, intelligent client detection, and system diagnostics.
 
-**Important Note:** Part I describes the *vision* for future versions (v0.3+) with enhanced plugin/skill/agent orchestration. Part II describes the *current implementation* (v0.2.5) which is a multi-platform MCP synchronization tool with intelligent client detection. The two parts represent different stages of the project roadmap.
+**Important Note:** Part I describes the _vision_ for future versions (v0.3+) with enhanced plugin/skill/agent orchestration. Part II describes the _current implementation_ (v0.2.5) which is a multi-platform MCP synchronization tool with intelligent client detection. The two parts represent different stages of the project roadmap.
 
 ---
 
@@ -30,6 +30,7 @@ This document covers two major aspects of Overture's architecture:
 **What they are:** Shell commands that execute at specific points in Claude Code's lifecycle.
 
 **Event Types (9 total):**
+
 - **PreToolUse**: Before tool execution (can block or auto-approve)
 - **PostToolUse**: After tool execution (can validate or format)
 - **UserPromptSubmit**: When user submits prompt (can inject context or block)
@@ -40,6 +41,7 @@ This document covers two major aspects of Overture's architecture:
 - **PreCompact**: Before context window compression
 
 **Configuration:**
+
 - Stored in settings.json with matchers (pattern-based filters)
 - Receive JSON via stdin
 - Communicate via exit codes:
@@ -48,11 +50,13 @@ This document covers two major aspects of Overture's architecture:
   - Other: Non-blocking error
 
 **LLM Guidance Mechanism:**
+
 - **Blocking**: Exit code 2 stops execution, feeds error to Claude
 - **Context Injection**: UserPromptSubmit/SessionStart append information
 - **Feedback Integration**: PostToolUse can reject results with explanations
 
 **Example Use Cases:**
+
 - Auto-format code after edits (PostToolUse)
 - Block sensitive file modifications (PreToolUse)
 - Inject git context into prompts (UserPromptSubmit)
@@ -64,14 +68,16 @@ This document covers two major aspects of Overture's architecture:
 **What they are:** Specialized AI assistants with separate context windows.
 
 **Storage Locations:**
+
 - `.claude/agents/*.md` (project-level, highest priority)
 - `~/.claude/agents/*.md` (user-level)
 
 **File Format:** Markdown with YAML frontmatter
+
 ```yaml
 ---
 name: agent-name
-description: "When to use this agent"
+description: 'When to use this agent'
 tools:
   - Read
   - Write
@@ -82,10 +88,12 @@ Agent instructions in Markdown...
 ```
 
 **Invocation:**
+
 - **Automatic**: Claude proactively delegates based on task description
 - **Explicit**: User requests specific agent
 
 **Key Features:**
+
 - Isolated context window (prevents main conversation pollution)
 - Tool restrictions via `tools` field
 - Can use different AI model than main conversation
@@ -96,18 +104,21 @@ Agent instructions in Markdown...
 **What they are:** User-invoked prompt shortcuts and templates.
 
 **Types:**
+
 - **Built-in**: 25+ system commands (`/clear`, `/model`, `/review`, etc.)
 - **Custom**: User-defined Markdown files
 
 **Storage Locations:**
+
 - `.claude/commands/*.md` (project-level)
 - `~/.claude/commands/*.md` (personal)
 - Subdirectories create namespaces: `commands/team/standup.md` → `/team/standup`
 
 **File Format:** Markdown with YAML frontmatter
+
 ```yaml
 ---
-description: "Command description"
+description: 'Command description'
 allowed-tools:
   - Read
   - Grep
@@ -118,12 +129,14 @@ Reference files with @path/to/file.md
 ```
 
 **Advanced Features:**
+
 - **Parameters**: `$ARGUMENTS`, `$1`, `$2` for positional arguments
 - **Bash execution**: `!` prefix executes shell commands
 - **File references**: `@` prefix includes file contents
 - **Tool restrictions**: `allowed-tools` limits available capabilities
 
 **LLM Guidance:**
+
 - Command Markdown content becomes the actual prompt sent to LLM
 - Variables and file references substituted at invocation time
 
@@ -134,13 +147,15 @@ Reference files with @path/to/file.md
 **Key Distinction:** Model-invoked (Claude decides) vs Commands (user invokes)
 
 **Storage Locations:**
+
 - `.claude/skills/*/SKILL.md` (project)
 - `~/.claude/skills/*/SKILL.md` (personal)
 
 **File Format:** SKILL.md with YAML frontmatter
+
 ```yaml
 ---
-description: "What this skill does AND when to use it"
+description: 'What this skill does AND when to use it'
 allowed-tools:
   - Read
   - Write
@@ -149,15 +164,18 @@ Skill instructions and expertise...
 ```
 
 **Discovery Mechanism:**
+
 - Claude evaluates `description` field to match against user requests
 - Automatically activates when relevant
 - No explicit user invocation needed
 
 **Tool Access Control:**
+
 - `allowed-tools` restricts capabilities within skill context
 - Enables read-only skills or security-sensitive workflows
 
 **Directory Structure:**
+
 - Each skill in its own directory
 - Can include templates and supporting files
 
@@ -166,6 +184,7 @@ Skill instructions and expertise...
 **What they are:** Bundled packages of commands, agents, skills, hooks, and MCP servers.
 
 **Structure:**
+
 ```
 .claude-plugin/
 ├── plugin.json          # Manifest
@@ -177,6 +196,7 @@ Skill instructions and expertise...
 ```
 
 **Manifest (plugin.json):**
+
 ```json
 {
   "name": "plugin-name",
@@ -187,11 +207,13 @@ Skill instructions and expertise...
 ```
 
 **Installation:**
+
 - Interactive: `/plugin` opens management interface
 - Direct: `/plugin install plugin-name@marketplace-name`
 - Team: Configure in `.claude/settings.json` for auto-install
 
 **Team Workflows:**
+
 - Repository-level plugin specifications
 - Automatic installation when folder trusted
 - Ensures consistent tooling across teams
@@ -201,11 +223,13 @@ Skill instructions and expertise...
 **What they are:** External tools and data sources following Model Context Protocol standard.
 
 **Transport Mechanisms:**
+
 - **HTTP**: Remote services (recommended)
 - **SSE**: Server-Sent Events (deprecated)
 - **Stdio**: Local processes
 
 **Configuration (`.mcp.json`):**
+
 ```json
 {
   "mcpServers": {
@@ -237,6 +261,7 @@ Skill instructions and expertise...
    - Dynamically discovered
 
 **Scope Levels (Implicit):**
+
 - User-global: MCPs in `~/.config/overture/config.yml` → synced to `~/.claude.json`
 - Project: MCPs in `.overture/config.yaml` → synced to `.mcp.json`
 - Scope is determined by file location, no explicit `scope` field needed
@@ -294,41 +319,50 @@ LLM Response Generation
 ### Component Interactions
 
 **Commands → Tools:**
+
 - Commands can restrict available tools via `allowed-tools`
 - Enables secure or focused command contexts
 
 **Commands → Files:**
+
 - `@` prefix includes file contents
 - Enables templating and reusable snippets
 
 **Skills → Tools:**
+
 - Skills can restrict tool access for security
 - Creates specialized, limited-capability contexts
 
 **Hooks → Context:**
+
 - UserPromptSubmit injects data before LLM sees prompt
 - SessionStart loads project context
 - Shapes what information LLM has available
 
 **Hooks → Tools:**
+
 - PreToolUse blocks or approves operations
 - PostToolUse validates results
 - Acts as guardrails around LLM actions
 
 **Agents → Context:**
+
 - Isolated context window prevents pollution
 - Focused expertise without distraction
 
 **MCP Prompts → Commands:**
+
 - MCP servers provide prompts
 - Become callable slash commands
 - Extend command library dynamically
 
 **MCP Resources → Context:**
+
 - @ mention syntax fetches data
 - Injects external information into conversation
 
 **Plugins → Everything:**
+
 - Package all components together
 - Distribution unit for sharing configurations
 
@@ -337,6 +371,7 @@ LLM Response Generation
 ### Scenario 1: Team Code Review Workflow
 
 **Setup:**
+
 - Command: `/review` with team standards template
 - Skill: `code-reviewer` for analysis expertise
 - Agent: `security-auditor` for security-specific reviews
@@ -345,6 +380,7 @@ LLM Response Generation
 - MCP: `github` server for PR integration
 
 **Flow:**
+
 1. User: `/review src/auth`
 2. UserPromptSubmit hook injects current branch, recent commits
 3. Command expands with `@.claude/templates/review-checklist.md` (rewritten during generation)
@@ -360,12 +396,14 @@ LLM Response Generation
 ### Scenario 2: New Developer Onboarding
 
 **Setup:**
+
 - SessionStart hook: Load context, check dependencies
 - Command: `/onboard` - interactive guide
 - Skill: `project-guide` - ongoing help
 - MCP: `filesystem` - documentation access
 
 **Flow:**
+
 1. New developer starts Claude Code
 2. SessionStart hook checks node_modules, runs `npm install` if needed
 3. SessionStart hook loads project context from config repo
@@ -378,12 +416,14 @@ LLM Response Generation
 ### Scenario 3: Continuous Integration
 
 **Setup:**
+
 - PreToolUse hook: Block commits to main branch
 - PostToolUse hook: Run linter/formatter on edits
 - Skill: `ci-helper` - CI/CD assistance
 - MCP: `github` - CI status checks
 
 **Flow:**
+
 1. Claude edits file
 2. PostToolUse hook runs prettier, eslint
 3. Violations found → exit code 2 with feedback
@@ -478,7 +518,7 @@ LLM Response Generation
 #### config.yaml
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 # Include other files
 includes:
@@ -509,8 +549,8 @@ settings:
 
 # Variables for substitution
 variables:
-  team_style_guide: "team-coding-standards.md"
-  repo_url: "https://github.com/org/repo"
+  team_style_guide: 'team-coding-standards.md'
+  repo_url: 'https://github.com/org/repo'
 ```
 
 #### mcp-servers.yaml
@@ -521,9 +561,9 @@ servers:
     transport: stdio
     command: npx
     args:
-      - "-y"
-      - "@modelcontextprotocol/server-filesystem"
-      - "${project.root}"
+      - '-y'
+      - '@modelcontextprotocol/server-filesystem'
+      - '${project.root}'
     env:
       LOG_LEVEL: info
 
@@ -532,14 +572,14 @@ servers:
     url: https://api.github.com/mcp
     auth:
       type: bearer
-      token: ${env.GITHUB_TOKEN}  # Environment variable
+      token: ${env.GITHUB_TOKEN} # Environment variable
 
   database:
     transport: stdio
     command: /usr/local/bin/db-mcp-server
     args:
-      - "--connection"
-      - "${env.DB_CONNECTION_STRING}"
+      - '--connection'
+      - '${env.DB_CONNECTION_STRING}'
 ```
 
 #### hooks.yaml
@@ -549,23 +589,23 @@ hooks:
   # Auto-format TypeScript after editing
   - matcher:
       tool: Edit
-      pattern: "**/*.ts"
+      pattern: '**/*.ts'
     events:
       postToolUse:
         - command: npx prettier --write "${CLAUDE_FILE_PATH}"
           timeout: 5000
-          description: "Format TypeScript with Prettier"
+          description: 'Format TypeScript with Prettier'
 
   # Block .env file modifications
   - matcher:
       tool: Edit|Write
-      pattern: "**/.env*"
+      pattern: '**/.env*'
     events:
       preToolUse:
         - command: |
             echo '{"permissionDecision": "deny", "reason": "Env files require manual review"}' >&2
             exit 2
-          description: "Protect environment files"
+          description: 'Protect environment files'
 
   # Inject git context on prompt submit
   - events:
@@ -573,18 +613,18 @@ hooks:
         - command: |
             echo "Current branch: $(git branch --show-current)"
             echo "Last commit: $(git log -1 --oneline)"
-          description: "Inject git context"
+          description: 'Inject git context'
 
   # Load project context on session start
   - events:
       sessionStart:
         - command: cat "$(readlink .overture)/context/project-overview.md"
-          description: "Load project context"
+          description: 'Load project context'
         - command: |
             if [ ! -d "node_modules" ]; then
               npm install
             fi
-          description: "Install dependencies"
+          description: 'Install dependencies'
 ```
 
 #### Commands (Markdown + YAML)
@@ -593,7 +633,7 @@ hooks:
 
 ```markdown
 ---
-description: "Request code review with team standards"
+description: 'Request code review with team standards'
 allowed-tools:
   - Read
   - Grep
@@ -616,7 +656,7 @@ Use the team's review checklist:
 
 ```markdown
 ---
-description: "Request code review with team standards"
+description: 'Request code review with team standards'
 allowed-tools:
   - Read
   - Grep
@@ -635,7 +675,7 @@ Use the team's review checklist:
 @.claude/templates/review-checklist.md
 ```
 
-*Note: During generation, Overture copies `templates/review-checklist.md` to `.claude/templates/` and rewrites the path.*
+_Note: During generation, Overture copies `templates/review-checklist.md` to `.claude/templates/` and rewrites the path._
 
 #### Agents (Markdown + YAML)
 
@@ -644,7 +684,7 @@ Use the team's review checklist:
 ```markdown
 ---
 name: security-auditor
-description: "Specialized security audit agent. Use when analyzing code for vulnerabilities or reviewing security-sensitive changes."
+description: 'Specialized security audit agent. Use when analyzing code for vulnerabilities or reviewing security-sensitive changes.'
 tools:
   - Read
   - Grep
@@ -662,6 +702,7 @@ You are a security-focused code auditor. Your responsibilities:
 5. Check dependency versions for known CVEs
 
 Always provide:
+
 - Severity rating (Critical/High/Medium/Low)
 - Specific line references
 - Remediation suggestions
@@ -674,7 +715,7 @@ Always provide:
 
 ```markdown
 ---
-description: "Generate OpenAPI documentation from code. Use when user asks to document APIs or create OpenAPI/Swagger specs."
+description: 'Generate OpenAPI documentation from code. Use when user asks to document APIs or create OpenAPI/Swagger specs.'
 allowed-tools:
   - Read
   - Write
@@ -697,6 +738,7 @@ Use templates from @skills/api-documenter/templates/
 ### Variable Substitution
 
 **Variable Sources:**
+
 - `${env.VAR_NAME}` - Environment variables
 - `${overture.project.name}` - Overture config variables
 - `${git.branch}` - Git context
@@ -718,6 +760,7 @@ servers:
 
 ```markdown
 <!-- In commands/create-pr.md -->
+
 Create a pull request for branch ${git.branch} to ${git.default_branch}
 ```
 
@@ -754,11 +797,11 @@ mcp-servers:
 
 ```yaml
 # ~/work/project-config/config.yaml
-extends: ~/personal-config/config.yaml  # Inherit from personal config
+extends: ~/personal-config/config.yaml # Inherit from personal config
 
 # Override specific settings
 settings:
-  defaultModel: claude-opus-4  # Override for this project
+  defaultModel: claude-opus-4 # Override for this project
 
 # Add project-specific plugins
 plugins:
@@ -869,7 +912,7 @@ Error in config.yaml:8
 
 ```yaml
 # config.yaml (in overture config repo)
-version: "1.0"  # Overture format version
+version: '1.0' # Overture format version
 ```
 
 ### Import from Claude Code
@@ -879,6 +922,7 @@ overture import
 ```
 
 Process:
+
 1. Read `.claude/settings.json`, `.claude/.mcp.json`
 2. Parse existing commands/agents/skills
 3. Generate Overture config repo structure
@@ -1058,16 +1102,19 @@ apps/cli/src/
 **Pure domain logic** with **zero external dependencies**.
 
 **Responsibilities:**
+
 - TypeScript interfaces and types
 - Zod validation schemas
 - Custom error classes
 - Enums and constants
 
 **Files:**
+
 - `config-v2.types.ts` - v2.0 configuration types
 - `config-v2.schema.ts` - Zod validators
 
 **Key Types:**
+
 ```typescript
 interface OvertureConfigV2 {
   version: string;
@@ -1100,6 +1147,7 @@ interface McpServerConfigV2 {
 **External interactions** (file system, processes).
 
 **Responsibilities:**
+
 - File system operations (read, write, backup)
 - Process execution (plugin installation)
 - Template loading
@@ -1111,6 +1159,7 @@ interface McpServerConfigV2 {
 **Business logic** and **orchestration**.
 
 **Responsibilities:**
+
 - Configuration loading and merging
 - Path resolution with env var expansion
 - Sync engine orchestration
@@ -1120,22 +1169,27 @@ interface McpServerConfigV2 {
 **Key Components:**
 
 #### Config Loader
+
 ```typescript
 class ConfigLoader {
-  loadUserConfig(): OvertureConfigV2
-  loadProjectConfig(): OvertureConfigV2 | null
-  mergeConfigs(user, project): OvertureConfigV2
+  loadUserConfig(): OvertureConfigV2;
+  loadProjectConfig(): OvertureConfigV2 | null;
+  mergeConfigs(user, project): OvertureConfigV2;
 }
 ```
 
 #### Sync Engine
+
 ```typescript
 class SyncEngine {
-  sync(config: OvertureConfigV2, clients: ClientName[]): SyncResult
+  sync(config: OvertureConfigV2, clients: ClientName[]): SyncResult;
 
-  private shouldSyncMcp(mcp: McpServerConfigV2, client: ClientName): boolean
-  private backupExistingConfig(client: ClientName): void
-  private mergeConfigs(existing: ClientMcpConfig, overture: ClientMcpConfig): ClientMcpConfig
+  private shouldSyncMcp(mcp: McpServerConfigV2, client: ClientName): boolean;
+  private backupExistingConfig(client: ClientName): void;
+  private mergeConfigs(
+    existing: ClientMcpConfig,
+    overture: ClientMcpConfig,
+  ): ClientMcpConfig;
 }
 ```
 
@@ -1146,6 +1200,7 @@ class SyncEngine {
 **Client-specific implementations**.
 
 **Responsibilities:**
+
 - Detect client installation
 - Read/write client config
 - Convert between formats
@@ -1153,6 +1208,7 @@ class SyncEngine {
 - Handle environment variable expansion
 
 **Interface:**
+
 ```typescript
 interface ClientAdapter {
   readonly name: ClientName;
@@ -1168,6 +1224,7 @@ interface ClientAdapter {
 ```
 
 **Implementations:**
+
 1. **ClaudeCodeAdapter** - User + project config, stdio/http
 2. **ClaudeDesktopAdapter** - User only, stdio/sse, platform-specific paths
 3. **VSCodeAdapter** - Uses `servers` key, stdio only
@@ -1183,6 +1240,7 @@ interface ClientAdapter {
 **User interface** and **command handling**.
 
 **Commands:**
+
 - `overture init` - Initialize project config
 - `overture sync` - Sync MCPs to clients
 - `overture user init` - Initialize user global config
@@ -1250,8 +1308,8 @@ class ExclusionFilter {
   shouldSyncMcp(
     mcp: McpServerConfigV2,
     client: ClientName,
-    platform: Platform
-  ): FilterResult
+    platform: Platform,
+  ): FilterResult;
 
   // Filter by:
   // 1. MCP enabled flag
@@ -1267,9 +1325,9 @@ Manages configuration backups with retention:
 
 ```typescript
 class BackupService {
-  backup(client: ClientName, config: ClientMcpConfig): string
-  list(client?: ClientName): BackupMetadata[]
-  cleanup(retentionCount: number): void
+  backup(client: ClientName, config: ClientMcpConfig): string;
+  list(client?: ClientName): BackupMetadata[];
+  cleanup(retentionCount: number): void;
 }
 ```
 
@@ -1279,7 +1337,7 @@ Detects MCPs not managed by Overture:
 
 ```typescript
 class AuditService {
-  audit(clients: ClientName[]): AuditResult
+  audit(clients: ClientName[]): AuditResult;
 
   // For each client:
   // 1. Read client config
@@ -1319,8 +1377,8 @@ mcp:
     command: mcp-server-github
     transport: stdio
     clients:
-      exclude: [vscode]  # Skip VSCode
-      include: [claude-code, cursor]  # Only these
+      exclude: [vscode] # Skip VSCode
+      include: [claude-code, cursor] # Only these
 ```
 
 ### Platform-Specific Exclusions
@@ -1331,7 +1389,7 @@ mcp:
     command: my-server
     transport: stdio
     platforms:
-      exclude: [win32]  # Skip Windows
+      exclude: [win32] # Skip Windows
 ```
 
 ---

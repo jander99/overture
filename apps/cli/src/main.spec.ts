@@ -44,7 +44,11 @@ describe('main.ts', () => {
     describe('OvertureError handling', () => {
       it('should log error message and return OvertureError exitCode', () => {
         // Arrange
-        const testError = new OvertureError('Test overture error', 'TEST_CODE', 42);
+        const testError = new OvertureError(
+          'Test overture error',
+          'TEST_CODE',
+          42,
+        );
 
         // Act
         const exitCode = handleError(testError);
@@ -64,7 +68,9 @@ describe('main.ts', () => {
 
         // Assert
         expect(Logger.error).toHaveBeenCalledWith('Debug error');
-        expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('OvertureError'));
+        expect(Logger.debug).toHaveBeenCalledWith(
+          expect.stringContaining('OvertureError'),
+        );
         expect(exitCode).toBe(5);
       });
 
@@ -100,7 +106,9 @@ describe('main.ts', () => {
         const exitCode = handleError(unexpectedError);
 
         // Assert
-        expect(Logger.error).toHaveBeenCalledWith('An unexpected error occurred');
+        expect(Logger.error).toHaveBeenCalledWith(
+          'An unexpected error occurred',
+        );
         expect(Logger.error).toHaveBeenCalledWith('Unexpected failure');
         expect(exitCode).toBe(1);
       });
@@ -232,7 +240,9 @@ describe('main.ts', () => {
     it('should call process.exit with correct code on OvertureError', async () => {
       // Arrange
       const { createProgram } = await import('./cli');
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const mockExit = vi
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never);
       const testError = new OvertureError('CLI error', 'CLI_ERR', 7);
 
       vi.mocked(createProgram).mockReturnValue({
@@ -250,7 +260,9 @@ describe('main.ts', () => {
     it('should call process.exit with 1 on unexpected error', async () => {
       // Arrange
       const { createProgram } = await import('./cli');
-      const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const mockExit = vi
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never);
 
       vi.mocked(createProgram).mockReturnValue({
         parseAsync: vi.fn().mockRejectedValue(new Error('Unexpected')),

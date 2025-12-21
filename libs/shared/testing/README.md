@@ -33,10 +33,9 @@ import { vi } from 'vitest';
 vi.mock('fs');
 
 // Create mock filesystem
-const mockFs = createMockFs(
-  { '/config/overture.yml': 'version: "2.0"' },
-  ['/config']
-);
+const mockFs = createMockFs({ '/config/overture.yml': 'version: "2.0"' }, [
+  '/config',
+]);
 
 // Configure fs.existsSync mock
 configureMockFsExists(mockFs, fs.existsSync as any);
@@ -116,7 +115,11 @@ os.homedir(); // '/home/testuser'
 Use predefined configuration objects:
 
 ```typescript
-import { validUserConfig, validProjectConfig, configWithPlugins } from '@overture/testing';
+import {
+  validUserConfig,
+  validProjectConfig,
+  configWithPlugins,
+} from '@overture/testing';
 
 describe('Config Loader', () => {
   it('should load valid user config', () => {
@@ -131,15 +134,26 @@ describe('Config Loader', () => {
 Build flexible test configurations:
 
 ```typescript
-import { buildConfig, buildMcpServer, buildPluginConfig } from '@overture/testing';
+import {
+  buildConfig,
+  buildMcpServer,
+  buildPluginConfig,
+} from '@overture/testing';
 
 const config = buildConfig({
   version: '2.0',
   plugins: {
-    'python-development': buildPluginConfig('claude-code-workflows', true, ['python-repl']),
+    'python-development': buildPluginConfig('claude-code-workflows', true, [
+      'python-repl',
+    ]),
   },
   mcp: {
-    'python-repl': buildMcpServer('uvx', ['mcp-server-python-repl'], {}, 'stdio'),
+    'python-repl': buildMcpServer(
+      'uvx',
+      ['mcp-server-python-repl'],
+      {},
+      'stdio',
+    ),
   },
 });
 ```
@@ -149,6 +163,7 @@ const config = buildConfig({
 ### Mocks
 
 #### Filesystem
+
 - `createMockFs(files, directories)` - Create mock filesystem
 - `configureMockFsExists(mockFs, existsSyncMock)` - Configure existsSync
 - `configureMockFsReadFile(mockFs, readFileSyncMock)` - Configure readFileSync
@@ -157,6 +172,7 @@ const config = buildConfig({
 - `configureAllFsMocks(mockFs, fsMock)` - Configure all fs mocks at once
 
 #### Process
+
 - `buildExecResult(stdout, stderr, exitCode)` - Build execution result
 - `createMockProcess(results)` - Create mock process executor
 - `createSuccessProcess(output)` - Create always-succeeding process
@@ -165,6 +181,7 @@ const config = buildConfig({
 - `addMockResults(executor, results)` - Add more results to queue
 
 #### Adapter
+
 - `createMockAdapter(name, options)` - Create mock client adapter
 - `createDetectedAdapter(name, config)` - Create detected adapter
 - `createUndetectedAdapter(name)` - Create undetected adapter
@@ -173,6 +190,7 @@ const config = buildConfig({
 - `getLastWrittenConfig(adapter)` - Get last written config
 
 #### Platform
+
 - `createLinuxPlatform(homedir)` - Create Linux platform config
 - `createMacOSPlatform(homedir)` - Create macOS platform config
 - `createWindowsPlatform(homedir)` - Create Windows platform config
@@ -224,6 +242,7 @@ Run `nx test @overture/testing` to execute the unit tests via [Vitest](https://v
 ## Dependencies
 
 This library has **zero production dependencies** and only requires:
+
 - `tslib` - TypeScript runtime library
 - `vitest` - Test runner (dev dependency)
 

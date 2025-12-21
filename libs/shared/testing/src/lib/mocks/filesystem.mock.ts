@@ -42,7 +42,7 @@ export interface MockFileSystem {
  */
 export function createMockFs(
   files: Record<string, string> = {},
-  directories: string[] = []
+  directories: string[] = [],
 ): MockFileSystem {
   return {
     files: new Map(Object.entries(files)),
@@ -64,7 +64,7 @@ export function createMockFs(
  */
 export function configureMockFsExists(
   mockFs: MockFileSystem,
-  existsSyncMock: any
+  existsSyncMock: any,
 ): void {
   existsSyncMock.mockImplementation((path: string) => {
     return mockFs.files.has(path) || mockFs.directories.has(path);
@@ -85,7 +85,7 @@ export function configureMockFsExists(
  */
 export function configureMockFsReadFile(
   mockFs: MockFileSystem,
-  readFileSyncMock: any
+  readFileSyncMock: any,
 ): void {
   readFileSyncMock.mockImplementation((path: string) => {
     const content = mockFs.files.get(path);
@@ -110,7 +110,7 @@ export function configureMockFsReadFile(
  */
 export function configureMockFsWriteFile(
   mockFs: MockFileSystem,
-  writeFileSyncMock: any
+  writeFileSyncMock: any,
 ): void {
   writeFileSyncMock.mockImplementation((path: string, content: string) => {
     mockFs.files.set(path, content);
@@ -131,7 +131,7 @@ export function configureMockFsWriteFile(
  */
 export function configureMockFsMkdir(
   mockFs: MockFileSystem,
-  mkdirSyncMock: any
+  mkdirSyncMock: any,
 ): void {
   mkdirSyncMock.mockImplementation((path: string) => {
     mockFs.directories.add(path);
@@ -153,7 +153,7 @@ export function configureMockFsMkdir(
  */
 export function configureAllFsMocks(
   mockFs: MockFileSystem,
-  fsMock: Mocked<typeof fs>
+  fsMock: Mocked<typeof fs>,
 ): void {
   configureMockFsExists(mockFs, fsMock.existsSync);
   configureMockFsReadFile(mockFs, fsMock.readFileSync);

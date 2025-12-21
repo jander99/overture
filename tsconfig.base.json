@@ -19,7 +19,9 @@
     "customConditions": ["@overture/source"],
     "baseUrl": ".",
     "paths": {
-      "@overture/client-adapters": ["libs/adapters/client-adapters/src/index.ts"],
+      "@overture/client-adapters": [
+        "libs/adapters/client-adapters/src/index.ts"
+      ],
       "@overture/config-core": ["libs/core/config/src/index.ts"],
       "@overture/config-schema": ["libs/domain/config-schema/src/index.ts"],
       "@overture/config-types": ["libs/domain/config-types/src/index.ts"],

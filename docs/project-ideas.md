@@ -21,4 +21,4 @@ Overture should also manage which Claude Code plugins a user has subscribed to.
 
 ### MCP Sync
 
-Overture should provide for the ability for users to persist multiple mcp servers per project as well as a set of global mcp servers the user prefers to use regardless of project. 
+Overture should provide for the ability for users to persist multiple mcp servers per project as well as a set of global mcp servers the user prefers to use regardless of project.

@@ -18,9 +18,12 @@ import {
 } from './test-helpers.js';
 
 describe('DiscoveryService', () => {
-  function createTestDeps(overrides: Partial<DiscoveryServiceDeps> = {}): DiscoveryServiceDeps {
+  function createTestDeps(
+    overrides: Partial<DiscoveryServiceDeps> = {},
+  ): DiscoveryServiceDeps {
     const fs = createMockFilesystem();
-    const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
+    const { fileExists, readFile, readDir, isDirectory } =
+      createFilesystemFunctions(fs);
 
     return {
       processPort: createMockProcessPort(),
@@ -38,7 +41,10 @@ describe('DiscoveryService', () => {
   describe('discoverAll', () => {
     it('should discover all clients and return report', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
         ['claude --version', { stdout: '2.1.0\n', stderr: '', exitCode: 0 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -76,7 +82,8 @@ describe('DiscoveryService', () => {
       fs.directories.add('/mnt/c/Users/jeff');
       fs.directories.add('/mnt/c/Users/jeff/Desktop');
 
-      const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
+      const { fileExists, readFile, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
 
       const deps = createTestDeps({
         environmentPort,
@@ -92,14 +99,19 @@ describe('DiscoveryService', () => {
 
       expect(report.environment.isWSL2).toBe(true);
       expect(report.environment.wsl2Info?.distroName).toBe('Ubuntu');
-      expect(report.environment.wsl2Info?.windowsUserProfile).toBe('/mnt/c/Users/jeff');
+      expect(report.environment.wsl2Info?.windowsUserProfile).toBe(
+        '/mnt/c/Users/jeff',
+      );
     });
   });
 
   describe('discoverByAdapter', () => {
     it('should discover single client', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
         ['claude --version', { stdout: '2.1.0\n', stderr: '', exitCode: 0 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -143,8 +155,14 @@ describe('DiscoveryService', () => {
       const fs = createMockFilesystem();
       fs.files.set('/custom/path/to/claude', '#!/bin/bash');
 
-      const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
-      const deps = createTestDeps({ fileExists, readFile, readDir, isDirectory });
+      const { fileExists, readFile, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
+      const deps = createTestDeps({
+        fileExists,
+        readFile,
+        readDir,
+        isDirectory,
+      });
 
       const adapter = createMockAdapter('claude-code');
 
@@ -169,8 +187,14 @@ describe('DiscoveryService', () => {
       const fs = createMockFilesystem();
       fs.files.set('/home/testuser/bin/claude', '#!/bin/bash');
 
-      const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
-      const deps = createTestDeps({ fileExists, readFile, readDir, isDirectory });
+      const { fileExists, readFile, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
+      const deps = createTestDeps({
+        fileExists,
+        readFile,
+        readDir,
+        isDirectory,
+      });
 
       const adapter = createMockAdapter('claude-code');
 
@@ -203,10 +227,11 @@ describe('DiscoveryService', () => {
       fs.directories.add('/mnt/c/Users/jeff/Desktop');
       fs.files.set(
         '/mnt/c/Users/jeff/AppData/Local/Programs/claude-code/claude.exe',
-        'exe'
+        'exe',
       );
 
-      const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
+      const { fileExists, readFile, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
 
       const deps = createTestDeps({
         environmentPort,
@@ -238,7 +263,8 @@ describe('DiscoveryService', () => {
       fs.directories.add('/mnt/c/Users');
       fs.directories.add('/mnt/c/Users/jeff');
 
-      const { fileExists, readFile, readDir, isDirectory } = createFilesystemFunctions(fs);
+      const { fileExists, readFile, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
 
       const deps = createTestDeps({
         environmentPort,

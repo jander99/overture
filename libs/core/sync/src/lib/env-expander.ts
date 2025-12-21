@@ -34,7 +34,10 @@ import { ConfigError } from '@overture/errors';
  * // Returns: '' (if GITHUB_TOKEN is not set)
  * ```
  */
-export function expandEnvVars(input: string, env: Record<string, string | undefined> = process.env): string {
+export function expandEnvVars(
+  input: string,
+  env: Record<string, string | undefined> = process.env,
+): string {
   // Pattern: ${VAR} or ${VAR:-default}
   const pattern = /\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]+))?\}/g;
 
@@ -76,7 +79,7 @@ export function expandEnvVars(input: string, env: Record<string, string | undefi
 export function expandEnvVarsRecursive(
   input: string,
   env: Record<string, string | undefined> = process.env,
-  maxDepth = 10
+  maxDepth = 10,
 ): string {
   let result = input;
   let previousResult = '';
@@ -89,7 +92,9 @@ export function expandEnvVarsRecursive(
   }
 
   if (depth >= maxDepth && result !== previousResult) {
-    throw new ConfigError(`Circular environment variable reference detected in: ${input}`);
+    throw new ConfigError(
+      `Circular environment variable reference detected in: ${input}`,
+    );
   }
 
   return result;
@@ -121,15 +126,22 @@ export function expandEnvVarsRecursive(
  */
 export function expandEnvVarsInObject<T extends Record<string, unknown>>(
   obj: T,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): T {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
       result[key] = expandEnvVars(value, env);
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      result[key] = expandEnvVarsInObject(value as Record<string, unknown>, env);
+    } else if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
+      result[key] = expandEnvVarsInObject(
+        value as Record<string, unknown>,
+        env,
+      );
     } else {
       result[key] = value;
     }
@@ -195,14 +207,16 @@ export function extractEnvVarNames(input: string): string[] {
  */
 export function validateEnvVars(
   input: string,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): { valid: boolean; missing: string[] } {
   const varNames = extractEnvVarNames(input);
   const missing: string[] = [];
 
   // Pattern to check for default values
   const defaultPattern = /\$\{([A-Z_][A-Z0-9_]*):-[^}]+\}/g;
-  const varsWithDefaults = new Set([...input.matchAll(defaultPattern)].map((match) => match[1]));
+  const varsWithDefaults = new Set(
+    [...input.matchAll(defaultPattern)].map((match) => match[1]),
+  );
 
   for (const varName of varNames) {
     // Skip validation if variable has default value
@@ -238,7 +252,7 @@ export function validateEnvVars(
  */
 export function expandEnvVarsInArgs(
   args: string[],
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): string[] {
   return args.map((arg) => expandEnvVars(arg, env));
 }

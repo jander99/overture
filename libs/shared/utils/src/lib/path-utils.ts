@@ -23,7 +23,7 @@
 export function getDirname(filePath: string): string {
   const lastSlash = Math.max(
     filePath.lastIndexOf('/'),
-    filePath.lastIndexOf('\\')
+    filePath.lastIndexOf('\\'),
   );
   return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
 }

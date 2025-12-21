@@ -126,12 +126,14 @@ describe('OpenCodeAdapter', () => {
             type: 'local',
             enabled: true,
             command: ['npx', 'test-server'],
-            environment: { API_KEY: '{env:MY_KEY}' }
-          }
-        }
+            environment: { API_KEY: '{env:MY_KEY}' },
+          },
+        },
       };
       vi.mocked(filesystem.exists).mockResolvedValue(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(mockConfig));
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(mockConfig),
+      );
 
       const config = await adapter.readConfig('/test/path.json');
 
@@ -153,7 +155,7 @@ describe('OpenCodeAdapter', () => {
       vi.mocked(filesystem.readFile).mockResolvedValue('invalid json');
 
       await expect(adapter.readConfig('/test/path.json')).rejects.toThrow(
-        'Failed to read OpenCode config'
+        'Failed to read OpenCode config',
       );
     });
 
@@ -165,7 +167,9 @@ describe('OpenCodeAdapter', () => {
         mcp: { 'test-server': { type: 'local', command: ['test'] } },
       };
       vi.mocked(filesystem.exists).mockResolvedValue(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(mockConfig));
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(mockConfig),
+      );
 
       const config = await adapter.readConfig('/test/path.json');
 
@@ -183,19 +187,24 @@ describe('OpenCodeAdapter', () => {
       const config = { mcp: {} };
       await adapter.writeConfig('/test/dir/config.json', config);
 
-      expect(filesystem.mkdir).toHaveBeenCalledWith('/test/dir', { recursive: true });
+      expect(filesystem.mkdir).toHaveBeenCalledWith('/test/dir', {
+        recursive: true,
+      });
       expect(filesystem.writeFile).toHaveBeenCalledWith(
         '/test/dir/config.json',
-        JSON.stringify(config, null, 2)
+        JSON.stringify(config, null, 2),
       );
     });
 
     it('should not create directory if it exists', async () => {
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(false) // file doesn't exist
-                                    .mockResolvedValueOnce(true); // dir exists
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(false) // file doesn't exist
+        .mockResolvedValueOnce(true); // dir exists
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
-      const config = { mcp: { test: { command: 'cmd', args: [], type: 'local' } } };
+      const config = {
+        mcp: { test: { command: 'cmd', args: [], type: 'local' } },
+      };
       await adapter.writeConfig('/test/dir/config.json', config);
 
       expect(filesystem.mkdir).not.toHaveBeenCalled();
@@ -216,9 +225,12 @@ describe('OpenCodeAdapter', () => {
         },
       };
 
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(true) // dir exists
-                                    .mockResolvedValueOnce(true); // file exists
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(existingConfig));
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(true) // dir exists
+        .mockResolvedValueOnce(true); // file exists
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(existingConfig),
+      );
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
       const newConfig = {
@@ -249,12 +261,17 @@ describe('OpenCodeAdapter', () => {
         mcp: {},
       };
 
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(true)
-                                    .mockResolvedValueOnce(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(existingConfig));
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(existingConfig),
+      );
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
-      const newConfig = { mcp: { 'test': { type: 'local', command: ['test'], args: [] } } };
+      const newConfig = {
+        mcp: { test: { type: 'local', command: ['test'], args: [] } },
+      };
       await adapter.writeConfig('/test/config.json', newConfig);
 
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
@@ -267,17 +284,22 @@ describe('OpenCodeAdapter', () => {
       const existingConfig = {
         permission: {
           edit: 'ask',
-          bash: { '*': 'ask', 'git': 'allow' },
+          bash: { '*': 'ask', git: 'allow' },
         },
         mcp: {},
       };
 
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(true)
-                                    .mockResolvedValueOnce(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(existingConfig));
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(existingConfig),
+      );
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
-      const newConfig = { mcp: { 'test': { type: 'local', command: ['test'], args: [] } } };
+      const newConfig = {
+        mcp: { test: { type: 'local', command: ['test'], args: [] } },
+      };
       await adapter.writeConfig('/test/config.json', newConfig);
 
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
@@ -292,12 +314,17 @@ describe('OpenCodeAdapter', () => {
         mcp: {},
       };
 
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(true)
-                                    .mockResolvedValueOnce(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(existingConfig));
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(existingConfig),
+      );
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
-      const newConfig = { mcp: { 'test': { type: 'local', command: ['test'], args: [] } } };
+      const newConfig = {
+        mcp: { test: { type: 'local', command: ['test'], args: [] } },
+      };
       await adapter.writeConfig('/test/config.json', newConfig);
 
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
@@ -314,9 +341,12 @@ describe('OpenCodeAdapter', () => {
         },
       };
 
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(true)
-                                    .mockResolvedValueOnce(true);
-      vi.mocked(filesystem.readFile).mockResolvedValue(JSON.stringify(existingConfig));
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+      vi.mocked(filesystem.readFile).mockResolvedValue(
+        JSON.stringify(existingConfig),
+      );
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
       const newConfig = {
@@ -335,12 +365,15 @@ describe('OpenCodeAdapter', () => {
     });
 
     it('should write new config when file does not exist', async () => {
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(false) // dir doesn't exist
-                                    .mockResolvedValueOnce(false); // file doesn't exist
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(false) // dir doesn't exist
+        .mockResolvedValueOnce(false); // file doesn't exist
       vi.mocked(filesystem.mkdir).mockResolvedValue(undefined);
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
-      const config = { mcp: { 'test': { command: 'test-cmd', args: ['arg1'], type: 'local' } } };
+      const config = {
+        mcp: { test: { command: 'test-cmd', args: ['arg1'], type: 'local' } },
+      };
       await adapter.writeConfig('/test/config.json', config);
 
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
@@ -351,8 +384,9 @@ describe('OpenCodeAdapter', () => {
     });
 
     it('should combine command and args when writing', async () => {
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(false) // file doesn't exist
-                                    .mockResolvedValueOnce(true); // dir exists
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(false) // file doesn't exist
+        .mockResolvedValueOnce(true); // dir exists
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
       const config = {
@@ -361,8 +395,8 @@ describe('OpenCodeAdapter', () => {
             command: 'uvx',
             args: ['mcp-server-python'],
             type: 'local',
-          }
-        }
+          },
+        },
       };
 
       await adapter.writeConfig('/test/config.json', config);
@@ -370,12 +404,16 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['python-repl'].command).toEqual(['uvx', 'mcp-server-python']);
+      expect(written.mcp['python-repl'].command).toEqual([
+        'uvx',
+        'mcp-server-python',
+      ]);
     });
 
     it('should rename env to environment when writing', async () => {
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(false) // file doesn't exist
-                                    .mockResolvedValueOnce(true); // dir exists
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(false) // file doesn't exist
+        .mockResolvedValueOnce(true); // dir exists
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
       const config = {
@@ -385,8 +423,8 @@ describe('OpenCodeAdapter', () => {
             args: [],
             env: { API_KEY: '{env:MY_KEY}' },
             type: 'local',
-          }
-        }
+          },
+        },
       };
 
       await adapter.writeConfig('/test/config.json', config);
@@ -394,13 +432,16 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['test-server'].environment).toEqual({ API_KEY: '{env:MY_KEY}' });
+      expect(written.mcp['test-server'].environment).toEqual({
+        API_KEY: '{env:MY_KEY}',
+      });
       expect(written.mcp['test-server'].env).toBeUndefined();
     });
 
     it('should add enabled true when writing', async () => {
-      vi.mocked(filesystem.exists).mockResolvedValueOnce(false) // file doesn't exist
-                                    .mockResolvedValueOnce(true); // dir exists
+      vi.mocked(filesystem.exists)
+        .mockResolvedValueOnce(false) // file doesn't exist
+        .mockResolvedValueOnce(true); // dir exists
       vi.mocked(filesystem.writeFile).mockResolvedValue(undefined);
 
       const config = {
@@ -409,8 +450,8 @@ describe('OpenCodeAdapter', () => {
             command: 'test',
             args: [],
             type: 'local',
-          }
-        }
+          },
+        },
       };
 
       await adapter.writeConfig('/test/config.json', config);
@@ -439,7 +480,9 @@ describe('OpenCodeAdapter', () => {
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
       expect(clientConfig.mcp['python-repl'].command).toBe('uvx');
-      expect(clientConfig.mcp['python-repl'].args).toEqual(['mcp-server-python']);
+      expect(clientConfig.mcp['python-repl'].args).toEqual([
+        'mcp-server-python',
+      ]);
     });
 
     it('should translate env vars and keep as env property', () => {
@@ -458,7 +501,9 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({ API_KEY: '{env:MY_KEY}' });
+      expect(clientConfig.mcp['test-server'].env).toEqual({
+        API_KEY: '{env:MY_KEY}',
+      });
     });
 
     it('should add type local', () => {
@@ -495,7 +540,9 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({ API_KEY: '{env:MY_KEY}' });
+      expect(clientConfig.mcp['test-server'].env).toEqual({
+        API_KEY: '{env:MY_KEY}',
+      });
     });
 
     it('should translate ${env:VAR} to {env:VAR}', () => {
@@ -514,7 +561,9 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({ API_KEY: '{env:MY_KEY}' });
+      expect(clientConfig.mcp['test-server'].env).toEqual({
+        API_KEY: '{env:MY_KEY}',
+      });
     });
 
     it('should filter MCPs by platform exclusions', () => {
@@ -620,12 +669,12 @@ describe('OpenCodeAdapter', () => {
         version: '1.0',
         project: { name: 'test', type: 'generic' },
         mcp: {
-          'server1': {
+          server1: {
             command: 'cmd1',
             args: ['arg1'],
             transport: 'stdio',
           },
-          'server2': {
+          server2: {
             command: 'cmd2',
             args: ['arg2'],
             transport: 'stdio',

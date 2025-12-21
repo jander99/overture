@@ -4,7 +4,15 @@
  * @module @overture/utils/logger.spec
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import { Logger, logger } from './logger.js';
 import type { OutputPort } from '@overture/ports-output';
 

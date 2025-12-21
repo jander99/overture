@@ -29,7 +29,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.isWSL2();
@@ -39,7 +39,10 @@ describe('WSL2Detector', () => {
 
     it('should detect WSL2 via /proc/version', async () => {
       const fs = createMockFilesystem();
-      fs.files.set('/proc/version', 'Linux version 5.10.16.3-microsoft-standard-WSL2');
+      fs.files.set(
+        '/proc/version',
+        'Linux version 5.10.16.3-microsoft-standard-WSL2',
+      );
 
       const { readFile } = createFilesystemFunctions(fs);
 
@@ -53,7 +56,7 @@ describe('WSL2Detector', () => {
         readFile,
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.isWSL2();
@@ -77,7 +80,7 @@ describe('WSL2Detector', () => {
         readFile,
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.isWSL2();
@@ -100,7 +103,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = detector.getDistroName();
@@ -119,7 +122,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = detector.getDistroName();
@@ -131,11 +134,14 @@ describe('WSL2Detector', () => {
   describe('getWindowsUserProfile', () => {
     it('should get profile via cmd.exe', async () => {
       const execResults = new Map([
-        ['/mnt/c/Windows/System32/cmd.exe /c echo %USERPROFILE%', {
-          stdout: 'C:\\Users\\jeff\r\n',
-          stderr: '',
-          exitCode: 0,
-        }],
+        [
+          '/mnt/c/Windows/System32/cmd.exe /c echo %USERPROFILE%',
+          {
+            stdout: 'C:\\Users\\jeff\r\n',
+            stderr: '',
+            exitCode: 0,
+          },
+        ],
       ]);
 
       const processPort = createMockProcessPort(execResults);
@@ -148,7 +154,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.getWindowsUserProfile();
@@ -163,7 +169,8 @@ describe('WSL2Detector', () => {
       fs.directories.add('/mnt/c/Users/jeff');
       fs.directories.add('/mnt/c/Users/jeff/Desktop');
 
-      const { fileExists, readDir, isDirectory } = createFilesystemFunctions(fs);
+      const { fileExists, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
 
       const processPort = createMockProcessPort(execResults);
       const environmentPort = createMockEnvironmentPort('linux');
@@ -175,7 +182,7 @@ describe('WSL2Detector', () => {
         () => '',
         readDir,
         isDirectory,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.getWindowsUserProfile();
@@ -191,7 +198,8 @@ describe('WSL2Detector', () => {
       fs.directories.add('/mnt/c/Users/Default');
       fs.directories.add('/mnt/c/Users/jeff');
 
-      const { fileExists, readDir, isDirectory } = createFilesystemFunctions(fs);
+      const { fileExists, readDir, isDirectory } =
+        createFilesystemFunctions(fs);
 
       const processPort = createMockProcessPort(execResults);
       const environmentPort = createMockEnvironmentPort('linux');
@@ -203,7 +211,7 @@ describe('WSL2Detector', () => {
         () => '',
         readDir,
         isDirectory,
-        joinPath
+        joinPath,
       );
 
       const result = await detector.getWindowsUserProfile();
@@ -224,10 +232,12 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
-      const result = detector.translateWindowsPath('C:\\Users\\jeff\\Documents');
+      const result = detector.translateWindowsPath(
+        'C:\\Users\\jeff\\Documents',
+      );
 
       expect(result).toBe('/mnt/c/Users/jeff/Documents');
     });
@@ -243,7 +253,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = detector.translateWindowsPath('D:\\Projects\\MyApp');
@@ -262,7 +272,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       const result = detector.translateWindowsPath('/mnt/c/Users/jeff');
@@ -283,13 +293,20 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
-      const paths = detector.getWindowsInstallPaths('claude-code', '/mnt/c/Users/jeff');
+      const paths = detector.getWindowsInstallPaths(
+        'claude-code',
+        '/mnt/c/Users/jeff',
+      );
 
-      expect(paths).toContain('/mnt/c/Users/jeff/AppData/Local/Programs/claude-code/claude.exe');
-      expect(paths).toContain('/mnt/c/Users/jeff/AppData/Roaming/npm/claude.cmd');
+      expect(paths).toContain(
+        '/mnt/c/Users/jeff/AppData/Local/Programs/claude-code/claude.exe',
+      );
+      expect(paths).toContain(
+        '/mnt/c/Users/jeff/AppData/Roaming/npm/claude.cmd',
+      );
     });
 
     it('should return empty array for unknown client', () => {
@@ -303,10 +320,13 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
-      const paths = detector.getWindowsInstallPaths('unknown-client' as any, '/mnt/c/Users/jeff');
+      const paths = detector.getWindowsInstallPaths(
+        'unknown-client' as any,
+        '/mnt/c/Users/jeff',
+      );
 
       expect(paths).toEqual([]);
     });
@@ -324,12 +344,17 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
-      const configPath = detector.getWindowsConfigPath('claude-code', '/mnt/c/Users/jeff');
+      const configPath = detector.getWindowsConfigPath(
+        'claude-code',
+        '/mnt/c/Users/jeff',
+      );
 
-      expect(configPath).toBe('/mnt/c/Users/jeff/AppData/Roaming/Claude/mcp.json');
+      expect(configPath).toBe(
+        '/mnt/c/Users/jeff/AppData/Roaming/Claude/mcp.json',
+      );
     });
 
     it('should return undefined for client without config path', () => {
@@ -343,10 +368,13 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
-      const configPath = detector.getWindowsConfigPath('unknown-client' as any, '/mnt/c/Users/jeff');
+      const configPath = detector.getWindowsConfigPath(
+        'unknown-client' as any,
+        '/mnt/c/Users/jeff',
+      );
 
       expect(configPath).toBeUndefined();
     });
@@ -371,7 +399,7 @@ describe('WSL2Detector', () => {
         },
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       // First call
@@ -399,7 +427,7 @@ describe('WSL2Detector', () => {
         () => '',
         () => [],
         () => false,
-        joinPath
+        joinPath,
       );
 
       await detector.detectEnvironment();

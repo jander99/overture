@@ -1,4 +1,10 @@
-import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
+import type {
+  Mock,
+  Mocked,
+  MockedObject,
+  MockedFunction,
+  MockInstance,
+} from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { FsUtils } from './fs-utils';
@@ -34,7 +40,7 @@ describe('FsUtils', () => {
 
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(ConfigError);
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(
-        'Failed to read file: ENOENT: no such file or directory'
+        'Failed to read file: ENOENT: no such file or directory',
       );
     });
 
@@ -61,7 +67,7 @@ describe('FsUtils', () => {
 
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(ConfigError);
       await expect(FsUtils.readFile(filePath)).rejects.toThrow(
-        'Failed to read file: EACCES: permission denied'
+        'Failed to read file: EACCES: permission denied',
       );
     });
 
@@ -140,10 +146,10 @@ describe('FsUtils', () => {
       (fs.mkdir as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
-        ConfigError
+        ConfigError,
       );
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
-        'Failed to write file'
+        'Failed to write file',
       );
     });
 
@@ -156,10 +162,10 @@ describe('FsUtils', () => {
       (fs.writeFile as Mock).mockRejectedValue(error);
 
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
-        ConfigError
+        ConfigError,
       );
       await expect(FsUtils.writeFile(filePath, content)).rejects.toThrow(
-        'Failed to write file: ENOSPC: no space left on device'
+        'Failed to write file: ENOSPC: no space left on device',
       );
     });
 
@@ -366,9 +372,7 @@ describe('FsUtils', () => {
       const fileName = 'nonexistent.txt';
       const startDir = '/home/user/project';
 
-      (fs.access as Mock).mockRejectedValue(
-        new Error('ENOENT: no such file')
-      );
+      (fs.access as Mock).mockRejectedValue(new Error('ENOENT: no such file'));
 
       const result = await FsUtils.findUp(fileName, startDir);
 
@@ -379,9 +383,7 @@ describe('FsUtils', () => {
       const fileName = 'root-only.txt';
       const startDir = '/home/user/project';
 
-      (fs.access as Mock).mockRejectedValue(
-        new Error('ENOENT: no such file')
-      );
+      (fs.access as Mock).mockRejectedValue(new Error('ENOENT: no such file'));
 
       const result = await FsUtils.findUp(fileName, startDir);
 

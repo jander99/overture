@@ -31,8 +31,12 @@ import type { DiscoveryServiceDeps } from '@overture/discovery-core';
 // Create dependencies
 const deps: DiscoveryServiceDeps = {
   processPort: {
-    exec: async (cmd, args) => { /* implementation */ },
-    commandExists: async (cmd) => { /* implementation */ },
+    exec: async (cmd, args) => {
+      /* implementation */
+    },
+    commandExists: async (cmd) => {
+      /* implementation */
+    },
   },
   environmentPort: {
     platform: () => process.platform as Platform,
@@ -53,7 +57,9 @@ const discovery = createDiscoveryService(deps);
 // Discover all clients
 const report = await discovery.discoverAll(adapters);
 
-console.log(`Found ${report.summary.detected} of ${report.summary.totalClients} clients`);
+console.log(
+  `Found ${report.summary.detected} of ${report.summary.totalClients} clients`,
+);
 if (report.environment.isWSL2) {
   console.log(`WSL2 detected: ${report.environment.wsl2Info?.distroName}`);
 }
@@ -89,7 +95,7 @@ const detector = createBinaryDetector(
   processPort,
   environmentPort,
   fs.existsSync,
-  (path) => fs.readFileSync(path, 'utf-8')
+  (path) => fs.readFileSync(path, 'utf-8'),
 );
 
 const result = await detector.detectClient(adapter, 'linux');
@@ -109,7 +115,7 @@ const detector = createWSL2Detector(
   (path) => fs.readFileSync(path, 'utf-8'),
   fs.readdirSync,
   (path) => fs.statSync(path).isDirectory(),
-  path.join
+  path.join,
 );
 
 const info = await detector.detectEnvironment();
@@ -184,6 +190,7 @@ const service = createDiscoveryService(deps, config);
 Factory: `createDiscoveryService(deps, config?)`
 
 Methods:
+
 - `discoverAll(adapters)` - Discover all registered clients
 - `discoverByAdapter(adapter)` - Discover specific client
 - `updateConfig(config)` - Update discovery configuration
@@ -194,6 +201,7 @@ Methods:
 Factory: `createBinaryDetector(processPort, environmentPort, fileExists, readFile)`
 
 Methods:
+
 - `detectClient(adapter, platform)` - Detect client binary/bundle
 - `detectBinary(binaryName)` - Detect specific binary in PATH
 - `detectAppBundle(paths)` - Detect application bundle
@@ -204,6 +212,7 @@ Methods:
 Factory: `createWSL2Detector(processPort, environmentPort, fileExists, readFile, readDir, isDirectory, joinPath)`
 
 Methods:
+
 - `detectEnvironment()` - Detect WSL2 environment
 - `isWSL2()` - Check if running in WSL2
 - `getDistroName()` - Get WSL2 distribution name
@@ -219,6 +228,7 @@ Methods:
 - **100% coverage** of core functionality
 
 Test files:
+
 - `binary-detector.spec.ts` (14 tests)
 - `wsl2-detector.spec.ts` (17 tests)
 - `discovery-service.spec.ts` (9 tests)
@@ -228,12 +238,14 @@ Test files:
 This library extracts and refactors discovery logic from `apps/cli/src/core/`:
 
 **Before:**
+
 ```typescript
 import { discoveryService } from '../core/discovery-service';
 // Uses singleton with hardcoded dependencies
 ```
 
 **After:**
+
 ```typescript
 import { createDiscoveryService } from '@overture/discovery-core';
 // Inject dependencies explicitly

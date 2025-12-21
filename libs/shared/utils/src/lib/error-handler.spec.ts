@@ -4,7 +4,15 @@
  * @module @overture/utils/error-handler.spec
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import {
   ErrorHandler,
   ExitCode,
@@ -83,7 +91,7 @@ describe('ErrorHandler', () => {
     it('should format ConfigurationError', () => {
       const error = new ConfigurationError(
         'Config not found',
-        '/path/to/config.yaml'
+        '/path/to/config.yaml',
       );
       const formatted = ErrorHandler.formatError(error);
 
@@ -96,7 +104,7 @@ describe('ErrorHandler', () => {
       const error = new FileSystemError(
         'Permission denied',
         '/path/to/file',
-        'write'
+        'write',
       );
       const formatted = ErrorHandler.formatError(error);
 
@@ -110,7 +118,7 @@ describe('ErrorHandler', () => {
       const error = new NetworkError(
         'Request failed',
         'https://api.example.com',
-        404
+        404,
       );
       const formatted = ErrorHandler.formatError(error);
 
@@ -328,7 +336,9 @@ describe('ErrorHandler', () => {
 
       ErrorHandler.logError(formatted);
 
-      expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Test error'));
+      expect(Logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Test error'),
+      );
     });
 
     it('should log error details', () => {
@@ -340,8 +350,12 @@ describe('ErrorHandler', () => {
 
       ErrorHandler.logError(formatted);
 
-      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Details:'));
-      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Additional details'));
+      expect(Logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Details:'),
+      );
+      expect(Logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Additional details'),
+      );
     });
 
     it('should log suggestion', () => {
@@ -353,8 +367,12 @@ describe('ErrorHandler', () => {
 
       ErrorHandler.logError(formatted, suggestion);
 
-      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Suggestion:'));
-      expect(Logger.info).toHaveBeenCalledWith(expect.stringContaining('Try this fix'));
+      expect(Logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Suggestion:'),
+      );
+      expect(Logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Try this fix'),
+      );
     });
 
     it('should log stack trace when verbose', () => {
@@ -366,8 +384,12 @@ describe('ErrorHandler', () => {
 
       ErrorHandler.logError(formatted, undefined, true);
 
-      expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('Stack trace:'));
-      expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('Error: Test error'));
+      expect(Logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Stack trace:'),
+      );
+      expect(Logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Error: Test error'),
+      );
     });
 
     it('should not log stack trace when not verbose', () => {
@@ -409,7 +431,7 @@ describe('ErrorHandler', () => {
       expect(Logger.error).toHaveBeenCalled();
       // Suggestion should include "overture validate" for sync command
       expect(Logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('overture validate')
+        expect.stringContaining('overture validate'),
       );
     });
 
@@ -448,11 +470,7 @@ describe('ErrorHandler', () => {
     });
 
     it('should create FileSystemError with all properties', () => {
-      const error = new FileSystemError(
-        'FS error',
-        '/path/to/file',
-        'write'
-      );
+      const error = new FileSystemError('FS error', '/path/to/file', 'write');
 
       expect(error.message).toBe('FS error');
       expect(error.path).toBe('/path/to/file');
@@ -464,7 +482,7 @@ describe('ErrorHandler', () => {
       const error = new NetworkError(
         'Network error',
         'https://example.com',
-        404
+        404,
       );
 
       expect(error.message).toBe('Network error');

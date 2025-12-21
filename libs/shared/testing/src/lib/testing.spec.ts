@@ -67,10 +67,7 @@ import {
 describe('@overture/testing', () => {
   describe('Filesystem Mocks', () => {
     it('should create mock filesystem', () => {
-      const mockFs = createMockFs(
-        { '/test/file.txt': 'content' },
-        ['/test']
-      );
+      const mockFs = createMockFs({ '/test/file.txt': 'content' }, ['/test']);
 
       expect(mockFs.files.has('/test/file.txt')).toBe(true);
       expect(mockFs.files.get('/test/file.txt')).toBe('content');
@@ -151,7 +148,7 @@ describe('@overture/testing', () => {
 
       await mockProcess.execute('cmd', []);
       await expect(mockProcess.execute('cmd', [])).rejects.toThrow(
-        'No more mock results available'
+        'No more mock results available',
       );
     });
 
@@ -299,7 +296,7 @@ describe('@overture/testing', () => {
     it('should provide config with plugins', () => {
       expect(configWithPlugins.plugins).toBeDefined();
       expect(Object.keys(configWithPlugins.plugins!)).toContain(
-        'python-development'
+        'python-development',
       );
     });
 
@@ -329,11 +326,9 @@ describe('@overture/testing', () => {
     });
 
     it('should build plugin config', () => {
-      const plugin = buildPluginConfig(
-        'claude-code-workflows',
-        true,
-        ['python-repl']
-      );
+      const plugin = buildPluginConfig('claude-code-workflows', true, [
+        'python-repl',
+      ]);
 
       expect(plugin.marketplace).toBe('claude-code-workflows');
       expect(plugin.enabled).toBe(true);
@@ -384,10 +379,9 @@ describe('@overture/testing', () => {
     });
 
     it('should build Claude settings', () => {
-      const settings = buildClaudeSettings(
-        { 'test-plugin': {} },
-        ['claude-code-workflows']
-      );
+      const settings = buildClaudeSettings({ 'test-plugin': {} }, [
+        'claude-code-workflows',
+      ]);
 
       expect(settings.plugins).toBeDefined();
       expect(settings.marketplaces).toContain('claude-code-workflows');
@@ -455,10 +449,9 @@ describe('@overture/testing', () => {
     let mockAdapter: ReturnType<typeof createMockAdapter>;
 
     beforeEach(() => {
-      mockFs = createMockFs(
-        { '/config/overture.yml': 'version: "2.0"' },
-        ['/config']
-      );
+      mockFs = createMockFs({ '/config/overture.yml': 'version: "2.0"' }, [
+        '/config',
+      ]);
 
       mockProcess = createMockProcess([
         buildExecResult('Plugin installed successfully\n'),

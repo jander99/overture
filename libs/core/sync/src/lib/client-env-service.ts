@@ -10,7 +10,11 @@
  */
 
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
-import { expandEnvVars, expandEnvVarsInObject, expandEnvVarsInArgs } from './env-expander.js';
+import {
+  expandEnvVars,
+  expandEnvVarsInObject,
+  expandEnvVarsInArgs,
+} from './env-expander.js';
 
 /**
  * Determine if environment variables should be expanded for a client
@@ -38,7 +42,7 @@ export function shouldExpandEnvVars(client: ClientAdapter): boolean {
 export function expandEnvVarsInMcpConfig(
   mcpConfig: any,
   client: ClientAdapter,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): any {
   if (!shouldExpandEnvVars(client)) {
     return mcpConfig; // Client handles expansion natively
@@ -78,7 +82,7 @@ export function expandEnvVarsInMcpConfig(
 export function expandEnvVarsInClientConfig(
   config: ClientMcpConfig,
   client: ClientAdapter,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): ClientMcpConfig {
   if (!shouldExpandEnvVars(client)) {
     return config; // Client handles expansion natively
@@ -105,7 +109,9 @@ export function expandEnvVarsInClientConfig(
  * @returns Array of client names that need expansion
  */
 export function getClientsNeedingExpansion(clients: ClientAdapter[]): string[] {
-  return clients.filter((client) => shouldExpandEnvVars(client)).map((client) => client.name);
+  return clients
+    .filter((client) => shouldExpandEnvVars(client))
+    .map((client) => client.name);
 }
 
 /**
@@ -114,6 +120,10 @@ export function getClientsNeedingExpansion(clients: ClientAdapter[]): string[] {
  * @param clients - Array of client adapters
  * @returns Array of client names with native support
  */
-export function getClientsWithNativeSupport(clients: ClientAdapter[]): string[] {
-  return clients.filter((client) => !shouldExpandEnvVars(client)).map((client) => client.name);
+export function getClientsWithNativeSupport(
+  clients: ClientAdapter[],
+): string[] {
+  return clients
+    .filter((client) => !shouldExpandEnvVars(client))
+    .map((client) => client.name);
 }

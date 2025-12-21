@@ -58,7 +58,9 @@ describe('FilesystemPort', () => {
 
       // All methods should return Promises
       await expect(mockFilesystem.readFile('/test')).resolves.toBe('content');
-      await expect(mockFilesystem.writeFile('/test', 'data')).resolves.toBeUndefined();
+      await expect(
+        mockFilesystem.writeFile('/test', 'data'),
+      ).resolves.toBeUndefined();
       await expect(mockFilesystem.exists('/test')).resolves.toBe(true);
       await expect(mockFilesystem.mkdir('/test')).resolves.toBeUndefined();
       await expect(mockFilesystem.readdir('/test')).resolves.toEqual([]);
@@ -100,7 +102,7 @@ describe('FilesystemPort', () => {
       await mockFilesystem.writeFile('/path/to/file.txt', 'new content');
       expect(mockFilesystem.writeFile).toHaveBeenCalledWith(
         '/path/to/file.txt',
-        'new content'
+        'new content',
       );
     });
   });
@@ -179,7 +181,9 @@ describe('FilesystemPort', () => {
         writeFile: vi.fn(),
         exists: vi.fn(),
         mkdir: vi.fn(),
-        readdir: vi.fn().mockResolvedValue(['file1.txt', 'file2.txt', 'subdir']),
+        readdir: vi
+          .fn()
+          .mockResolvedValue(['file1.txt', 'file2.txt', 'subdir']),
         stat: vi.fn(),
         rm: vi.fn(),
       };
@@ -378,7 +382,7 @@ describe('FilesystemPort usage examples', () => {
 
     // Consumers should handle errors
     await expect(mockFilesystem.readFile('/nonexistent.txt')).rejects.toThrow(
-      'ENOENT: file not found'
+      'ENOENT: file not found',
     );
   });
 });

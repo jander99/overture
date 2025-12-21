@@ -502,9 +502,9 @@ describe('Port: OutputPort Interface', () => {
         // Assert
         expect(messages).toHaveLength(8);
         expect(messages.filter((m) => m.startsWith('[INFO]'))).toHaveLength(4);
-        expect(
-          messages.filter((m) => m.startsWith('[SUCCESS]'))
-        ).toHaveLength(3);
+        expect(messages.filter((m) => m.startsWith('[SUCCESS]'))).toHaveLength(
+          3,
+        );
         expect(messages.filter((m) => m.startsWith('[WARN]'))).toHaveLength(1);
       });
 
@@ -525,9 +525,7 @@ describe('Port: OutputPort Interface', () => {
         cliOutput.error('  - "mcp" field must be an object');
 
         // Assert
-        expect(messages.filter((m) => m.startsWith('[ERROR]'))).toHaveLength(
-          3
-        );
+        expect(messages.filter((m) => m.startsWith('[ERROR]'))).toHaveLength(3);
       });
     });
 

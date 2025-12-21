@@ -9,14 +9,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export class TemplateLoader {
-  private static templateDir = path.join(__dirname, '..', 'assets', 'templates');
+  private static templateDir = path.join(
+    __dirname,
+    '..',
+    'assets',
+    'templates',
+  );
 
   /**
    * Render template with data
    */
   static async render(
     templateName: string,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
   ): Promise<string> {
     const templatePath = path.join(this.templateDir, templateName);
     const templateContent = await FsUtils.readFile(templatePath);

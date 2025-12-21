@@ -72,7 +72,7 @@ export class Prompts {
    */
   static async select<T extends string>(
     message: string,
-    choices: Array<{ name: string; value: T }>
+    choices: Array<{ name: string; value: T }>,
   ): Promise<T> {
     const { selected } = await inquirer.prompt([
       {
@@ -102,7 +102,7 @@ export class Prompts {
    */
   static async multiSelect<T extends string>(
     message: string,
-    choices: Array<{ name: string; value: T; checked?: boolean }>
+    choices: Array<{ name: string; value: T; checked?: boolean }>,
   ): Promise<T[]> {
     const { selected } = await inquirer.prompt([
       {
@@ -126,10 +126,7 @@ export class Prompts {
    * const projectName = await Prompts.input('Project name:', 'my-project');
    * ```
    */
-  static async input(
-    message: string,
-    defaultValue?: string
-  ): Promise<string> {
+  static async input(message: string, defaultValue?: string): Promise<string> {
     const { value } = await inquirer.prompt([
       {
         type: 'input',

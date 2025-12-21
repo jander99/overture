@@ -9,73 +9,80 @@
 ## Overture Project Configuration
 
 {{#if projectName}}
-**Project:** {{projectName}}
-{{#if projectType}} ({{projectType}}){{/if}}
+  **Project:**
+  {{projectName}}
+  {{#if projectType}} ({{projectType}}){{/if}}
 
-{{#if projectDescription}}
-{{projectDescription}}
+  {{#if projectDescription}}
+    {{projectDescription}}
 
+  {{/if}}
 {{/if}}
-{{/if}}
-## Configured Plugins
-
-The following Claude Code plugins are configured for this project:
+## Configured Plugins The following Claude Code plugins are configured for this
+project:
 
 {{#if plugins}}
-{{#each plugins}}
-### {{name}}
+  {{#each plugins}}
+    ###
+    {{name}}
 
-- **Marketplace:** {{marketplace}}
-- **Status:** {{#if enabled}}✅ Enabled{{else}}⚠️ Disabled{{/if}}
-{{#if mcps}}
-- **MCPs:** {{#each mcps}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
-{{/if}}
+    - **Marketplace:**
+    {{marketplace}}
+    - **Status:**
+    {{#if enabled}}✅ Enabled{{else}}⚠️ Disabled{{/if}}
+    {{#if mcps}}
+      - **MCPs:**
+      {{#each mcps}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+    {{/if}}
 
-{{/each}}
+  {{/each}}
 {{else}}
-No plugins configured.
+  No plugins configured.
 
 {{/if}}
 ## MCP Servers
 
 {{#if mcps}}
-{{#each mcps}}
-{{#if (eq scope "global")}}
-### {{name}} (Global)
+  {{#each mcps}}
+    {{#if (eq scope 'global')}}
+      ###
+      {{name}}
+      (Global) Configured globally in `~/.claude.json`.
 
-Configured globally in `~/.claude.json`.
+    {{/if}}
+    {{#if (eq scope 'project')}}
+      ###
+      {{name}}
+      (Project)
 
-{{/if}}
-{{#if (eq scope "project")}}
-### {{name}} (Project)
+      {{#if command}}
+        **Command:** `{{command}}{{#if args}}
+          {{#each args}}{{this}}{{#unless @last}}{{/unless}}{{/each}}{{/if}}`
+      {{/if}}
+      **Status:**
+      {{#if enabled}}✅ Enabled{{else}}⚠️ Disabled{{/if}}
 
-{{#if command}}
-**Command:** `{{command}}{{#if args}} {{#each args}}{{this}}{{#unless @last}} {{/unless}}{{/each}}{{/if}}`
-{{/if}}
-**Status:** {{#if enabled}}✅ Enabled{{else}}⚠️ Disabled{{/if}}
-
-{{/if}}
-{{/each}}
+    {{/if}}
+  {{/each}}
 {{else}}
-No MCP servers configured.
+  No MCP servers configured.
 
 {{/if}}
 ## Plugin→MCP Guidance
 
 {{#if plugins}}
-{{#each plugins}}
-{{#if mcps}}
-**When using `{{name}}` plugin:**
-{{#each mcps}}
-- Use `{{this}}` MCP
-{{/each}}
+  {{#each plugins}}
+    {{#if mcps}}
+      **When using `{{name}}` plugin:**
+      {{#each mcps}}
+        - Use `{{this}}` MCP
+      {{/each}}
 
-{{/if}}
-{{/each}}
+    {{/if}}
+  {{/each}}
 {{else}}
-No plugin→MCP mappings defined.
+  No plugin→MCP mappings defined.
 
 {{/if}}
----
-
-*This section is managed by Overture. To preserve custom content, add it above or below the Overture markers.*
+--- *This section is managed by Overture. To preserve custom content, add it
+above or below the Overture markers.*

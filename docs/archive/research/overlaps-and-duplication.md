@@ -11,10 +11,12 @@ This document analyzes potential overlaps and duplication issues across Claude C
 **Overlap Type**: Functional duplication
 
 **Description**: Both can perform similar tasks, but with different mechanisms:
+
 - **Skills**: Instructions loaded into Claude's current context, model-invoked
 - **Subagents**: Separate AI instance with isolated context, delegated to
 
 **Specific Overlaps**:
+
 1. **Test Generation**
    - Skill: "generate-tests" with instructions on writing test cases
    - Subagent: "test-engineer" that writes tests in isolated context
@@ -31,12 +33,14 @@ This document analyzes potential overlaps and duplication issues across Claude C
    - Duplication: Same expertise area
 
 **Design Implications**:
+
 - Skills are "lightweight" (instructions only)
 - Subagents are "heavyweight" (full AI instance with tools)
 - Consider skills as shared knowledge that subagents can reference
 - Subagents should use skills rather than duplicating their instructions
 
 **Recommendation**:
+
 - Allow subagents to explicitly reference skills in their definitions
 - Detect when skill description matches subagent purpose
 - Provide warnings when creating redundant capabilities
@@ -47,10 +51,12 @@ This document analyzes potential overlaps and duplication issues across Claude C
 **Overlap Type**: Trigger mechanism confusion
 
 **Description**: Skills that trigger on events might overlap with hook functionality:
+
 - **Skills**: Claude decides when to invoke based on task relevance
 - **Hooks**: Automatically triggered by specific events
 
 **Specific Overlaps**:
+
 1. **Pre-commit Validation**
    - Skill: "pre-commit-checks" that Claude might invoke before commits
    - Hook: `PreToolUse` hook on `Bash` tool for git commands
@@ -62,12 +68,14 @@ This document analyzes potential overlaps and duplication issues across Claude C
    - Duplication: Same outcome through different triggers
 
 **Design Implications**:
+
 - Skills are decision-based (Claude chooses when)
 - Hooks are deterministic (always run on event)
 - Hooks should be simple automation, skills for complex logic
 - Hooks can invoke skills for decision-making
 
 **Recommendation**:
+
 - Keep hooks as thin automation layer
 - Use hooks to trigger Claude to consider relevant skills
 - Don't duplicate complex logic in both hooks and skills
@@ -78,10 +86,12 @@ This document analyzes potential overlaps and duplication issues across Claude C
 **Overlap Type**: Complex logic in hooks
 
 **Description**: Sophisticated hooks might duplicate subagent reasoning:
+
 - **Hooks**: Shell command execution in response to events
 - **Subagents**: Full AI reasoning with context and tools
 
 **Specific Overlaps**:
+
 1. **Test Result Analysis**
    - Hook: Complex script analyzing test output
    - Subagent: "test-analyst" interpreting failures
@@ -93,11 +103,13 @@ This document analyzes potential overlaps and duplication issues across Claude C
    - Duplication: Decision-making capability
 
 **Design Implications**:
+
 - Hooks are for automation, not complex decision-making
 - Complex logic belongs in subagents or skills
 - Hooks can trigger subagent delegation
 
 **Recommendation**:
+
 - Limit hooks to simple command execution
 - For complex logic, hook should trigger subagent
 - Don't encode sophisticated rules in hook scripts
@@ -110,6 +122,7 @@ This document analyzes potential overlaps and duplication issues across Claude C
 **Description**: MCP servers provide tools used by multiple features:
 
 **Tool Sharing Pattern**:
+
 ```
 MCP Server: pytest-runner
     ├─→ Subagent: test-engineer (uses pytest-runner)
@@ -119,6 +132,7 @@ MCP Server: pytest-runner
 ```
 
 **Specific Overlaps**:
+
 1. **Multiple Server Definitions**
    - User-level: `~/.claude.json` defines `git-tools`
    - Project-level: `.mcp.json` defines `git-tools`
@@ -130,11 +144,13 @@ MCP Server: pytest-runner
    - Conflict: Version mismatch or duplicate registration
 
 **Design Implications**:
+
 - MCP servers should be defined once, shared everywhere
 - Configuration scope determines availability
 - Plugins must handle already-configured servers
 
 **Recommendation**:
+
 - Detect duplicate MCP server names across scopes
 - Version tracking for servers
 - Plugin installation should check for existing servers
@@ -147,6 +163,7 @@ MCP Server: pytest-runner
 **Description**: Plugins are containers for other features:
 
 **Plugin Contents**:
+
 ```
 Plugin: python-dev
     ├── Subagents: [test-engineer, package-manager]
@@ -157,6 +174,7 @@ Plugin: python-dev
 ```
 
 **Specific Overlaps**:
+
 1. **Internal Plugin Duplication**
    - Plugin includes both skill and subagent for same task
    - Recommendation: Subagent should reference skill
@@ -172,11 +190,13 @@ Plugin: python-dev
    - Conflict: Duplicate features
 
 **Design Implications**:
+
 - Plugins should compose features, not duplicate them
 - Plugin system needs conflict detection
 - Installed components should be tracked by origin
 
 **Recommendation**:
+
 - Track plugin provenance (which features came from which plugin)
 - Warn on overlaps between plugins
 - Support plugin updates without duplicating configs
@@ -206,6 +226,7 @@ Plugin: python-dev
    - Conflict: Conflicting review criteria
 
 **Recommendation**:
+
 - Document clear precedence rules (project > user)
 - Detect same-name features across scopes
 - Provide warnings about shadowing
@@ -220,6 +241,7 @@ Some information is relevant across multiple features:
 **Example: Python Testing Knowledge**
 
 Could appear in:
+
 1. **Skill**: `write-python-tests/SKILL.md` - How to write pytest tests
 2. **Subagent**: `test-engineer.md` - Uses same testing knowledge
 3. **Command**: `test-runner.md` - Uses same test execution knowledge
@@ -228,6 +250,7 @@ Could appear in:
 **Duplication Problem**: Same information copied to 4 different places
 
 **Recommendation for Overture**:
+
 - Support shared knowledge files (e.g., `knowledge/python-testing.md`)
 - Features reference shared knowledge
 - Single source of truth for domain expertise
@@ -240,11 +263,13 @@ Could appear in:
 **Example: React Component Templates**
 
 Could be used by:
+
 1. **Skill**: `generate-component/templates/` - Component templates
 2. **Subagent**: `react-developer` - Uses same templates
 3. **Command**: `/component` - Creates from templates
 
 **Recommendation**:
+
 - Shared resource directory (e.g., `.claude/resources/`)
 - Features reference resources by path
 - Overture tracks resource dependencies
@@ -255,6 +280,7 @@ Could be used by:
 ### 1. Dependency Graph
 
 Build a dependency graph showing:
+
 - Which features depend on which MCP servers
 - Which subagents reference which skills
 - Which plugins contain which components
@@ -263,6 +289,7 @@ Build a dependency graph showing:
 ### 2. Conflict Detection
 
 Implement detection for:
+
 - Duplicate feature names across scopes
 - Overlapping plugin contents
 - Conflicting MCP server definitions
@@ -271,6 +298,7 @@ Implement detection for:
 ### 3. Composition Over Duplication
 
 Enable:
+
 - Subagents referencing skills (not duplicating instructions)
 - Hooks triggering subagents (not duplicating logic)
 - Plugins composing existing features (not bundling copies)
@@ -279,6 +307,7 @@ Enable:
 ### 4. Provenance Tracking
 
 Track:
+
 - Which plugin installed which features
 - Which features were manually configured
 - Version information for all components
@@ -287,6 +316,7 @@ Track:
 ### 5. Schema Design
 
 Create schema that:
+
 - Allows skill references in subagent definitions
 - Supports shared knowledge/resource references
 - Tracks plugin membership
@@ -296,6 +326,7 @@ Create schema that:
 ### 6. Validation Rules
 
 Implement validation:
+
 - Warn when skill matches subagent purpose
 - Detect duplicate MCP server names
 - Flag complex logic in hooks (suggest subagent)
@@ -307,12 +338,14 @@ Implement validation:
 ### Claude-Specific Features
 
 Features with no Copilot equivalent:
+
 - **Subagents**: No Copilot equivalent (as of 2025)
 - **Skills**: No Copilot equivalent
 - **Hooks**: No Copilot equivalent
 - **Plugins**: No Copilot equivalent
 
 **Overture Strategy**:
+
 - Mark features as Claude-specific
 - Document what they do for Copilot users
 - Provide equivalent Copilot configurations where possible
@@ -321,13 +354,15 @@ Features with no Copilot equivalent:
 ### Potentially Shareable Features
 
 **MCP Servers**:
+
 - If Copilot adopts MCP, could be shared
 - Design schema to accommodate future Copilot MCP support
 - For now, Claude-specific but with shareable potential
 
 **Configuration Philosophy**:
+
 - Some features may provide capabilities in Claude-specific ways
-- Document the *intent* even if implementation differs
+- Document the _intent_ even if implementation differs
 - Enable partial sync (sync what's compatible)
 
 ## Summary

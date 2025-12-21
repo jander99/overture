@@ -271,7 +271,11 @@ describe('NodeProcessAdapter', () => {
       const result = await adapter.exec('echo', ['hello; echo pwned']);
 
       // Verify execa was called with array args (preventing shell interpretation)
-      expect(execa).toHaveBeenCalledWith('echo', ['hello; echo pwned'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['hello; echo pwned'],
+        expect.any(Object),
+      );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toBe('hello; echo pwned');
     });
@@ -286,7 +290,11 @@ describe('NodeProcessAdapter', () => {
 
       const result = await adapter.exec('echo', ['`whoami`']);
 
-      expect(execa).toHaveBeenCalledWith('echo', ['`whoami`'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['`whoami`'],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe('`whoami`');
     });
 
@@ -300,7 +308,11 @@ describe('NodeProcessAdapter', () => {
 
       const result = await adapter.exec('echo', ['$(pwd)']);
 
-      expect(execa).toHaveBeenCalledWith('echo', ['$(pwd)'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['$(pwd)'],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe('$(pwd)');
     });
 
@@ -328,7 +340,11 @@ describe('NodeProcessAdapter', () => {
 
       const result = await adapter.exec('echo', ['hello | cat']);
 
-      expect(execa).toHaveBeenCalledWith('echo', ['hello | cat'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['hello | cat'],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe('hello | cat');
     });
 
@@ -345,7 +361,11 @@ describe('NodeProcessAdapter', () => {
       const result = await adapter.exec('echo', [maliciousName]);
 
       // The entire malicious string should be a single argument
-      expect(execa).toHaveBeenCalledWith('echo', [maliciousName], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        [maliciousName],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe(maliciousName);
     });
 
@@ -359,7 +379,11 @@ describe('NodeProcessAdapter', () => {
 
       const result = await adapter.exec('echo', ['hello &']);
 
-      expect(execa).toHaveBeenCalledWith('echo', ['hello &'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['hello &'],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe('hello &');
     });
 
@@ -373,7 +397,11 @@ describe('NodeProcessAdapter', () => {
 
       const result = await adapter.exec('echo', ['test > /tmp/pwned.txt']);
 
-      expect(execa).toHaveBeenCalledWith('echo', ['test > /tmp/pwned.txt'], expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        'echo',
+        ['test > /tmp/pwned.txt'],
+        expect.any(Object),
+      );
       expect(result.stdout).toBe('test > /tmp/pwned.txt');
     });
   });

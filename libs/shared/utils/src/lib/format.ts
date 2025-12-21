@@ -44,7 +44,7 @@ export function formatList(items: string[], bullet = '\u2022'): string {
 export function formatKeyValue(
   key: string,
   value: string,
-  keyWidth = 20
+  keyWidth = 20,
 ): string {
   return `  ${key.padEnd(keyWidth)} ${chalk.gray(':')} ${value}`;
 }
@@ -65,7 +65,7 @@ export function formatKeyValue(
  */
 export function formatTable(
   data: Record<string, string>,
-  keyWidth = 20
+  keyWidth = 20,
 ): string {
   return Object.entries(data)
     .map(([key, value]) => formatKeyValue(key, value, keyWidth))
@@ -100,7 +100,7 @@ export function formatSection(header: string, content: string): string {
  */
 export function formatHeading(
   text: string,
-  color: (str: string) => string = chalk.bold
+  color: (str: string) => string = chalk.bold,
 ): string {
   return color(text);
 }

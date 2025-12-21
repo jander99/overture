@@ -5,6 +5,7 @@ Hexagonal architecture ports for process execution and environment information.
 ## Purpose
 
 This library provides **pure TypeScript interfaces** that define the contracts for:
+
 - **Process Execution**: Running external commands and checking command availability
 - **Environment Information**: Accessing OS platform, home directory, and environment variables
 
@@ -43,7 +44,7 @@ const processPort: ProcessPort = {
   async commandExists(command: string): Promise<boolean> {
     // Check if command is in PATH
     return true;
-  }
+  },
 };
 
 // Usage
@@ -72,7 +73,7 @@ const envPort: EnvironmentPort = {
     return '/home/user';
   },
 
-  env: process.env
+  env: process.env,
 };
 
 // Usage
@@ -91,9 +92,9 @@ Result of command execution:
 
 ```typescript
 interface ExecResult {
-  stdout: string;    // Standard output
-  stderr: string;    // Standard error
-  exitCode: number;  // Exit code (0 = success)
+  stdout: string; // Standard output
+  stderr: string; // Standard error
+  exitCode: number; // Exit code (0 = success)
 }
 ```
 
@@ -126,7 +127,7 @@ import type { ProcessPort, ExecResult } from '@overture/ports-process';
 
 async function installPackage(
   processPort: ProcessPort,
-  packageName: string
+  packageName: string,
 ): Promise<void> {
   const result = await processPort.exec('npm', ['install', packageName]);
 
@@ -145,8 +146,7 @@ import type { EnvironmentPort } from '@overture/ports-process';
 
 function isWSL(envPort: EnvironmentPort): boolean {
   return (
-    envPort.platform() === 'linux' &&
-    envPort.env.WSL_DISTRO_NAME !== undefined
+    envPort.platform() === 'linux' && envPort.env.WSL_DISTRO_NAME !== undefined
   );
 }
 
@@ -161,13 +161,20 @@ This library makes testing easy by providing pure interfaces that can be mocked:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import type { ProcessPort, ExecResult, EnvironmentPort } from '@overture/ports-process';
+import type {
+  ProcessPort,
+  ExecResult,
+  EnvironmentPort,
+} from '@overture/ports-process';
 
 describe('my feature', () => {
   it('should execute commands', async () => {
     // Create a mock implementation
     const mockProcess: ProcessPort = {
-      exec: async (command: string, args: string[] = []): Promise<ExecResult> => ({
+      exec: async (
+        command: string,
+        args: string[] = [],
+      ): Promise<ExecResult> => ({
         stdout: `Mocked: ${command} ${args.join(' ')}`,
         stderr: '',
         exitCode: 0,
@@ -224,6 +231,7 @@ This library follows **hexagonal architecture** (ports and adapters):
 ```
 
 **Benefits:**
+
 - ✅ Application core has no dependencies on Node.js APIs
 - ✅ Easy to test with mock implementations
 - ✅ Can swap implementations without changing core logic

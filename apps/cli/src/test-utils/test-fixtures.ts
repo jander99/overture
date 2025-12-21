@@ -66,7 +66,7 @@ export interface ClientDetection {
  * ```
  */
 export function createMockDiscoveryReport(
-  overrides?: Partial<DiscoveryReport>
+  overrides?: Partial<DiscoveryReport>,
 ): DiscoveryReport {
   return {
     environment: {
@@ -94,7 +94,7 @@ export function createMockDiscoveryReport(
  */
 export function createFoundClient(
   clientName: ClientName = 'claude-code',
-  overrides?: Partial<ClientDetection>
+  overrides?: Partial<ClientDetection>,
 ): ClientDetection {
   return {
     client: clientName,
@@ -125,7 +125,7 @@ export function createFoundClient(
  */
 export function createNotFoundClient(
   clientName: ClientName,
-  overrides?: Partial<ClientDetection>
+  overrides?: Partial<ClientDetection>,
 ): ClientDetection {
   return {
     client: clientName,
@@ -154,7 +154,7 @@ export function createNotFoundClient(
  */
 export function createSkippedClient(
   clientName: ClientName,
-  overrides?: Partial<ClientDetection>
+  overrides?: Partial<ClientDetection>,
 ): ClientDetection {
   return {
     client: clientName,
@@ -187,7 +187,7 @@ export function createSkippedClient(
 export function createWSL2Report(
   distroName = 'Ubuntu-22.04',
   windowsUserProfile = '/mnt/c/Users/TestUser',
-  clients: ClientDetection[] = []
+  clients: ClientDetection[] = [],
 ): DiscoveryReport {
   return {
     environment: {
@@ -218,12 +218,14 @@ export function createWSL2Report(
  */
 export function createMockAdapter(
   name: ClientName = 'claude-code',
-  overrides?: Partial<ClientAdapter>
+  overrides?: Partial<ClientAdapter>,
 ): ClientAdapter {
   return {
     name,
     isInstalled: vi.fn().mockReturnValue(true),
-    detectConfigPath: vi.fn().mockReturnValue(`/home/user/.config/${name}/mcp.json`),
+    detectConfigPath: vi
+      .fn()
+      .mockReturnValue(`/home/user/.config/${name}/mcp.json`),
     readConfig: vi.fn().mockResolvedValue({}),
     writeConfig: vi.fn().mockResolvedValue(undefined),
     validateTransport: vi.fn().mockReturnValue(true),
@@ -246,7 +248,7 @@ export function createMockAdapter(
  * ```
  */
 export function createMockBackupMetadata(
-  overrides?: Partial<BackupMetadata>
+  overrides?: Partial<BackupMetadata>,
 ): BackupMetadata {
   const client = overrides?.client ?? 'claude-code';
   const timestamp = overrides?.timestamp ?? '2025-01-11T14-30-45-123Z';
@@ -275,7 +277,7 @@ export function createMockBackupMetadata(
  */
 export function createMockBackups(
   count: number,
-  clientName: ClientName = 'claude-code'
+  clientName: ClientName = 'claude-code',
 ): BackupMetadata[] {
   return Array.from({ length: count }, (_, i) => {
     const timestamp = `2025-01-11T${String(14 + i).padStart(2, '0')}-00-00-000Z`;

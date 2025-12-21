@@ -5,6 +5,7 @@ This guide walks through adding support for a new AI coding CLI client to Overtu
 ## Overview
 
 Adding a new CLI client involves:
+
 1. **Type System Updates** - Add the client name to type definitions
 2. **Adapter Implementation** - Create a ClientAdapter for the new client
 3. **WSL2 Support** - Add Windows path detection (if needed)
@@ -20,6 +21,7 @@ Adding a new CLI client involves:
 ## Step 1: Research the Client's Configuration
 
 Before starting, understand:
+
 - **Config file location** (user and project paths)
 - **Config file format** (JSON, YAML, etc.)
 - **Schema structure** (root key for MCP servers: `mcpServers`, `servers`, `mcp`, etc.)
@@ -31,6 +33,7 @@ Before starting, understand:
 ### OpenCode Example
 
 For OpenCode, we researched:
+
 - **Docs:** https://opencode.ai/docs/
 - **Config location:** `~/.config/opencode/opencode.json`
 - **Schema root key:** `mcp` (not `mcpServers`)
@@ -62,7 +65,7 @@ export type ClientName =
   | 'jetbrains-copilot'
   | 'codex'
   | 'gemini-cli'
-  | 'opencode';  // ADD YOUR CLIENT HERE
+  | 'opencode'; // ADD YOUR CLIENT HERE
 ```
 
 **Reference Commit:** `cd4a642` - "feat: implement OpenCodeAdapter with comprehensive tests"
@@ -124,7 +127,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
   constructor(
     private readonly filesystem: FilesystemPort,
-    private readonly environment: EnvironmentPort
+    private readonly environment: EnvironmentPort,
   ) {
     super();
   }
@@ -152,7 +155,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
     // Merge: Preserve everything except 'mcp' section
     const merged = {
       ...existing,
-      mcp: config.mcp
+      mcp: config.mcp,
     };
 
     const dir = this.getDirname(path);
@@ -162,7 +165,10 @@ export class OpenCodeAdapter extends BaseClientAdapter {
     await this.filesystem.writeFile(path, JSON.stringify(merged, null, 2));
   }
 
-  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
+  convertFromOverture(
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): ClientMcpConfig {
     const mcpServers: Record<string, any> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
@@ -175,14 +181,16 @@ export class OpenCodeAdapter extends BaseClientAdapter {
         type: 'local',
         enabled: true,
         command: [serverConfig.command, ...serverConfig.args], // Combined array
-        environment: this.translateEnvVars(serverConfig.env || {}) // ${VAR} -> {env:VAR}
+        environment: this.translateEnvVars(serverConfig.env || {}), // ${VAR} -> {env:VAR}
       };
     }
 
     return { mcp: mcpServers };
   }
 
-  private translateEnvVars(env: Record<string, string>): Record<string, string> {
+  private translateEnvVars(
+    env: Record<string, string>,
+  ): Record<string, string> {
     const translated: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
       translated[key] = value.replace(/\$\{([^}]+)\}/g, '{env:$1}');
@@ -239,11 +247,11 @@ import { OpenCodeAdapter } from './adapters/opencode.adapter.js';
 
 export function createAdapterRegistry(
   filesystem: FilesystemPort,
-  environment: EnvironmentPort
+  environment: EnvironmentPort,
 ): AdapterRegistry {
   const registry = new AdapterRegistry();
   registry.register(new ClaudeCodeAdapter(filesystem, environment));
-  registry.register(new OpenCodeAdapter(filesystem, environment));  // ADD HERE
+  registry.register(new OpenCodeAdapter(filesystem, environment)); // ADD HERE
   // ... other adapters
   return registry;
 }
@@ -251,12 +259,12 @@ export function createAdapterRegistry(
 export function createAdapter(
   adapterName: string,
   filesystem: FilesystemPort,
-  environment: EnvironmentPort
+  environment: EnvironmentPort,
 ): ClientAdapter {
   switch (adapterName) {
     case 'claude-code':
       return new ClaudeCodeAdapter(filesystem, environment);
-    case 'opencode':  // ADD CASE
+    case 'opencode': // ADD CASE
       return new OpenCodeAdapter(filesystem, environment);
     // ... other cases
     default:
@@ -286,13 +294,13 @@ If your client uses a different schema root key, add it to the union type:
 ```typescript
 export interface ClientAdapter {
   readonly name: ClientName;
-  readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';  // ADD 'mcp' if needed
+  readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp'; // ADD 'mcp' if needed
   // ...
 }
 
 export abstract class BaseClientAdapter implements ClientAdapter {
   abstract readonly name: ClientName;
-  abstract readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp';  // SAME HERE
+  abstract readonly schemaRootKey: 'mcpServers' | 'servers' | 'mcp'; // SAME HERE
   // ...
 }
 ```
@@ -337,7 +345,7 @@ If your client uses a different root key, update the `generateDiff` function sig
 export function generateDiff(
   oldConfig: ClientMcpConfig,
   newConfig: ClientMcpConfig,
-  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers'  // ADD 'mcp'
+  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers', // ADD 'mcp'
 ): ConfigDiff {
   // ...
 }
@@ -364,13 +372,13 @@ const ALL_CLIENTS: ClientName[] = [
   'jetbrains-copilot',
   'codex',
   'gemini-cli',
-  'opencode',  // ADD HERE
+  'opencode', // ADD HERE
 ];
 
 function getInstallRecommendation(client: ClientName): string | null {
   const recommendations: Record<ClientName, string> = {
     // ... existing entries ...
-    opencode: 'Install OpenCode: https://opencode.ai',  // ADD HERE
+    opencode: 'Install OpenCode: https://opencode.ai', // ADD HERE
   };
   return recommendations[client] || null;
 }
@@ -385,6 +393,7 @@ function getInstallRecommendation(client: ClientName): string | null {
 ### File: `libs/adapters/client-adapters/src/lib/adapters/{client-name}.adapter.spec.ts`
 
 Write at least 20 test cases covering:
+
 - Path detection (user, project, platform-specific)
 - Read config (valid JSON, invalid JSON, missing file)
 - Write config (new file, update existing, preserve custom sections)
@@ -417,7 +426,10 @@ describe('OpenCodeAdapter', () => {
       const environment = createMockEnvironment('win32');
       const adapter = new OpenCodeAdapter(filesystem, environment);
 
-      const result = adapter.detectConfigPath('win32', 'C:\\Users\\user\\project');
+      const result = adapter.detectConfigPath(
+        'win32',
+        'C:\\Users\\user\\project',
+      );
 
       expect(result.user).toBe('%APPDATA%/opencode/opencode.json');
       expect(result.project).toBe('C:\\Users\\user\\project/opencode.json');
@@ -431,15 +443,22 @@ describe('OpenCodeAdapter', () => {
       const adapter = new OpenCodeAdapter(filesystem, environment);
 
       // Existing config with custom sections
-      filesystem.files.set('/config.json', JSON.stringify({
-        agents: { myAgent: { skills: ['analyze'] } },
-        commands: { '/custom': 'echo hello' },
-        mcp: { oldServer: { command: ['old'] } }
-      }, null, 2));
+      filesystem.files.set(
+        '/config.json',
+        JSON.stringify(
+          {
+            agents: { myAgent: { skills: ['analyze'] } },
+            commands: { '/custom': 'echo hello' },
+            mcp: { oldServer: { command: ['old'] } },
+          },
+          null,
+          2,
+        ),
+      );
 
       // Write new MCP config
       await adapter.writeConfig('/config.json', {
-        mcp: { newServer: { command: ['uvx', 'server'] } }
+        mcp: { newServer: { command: ['uvx', 'server'] } },
       });
 
       const written = JSON.parse(filesystem.files.get('/config.json') || '{}');
@@ -449,7 +468,9 @@ describe('OpenCodeAdapter', () => {
       expect(written.commands).toEqual({ '/custom': 'echo hello' });
 
       // MCP section updated
-      expect(written.mcp).toEqual({ newServer: { command: ['uvx', 'server'] } });
+      expect(written.mcp).toEqual({
+        newServer: { command: ['uvx', 'server'] },
+      });
     });
   });
 
@@ -464,9 +485,9 @@ describe('OpenCodeAdapter', () => {
           python: {
             command: 'uvx',
             args: ['mcp-server-python'],
-            enabled: true
-          }
-        }
+            enabled: true,
+          },
+        },
       };
 
       const result = adapter.convertFromOverture(overtureConfig, 'linux');
@@ -485,14 +506,16 @@ describe('OpenCodeAdapter', () => {
             command: 'mcp-server-github',
             args: [],
             env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
-            enabled: true
-          }
-        }
+            enabled: true,
+          },
+        },
       };
 
       const result = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(result.mcp.github.environment.GITHUB_TOKEN).toBe('{env:GITHUB_TOKEN}');
+      expect(result.mcp.github.environment.GITHUB_TOKEN).toBe(
+        '{env:GITHUB_TOKEN}',
+      );
     });
   });
 });
@@ -511,11 +534,11 @@ Add a column for the new client in the comparison table.
 **File:** `README.md` (lines ~496-565)
 
 ```markdown
-| Feature | Claude Code | ... | OpenCode |
-|---------|-------------|-----|----------|
-| MCP Client Support | ✅ Full | ... | ✅ Full |
-| MCP Server Mode | ❌ | ... | ❌ |
-| ...more rows... | ... | ... | ... |
+| Feature            | Claude Code | ... | OpenCode |
+| ------------------ | ----------- | --- | -------- |
+| MCP Client Support | ✅ Full     | ... | ✅ Full  |
+| MCP Server Mode    | ❌          | ... | ❌       |
+| ...more rows...    | ...         | ... | ...      |
 ```
 
 **Reference Commit:** `8fd14d0` - "docs: add OpenCode to comparison matrix and hybrid setup example"
@@ -526,14 +549,15 @@ Create an example showing hybrid setups or client-specific features.
 
 **File:** `docs/examples.md`
 
-```markdown
+````markdown
 ## Example 7: OpenCode + Claude Code Hybrid Setup
 
 Demonstrates unified MCP management across multiple tools.
 
 ### `.overture/config.yaml`
+
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-api
@@ -549,8 +573,10 @@ mcp:
     command: uvx
     args: [mcp-server-python-repl]
 ```
+````
 
 ### Generated `opencode.json`
+
 ```json
 {
   "agents": {
@@ -568,10 +594,12 @@ mcp:
 ```
 
 **What it does:**
+
 - Unified MCP management across Claude Code and OpenCode
 - Preserves OpenCode custom agents/commands
 - Single source of truth for MCP servers
-```
+
+````
 
 **Reference Commit:** `8fd14d0` - "docs: add OpenCode to comparison matrix and hybrid setup example"
 
@@ -600,20 +628,24 @@ Describe the issue with OpenCode integration.
 ## OpenCode Configuration
 ```json
 # Paste relevant parts of ~/.config/opencode/opencode.json
-```
+````
 
 ## Overture Configuration
+
 ```yaml
 # Paste relevant parts of .overture/config.yaml
 ```
 
 ## Steps to Reproduce
+
 1. ...
 2. ...
 
 ## Expected vs Actual Behavior
+
 ...
-```
+
+````
 
 **Reference Commit:** `cd33cfc` - "feat: add GitHub issue templates for bugs, features, and OpenCode"
 
@@ -625,7 +657,7 @@ Describe the issue with OpenCode integration.
 
 ```bash
 nx build @overture/cli
-```
+````
 
 ### Run Unit Tests
 
@@ -641,6 +673,7 @@ node dist/apps/cli/main.js doctor
 ```
 
 Expected output:
+
 ```
 ✓ ✓ opencode (1.0.153) - /path/to/opencode
   Config: /home/user/.config/opencode/opencode.json (valid/invalid)
@@ -789,6 +822,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Problem:** FilesystemPort is async, but some parts of the codebase need sync operations.
 
 **Solution:**
+
 - Use FilesystemPort (async) in adapters
 - Composition root provides sync adapters for BinaryDetector using Node.js `fs` directly
 
@@ -797,6 +831,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Problem:** Config validation shows all files as invalid.
 
 **Solution:**
+
 - Ensure `validateConfigFile()` uses actual filesystem operations
 - Don't create BinaryDetector without arguments
 - Use async methods if using FilesystemPort
@@ -808,6 +843,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Problem:** Custom config sections are being overwritten.
 
 **Solution:**
+
 ```typescript
 async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
   // Read existing file FIRST
@@ -832,6 +868,7 @@ async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
 **Problem:** Paths work on Linux but fail on Windows/macOS.
 
 **Solution:**
+
 - Use platform parameter in `detectConfigPath()`
 - Test all three platforms: `'linux'`, `'darwin'`, `'win32'`
 - Use `%APPDATA%` for Windows user data
@@ -842,6 +879,7 @@ async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
 **Problem:** Client config has wrong format after conversion.
 
 **Solution:**
+
 - Log the Overture config and converted config during development
 - Write specific tests for each translation (command format, env vars, etc.)
 - Check the client's actual config file format from their docs
@@ -870,19 +908,20 @@ Before submitting:
 
 **December 2024** - Complete OpenCode integration in ~6 hours:
 
-| Time | Task | Commit |
-|------|------|--------|
-| 0:00 | Research OpenCode docs and config format | - |
-| 1:00 | Create OpenCodeAdapter with core methods | - |
-| 2:30 | Write 39 test cases | - |
-| 3:30 | Register adapter, update type system | `cd4a642` |
-| 4:00 | Add WSL2 support, config diff types | `007edb4` |
-| 4:30 | Update doctor command | `21a71ef` |
-| 5:00 | Update README and examples | `8fd14d0` |
-| 5:30 | Fix config validation issues | `5ff2e17`, `8850859` |
-| 6:00 | Final testing and documentation | - |
+| Time | Task                                     | Commit               |
+| ---- | ---------------------------------------- | -------------------- |
+| 0:00 | Research OpenCode docs and config format | -                    |
+| 1:00 | Create OpenCodeAdapter with core methods | -                    |
+| 2:30 | Write 39 test cases                      | -                    |
+| 3:30 | Register adapter, update type system     | `cd4a642`            |
+| 4:00 | Add WSL2 support, config diff types      | `007edb4`            |
+| 4:30 | Update doctor command                    | `21a71ef`            |
+| 5:00 | Update README and examples               | `8fd14d0`            |
+| 5:30 | Fix config validation issues             | `5ff2e17`, `8850859` |
+| 6:00 | Final testing and documentation          | -                    |
 
 **Result:**
+
 - 96.72% test coverage
 - 39 passing tests
 - Full WSL2 support

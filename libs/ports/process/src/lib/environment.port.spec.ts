@@ -178,8 +178,12 @@ describe('EnvironmentPort', () => {
         env: {},
       };
 
-      expect(createConfigPath(linuxPort)).toBe('/home/user/.config/overture.yml');
-      expect(createConfigPath(windowsPort)).toBe('C:\\Users\\user\\.config\\overture.yml');
+      expect(createConfigPath(linuxPort)).toBe(
+        '/home/user/.config/overture.yml',
+      );
+      expect(createConfigPath(windowsPort)).toBe(
+        'C:\\Users\\user\\.config\\overture.yml',
+      );
     });
 
     it('should support environment detection logic', () => {
@@ -188,7 +192,9 @@ describe('EnvironmentPort', () => {
       };
 
       const isWSL = (port: EnvironmentPort): boolean => {
-        return port.platform() === 'linux' && port.env.WSL_DISTRO_NAME !== undefined;
+        return (
+          port.platform() === 'linux' && port.env.WSL_DISTRO_NAME !== undefined
+        );
       };
 
       const prodPort: EnvironmentPort = {

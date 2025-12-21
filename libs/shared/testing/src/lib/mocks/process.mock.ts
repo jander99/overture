@@ -58,7 +58,7 @@ export interface MockProcessExecutor {
 export function buildExecResult(
   stdout = '',
   stderr = '',
-  exitCode = 0
+  exitCode = 0,
 ): ExecResult {
   return { stdout, stderr, exitCode };
 }
@@ -86,7 +86,7 @@ export function buildExecResult(
  * ```
  */
 export function createMockProcess(
-  results: ExecResult[] = []
+  results: ExecResult[] = [],
 ): MockProcessExecutor {
   const executor: MockProcessExecutor = {
     results,
@@ -100,7 +100,7 @@ export function createMockProcess(
       // Return next result from queue
       if (executor.currentIndex >= executor.results.length) {
         throw new Error(
-          `No more mock results available. Executed: ${command} ${args.join(' ')}`
+          `No more mock results available. Executed: ${command} ${args.join(' ')}`,
         );
       }
 
@@ -146,7 +146,7 @@ export function createSuccessProcess(output = ''): MockProcessExecutor {
  */
 export function createFailureProcess(
   error = 'Command failed',
-  exitCode = 1
+  exitCode = 1,
 ): MockProcessExecutor {
   return createMockProcess([buildExecResult('', error, exitCode)]);
 }
@@ -185,7 +185,7 @@ export function resetMockProcess(executor: MockProcessExecutor): void {
  */
 export function addMockResults(
   executor: MockProcessExecutor,
-  results: ExecResult[]
+  results: ExecResult[],
 ): void {
   executor.results.push(...results);
 }

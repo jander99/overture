@@ -26,6 +26,7 @@ OpenCode.ai is an open-source AI coding agent with **comprehensive configuration
 ### 1. Installation & Platforms
 
 **Multiple Installation Methods:**
+
 - Install script: `curl -fsSL https://opencode.ai/install | bash`
 - Package managers: npm, Bun, pnpm, Yarn, Homebrew, Paru, Chocolatey, Scoop
 - Docker containers
@@ -33,6 +34,7 @@ OpenCode.ai is an open-source AI coding agent with **comprehensive configuration
 - IDE extensions (VSCode, desktop app)
 
 **Platforms:**
+
 - Terminal Interface (CLI)
 - Desktop Application
 - IDE Extension
@@ -43,12 +45,12 @@ OpenCode.ai is an open-source AI coding agent with **comprehensive configuration
 
 OpenCode uses a **merge-based configuration system** (similar to Overture's design):
 
-| Location | Scope | Precedence |
-|----------|-------|------------|
-| `~/.config/opencode/opencode.json` | Global | Base |
-| `<project>/opencode.json` | Project | Overrides global |
-| `OPENCODE_CONFIG` env var | Custom path | Highest |
-| `OPENCODE_CONFIG_DIR` env var | Custom directory | Highest |
+| Location                           | Scope            | Precedence       |
+| ---------------------------------- | ---------------- | ---------------- |
+| `~/.config/opencode/opencode.json` | Global           | Base             |
+| `<project>/opencode.json`          | Project          | Overrides global |
+| `OPENCODE_CONFIG` env var          | Custom path      | Highest          |
+| `OPENCODE_CONFIG_DIR` env var      | Custom directory | Highest          |
 
 **Configuration files merge** rather than replace each other (conflicts resolved by later configs).
 
@@ -133,10 +135,12 @@ OpenCode uses a **merge-based configuration system** (similar to Overture's desi
 ```
 
 **Variable Substitution:**
+
 - `{env:VARIABLE_NAME}` - Environment variable
 - `{file:path/to/file}` - File contents
 
 **Schema Validation:**
+
 - Schema available at: `https://opencode.ai/config.json`
 - IDE autocomplete and validation support
 
@@ -145,10 +149,12 @@ OpenCode uses a **merge-based configuration system** (similar to Overture's desi
 OpenCode uses **AGENTS.md** (equivalent to Claude Code's CLAUDE.md):
 
 #### Initialization
+
 - Auto-generate: `/init` command
 - Manual creation supported
 
 #### File Locations & Precedence
+
 1. **Project-level:** `<project>/AGENTS.md` (version-controlled, team-shared)
 2. **Global:** `~/.config/opencode/AGENTS.md` (personal preferences)
 3. **Both merge** when both exist
@@ -175,11 +181,13 @@ OpenCode uses **AGENTS.md** (equivalent to Claude Code's CLAUDE.md):
 OpenCode provides **two agent categories:**
 
 #### Primary Agents
+
 - Main assistants user interacts with directly
 - Switch between agents: Tab key or custom keybinds
 - Built-in: **Build** (default, full tools) and **Plan** (analysis only)
 
 #### Subagents
+
 - Specialized assistants invoked by primary agents
 - Invocation: Automatic or via @ mentions
 - Built-in: **General** (research), **Explore** (codebase exploration)
@@ -187,6 +195,7 @@ OpenCode provides **two agent categories:**
 #### Agent Configuration
 
 **Via opencode.json:**
+
 ```json
 {
   "agent": {
@@ -211,10 +220,12 @@ OpenCode provides **two agent categories:**
 ```
 
 **Via markdown files:**
+
 - Global: `~/.config/opencode/agent/*.md`
 - Project: `.opencode/agent/*.md`
 
 **Interactive creation:**
+
 ```bash
 opencode agent create
 # Wizard guides you through agent definition
@@ -227,10 +238,12 @@ OpenCode supports **custom slash commands**:
 #### Definition Methods
 
 **Markdown files:**
+
 - File location: `.opencode/command/*.md`
 - Filename becomes command: `test.md` → `/test`
 
 **opencode.json:**
+
 ```json
 {
   "command": {
@@ -251,12 +264,14 @@ OpenCode supports **custom slash commands**:
 #### Advanced Features
 
 **Placeholders:**
+
 - `$ARGUMENTS` - All arguments
 - `$1`, `$2`, etc. - Positional parameters
-- ``!command`` - Shell command output injection
+- `!command` - Shell command output injection
 - `@filename` - File content injection
 
 **Example with injection:**
+
 ```json
 {
   "command": {
@@ -273,22 +288,23 @@ OpenCode supports **custom slash commands**:
 
 #### Built-in Tools
 
-| Tool | Function |
-|------|----------|
-| **bash** | Execute shell commands |
-| **edit** | Modify files with exact string replacements |
-| **write** | Create/overwrite files |
-| **read** | Read file contents with line ranges |
-| **grep** | Regex search across codebase (ripgrep) |
-| **glob** | File pattern matching |
-| **list** | Directory contents with filtering |
-| **patch** | Apply patch files |
-| **todowrite/todoread** | Task list management |
-| **webfetch** | Retrieve web pages |
+| Tool                   | Function                                    |
+| ---------------------- | ------------------------------------------- |
+| **bash**               | Execute shell commands                      |
+| **edit**               | Modify files with exact string replacements |
+| **write**              | Create/overwrite files                      |
+| **read**               | Read file contents with line ranges         |
+| **grep**               | Regex search across codebase (ripgrep)      |
+| **glob**               | File pattern matching                       |
+| **list**               | Directory contents with filtering           |
+| **patch**              | Apply patch files                           |
+| **todowrite/todoread** | Task list management                        |
+| **webfetch**           | Retrieve web pages                          |
 
 #### Tool Configuration
 
 **Global enable/disable:**
+
 ```json
 {
   "tools": {
@@ -300,6 +316,7 @@ OpenCode supports **custom slash commands**:
 ```
 
 **Per-agent basis:**
+
 ```json
 {
   "agent": {
@@ -319,11 +336,13 @@ OpenCode supports **custom slash commands**:
 #### Custom Tools
 
 **Definition:**
+
 - TypeScript/JavaScript files
 - Location: `.opencode/tool/` (project) or `~/.config/opencode/tool/` (global)
 - Uses `tool()` helper with Zod schema validation
 
 **Multiple exports:**
+
 - Naming: `<filename>_<exportname>`
 
 ### 7. MCP Server Support
@@ -380,6 +399,7 @@ OpenCode has **comprehensive MCP client support**:
 #### OAuth Authentication
 
 **Automatic OAuth handling:**
+
 - Detects 401 responses
 - Initiates OAuth flow automatically
 - Pre-configure credentials or disable: `"oauth": false`
@@ -387,6 +407,7 @@ OpenCode has **comprehensive MCP client support**:
 #### Tool Management
 
 **MCP servers are treated as tools:**
+
 - Global enable/disable via `tools` section
 - Per-agent override
 - Wildcard pattern support: `"my-mcp*"`
@@ -425,13 +446,16 @@ OpenCode provides **granular permission controls**:
 #### Key Features
 
 **Bash command targeting:**
+
 - Individual command permissions
 - Wildcard patterns: `*` (zero or more chars), `?` (exactly one char)
 
 **Agent-level overrides:**
+
 - Global permissions can be overridden per-agent
 
 **Defaults:**
+
 - Most operations: `"allow"`
 - `doom_loop`: `"ask"` (detects 3+ identical tool calls)
 - `external_directory`: `"ask"` (operations outside working dir)
@@ -446,10 +470,7 @@ OpenCode provides **granular permission controls**:
 2. **opencode.json reference:**
    ```json
    {
-     "instructions": [
-       "AGENTS.md",
-       "packages/*/AGENTS.md"
-     ]
+     "instructions": ["AGENTS.md", "packages/*/AGENTS.md"]
    }
    ```
 3. **Lazy loading** - Reference external files within AGENTS.md
@@ -463,30 +484,37 @@ OpenCode provides **granular permission controls**:
 ### 10. Additional Features
 
 #### Themes
+
 - Customizable visual appearance
 - Configuration via `theme` field
 
 #### Keybinds
+
 - Custom keyboard shortcuts
 - Tab key for agent switching
 
 #### Formatters
+
 - Code formatter configuration
 - Per-language settings
 
 #### Sharing
+
 - **Modes:** `"manual"`, `"auto"`, `"disabled"`
 - Creates shareable conversation links
 - Command: `/share`
 
 #### Auto-update
+
 - Automatic updates: `"autoupdate": true`
 
 #### Usage Modes
+
 - **Plan Mode** (Tab key) - Suggest approaches without changes
 - **Build Mode** - Execute actual modifications
 
 #### Version Control
+
 - Git integration
 - Undo/Redo: `/undo`, `/redo`
 
@@ -496,69 +524,70 @@ OpenCode provides **granular permission controls**:
 
 ### Feature Parity Matrix
 
-| Feature | Claude Code | OpenCode | Notes |
-|---------|-------------|----------|-------|
-| **Configuration Files** |
-| Project config | `.mcp.json` | `opencode.json` | OpenCode has richer schema |
-| Context file | `CLAUDE.md` | `AGENTS.md` | Equivalent functionality |
-| Global config | `~/.config/claude/mcp.json` | `~/.config/opencode/opencode.json` | Similar precedence |
-| Config merge | No | Yes | OpenCode merges configs |
-| Schema validation | No | Yes | OpenCode: `opencode.ai/config.json` |
-| **MCP Support** |
-| MCP client | ✅ | ✅ | Both support MCP protocol |
-| MCP server mode | ✅ | ❌ | Claude Code: `claude mcp serve` |
-| Local MCP servers | ✅ | ✅ | Similar configuration |
-| Remote MCP servers | ✅ | ✅ | OpenCode adds OAuth |
-| OAuth for remote MCP | ❌ | ✅ | OpenCode unique |
-| MCP tool wildcards | ❌ | ✅ | OpenCode: `"mymcp_*": false` |
-| **Agent System** |
-| Subagents/Task delegation | ✅ Task tool | ✅ Subagents | Similar capability |
-| Custom agents | ✅ Plugins | ✅ Config/markdown | OpenCode more flexible |
-| Agent modes | N/A | ✅ | Primary/subagent/all |
-| Agent switching | N/A | ✅ | Tab key |
-| Per-agent tools | ❌ | ✅ | OpenCode unique |
-| Per-agent permissions | ❌ | ✅ | OpenCode unique |
-| **Commands** |
-| Slash commands | ✅ `.claude/commands/` | ✅ `.opencode/command/` | Similar |
-| Command templates | ✅ Markdown | ✅ Markdown + JSON | OpenCode more flexible |
-| Command arguments | ✅ | ✅ | Both support placeholders |
-| Shell injection | ❌ | ✅ | OpenCode: ``!command`` |
-| Override built-ins | ❌ | ✅ | OpenCode allows |
-| **Tools** |
-| Built-in tools | ✅ | ✅ | Similar set |
-| Custom tools | ✅ Plugins | ✅ TS/JS files | OpenCode more direct |
-| Tool permissions | ❌ | ✅ | OpenCode granular |
-| Global tool toggle | ❌ | ✅ | OpenCode unique |
-| Per-agent tool toggle | ❌ | ✅ | OpenCode unique |
-| **Permissions** |
-| Global permissions | ❌ | ✅ | OpenCode unique |
-| Per-tool permissions | ❌ | ✅ | OpenCode: ask/allow/deny |
-| Bash command permissions | ❌ | ✅ | OpenCode: individual commands |
-| Agent permission overrides | ❌ | ✅ | OpenCode unique |
-| **Configuration** |
-| Model selection | ✅ | ✅ | Both support |
-| Temperature control | ❌ | ✅ | OpenCode per-agent |
-| Max steps limit | ❌ | ✅ | OpenCode cost control |
-| Variable substitution | ❌ | ✅ | OpenCode: `{env:}`, `{file:}` |
-| Glob patterns | ❌ | ✅ | OpenCode: instructions field |
-| **Extensibility** |
-| Plugin system | ✅ Rich ecosystem | ❌ | Claude Code advantage |
-| Plugin marketplace | ✅ Multiple | ❌ | Claude Code advantage |
-| Hooks/automation | ✅ Pre/post hooks | ❌ | Claude Code advantage |
-| **Other Features** |
-| Background tasks | ✅ Task tool | ❌ | Claude Code advantage |
-| Web search | ✅ Built-in | ❌ | Claude Code advantage |
-| Themes | ❌ | ✅ | OpenCode advantage |
-| Keybinds | ❌ | ✅ | OpenCode advantage |
-| Formatters | ❌ | ✅ | OpenCode advantage |
-| Share conversations | ❌ | ✅ `/share` | OpenCode advantage |
-| Undo/Redo | ❌ | ✅ | OpenCode advantage |
-| Plan/Build modes | ❌ | ✅ | OpenCode advantage |
-| Open source | ❌ | ✅ | OpenCode advantage |
+| Feature                    | Claude Code                 | OpenCode                           | Notes                               |
+| -------------------------- | --------------------------- | ---------------------------------- | ----------------------------------- |
+| **Configuration Files**    |
+| Project config             | `.mcp.json`                 | `opencode.json`                    | OpenCode has richer schema          |
+| Context file               | `CLAUDE.md`                 | `AGENTS.md`                        | Equivalent functionality            |
+| Global config              | `~/.config/claude/mcp.json` | `~/.config/opencode/opencode.json` | Similar precedence                  |
+| Config merge               | No                          | Yes                                | OpenCode merges configs             |
+| Schema validation          | No                          | Yes                                | OpenCode: `opencode.ai/config.json` |
+| **MCP Support**            |
+| MCP client                 | ✅                          | ✅                                 | Both support MCP protocol           |
+| MCP server mode            | ✅                          | ❌                                 | Claude Code: `claude mcp serve`     |
+| Local MCP servers          | ✅                          | ✅                                 | Similar configuration               |
+| Remote MCP servers         | ✅                          | ✅                                 | OpenCode adds OAuth                 |
+| OAuth for remote MCP       | ❌                          | ✅                                 | OpenCode unique                     |
+| MCP tool wildcards         | ❌                          | ✅                                 | OpenCode: `"mymcp_*": false`        |
+| **Agent System**           |
+| Subagents/Task delegation  | ✅ Task tool                | ✅ Subagents                       | Similar capability                  |
+| Custom agents              | ✅ Plugins                  | ✅ Config/markdown                 | OpenCode more flexible              |
+| Agent modes                | N/A                         | ✅                                 | Primary/subagent/all                |
+| Agent switching            | N/A                         | ✅                                 | Tab key                             |
+| Per-agent tools            | ❌                          | ✅                                 | OpenCode unique                     |
+| Per-agent permissions      | ❌                          | ✅                                 | OpenCode unique                     |
+| **Commands**               |
+| Slash commands             | ✅ `.claude/commands/`      | ✅ `.opencode/command/`            | Similar                             |
+| Command templates          | ✅ Markdown                 | ✅ Markdown + JSON                 | OpenCode more flexible              |
+| Command arguments          | ✅                          | ✅                                 | Both support placeholders           |
+| Shell injection            | ❌                          | ✅                                 | OpenCode: `!command`                |
+| Override built-ins         | ❌                          | ✅                                 | OpenCode allows                     |
+| **Tools**                  |
+| Built-in tools             | ✅                          | ✅                                 | Similar set                         |
+| Custom tools               | ✅ Plugins                  | ✅ TS/JS files                     | OpenCode more direct                |
+| Tool permissions           | ❌                          | ✅                                 | OpenCode granular                   |
+| Global tool toggle         | ❌                          | ✅                                 | OpenCode unique                     |
+| Per-agent tool toggle      | ❌                          | ✅                                 | OpenCode unique                     |
+| **Permissions**            |
+| Global permissions         | ❌                          | ✅                                 | OpenCode unique                     |
+| Per-tool permissions       | ❌                          | ✅                                 | OpenCode: ask/allow/deny            |
+| Bash command permissions   | ❌                          | ✅                                 | OpenCode: individual commands       |
+| Agent permission overrides | ❌                          | ✅                                 | OpenCode unique                     |
+| **Configuration**          |
+| Model selection            | ✅                          | ✅                                 | Both support                        |
+| Temperature control        | ❌                          | ✅                                 | OpenCode per-agent                  |
+| Max steps limit            | ❌                          | ✅                                 | OpenCode cost control               |
+| Variable substitution      | ❌                          | ✅                                 | OpenCode: `{env:}`, `{file:}`       |
+| Glob patterns              | ❌                          | ✅                                 | OpenCode: instructions field        |
+| **Extensibility**          |
+| Plugin system              | ✅ Rich ecosystem           | ❌                                 | Claude Code advantage               |
+| Plugin marketplace         | ✅ Multiple                 | ❌                                 | Claude Code advantage               |
+| Hooks/automation           | ✅ Pre/post hooks           | ❌                                 | Claude Code advantage               |
+| **Other Features**         |
+| Background tasks           | ✅ Task tool                | ❌                                 | Claude Code advantage               |
+| Web search                 | ✅ Built-in                 | ❌                                 | Claude Code advantage               |
+| Themes                     | ❌                          | ✅                                 | OpenCode advantage                  |
+| Keybinds                   | ❌                          | ✅                                 | OpenCode advantage                  |
+| Formatters                 | ❌                          | ✅                                 | OpenCode advantage                  |
+| Share conversations        | ❌                          | ✅ `/share`                        | OpenCode advantage                  |
+| Undo/Redo                  | ❌                          | ✅                                 | OpenCode advantage                  |
+| Plan/Build modes           | ❌                          | ✅                                 | OpenCode advantage                  |
+| Open source                | ❌                          | ✅                                 | OpenCode advantage                  |
 
 ### Key Differentiators
 
 #### Claude Code Advantages
+
 1. **Plugin ecosystem** - Rich marketplace with specialized agents
 2. **Hooks system** - Pre/post automation capabilities
 3. **MCP server mode** - Can act as both client AND server
@@ -567,6 +596,7 @@ OpenCode provides **granular permission controls**:
 6. **Official Anthropic support** - Direct integration with Claude
 
 #### OpenCode Advantages
+
 1. **Permissions system** - Granular control over tool access
 2. **Configuration flexibility** - Rich JSON schema with merging
 3. **Per-agent customization** - Tools, permissions, models per-agent
@@ -583,6 +613,7 @@ OpenCode provides **granular permission controls**:
 ### Current Overture Features (v0.2.5)
 
 **What Overture does today:**
+
 1. Multi-platform MCP configuration management
 2. Generates `.mcp.json` for Claude Code
 3. Generates `CLAUDE.md` for Claude Code
@@ -606,6 +637,7 @@ OpenCode provides **granular permission controls**:
 **Extend Overture to manage opencode.json alongside .mcp.json**
 
 Enable developers to:
+
 - Declare MCP servers ONCE in Overture config
 - Sync to BOTH Claude Code AND OpenCode
 - Maintain consistent MCP configuration across tools
@@ -616,6 +648,7 @@ Enable developers to:
 **Strategy:** Selective patching rather than full generation
 
 **Rationale:**
+
 - OpenCode has many config fields beyond MCPs (agents, commands, tools, permissions)
 - Users may have customized agents, commands, themes, etc.
 - Full file generation would wipe these customizations
@@ -636,14 +669,14 @@ interface OpenCodeAdapter extends ClientAdapter {
   getVersion(): Promise<string>;
 
   // Config file paths
-  getUserConfigPath(): string;        // ~/.config/opencode/opencode.json
-  getProjectConfigPath(): string;     // <cwd>/opencode.json
+  getUserConfigPath(): string; // ~/.config/opencode/opencode.json
+  getProjectConfigPath(): string; // <cwd>/opencode.json
 
   // JSON patching (unique to OpenCode)
   patchMcpSection(
     configPath: string,
     mcpServers: Record<string, McpServerConfig>,
-    options: PatchOptions
+    options: PatchOptions,
   ): Promise<void>;
 
   // Validation
@@ -655,15 +688,15 @@ interface OpenCodeAdapter extends ClientAdapter {
 
 ```typescript
 interface PatchOptions {
-  preserveExisting: boolean;  // Keep manually-added MCPs
-  mergeStrategy: 'replace' | 'merge';  // How to handle conflicts
-  backup: boolean;  // Create backup before patching
+  preserveExisting: boolean; // Keep manually-added MCPs
+  mergeStrategy: 'replace' | 'merge'; // How to handle conflicts
+  backup: boolean; // Create backup before patching
 }
 
 async function patchMcpSection(
   configPath: string,
   mcpServers: Record<string, McpServerConfig>,
-  options: PatchOptions
+  options: PatchOptions,
 ): Promise<void> {
   // 1. Read existing opencode.json (or create if missing)
   const existing = await readJson(configPath);
@@ -682,21 +715,21 @@ async function patchMcpSection(
     // Replace all managed MCPs, preserve manual
     updatedMcps = {
       ...manualMcps,
-      ...mcpServers
+      ...mcpServers,
     };
   } else {
     // Merge: update managed, preserve manual, add new
     updatedMcps = {
       ...manualMcps,
       ...currentMcps,
-      ...mcpServers
+      ...mcpServers,
     };
   }
 
   // 5. Patch only the mcp section
   const patched = {
     ...existing,
-    mcp: updatedMcps
+    mcp: updatedMcps,
   };
 
   // 6. Write back (with backup)
@@ -710,16 +743,18 @@ async function patchMcpSection(
 **3. MCP Server Format Translation**
 
 **Overture format:**
+
 ```yaml
 mcp:
   python-repl:
     command: uvx
     args: [mcp-server-python-repl]
     env:
-      API_KEY: "${MY_API_KEY}"
+      API_KEY: '${MY_API_KEY}'
 ```
 
 **Translate to OpenCode format:**
+
 ```json
 {
   "mcp": {
@@ -736,6 +771,7 @@ mcp:
 ```
 
 **Translation logic:**
+
 - Overture `command` + `args` → OpenCode `command` array
 - Overture `env` → OpenCode `environment`
 - Add `type: "local"` (assume local unless URL present)
@@ -747,6 +783,7 @@ mcp:
 **Strategy:** Generate AGENTS.md similar to CLAUDE.md
 
 **Content:**
+
 - Project info (from `.overture/config.yaml`)
 - Active plugins
 - MCP server list (global vs project)
@@ -754,11 +791,13 @@ mcp:
 - Workflow instructions (if defined)
 
 **Preservation:**
+
 - Use HTML comment markers: `<!-- overture configuration start/end -->`
 - Preserve custom sections outside markers
 - Merge on regeneration
 
 **File location:**
+
 - Project: `<project>/AGENTS.md`
 - Global: `~/.config/opencode/AGENTS.md` (optional)
 
@@ -793,6 +832,7 @@ overture sync
 ```
 
 **What gets preserved in opencode.json:**
+
 - Custom agents
 - Custom commands
 - Tool permissions
@@ -800,6 +840,7 @@ overture sync
 - All non-MCP configuration
 
 **What gets updated:**
+
 - `mcp` section (Overture-managed servers)
 - Manually-added MCPs preserved (if `--preserve-manual` flag)
 
@@ -809,7 +850,7 @@ overture sync
 
 ```yaml
 # .overture/config.yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-app
@@ -831,9 +872,9 @@ mcp:
 
 # OpenCode-specific configuration (optional)
 opencode:
-  sync_agents_md: true  # Generate AGENTS.md
-  preserve_manual_mcps: true  # Don't delete manually-added MCPs
-  merge_strategy: 'merge'  # 'replace' or 'merge'
+  sync_agents_md: true # Generate AGENTS.md
+  preserve_manual_mcps: true # Don't delete manually-added MCPs
+  merge_strategy: 'merge' # 'replace' or 'merge'
 ```
 
 **Generated opencode.json (patched):**
@@ -926,6 +967,7 @@ overture validate --client opencode
 #### Implementation Phases
 
 **Phase 1: Basic OpenCode Support**
+
 - [ ] Create OpenCodeAdapter
 - [ ] Binary detection (check for `opencode` in PATH)
 - [ ] Version extraction
@@ -935,6 +977,7 @@ overture validate --client opencode
 - [ ] Tests for patching logic
 
 **Phase 2: Integration with Sync**
+
 - [ ] Add OpenCode to sync command
 - [ ] Implement `--client opencode` filter
 - [ ] Add `--preserve-manual` flag
@@ -943,6 +986,7 @@ overture validate --client opencode
 - [ ] Integration tests
 
 **Phase 3: AGENTS.md Generation**
+
 - [ ] Create AGENTS.md generator
 - [ ] HTML comment marker preservation
 - [ ] Plugin→MCP mapping section
@@ -950,6 +994,7 @@ overture validate --client opencode
 - [ ] Tests for generation + preservation
 
 **Phase 4: Advanced Features**
+
 - [ ] Audit command for manual MCPs
 - [ ] MCP list filtering by client
 - [ ] Validation for opencode.json
@@ -957,6 +1002,7 @@ overture validate --client opencode
 - [ ] Schema validation (if schema available)
 
 **Phase 5: OpenCode-Specific Features**
+
 - [ ] Remote MCP server support
 - [ ] OAuth configuration translation
 - [ ] Permission mapping (if applicable)
@@ -965,6 +1011,7 @@ overture validate --client opencode
 #### Testing Strategy
 
 **Unit Tests:**
+
 - JSON patching logic
 - Format translation (Overture → OpenCode)
 - Merge strategies (replace vs merge)
@@ -972,12 +1019,14 @@ overture validate --client opencode
 - Variable substitution translation
 
 **Integration Tests:**
+
 - End-to-end sync to opencode.json
 - AGENTS.md generation + preservation
 - Backup/restore for OpenCode
 - Multi-client sync (Claude + OpenCode)
 
 **E2E Tests:**
+
 - Install OpenCode
 - Create Overture config
 - Sync to OpenCode
@@ -988,18 +1037,22 @@ overture validate --client opencode
 #### Risks & Mitigations
 
 **Risk 1: OpenCode schema changes**
+
 - **Mitigation:** Monitor OpenCode releases, schema validation
 - **Fallback:** Warn on unknown fields, continue with best effort
 
 **Risk 2: User edits opencode.json directly**
+
 - **Mitigation:** Preserve manual MCPs with `--preserve-manual`
 - **Audit command:** `overture audit` shows manual vs Overture-managed
 
 **Risk 3: Conflicting MCP definitions**
+
 - **Mitigation:** Merge strategy options (replace vs merge)
 - **User control:** `--merge-strategy` flag
 
 **Risk 4: AGENTS.md conflicts**
+
 - **Mitigation:** HTML comment markers for managed sections
 - **Preservation:** Custom content outside markers preserved
 
@@ -1096,6 +1149,7 @@ Based on this research, features that would enhance OpenCode:
 ### Overture's Unique Value
 
 **What Overture does that OpenCode doesn't:**
+
 1. Multi-platform MCP sync (7 clients)
 2. User global + project config merge
 3. Plugin lifecycle management (Claude Code)
@@ -1104,6 +1158,7 @@ Based on this research, features that would enhance OpenCode:
 6. Workflow orchestration documentation
 
 **What OpenCode does that Overture doesn't:**
+
 1. Execute AI assistance (Overture configures, doesn't execute)
 2. Custom agents, commands, tools
 3. Permissions system
@@ -1119,10 +1174,12 @@ Based on this research, features that would enhance OpenCode:
 - **OpenCode** = AI coding agent (execution runtime)
 
 **Analogy:**
+
 - Overture : OpenCode :: Homebrew : VSCode
 - Overture manages configuration, OpenCode executes tasks
 
 **Value proposition:**
+
 > "Use Overture to manage your MCPs across Claude Code and OpenCode. Use OpenCode's rich agent system and permissions. Best of both worlds."
 
 ---
@@ -1186,6 +1243,7 @@ Based on this research, features that would enhance OpenCode:
 ## Appendix: OpenCode Resources
 
 ### Documentation
+
 - **Main docs:** https://opencode.ai/docs/
 - **Configuration:** https://opencode.ai/docs/config/
 - **Agents:** https://opencode.ai/docs/agents/
@@ -1196,13 +1254,16 @@ Based on this research, features that would enhance OpenCode:
 - **Permissions:** https://opencode.ai/docs/permissions/
 
 ### Schema
+
 - **Config schema:** https://opencode.ai/config.json
 
 ### Installation
+
 - **Install script:** `curl -fsSL https://opencode.ai/install | bash`
 - **GitHub:** (Repository URL not found in docs, likely https://github.com/opencode-ai/opencode)
 
 ### Key Commands
+
 - `/init` - Generate AGENTS.md
 - `/connect` - Configure API keys
 - `/undo` / `/redo` - Change management

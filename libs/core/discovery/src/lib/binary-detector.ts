@@ -15,7 +15,7 @@ import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type {
   Platform,
   BinaryDetectionResult,
-  ClientAdapter
+  ClientAdapter,
 } from '@overture/config-types';
 
 /**
@@ -33,7 +33,7 @@ export class BinaryDetector {
     private readonly processPort: ProcessPort,
     private readonly environmentPort: EnvironmentPort,
     private readonly fileExists: (path: string) => boolean,
-    private readonly readFile: (path: string) => string
+    private readonly readFile: (path: string) => string,
   ) {}
 
   /**
@@ -59,7 +59,7 @@ export class BinaryDetector {
    */
   async detectClient(
     client: ClientAdapter,
-    platform: Platform
+    platform: Platform,
   ): Promise<BinaryDetectionResult> {
     const warnings: string[] = [];
     let binaryPath: string | undefined;
@@ -102,7 +102,7 @@ export class BinaryDetector {
         };
       } else {
         warnings.push(
-          `Application bundle not found (binary available). Checked paths: ${appBundlePaths.join(', ')}`
+          `Application bundle not found (binary available). Checked paths: ${appBundlePaths.join(', ')}`,
         );
       }
     }
@@ -128,7 +128,7 @@ export class BinaryDetector {
 
       if (!configValid) {
         warnings.push(
-          `Config file exists but is invalid JSON: ${configPathToCheck}`
+          `Config file exists but is invalid JSON: ${configPathToCheck}`,
         );
       }
     }
@@ -157,14 +157,14 @@ export class BinaryDetector {
    * ```
    */
   async detectBinary(
-    binaryName: string
+    binaryName: string,
   ): Promise<{ found: boolean; path?: string; version?: string }> {
     try {
       // Check if binary exists in PATH
       const exists = await Promise.race([
         this.processPort.commandExists(binaryName),
         new Promise<boolean>((resolve) =>
-          setTimeout(() => resolve(false), DETECTION_TIMEOUT)
+          setTimeout(() => resolve(false), DETECTION_TIMEOUT),
         ),
       ]);
 
@@ -181,13 +181,15 @@ export class BinaryDetector {
           (resolve) =>
             setTimeout(
               () => resolve({ stdout: '', stderr: '', exitCode: 1 }),
-              DETECTION_TIMEOUT
-            )
+              DETECTION_TIMEOUT,
+            ),
         ),
       ]);
 
       const binaryPath =
-        whichResult.exitCode === 0 ? whichResult.stdout.trim().split('\n')[0] : undefined;
+        whichResult.exitCode === 0
+          ? whichResult.stdout.trim().split('\n')[0]
+          : undefined;
 
       // Try to get version
       let version: string | undefined;
@@ -198,8 +200,8 @@ export class BinaryDetector {
             (resolve) =>
               setTimeout(
                 () => resolve({ stdout: '', stderr: '', exitCode: 1 }),
-                DETECTION_TIMEOUT
-              )
+                DETECTION_TIMEOUT,
+              ),
           ),
         ]);
 
@@ -233,7 +235,7 @@ export class BinaryDetector {
    * ```
    */
   async detectAppBundle(
-    paths: string[]
+    paths: string[],
   ): Promise<{ found: boolean; path?: string }> {
     for (const appPath of paths) {
       if (this.fileExists(appPath)) {
@@ -320,7 +322,7 @@ export function createBinaryDetector(
   processPort: ProcessPort,
   environmentPort: EnvironmentPort,
   fileExists: (path: string) => boolean,
-  readFile: (path: string) => string
+  readFile: (path: string) => string,
 ): BinaryDetector {
   return new BinaryDetector(processPort, environmentPort, fileExists, readFile);
 }

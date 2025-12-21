@@ -7,6 +7,7 @@ Projects in the Claude Code and MCP server ecosystem that relate to Overture.
 ## Claude Code Plugins & Skills
 
 ### Claude Code Workflows (wshobson/agents)
+
 **Repository**: https://github.com/wshobson/agents
 **Type**: Plugin Marketplace
 
@@ -17,6 +18,7 @@ Production-ready marketplace with 64 plugins, 87 agents, 47 skills across 23 cat
 ---
 
 ### Superpowers (obra/superpowers)
+
 **Repository**: https://github.com/obra/superpowers
 **Type**: Skills Library
 
@@ -29,6 +31,7 @@ Comprehensive skill library for testing, debugging, collaboration, and developme
 ## Execution Orchestrators
 
 ### Claude Code Flow (ruvnet/claude-code-flow)
+
 **Repository**: https://github.com/ruvnet/claude-code-flow
 **Type**: Multi-Agent Execution Orchestrator
 
@@ -39,6 +42,7 @@ Coordinates multiple Claude agents in complex workflows with state management an
 ---
 
 ### Claude Squad (smtg-ai/claude-squad)
+
 **Repository**: https://github.com/smtg-ai/claude-squad
 **Type**: Multi-Agent Coordinator
 
@@ -51,6 +55,7 @@ Runtime coordination for agent collaboration and task distribution.
 ## MCP Servers
 
 ### CCMem (adestefa/ccmem)
+
 **Repository**: https://github.com/adestefa/ccmem
 **Type**: Persistent Memory MCP Server
 
@@ -62,14 +67,14 @@ Cross-session memory for Claude Code with knowledge graph storage.
 
 ## Comparison: What Each Project Does
 
-| Project | Focus | Scope |
-|---------|-------|-------|
-| **wshobson/agents** | Plugin marketplace | 64 plugins for development |
-| **obra/superpowers** | Skills library | Testing, debugging, workflows |
-| **ruvnet/claude-code-flow** | Multi-agent execution | Runtime orchestration |
-| **smtg-ai/claude-squad** | Agent coordination | Runtime collaboration |
-| **adestefa/ccmem** | Persistent memory | Cross-session context |
-| **Overture** | Configuration orchestration | MCP management across clients |
+| Project                     | Focus                       | Scope                         |
+| --------------------------- | --------------------------- | ----------------------------- |
+| **wshobson/agents**         | Plugin marketplace          | 64 plugins for development    |
+| **obra/superpowers**        | Skills library              | Testing, debugging, workflows |
+| **ruvnet/claude-code-flow** | Multi-agent execution       | Runtime orchestration         |
+| **smtg-ai/claude-squad**    | Agent coordination          | Runtime collaboration         |
+| **adestefa/ccmem**          | Persistent memory           | Cross-session context         |
+| **Overture**                | Configuration orchestration | MCP management across clients |
 
 ---
 
@@ -81,6 +86,7 @@ Cross-session memory for Claude Code with knowledge graph storage.
 - **With Overture**: Declare plugin and MCP requirements → Overture ensures everything is connected
 
 **Complementary Stack:**
+
 ```
 ├── Plugins/Skills (agents, superpowers)    ← What Claude can do
 ├── Execution (flow, squad)                 ← How Claude executes
@@ -98,4 +104,4 @@ Cross-session memory for Claude Code with knowledge graph storage.
 
 ---
 
-*Last updated: 2025-01-15 (v0.2.5)*
+_Last updated: 2025-01-15 (v0.2.5)_

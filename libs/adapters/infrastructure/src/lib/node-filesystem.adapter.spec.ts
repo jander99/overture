@@ -53,7 +53,7 @@ describe('NodeFilesystemAdapter', () => {
       expect(fs.writeFile).toHaveBeenCalledWith(
         '/path/to/file.txt',
         'content',
-        'utf-8'
+        'utf-8',
       );
     });
 
@@ -70,7 +70,7 @@ describe('NodeFilesystemAdapter', () => {
       vi.mocked(fs.writeFile).mockRejectedValue(error);
 
       await expect(
-        adapter.writeFile('/protected.txt', 'content')
+        adapter.writeFile('/protected.txt', 'content'),
       ).rejects.toThrow(error);
     });
   });
@@ -87,7 +87,7 @@ describe('NodeFilesystemAdapter', () => {
 
     it('should return false when path does not exist', async () => {
       vi.mocked(fs.access).mockRejectedValue(
-        new Error('ENOENT: no such file or directory')
+        new Error('ENOENT: no such file or directory'),
       );
 
       const result = await adapter.exists('/missing/path');
@@ -97,7 +97,7 @@ describe('NodeFilesystemAdapter', () => {
 
     it('should return false on permission denied', async () => {
       vi.mocked(fs.access).mockRejectedValue(
-        new Error('EACCES: permission denied')
+        new Error('EACCES: permission denied'),
       );
 
       const result = await adapter.exists('/protected');

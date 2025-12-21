@@ -31,6 +31,7 @@ overture doctor
 ```
 
 **Example output:**
+
 ```
 ✓ claude-code (v2.1.0) - /usr/local/bin/claude
   Config: ~/.claude.json (valid)
@@ -43,6 +44,7 @@ overture doctor
 ```
 
 This shows:
+
 - Which AI clients are installed
 - Their versions and locations
 - Config file validity
@@ -81,7 +83,7 @@ User global MCPs are shared across all projects. Project MCPs are project-specif
 Edit `.overture/config.yaml`:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-api
@@ -94,7 +96,7 @@ mcp:
     command: gh
     args: [mcp]
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 
   # Python REPL for code execution
   python-repl:
@@ -116,12 +118,14 @@ overture sync
 ```
 
 This:
+
 1. ✅ Detects which AI clients are installed
 2. ✅ Generates configs for all detected clients
 3. ✅ Backs up existing configs
 4. ✅ Shows detection results and paths
 
 **Example output:**
+
 ```
 Syncing MCP configurations...
 
@@ -163,6 +167,7 @@ cat .mcp.json
 ### Adding a New MCP Server
 
 1. Edit `.overture/config.yaml`:
+
    ```yaml
    mcp:
      new-server:
@@ -211,15 +216,15 @@ overture doctor --json
 
 Overture automatically detects and syncs to these clients:
 
-| Client | Detection | Config Location |
-|--------|-----------|----------------|
-| **Claude Code** | CLI: `claude` | `~/.claude.json` (user)<br>`./.mcp.json` (project) |
-| **Claude Desktop** | macOS: `/Applications/Claude.app` | `~/Library/Application Support/Claude/mcp.json` |
-| **VSCode** | CLI: `code` | `~/.vscode/extensions/.../mcp.json` |
-| **Cursor** | CLI: `cursor` | `~/.cursor/mcp.json` |
-| **Windsurf** | App bundle (platform-specific) | Platform-specific |
-| **Copilot CLI** | CLI: `copilot` | Various locations |
-| **JetBrains** | IDE binaries | IDE-specific paths |
+| Client             | Detection                         | Config Location                                    |
+| ------------------ | --------------------------------- | -------------------------------------------------- |
+| **Claude Code**    | CLI: `claude`                     | `~/.claude.json` (user)<br>`./.mcp.json` (project) |
+| **Claude Desktop** | macOS: `/Applications/Claude.app` | `~/Library/Application Support/Claude/mcp.json`    |
+| **VSCode**         | CLI: `code`                       | `~/.vscode/extensions/.../mcp.json`                |
+| **Cursor**         | CLI: `cursor`                     | `~/.cursor/mcp.json`                               |
+| **Windsurf**       | App bundle (platform-specific)    | Platform-specific                                  |
+| **Copilot CLI**    | CLI: `copilot`                    | Various locations                                  |
+| **JetBrains**      | IDE binaries                      | IDE-specific paths                                 |
 
 ---
 
@@ -235,6 +240,7 @@ Overture automatically detects and syncs to these clients:
 ### Advanced Features
 
 **User Global Config:**
+
 ```bash
 # Create user global config
 overture user init
@@ -244,6 +250,7 @@ overture user init
 ```
 
 **CI/CD Integration:**
+
 ```yaml
 # .overture/config.yaml
 skipBinaryDetection: true  # Don't check for installed clients
@@ -253,6 +260,7 @@ skipBinaryDetection: true  # Don't check for installed clients
 ```
 
 **Platform Filtering:**
+
 ```yaml
 mcp:
   linux-only:
@@ -262,6 +270,7 @@ mcp:
 ```
 
 **Client Filtering:**
+
 ```yaml
 mcp:
   vscode-only:

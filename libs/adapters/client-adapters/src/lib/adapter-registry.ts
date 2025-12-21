@@ -111,7 +111,9 @@ export class AdapterRegistry {
    */
   getInstalledAdapters(platform: Platform): ClientAdapter[] {
     const installedNames = this.detectInstalledClients(platform);
-    return installedNames.map((name) => this.adapters.get(name)!).filter(Boolean);
+    return installedNames
+      .map((name) => this.adapters.get(name)!)
+      .filter(Boolean);
   }
 
   /**
@@ -159,10 +161,16 @@ export class AdapterRegistry {
  * const config = await adapter.readConfig('/path/to/config');
  * ```
  */
-export function getAdapterForClient(registry: AdapterRegistry, clientName: ClientName): ClientAdapter {
+export function getAdapterForClient(
+  registry: AdapterRegistry,
+  clientName: ClientName,
+): ClientAdapter {
   const adapter = registry.get(clientName);
   if (!adapter) {
-    throw new McpError(`No adapter registered for client: ${clientName}`, clientName);
+    throw new McpError(
+      `No adapter registered for client: ${clientName}`,
+      clientName,
+    );
   }
   return adapter;
 }

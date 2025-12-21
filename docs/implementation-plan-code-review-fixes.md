@@ -12,17 +12,17 @@ This document provides a detailed implementation plan for fixing issues identifi
 
 ### Issue Summary
 
-| Category | Count | Priority |
-|----------|-------|----------|
-| Critical Bugs | 3 | P0 |
-| Lint Errors | 33 | P1 |
-| Lint Warnings | 86 | P1 |
-| Documentation Discrepancies | 4 | P1 |
-| Error Handling Issues | 12 files | P2 |
-| Output Port Violations | 55+ instances | P2 |
-| Code Duplication | 4 patterns | P3 |
-| Missing Tests | 9 files | P3 |
-| E2E Test Issues | 10 skipped | P4 |
+| Category                    | Count         | Priority |
+| --------------------------- | ------------- | -------- |
+| Critical Bugs               | 3             | P0       |
+| Lint Errors                 | 33            | P1       |
+| Lint Warnings               | 86            | P1       |
+| Documentation Discrepancies | 4             | P1       |
+| Error Handling Issues       | 12 files      | P2       |
+| Output Port Violations      | 55+ instances | P2       |
+| Code Duplication            | 4 patterns    | P3       |
+| Missing Tests               | 9 files       | P3       |
+| E2E Test Issues             | 10 skipped    | P4       |
 
 ---
 
@@ -53,6 +53,7 @@ WS1 (Critical) ──┬──> WS2 (Lint)
 ```
 
 **Parallel Execution Strategy:**
+
 - WS1 must complete first (critical bugs)
 - WS2, WS3, WS4 can run in parallel after WS1
 - WS5 depends on WS4 completion
@@ -92,7 +93,7 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
 // AFTER
 export async function acquireLock(
   getLockFilePath: () => string,
-  options: LockOptions = {}
+  options: LockOptions = {},
 ): Promise<boolean> {
   const lockPath = getLockFilePath();
   // ...
@@ -113,6 +114,7 @@ export async function acquireLock(
    - Pass mock function directly to each function call
 
 **Verification:**
+
 ```bash
 nx test @overture/cli --testPathPattern=process-lock
 nx build @overture/cli
@@ -138,17 +140,15 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJson = JSON.parse(
-  readFileSync(join(__dirname, '../../package.json'), 'utf-8')
+  readFileSync(join(__dirname, '../../package.json'), 'utf-8'),
 );
 
 // In createProgram()
-program
-  .name('overture')
-  .description('...')
-  .version(packageJson.version);
+program.name('overture').description('...').version(packageJson.version);
 ```
 
 2. Ensure `apps/cli/package.json` has correct version:
+
 ```json
 {
   "version": "0.3.0"
@@ -156,6 +156,7 @@ program
 ```
 
 **Verification:**
+
 ```bash
 nx build @overture/cli
 node dist/apps/cli/main.js --version  # Should output 0.3.0
@@ -174,6 +175,7 @@ node dist/apps/cli/main.js --version  # Should output 0.3.0
 3. Search for any imports of this function and remove them
 
 **Verification:**
+
 ```bash
 nx build @overture/sync-core
 nx test @overture/sync-core
@@ -197,12 +199,14 @@ nx run-many -t lint --all -- --fix
 ```
 
 This should fix:
+
 - `@typescript-eslint/no-inferrable-types` (2 errors)
 - Some formatting issues
 
 ### Task 2.2: Fix Module Boundary Violations
 
 **Files:**
+
 - `apps/cli/src/main.ts:5`
 - `apps/cli/src/main.spec.ts:4`
 
@@ -211,6 +215,7 @@ This should fix:
 **Solution:** Check if `@overture/utils` should be eagerly loaded or adjust the import pattern. Review `nx.json` or project tags to understand the boundary rule.
 
 **Investigation needed:**
+
 ```bash
 nx graph --focus=@overture/cli
 ```
@@ -243,6 +248,7 @@ info() { /* no-op mock */ }
 ### Task 2.5: Fix Remaining `any` Types
 
 **Files with `@typescript-eslint/no-explicit-any` warnings:**
+
 - `libs/domain/config-schema/src/lib/config-schema.spec.ts:112, 444`
 - `apps/cli/src/main.spec.ts:201, 207, 223, 240, 257`
 - `apps/cli/src/test-utils/app-dependencies.mock.ts:132`
@@ -283,14 +289,16 @@ nx run-many -t lint --all
 **Changes needed:**
 
 1. **Line 30:** Change "Jest" to "Vitest"
+
    ```markdown
    - **Testing:** Vitest (384 tests, 83%+ coverage)
    ```
 
 2. **Line 122-127:** Update test framework section
+
    ```markdown
    **Test Framework:** Vitest with TypeScript support
-   
+
    - **Total Tests:** 384+ passing
    - **Coverage:** 83%+ (branches, functions, lines)
    ```
@@ -298,9 +306,10 @@ nx run-many -t lint --all
 3. **Line 139:** Already mentions `vi.mock()` which is correct for Vitest
 
 4. **Add linting/formatting section** after "Before Committing:" (line 183):
+
    ```markdown
    **Before Committing:**
-   
+
    1. Run linter: `nx run-many -t lint --all`
    2. Run formatter: `npx prettier --write .`
    3. Run tests: `nx test @overture/cli`
@@ -316,17 +325,20 @@ nx run-many -t lint --all
 **Changes needed:**
 
 1. **Line 26:** Update test count
+
    ```markdown
    - [x] **Test Suite** — Comprehensive Vitest tests with 83%+ code coverage (384+ tests passing)
    ```
 
 2. **Add to "Before Committing Checklist" (around line 486):**
+
    ```markdown
    - [ ] **Run linter** — Execute `nx run-many -t lint --all` to ensure no lint errors
    - [ ] **Run formatter** — Execute `npx prettier --write .` for consistent formatting
    ```
 
 3. **Add to "Common Anti-Patterns to Avoid" (around line 556):**
+
    ```markdown
    - Skip running linter before commits
    - Commit code with lint errors or warnings
@@ -341,6 +353,7 @@ nx run-many -t lint --all
 ### Task 3.3: Verify Documentation Accuracy
 
 Review and verify:
+
 - Test counts match actual: `nx run-many -t test --all 2>&1 | grep -E "passed|failed"`
 - Project structure matches actual directory layout
 - Command examples work correctly
@@ -375,6 +388,7 @@ try {
 **File:** `apps/cli/src/cli/commands/init.ts`
 
 **Current (lines 98-101):**
+
 ```typescript
 } catch (error) {
   output.error(`Failed to initialize configuration: ${(error as Error).message}`);
@@ -383,6 +397,7 @@ try {
 ```
 
 **Change to:**
+
 ```typescript
 } catch (error) {
   ErrorHandler.handleCommandError(error, 'init');
@@ -404,6 +419,7 @@ Apply same pattern as Task 4.2.
 **Lines to update:** 114, 135, 180, 212, 244, 264, 272, 292, 296
 
 **Special consideration:** Remove the test artifact check (lines 238-241):
+
 ```typescript
 // REMOVE THIS - test artifact leaking into production
 if (error instanceof Error && error.message.startsWith('process.exit:')) {
@@ -426,6 +442,7 @@ if (error instanceof Error && error.message.startsWith('process.exit:')) {
 ### Task 4.7: Verify Error Handling Consistency
 
 After all changes:
+
 ```bash
 grep -rn "process\.exit" apps/cli/src/cli/commands/
 # Should only show ErrorHandler.handleCommandError usage or signal handlers
@@ -453,11 +470,11 @@ export interface OutputPort {
   success(message: string): void;
   warn(message: string): void;
   error(message: string): void;
-  
+
   // New methods (optional)
   debug?(message: string): void;
-  raw?(message: string): void;  // Unformatted output
-  nl?(): void;                   // Newline
+  raw?(message: string): void; // Unformatted output
+  nl?(): void; // Newline
 }
 ```
 
@@ -486,6 +503,7 @@ output.info(`Platform: ${platform}`);
 **Lines:** 313-420 (`displayUserConfig` function)
 
 **Solution:** The function needs access to `output` from deps. Either:
+
 1. Pass `output` as parameter to `displayUserConfig`
 2. Move function inside the command action where deps are available
 
@@ -495,7 +513,8 @@ output.info(`Platform: ${platform}`);
 
 **Line 244:** `console.log(diffOutput)`
 
-**Solution:** 
+**Solution:**
+
 ```typescript
 // BEFORE
 console.log(diffOutput);
@@ -524,6 +543,7 @@ Replace with `output.info(JSON.stringify(...))`.
 ### Task 5.7: Refactor Library Code Console Usage
 
 **Files:**
+
 - `libs/core/plugin/src/lib/plugin-detector.ts:108, 265`
 - `libs/core/config/src/lib/config-loader.ts:190, 206, 295`
 - `apps/cli/src/core/process-lock.ts:118, 293`
@@ -531,6 +551,7 @@ Replace with `output.info(JSON.stringify(...))`.
 **Solution for libraries:** These need `OutputPort` injected via constructor.
 
 **For plugin-detector.ts:**
+
 ```typescript
 // Add to constructor
 constructor(
@@ -546,6 +567,7 @@ if (this.output) {
 ```
 
 **For config-loader.ts:**
+
 ```typescript
 // Change process.stderr.write to output.warn()
 // Requires adding OutputPort to ConfigLoader constructor
@@ -575,14 +597,14 @@ grep -rn "console\.\(log\|warn\|error\)" apps/cli/src/ libs/ --include="*.ts" | 
 /**
  * Cross-platform dirname extraction
  * Handles both forward slashes (Unix) and backslashes (Windows)
- * 
+ *
  * @param filePath - File path to extract directory from
  * @returns Directory portion of the path
  */
 export function getDirname(filePath: string): string {
   const lastSlash = Math.max(
     filePath.lastIndexOf('/'),
-    filePath.lastIndexOf('\\')
+    filePath.lastIndexOf('\\'),
   );
   return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
 }
@@ -595,6 +617,7 @@ export { getDirname } from './lib/path-utils';
 ```
 
 **Update client adapters:**
+
 - `libs/adapters/client-adapters/src/lib/adapters/claude-code.adapter.ts:145-149`
 - `libs/adapters/client-adapters/src/lib/adapters/copilot-cli.adapter.ts:159-165`
 - `libs/adapters/client-adapters/src/lib/adapters/opencode.adapter.ts:225-232`
@@ -616,12 +639,16 @@ import { getDirname } from '@overture/utils';
 /**
  * Supported client names for MCP configuration sync
  */
-export const SUPPORTED_CLIENTS = ['claude-code', 'copilot-cli', 'opencode'] as const;
+export const SUPPORTED_CLIENTS = [
+  'claude-code',
+  'copilot-cli',
+  'opencode',
+] as const;
 
 /**
  * Type for supported client names
  */
-export type ClientName = typeof SUPPORTED_CLIENTS[number];
+export type ClientName = (typeof SUPPORTED_CLIENTS)[number];
 
 /**
  * All known client names (including deprecated/legacy)
@@ -630,23 +657,24 @@ export type ClientName = typeof SUPPORTED_CLIENTS[number];
 export const ALL_KNOWN_CLIENTS = [
   ...SUPPORTED_CLIENTS,
   'claude-desktop',
-  'vscode', 
+  'vscode',
   'cursor',
   'windsurf',
   'jetbrains-copilot',
   'codex',
-  'gemini-cli'
+  'gemini-cli',
 ] as const;
 
 /**
  * Type for all known client names
  */
-export type KnownClientName = typeof ALL_KNOWN_CLIENTS[number];
+export type KnownClientName = (typeof ALL_KNOWN_CLIENTS)[number];
 ```
 
 **Update barrel export:** `libs/domain/config-types/src/index.ts`
 
 **Update files using hardcoded arrays:**
+
 - `apps/cli/src/cli/commands/doctor.ts:35`
 - `apps/cli/src/cli/commands/validate.ts:23-33`
 - `apps/cli/src/test-utils/app-dependencies.mock.ts:167, 170`
@@ -655,6 +683,7 @@ export type KnownClientName = typeof ALL_KNOWN_CLIENTS[number];
 ### Task 6.3: Consolidate Platform Detection
 
 **Files using direct `os.platform()` or `process.platform`:**
+
 - `apps/cli/src/cli/commands/doctor.ts:26`
 - `libs/shared/utils/src/lib/error-handler.ts:308`
 
@@ -693,23 +722,24 @@ grep -rn "claude-code.*copilot-cli.*opencode" apps/ libs/
 
 ### Overview of Files Needing Tests
 
-| File | Complexity | Priority | Tested Indirectly? |
-|------|------------|----------|-------------------|
-| `env-expander.ts` | Simple | High | No |
-| `audit-service.ts` | Medium | High | No |
-| `restore-service.ts` | Medium | High | No |
-| `backup-service.ts` | Medium | High | Mocked only |
-| `transport-validator.ts` | Simple | Medium | Mocked |
-| `config-diff.ts` | Simple | Medium | Mocked |
-| `client-env-service.ts` | Simple | Medium | Mocked |
-| `exclusion-filter.ts` | Medium | Low | Mocked |
-| `mcp-detector.ts` | Simple | Low | Mocked |
+| File                     | Complexity | Priority | Tested Indirectly? |
+| ------------------------ | ---------- | -------- | ------------------ |
+| `env-expander.ts`        | Simple     | High     | No                 |
+| `audit-service.ts`       | Medium     | High     | No                 |
+| `restore-service.ts`     | Medium     | High     | No                 |
+| `backup-service.ts`      | Medium     | High     | Mocked only        |
+| `transport-validator.ts` | Simple     | Medium   | Mocked             |
+| `config-diff.ts`         | Simple     | Medium   | Mocked             |
+| `client-env-service.ts`  | Simple     | Medium   | Mocked             |
+| `exclusion-filter.ts`    | Medium     | Low      | Mocked             |
+| `mcp-detector.ts`        | Simple     | Low      | Mocked             |
 
 ### Task 7.1: Create `env-expander.spec.ts`
 
 **File:** `libs/core/sync/src/lib/env-expander.spec.ts`
 
 **Test cases:**
+
 1. `expandEnvVars()` - basic expansion
 2. `expandEnvVars()` - default values `${VAR:-default}`
 3. `expandEnvVars()` - missing required vars throw
@@ -721,6 +751,7 @@ grep -rn "claude-code.*copilot-cli.*opencode" apps/ libs/
 9. `validateEnvVars()` - validation
 
 **Template:**
+
 ```typescript
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
@@ -738,11 +769,11 @@ describe('env-expander', () => {
       const env = { HOME: '/home/user' };
       expect(expandEnvVars('${HOME}/config', env)).toBe('/home/user/config');
     });
-    
+
     it('should use default value when var missing', () => {
       expect(expandEnvVars('${MISSING:-default}', {})).toBe('default');
     });
-    
+
     // ... more tests
   });
 });
@@ -753,6 +784,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/audit-service.spec.ts`
 
 **Test cases:**
+
 1. `auditClient()` - single client audit
 2. `auditAllClients()` - multiple clients
 3. `compareConfigs()` - finds unmanaged MCPs
@@ -764,6 +796,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/restore-service.spec.ts`
 
 **Test cases:**
+
 1. `restore()` - successful restore
 2. `restore()` - backup not found
 3. `restoreLatest()` - finds latest backup
@@ -775,6 +808,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/backup-service.spec.ts`
 
 **Test cases:**
+
 1. `backup()` - creates backup with timestamp
 2. `listBackups()` - sorted by date
 3. `getBackup()` - retrieves specific backup
@@ -787,6 +821,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/transport-validator.spec.ts`
 
 **Test cases:**
+
 1. `validateMcpTransport()` - single validation
 2. `getTransportWarnings()` - unsupported transports
 3. `filterByTransport()` - filter to supported only
@@ -797,6 +832,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/config-diff.spec.ts`
 
 **Test cases:**
+
 1. `generateDiff()` - additions
 2. `generateDiff()` - removals
 3. `generateDiff()` - modifications
@@ -809,6 +845,7 @@ describe('env-expander', () => {
 **File:** `libs/core/sync/src/lib/client-env-service.spec.ts`
 
 **Test cases:**
+
 1. `shouldExpandEnvVars()` - checks client support
 2. `expandEnvVarsInMcpConfig()` - single config
 3. `expandEnvVarsInClientConfig()` - full config
@@ -834,10 +871,12 @@ nx test @overture/sync-core --coverage
 ### Task 8.1: Investigate Skipped Tests
 
 **Files with skipped tests:**
+
 - `apps/cli-e2e/src/cli/sync-multi-client.spec.ts` - 7 skipped
 - `apps/cli-e2e/src/cli/audit.spec.ts` - 3 skipped
 
 **Investigation steps:**
+
 1. Run each skipped test individually to understand failure
 2. Document reason for skip (flaky? unimplemented? environment?)
 3. Create plan to fix or remove
@@ -850,6 +889,7 @@ nx e2e @overture/cli-e2e --testPathPattern=sync-multi-client
 ### Task 8.2: Fix or Remove Skipped Tests
 
 For each skipped test:
+
 1. If fixable: Fix the test
 2. If feature not implemented: Add TODO comment with issue reference
 3. If test is obsolete: Remove it
@@ -898,21 +938,25 @@ After all workstreams complete:
 ### Verification Steps
 
 1. **All tests pass:**
+
    ```bash
    nx run-many -t test --all
    ```
 
 2. **All lint checks pass:**
+
    ```bash
    nx run-many -t lint --all
    ```
 
 3. **Build succeeds:**
+
    ```bash
    nx build @overture/cli
    ```
 
 4. **CLI works correctly:**
+
    ```bash
    node dist/apps/cli/main.js --version
    node dist/apps/cli/main.js --help
@@ -942,6 +986,7 @@ git commit -m "fix(core): resolve critical bugs in process-lock and CLI version
 ### Final PR
 
 Create PR with:
+
 - Title: `fix: resolve code review issues (WS1-WS8)`
 - Body: Link to this implementation plan
 - Labels: `bug`, `refactor`, `tests`, `documentation`
@@ -951,11 +996,13 @@ Create PR with:
 ## Appendix A: File Reference Quick Lookup
 
 ### Critical Files (WS1)
+
 - `apps/cli/src/core/process-lock.ts`
 - `apps/cli/src/cli/index.ts`
 - `libs/core/sync/src/lib/sync.ts`
 
 ### Command Files (WS4, WS5)
+
 - `apps/cli/src/cli/commands/init.ts`
 - `apps/cli/src/cli/commands/sync.ts`
 - `apps/cli/src/cli/commands/doctor.ts`
@@ -967,10 +1014,12 @@ Create PR with:
 - `apps/cli/src/cli/commands/plugin-export.ts`
 
 ### Library Files with Console Usage (WS5)
+
 - `libs/core/plugin/src/lib/plugin-detector.ts`
 - `libs/core/config/src/lib/config-loader.ts`
 
 ### Files Needing Tests (WS7)
+
 - `libs/core/sync/src/lib/env-expander.ts`
 - `libs/core/sync/src/lib/audit-service.ts`
 - `libs/core/sync/src/lib/restore-service.ts`
@@ -982,6 +1031,7 @@ Create PR with:
 - `libs/core/sync/src/lib/mcp-detector.ts`
 
 ### Documentation Files (WS3)
+
 - `AGENTS.md`
 - `CLAUDE.md`
 
@@ -992,25 +1042,30 @@ Create PR with:
 When implementing this plan, use these MCP servers effectively:
 
 ### For Code Changes
+
 - **filesystem MCP**: Read/write files
 - **nx MCP**: Run tests, builds, lint via `nx_*` tools
 
 ### For Understanding Code
+
 - **nx_workspace**: Get project structure
 - **nx_project_details**: Get specific project config
 - **context7**: Look up library APIs (Commander.js, Zod, Vitest)
 
 ### For Complex Decisions
+
 - **sequentialthinking**: Break down multi-step problems
 - **memory**: Track decisions across sessions
 
 ### Parallel Agent Execution
 
 Multiple agents can work simultaneously on:
+
 - Different files within same workstream
 - Different workstreams (respecting dependencies)
 
 **Example parallel execution:**
+
 ```
 Agent 1: WS2 (lint fixes for @overture/errors)
 Agent 2: WS2 (lint fixes for @overture/ports-output)
@@ -1019,4 +1074,4 @@ Agent 3: WS3 (documentation updates)
 
 ---
 
-*Last updated: 2025-12-21*
+_Last updated: 2025-12-21_

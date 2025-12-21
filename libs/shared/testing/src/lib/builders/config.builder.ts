@@ -29,7 +29,7 @@ export function buildMcpServer(
   args: string[] = [],
   env: Record<string, string> = {},
   transport: 'stdio' | 'http' | 'sse' = 'stdio',
-  overrides: Record<string, any> = {}
+  overrides: Record<string, any> = {},
 ) {
   return {
     command,
@@ -56,7 +56,7 @@ export function buildMcpServer(
  */
 export function buildClientConfig(
   enabled = true,
-  overrides: Record<string, any> = {}
+  overrides: Record<string, any> = {},
 ) {
   return {
     enabled,
@@ -80,7 +80,7 @@ export function buildClientConfig(
 export function buildPluginConfig(
   marketplace = 'claude-code-workflows',
   enabled = true,
-  mcps: string[] = []
+  mcps: string[] = [],
 ) {
   return {
     marketplace,
@@ -133,14 +133,16 @@ export function buildSyncOptions(overrides: Record<string, any> = {}) {
  * });
  * ```
  */
-export function buildConfig(options: {
-  version?: string;
-  clients?: Record<string, any>;
-  plugins?: Record<string, any>;
-  mcp?: Record<string, any>;
-  sync?: any;
-  discovery?: any;
-} = {}) {
+export function buildConfig(
+  options: {
+    version?: string;
+    clients?: Record<string, any>;
+    plugins?: Record<string, any>;
+    mcp?: Record<string, any>;
+    sync?: any;
+    discovery?: any;
+  } = {},
+) {
   return {
     version: options.version ?? '2.0',
     clients: options.clients,
@@ -168,7 +170,7 @@ export function buildConfig(options: {
  */
 export function buildUserConfig(
   plugins: Record<string, any> = {},
-  mcp: Record<string, any> = {}
+  mcp: Record<string, any> = {},
 ) {
   return buildConfig({
     version: '2.0',
@@ -218,7 +220,7 @@ export function buildProjectConfig(mcp: Record<string, any> = {}) {
  */
 export function buildConfigWithPlugins(
   plugins: Record<string, any> = {},
-  mcp: Record<string, any> = {}
+  mcp: Record<string, any> = {},
 ) {
   return buildConfig({
     version: '2.0',
@@ -246,7 +248,7 @@ export function buildConfigWithPlugins(
  */
 export function buildClaudeSettings(
   plugins: Record<string, any> = {},
-  marketplaces: string[] = []
+  marketplaces: string[] = [],
 ) {
   return {
     plugins,
@@ -293,13 +295,13 @@ export function buildInstalledPlugin(overrides?: Record<string, any>) {
  */
 export function buildInstalledPlugins(
   count: number,
-  baseOverrides?: Record<string, any>
+  baseOverrides?: Record<string, any>,
 ): any[] {
   return Array.from({ length: count }, (_, i) =>
     buildInstalledPlugin({
       name: `plugin-${i + 1}`,
       ...baseOverrides,
-    })
+    }),
   );
 }
 
@@ -342,7 +344,7 @@ export function buildInstallationResult(overrides?: Record<string, any>) {
  */
 export function buildBinaryDetectionResult(
   status: 'found' | 'not-found' | 'skipped' = 'found',
-  overrides: Record<string, any> = {}
+  overrides: Record<string, any> = {},
 ) {
   return {
     status,
@@ -371,7 +373,7 @@ export function buildBinaryDetectionResult(
  */
 export function buildSyncResult(
   success = true,
-  clientResults: Record<string, any> = {}
+  clientResults: Record<string, any> = {},
 ) {
   const clients = Object.values(clientResults);
   const successfulClients = clients.filter((c: any) => c.success).length;
@@ -413,7 +415,7 @@ export function buildClientSyncResult(
   success = true,
   synced: string[] = [],
   skipped: string[] = [],
-  overrides: Record<string, any> = {}
+  overrides: Record<string, any> = {},
 ) {
   return {
     success,

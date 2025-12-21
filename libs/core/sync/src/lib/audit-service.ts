@@ -9,7 +9,11 @@
  */
 
 import type { ClientAdapter } from '@overture/client-adapters';
-import type { OvertureConfig, ClientName, Platform } from '@overture/config-types';
+import type {
+  OvertureConfig,
+  ClientName,
+  Platform,
+} from '@overture/config-types';
 
 /**
  * Audit service for detecting unmanaged MCPs
@@ -37,7 +41,11 @@ export class AuditService {
    * // => ['filesystem', 'slack']
    * ```
    */
-  async auditClient(adapter: ClientAdapter, overtureConfig: OvertureConfig, platform: Platform): Promise<string[]> {
+  async auditClient(
+    adapter: ClientAdapter,
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): Promise<string[]> {
     // Detect config path
     const configPath = adapter.detectConfigPath(platform);
 
@@ -66,11 +74,15 @@ export class AuditService {
       const rootKey = adapter.schemaRootKey;
 
       if (userConfig[rootKey]) {
-        Object.keys(userConfig[rootKey]).forEach((name) => clientMcps.add(name));
+        Object.keys(userConfig[rootKey]).forEach((name) =>
+          clientMcps.add(name),
+        );
       }
 
       if (projectConfig[rootKey]) {
-        Object.keys(projectConfig[rootKey]).forEach((name) => clientMcps.add(name));
+        Object.keys(projectConfig[rootKey]).forEach((name) =>
+          clientMcps.add(name),
+        );
       }
     }
 
@@ -103,12 +115,16 @@ export class AuditService {
   async auditAllClients(
     adapters: ClientAdapter[],
     overtureConfig: OvertureConfig,
-    platform: Platform
+    platform: Platform,
   ): Promise<Partial<Record<ClientName, string[]>>> {
     const result: Partial<Record<ClientName, string[]>> = {};
 
     for (const adapter of adapters) {
-      const unmanaged = await this.auditClient(adapter, overtureConfig, platform);
+      const unmanaged = await this.auditClient(
+        adapter,
+        overtureConfig,
+        platform,
+      );
 
       // Only include clients with unmanaged MCPs
       if (unmanaged.length > 0) {
@@ -165,7 +181,9 @@ export class AuditService {
    * // ]
    * ```
    */
-  generateSuggestions(unmanagedByClient: Record<ClientName, string[]>): string[] {
+  generateSuggestions(
+    unmanagedByClient: Record<ClientName, string[]>,
+  ): string[] {
     // Collect all unique unmanaged MCPs
     const allUnmanaged = new Set<string>();
 

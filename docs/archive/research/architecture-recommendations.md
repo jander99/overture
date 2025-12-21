@@ -51,6 +51,7 @@ Based on the validated theory that Overture should treat plugins as the primary 
 ### Recommended Format: YAML
 
 **Rationale**:
+
 - Human-readable and editable
 - Comments support (vs JSON)
 - Less verbose than JSON
@@ -61,45 +62,45 @@ Based on the validated theory that Overture should treat plugins as the primary 
 
 ```yaml
 # overture.yaml
-version: "1.0"
+version: '1.0'
 
 # Plugin metadata
 plugin:
-  name: "my-development-plugin"
-  version: "1.0.0"
-  author: "username"
-  description: "Complete development workflow for Python projects"
-  repository: "https://github.com/username/my-dev-plugin"
+  name: 'my-development-plugin'
+  version: '1.0.0'
+  author: 'username'
+  description: 'Complete development workflow for Python projects'
+  repository: 'https://github.com/username/my-dev-plugin'
 
 # Foundation: Tool integrations
 mcp_servers:
   pytest-runner:
     type: stdio
     command: npx
-    args: ["-y", "pytest-mcp-server"]
-    scope: plugin  # Options: plugin, user, reference
-    description: "Runs pytest tests"
+    args: ['-y', 'pytest-mcp-server']
+    scope: plugin # Options: plugin, user, reference
+    description: 'Runs pytest tests'
 
   git-tools:
     type: stdio
     command: mcp-git
-    scope: reference  # Reference existing user installation
-    description: "Git operations"
+    scope: reference # Reference existing user installation
+    description: 'Git operations'
 
 # Intelligence: AI workers
 subagents:
   test-engineer:
-    description: "Writes and debugs test cases"
+    description: 'Writes and debugs test cases'
     file: ./agents/test-engineer.md
     tools:
       - pytest-runner
       - git-tools
     skills:
-      - write-tests  # References skill below
-    model: claude-sonnet-4-5  # Optional: specific model
+      - write-tests # References skill below
+    model: claude-sonnet-4-5 # Optional: specific model
 
   code-reviewer:
-    description: "Reviews code for quality and style"
+    description: 'Reviews code for quality and style'
     file: ./agents/code-reviewer.md
     tools:
       - git-tools
@@ -109,23 +110,23 @@ subagents:
 # Capabilities: Reusable instructions
 skills:
   write-tests:
-    description: "Generate comprehensive test cases"
+    description: 'Generate comprehensive test cases'
     directory: ./skills/write-tests/
     # Contains SKILL.md and supporting files
 
   review-python:
-    description: "Review Python code following PEP 8"
+    description: 'Review Python code following PEP 8'
     directory: ./skills/review-python/
 
 # Workflows: User-invoked commands
 commands:
   test:
-    description: "Run test suite with coverage"
+    description: 'Run test suite with coverage'
     file: ./commands/test.md
-    uses_agent: test-engineer  # Optional: delegates to agent
+    uses_agent: test-engineer # Optional: delegates to agent
 
   review:
-    description: "Review recent changes"
+    description: 'Review recent changes'
     file: ./commands/review.md
     uses_agent: code-reviewer
 
@@ -133,15 +134,15 @@ commands:
 hooks:
   pre-commit-check:
     event: PreToolUse
-    matcher: "Bash"
-    pattern: "git commit"
+    matcher: 'Bash'
+    pattern: 'git commit'
     commands:
-      - "pytest --quick"
-      - "black --check ."
+      - 'pytest --quick'
+      - 'black --check .'
 
   post-test-notification:
     event: PostToolUse
-    matcher: "pytest-runner"
+    matcher: 'pytest-runner'
     commands:
       - "notify-send 'Tests complete'"
 ```
@@ -222,18 +223,21 @@ test_engineer = Subagent(
 ### Validation Rules
 
 1. **Existence Check**: All referenced components must be defined
+
    ```python
    if subagent.tools contains "pytest-runner":
        assert "pytest-runner" in mcp_servers
    ```
 
 2. **Circular Dependencies**: Detect and prevent cycles
+
    ```python
    # Invalid: skill-a uses skill-b, skill-b uses skill-a
    detect_cycles(dependency_graph)
    ```
 
 3. **Scope Validation**: Ensure scope compatibility
+
    ```python
    if mcp_server.scope == "reference":
        warn("Assumes user has {mcp_server.name} installed")
@@ -322,6 +326,7 @@ my-dev-plugin/
 ### Types of Conflicts
 
 1. **Name Conflicts**: Multiple components with same name
+
    ```yaml
    # Conflict: Two MCP servers with same name
    mcp_servers:
@@ -330,17 +335,19 @@ my-dev-plugin/
    ```
 
 2. **Scope Conflicts**: Referenced server not available
+
    ```yaml
    mcp_servers:
      git-tools:
-       scope: reference  # Assumes user has it
+       scope: reference # Assumes user has it
 
    subagents:
      my-agent:
-       tools: [git-tools]  # WARNING: Requires user installation
+       tools: [git-tools] # WARNING: Requires user installation
    ```
 
 3. **Circular References**: Components depending on each other
+
    ```yaml
    # Invalid cycle
    subagents:
@@ -349,14 +356,14 @@ my-dev-plugin/
 
    skills:
      skill-b:
-       references_agent: agent-a  # CYCLE DETECTED
+       references_agent: agent-a # CYCLE DETECTED
    ```
 
 4. **Missing Dependencies**: Referenced component doesn't exist
    ```yaml
    subagents:
      my-agent:
-       tools: [nonexistent-tool]  # ERROR: Tool not defined
+       tools: [nonexistent-tool] # ERROR: Tool not defined
    ```
 
 ### Conflict Resolution Strategies
@@ -404,13 +411,13 @@ def validate_configuration(config):
 
 ### Claude Code ↔ Copilot Mapping
 
-| Claude Code Feature | Copilot Equivalent | Sync Strategy |
-|---------------------|-------------------|---------------|
-| MCP Servers | ❌ None (yet) | Document in instructions |
-| Subagents | ❌ None | Convert to workflow patterns |
-| Skills | ❌ None | Convert to instructions |
-| Slash Commands | ❌ None | Document as workflows |
-| Hooks | ❌ None | Cannot sync (Claude-specific) |
+| Claude Code Feature | Copilot Equivalent | Sync Strategy                 |
+| ------------------- | ------------------ | ----------------------------- |
+| MCP Servers         | ❌ None (yet)      | Document in instructions      |
+| Subagents           | ❌ None            | Convert to workflow patterns  |
+| Skills              | ❌ None            | Convert to instructions       |
+| Slash Commands      | ❌ None            | Document as workflows         |
+| Hooks               | ❌ None            | Cannot sync (Claude-specific) |
 
 ### Copilot Instructions Generation
 
@@ -452,10 +459,10 @@ plugin:
     copilot:
       enabled: true
       components:
-        - skills  # Convert to instructions
-        - subagents  # Document as patterns
+        - skills # Convert to instructions
+        - subagents # Document as patterns
       exclude:
-        - hooks  # Can't sync
+        - hooks # Can't sync
 ```
 
 ## 7. CLI Interface Design
@@ -554,7 +561,7 @@ plugin:
 
   includes:
     - plugin: python-dev@1.0.0
-      components: [subagents, skills]  # Import specific components
+      components: [subagents, skills] # Import specific components
 
     - plugin: git-workflow@2.0.0
       components: [commands, hooks]
@@ -576,16 +583,17 @@ plugin:
 # overture.dev.yaml - development overrides
 mcp_servers:
   api:
-    url: "http://localhost:3000"
+    url: 'http://localhost:3000'
 
 ---
 # overture.prod.yaml - production overrides
 mcp_servers:
   api:
-    url: "https://api.production.com"
+    url: 'https://api.production.com'
 ```
 
 Build with environment:
+
 ```bash
 overture build --env prod
 ```
@@ -594,11 +602,11 @@ overture build --env prod
 
 ```yaml
 plugin:
-  version: "2.0.0"
+  version: '2.0.0'
 
   # Version constraints for dependencies
   includes:
-    - plugin: base-tools@^1.5.0  # Semver range
+    - plugin: base-tools@^1.5.0 # Semver range
 ```
 
 ## 9. Implementation Phases
@@ -608,6 +616,7 @@ plugin:
 **Goal**: Generate basic Claude Code plugins from YAML
 
 **Features**:
+
 - ✅ Parse overture.yaml
 - ✅ Validate basic schema
 - ✅ Generate plugin structure
@@ -622,6 +631,7 @@ plugin:
 **Goal**: Robust validation and conflict detection
 
 **Features**:
+
 - ✅ Full dependency graph
 - ✅ Circular dependency detection
 - ✅ Scope validation
@@ -635,6 +645,7 @@ plugin:
 **Goal**: Generate Copilot configurations
 
 **Features**:
+
 - ✅ Convert skills to Copilot instructions
 - ✅ Document Claude-specific features
 - ✅ Partial sync support
@@ -647,6 +658,7 @@ plugin:
 **Goal**: Plugin composition and ecosystem
 
 **Features**:
+
 - ✅ Plugin templates
 - ✅ Plugin composition (includes)
 - ✅ Environment overrides
@@ -673,15 +685,15 @@ plugin:
 
 ## 11. Key Decisions Summary
 
-| Decision | Recommendation | Rationale |
-|----------|----------------|-----------|
-| Primary product | ✅ Plugins | Distribution unit, marketplace ecosystem |
-| Config format | ✅ YAML | Human-readable, comments, less verbose |
-| Components | ✅ 5 types | MCP, Subagents, Skills, Commands, Hooks |
-| Dependency resolution | ✅ Full graph | Catch all conflicts before generation |
-| Copilot sync | ✅ Partial | Convert what's compatible, document rest |
-| Plugin composition | ✅ Phase 4 | Enable reuse, not MVP-critical |
-| CLI interface | ✅ Simple | init, validate, build, publish |
+| Decision              | Recommendation | Rationale                                |
+| --------------------- | -------------- | ---------------------------------------- |
+| Primary product       | ✅ Plugins     | Distribution unit, marketplace ecosystem |
+| Config format         | ✅ YAML        | Human-readable, comments, less verbose   |
+| Components            | ✅ 5 types     | MCP, Subagents, Skills, Commands, Hooks  |
+| Dependency resolution | ✅ Full graph  | Catch all conflicts before generation    |
+| Copilot sync          | ✅ Partial     | Convert what's compatible, document rest |
+| Plugin composition    | ✅ Phase 4     | Enable reuse, not MVP-critical           |
+| CLI interface         | ✅ Simple      | init, validate, build, publish           |
 
 ## 12. Next Steps
 

@@ -70,7 +70,9 @@ const TOKEN_PATTERNS = {
  * // result.issues[0] === "WARNING: MCP 'github' env.GITHUB_TOKEN appears to contain..."
  * ```
  */
-export function validateEnvVarReferences(config: OvertureConfig): ValidationResult {
+export function validateEnvVarReferences(
+  config: OvertureConfig,
+): ValidationResult {
   const issues: string[] = [];
 
   // Iterate through all MCP server configurations
@@ -107,8 +109,8 @@ export function validateEnvVarReferences(config: OvertureConfig): ValidationResu
       if (matchedPattern) {
         issues.push(
           `WARNING: MCP "${mcpName}" env.${key} appears to contain an actual ` +
-          `credential (detected: ${matchedPattern}). ` +
-          `Use variable reference format instead: \${${key}}`
+            `credential (detected: ${matchedPattern}). ` +
+            `Use variable reference format instead: \${${key}}`,
         );
       }
     }

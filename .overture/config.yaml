@@ -1,9 +1,9 @@
-version: "1.0"
+version: '1.0'
 
 project:
   name: overture
   type: typescript-tooling
-  description: "Configuration orchestrator and documentation generator for AI-assisted development ecosystem"
+  description: 'Configuration orchestrator and documentation generator for AI-assisted development ecosystem'
 
 # MCP server configurations
 mcp:
@@ -13,13 +13,13 @@ mcp:
     args: [nx, mcp]
     transport: stdio
     enabled: true
-    description: "Nx workspace management and build orchestration"
+    description: 'Nx workspace management and build orchestration'
   sequentialthinking:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-sequential-thinking@latest"]
+    args: ['-y', '@modelcontextprotocol/server-sequential-thinking@latest']
     transport: stdio
     enabled: true
-    description: "Complex problem-solving and reasoning"
+    description: 'Complex problem-solving and reasoning'
 
   # Global MCPs (referenced but not configured here)
   # These remain in ~/.claude.json:

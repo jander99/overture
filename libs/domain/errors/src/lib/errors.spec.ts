@@ -413,8 +413,9 @@ describe('Domain: Error Classes', () => {
 
       it('should handle multiple validation issues', () => {
         // Arrange
-        const issues = Array.from({ length: 5 }, (_, i) =>
-          `Field ${i + 1} is invalid`
+        const issues = Array.from(
+          { length: 5 },
+          (_, i) => `Field ${i + 1} is invalid`,
         );
 
         // Act
@@ -795,7 +796,7 @@ describe('Domain: Error Classes', () => {
         const issues = ['Field A must be a string', 'Field B must be >= 0'];
         const error = new ValidationError(
           'Configuration validation failed',
-          issues
+          issues,
         );
 
         // Act & Assert

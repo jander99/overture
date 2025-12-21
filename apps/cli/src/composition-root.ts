@@ -17,8 +17,17 @@ import { Logger } from '@overture/utils';
 import { ConfigLoader, PathResolver } from '@overture/config-core';
 import { createDiscoveryService } from '@overture/discovery-core';
 import { createAdapterRegistry } from '@overture/client-adapters';
-import { PluginInstaller, PluginDetector, PluginExporter } from '@overture/plugin-core';
-import { createSyncEngine, BackupService, RestoreService, AuditService } from '@overture/sync-core';
+import {
+  PluginInstaller,
+  PluginDetector,
+  PluginExporter,
+} from '@overture/plugin-core';
+import {
+  createSyncEngine,
+  BackupService,
+  RestoreService,
+  AuditService,
+} from '@overture/sync-core';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
@@ -118,7 +127,7 @@ export function createAppDependencies(): AppDependencies {
     filesystem,
     output,
     pluginDetector,
-    environment
+    environment,
   );
 
   // Create sync services

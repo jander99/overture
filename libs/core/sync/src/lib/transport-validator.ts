@@ -52,7 +52,7 @@ export interface TransportWarning {
 export function validateMcpTransport(
   mcpName: string,
   transport: TransportType,
-  client: ClientAdapter
+  client: ClientAdapter,
 ): TransportValidation {
   return {
     mcpName,
@@ -71,7 +71,7 @@ export function validateMcpTransport(
  */
 export function validateAllTransports(
   mcps: OvertureConfig['mcp'],
-  client: ClientAdapter
+  client: ClientAdapter,
 ): TransportValidation[] {
   const results: TransportValidation[] = [];
 
@@ -91,7 +91,7 @@ export function validateAllTransports(
  */
 export function getTransportWarnings(
   mcps: OvertureConfig['mcp'],
-  client: ClientAdapter
+  client: ClientAdapter,
 ): TransportWarning[] {
   const warnings: TransportWarning[] = [];
 
@@ -118,7 +118,7 @@ export function getTransportWarnings(
  */
 export function filterByTransport(
   mcps: OvertureConfig['mcp'],
-  client: ClientAdapter
+  client: ClientAdapter,
 ): OvertureConfig['mcp'] {
   const filtered: OvertureConfig['mcp'] = {};
 
@@ -140,7 +140,7 @@ export function filterByTransport(
  */
 export function getTransportValidationSummary(
   mcps: OvertureConfig['mcp'],
-  client: ClientAdapter
+  client: ClientAdapter,
 ): TransportValidationSummary {
   const validations = validateAllTransports(mcps, client);
   const warnings = getTransportWarnings(mcps, client);
@@ -162,7 +162,7 @@ export function getTransportValidationSummary(
  */
 export function hasTransportIssues(
   mcps: OvertureConfig['mcp'],
-  client: ClientAdapter
+  client: ClientAdapter,
 ): boolean {
   return getTransportWarnings(mcps, client).length > 0;
 }

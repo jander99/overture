@@ -57,7 +57,7 @@ export interface ConfigDiff {
 export function generateDiff(
   oldConfig: ClientMcpConfig,
   newConfig: ClientMcpConfig,
-  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers'
+  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
 ): ConfigDiff {
   const oldServers = oldConfig[rootKey] || {};
   const newServers = newConfig[rootKey] || {};
@@ -125,7 +125,10 @@ export function generateDiff(
 function detectFieldChanges(oldObj: any, newObj: any): FieldChange[] {
   const changes: FieldChange[] = [];
 
-  const allFields = new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]);
+  const allFields = new Set([
+    ...Object.keys(oldObj || {}),
+    ...Object.keys(newObj || {}),
+  ]);
 
   for (const field of allFields) {
     const oldValue = oldObj?.[field];
@@ -222,7 +225,9 @@ export function formatDiff(diff: ConfigDiff, clientName?: string): string {
 
   // Summary
   const total = diff.added.length + diff.modified.length + diff.removed.length;
-  lines.push(`Total changes: ${total} (${diff.added.length} added, ${diff.modified.length} modified, ${diff.removed.length} removed)`);
+  lines.push(
+    `Total changes: ${total} (${diff.added.length} added, ${diff.modified.length} modified, ${diff.removed.length} removed)`,
+  );
   lines.push(`Unchanged: ${diff.unchanged.length}`);
 
   return lines.join('\n');

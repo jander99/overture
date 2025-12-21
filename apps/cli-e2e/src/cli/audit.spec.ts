@@ -25,7 +25,10 @@ describe('Audit Command E2E Tests', () => {
 
   beforeEach(() => {
     // Create unique test directory
-    testDir = join(tmpdir(), `overture-audit-e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(
+      tmpdir(),
+      `overture-audit-e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     mkdirSync(testDir, { recursive: true });
 
     // Set up config directories
@@ -47,7 +50,9 @@ describe('Audit Command E2E Tests', () => {
 
     // Verify CLI exists
     if (!existsSync(cliPath)) {
-      throw new Error(`CLI not built at ${cliPath}. Run: nx build @overture/cli`);
+      throw new Error(
+        `CLI not built at ${cliPath}. Run: nx build @overture/cli`,
+      );
     }
   });
 
@@ -125,7 +130,11 @@ describe('Audit Command E2E Tests', () => {
   /**
    * Helper: Run overture audit command
    */
-  function runAudit(args: string[] = []): { stdout: string; stderr: string; exitCode: number } {
+  function runAudit(args: string[] = []): {
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+  } {
     try {
       const stdout = execSync(`node ${cliPath} audit ${args.join(' ')}`, {
         cwd: testDir,
@@ -270,7 +279,9 @@ describe('Audit Command E2E Tests', () => {
 
       // Verify success message
       expect(result.stdout).toContain('No unmanaged MCPs found');
-      expect(result.stdout).toContain('All client MCPs are managed by Overture');
+      expect(result.stdout).toContain(
+        'All client MCPs are managed by Overture',
+      );
 
       // Verify exit code
       expect(result.exitCode).toBe(0);
@@ -429,7 +440,13 @@ describe('Audit Command E2E Tests', () => {
       createOvertureConfig(['filesystem', 'memory', 'github']);
 
       // Create client config with: filesystem, memory, github, slack, postgres
-      createClaudeCodeConfig(['filesystem', 'memory', 'github', 'slack', 'postgres']);
+      createClaudeCodeConfig([
+        'filesystem',
+        'memory',
+        'github',
+        'slack',
+        'postgres',
+      ]);
 
       // Run audit
       const result = runAudit();
@@ -474,11 +491,15 @@ describe('Audit Command E2E Tests', () => {
 
       // Verify indentation (MCPs under clients)
       const lines = result.stdout.split('\n');
-      const claudeCodeIdx = lines.findIndex((line) => line.includes('claude-code:'));
+      const claudeCodeIdx = lines.findIndex((line) =>
+        line.includes('claude-code:'),
+      );
       const nextLines = lines.slice(claudeCodeIdx + 1, claudeCodeIdx + 5);
 
       // Should have indented MCP names
-      const hasIndentedMcps = nextLines.some((line) => line.match(/^\s{2,}- \w+/));
+      const hasIndentedMcps = nextLines.some((line) =>
+        line.match(/^\s{2,}- \w+/),
+      );
       expect(hasIndentedMcps).toBe(true);
 
       // Verify suggestions section
@@ -549,7 +570,10 @@ describe('Audit Command E2E Tests', () => {
   describe('Scenario 12: Large Config Performance', () => {
     it('should handle large number of MCPs efficiently', () => {
       // Create Overture config with 20 MCPs
-      const managedMcps = Array.from({ length: 20 }, (_, i) => `managed-mcp-${i}`);
+      const managedMcps = Array.from(
+        { length: 20 },
+        (_, i) => `managed-mcp-${i}`,
+      );
       createOvertureConfig(managedMcps);
 
       // Create client config with 30 MCPs (10 unmanaged)

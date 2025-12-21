@@ -155,7 +155,10 @@ export class MarketplaceRegistry {
    * ```
    */
   static isKnownMarketplace(shortName: string): boolean {
-    return shortName in this.KNOWN_MARKETPLACES || this.customMarketplaces.has(shortName);
+    return (
+      shortName in this.KNOWN_MARKETPLACES ||
+      this.customMarketplaces.has(shortName)
+    );
   }
 
   /**
@@ -178,17 +181,21 @@ export class MarketplaceRegistry {
    * ```
    */
   static getAllKnown(): MarketplaceConfig[] {
-    const builtIn = Object.entries(this.KNOWN_MARKETPLACES).map(([shortName, fullPath]) => ({
-      shortName,
-      fullPath,
-      type: 'github' as const,
-    }));
+    const builtIn = Object.entries(this.KNOWN_MARKETPLACES).map(
+      ([shortName, fullPath]) => ({
+        shortName,
+        fullPath,
+        type: 'github' as const,
+      }),
+    );
 
-    const custom = Array.from(this.customMarketplaces.entries()).map(([shortName, fullPath]) => ({
-      shortName,
-      fullPath,
-      type: 'github' as const,
-    }));
+    const custom = Array.from(this.customMarketplaces.entries()).map(
+      ([shortName, fullPath]) => ({
+        shortName,
+        fullPath,
+        type: 'github' as const,
+      }),
+    );
 
     return [...builtIn, ...custom];
   }
@@ -215,14 +222,19 @@ export class MarketplaceRegistry {
    */
   static getShortcutForPath(fullPath: string): string | undefined {
     // Check built-in marketplaces first
-    for (const [shortName, registeredPath] of Object.entries(this.KNOWN_MARKETPLACES)) {
+    for (const [shortName, registeredPath] of Object.entries(
+      this.KNOWN_MARKETPLACES,
+    )) {
       if (registeredPath === fullPath) {
         return shortName;
       }
     }
 
     // Check custom marketplaces
-    for (const [shortName, registeredPath] of this.customMarketplaces.entries()) {
+    for (const [
+      shortName,
+      registeredPath,
+    ] of this.customMarketplaces.entries()) {
       if (registeredPath === fullPath) {
         return shortName;
       }

@@ -37,21 +37,10 @@ export { FsUtils } from './lib/fs-utils.js';
 export { TemplateLoader } from './lib/template-loader.js';
 
 // Re-export types from ports for convenience
-export type {
-  FilesystemPort,
-  Stats,
-} from '@overture/ports-filesystem';
+export type { FilesystemPort, Stats } from '@overture/ports-filesystem';
 
-export type {
-  ProcessPort,
-  ExecResult,
-} from '@overture/ports-process';
+export type { ProcessPort, ExecResult } from '@overture/ports-process';
 
-export type {
-  EnvironmentPort,
-  Platform,
-} from '@overture/ports-process';
+export type { EnvironmentPort, Platform } from '@overture/ports-process';
 
-export type {
-  OutputPort,
-} from '@overture/ports-output';
+export type { OutputPort } from '@overture/ports-output';

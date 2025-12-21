@@ -61,7 +61,7 @@ export class RestoreService {
   async restore(
     client: ClientName,
     timestamp: string,
-    targetPath: string
+    targetPath: string,
   ): Promise<RestoreResult> {
     // Find the backup
     const backup = await this.deps.backupService.getBackup(client, timestamp);
@@ -121,7 +121,10 @@ export class RestoreService {
    * @param targetPath - Path to restore to
    * @returns Restore result
    */
-  async restoreLatest(client: ClientName, targetPath: string): Promise<RestoreResult> {
+  async restoreLatest(
+    client: ClientName,
+    targetPath: string,
+  ): Promise<RestoreResult> {
     const latestBackup = await this.deps.backupService.getLatestBackup(client);
 
     if (!latestBackup) {
@@ -218,7 +221,7 @@ export class RestoreService {
   async compare(
     client: ClientName,
     timestamp: string,
-    currentPath: string
+    currentPath: string,
   ): Promise<ComparisonResult> {
     const backup = await this.deps.backupService.getBackup(client, timestamp);
 
@@ -235,17 +238,21 @@ export class RestoreService {
 
     try {
       // Read backup
-      const backupContent = JSON.parse(await this.deps.filesystem.readFile(backup.path));
-      const backupServers = backupContent.mcpServers || backupContent.servers || {};
+      const backupContent = JSON.parse(
+        await this.deps.filesystem.readFile(backup.path),
+      );
+      const backupServers =
+        backupContent.mcpServers || backupContent.servers || {};
       const backupMcps = Object.keys(backupServers);
 
       // Read current config (if exists)
       let currentMcps: string[] = [];
       if (await this.deps.filesystem.exists(currentPath)) {
         const currentContent = JSON.parse(
-          await this.deps.filesystem.readFile(currentPath)
+          await this.deps.filesystem.readFile(currentPath),
         );
-        const currentServers = currentContent.mcpServers || currentContent.servers || {};
+        const currentServers =
+          currentContent.mcpServers || currentContent.servers || {};
         currentMcps = Object.keys(currentServers);
       }
 

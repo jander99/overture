@@ -7,7 +7,9 @@ describe('CLI tests', () => {
 
   beforeAll(() => {
     if (!existsSync(cliPath)) {
-      throw new Error(`CLI not built at ${cliPath}. Run: nx build @overture/cli`);
+      throw new Error(
+        `CLI not built at ${cliPath}. Run: nx build @overture/cli`,
+      );
     }
   });
 

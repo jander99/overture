@@ -12,7 +12,7 @@ export class FsUtils {
     } catch (error) {
       throw new ConfigError(
         `Failed to read file: ${(error as Error).message}`,
-        filePath
+        filePath,
       );
     }
   }
@@ -27,7 +27,7 @@ export class FsUtils {
     } catch (error) {
       throw new ConfigError(
         `Failed to write file: ${(error as Error).message}`,
-        filePath
+        filePath,
       );
     }
   }
@@ -56,7 +56,7 @@ export class FsUtils {
    */
   static async findUp(
     fileName: string,
-    startDir: string = process.cwd()
+    startDir: string = process.cwd(),
   ): Promise<string | null> {
     let currentDir = path.resolve(startDir);
     const root = path.parse(currentDir).root;

@@ -134,10 +134,7 @@ describe('ProcessPort', () => {
       const commandHistory: Array<{ command: string; args?: string[] }> = [];
 
       const mockPort: ProcessPort = {
-        exec: async (
-          command: string,
-          args?: string[]
-        ): Promise<ExecResult> => {
+        exec: async (command: string, args?: string[]): Promise<ExecResult> => {
           commandHistory.push({ command, args });
           return {
             stdout: 'mocked output',

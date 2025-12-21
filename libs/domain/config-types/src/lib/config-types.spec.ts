@@ -9,7 +9,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { OvertureConfig, McpServerConfig, ClientName } from './config.types';
+import type {
+  OvertureConfig,
+  McpServerConfig,
+  ClientName,
+} from './config.types';
 
 describe('config-types', () => {
   describe('OvertureConfig', () => {
@@ -61,7 +65,9 @@ describe('config-types', () => {
 
       expect(config.plugins).toBeDefined();
       expect(config.plugins?.['python-development']).toBeDefined();
-      expect(config.plugins?.['python-development'].mcps).toContain('python-repl');
+      expect(config.plugins?.['python-development'].mcps).toContain(
+        'python-repl',
+      );
     });
 
     it('should accept configuration with sync settings', () => {
@@ -130,7 +136,9 @@ describe('config-types', () => {
       };
 
       expect(mcpConfig.platforms).toBeDefined();
-      expect(mcpConfig.platforms?.commandOverrides?.win32).toBe('windows-command.exe');
+      expect(mcpConfig.platforms?.commandOverrides?.win32).toBe(
+        'windows-command.exe',
+      );
     });
 
     it('should accept configuration with excludeClients', () => {

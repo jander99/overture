@@ -48,7 +48,11 @@ describe('extractEnvVars', () => {
   it('should extract env var with default value', () => {
     const result = extractEnvVars('${API_URL:-https://api.example.com}');
     expect(result).toEqual([
-      { name: 'API_URL', hasDefault: true, defaultValue: 'https://api.example.com' },
+      {
+        name: 'API_URL',
+        hasDefault: true,
+        defaultValue: 'https://api.example.com',
+      },
     ]);
   });
 
@@ -82,7 +86,9 @@ describe('validateEnvVarSyntax', () => {
   });
 
   it('should validate syntax with defaults', () => {
-    expect(validateEnvVarSyntax('${URL:-http://localhost}')).toEqual({ valid: true });
+    expect(validateEnvVarSyntax('${URL:-http://localhost}')).toEqual({
+      valid: true,
+    });
   });
 
   it('should error on unclosed ${', () => {
@@ -218,14 +224,14 @@ describe('getEnvVarErrors', () => {
     const config: OvertureConfig = {
       version: '1.0',
       mcp: {
-        'mcp1': {
+        mcp1: {
           command: 'cmd',
           transport: 'stdio',
           env: {
             TOKEN: '${MISSING_VAR}',
           },
         },
-        'mcp2': {
+        mcp2: {
           command: 'cmd',
           transport: 'stdio',
           env: {
@@ -252,7 +258,7 @@ describe('getEnvVarErrors', () => {
           transport: 'stdio',
           clients: {
             overrides: {
-              'vscode': {
+              vscode: {
                 env: {
                   TOKEN: '${MISSING}',
                 },
@@ -346,7 +352,7 @@ describe('getEnvVarValidationSummary', () => {
     const config: OvertureConfig = {
       version: '1.0',
       mcp: {
-        'mcp1': {
+        mcp1: {
           command: 'cmd',
           transport: 'stdio',
           env: {

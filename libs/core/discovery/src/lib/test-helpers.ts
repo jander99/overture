@@ -13,8 +13,11 @@ import type { ClientAdapter, Platform } from '@overture/config-types';
  * Create a mock ProcessPort
  */
 export function createMockProcessPort(
-  execResults: Map<string, { stdout: string; stderr: string; exitCode: number }> = new Map(),
-  commandExistsResults: Map<string, boolean> = new Map()
+  execResults: Map<
+    string,
+    { stdout: string; stderr: string; exitCode: number }
+  > = new Map(),
+  commandExistsResults: Map<string, boolean> = new Map(),
 ): ProcessPort {
   return {
     exec: async (command: string, args: string[] = []) => {
@@ -36,7 +39,7 @@ export function createMockProcessPort(
  */
 export function createMockEnvironmentPort(
   platform: Platform = 'linux',
-  env: Record<string, string | undefined> = {}
+  env: Record<string, string | undefined> = {},
 ): EnvironmentPort {
   return {
     platform: () => platform,
@@ -59,7 +62,7 @@ export interface MockFilesystem {
 
 export function createMockFilesystem(
   files: Map<string, string> = new Map(),
-  directories: Set<string> = new Set()
+  directories: Set<string> = new Set(),
 ): MockFilesystem {
   return { files, directories };
 }
@@ -117,7 +120,7 @@ export function createFilesystemFunctions(fs: MockFilesystem) {
  */
 export function createMockAdapter(
   name = 'test-client',
-  overrides: Partial<ClientAdapter> = {}
+  overrides: Partial<ClientAdapter> = {},
 ): ClientAdapter {
   return {
     name: name as any,

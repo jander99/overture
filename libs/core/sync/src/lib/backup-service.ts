@@ -97,7 +97,9 @@ export class BackupService {
       if (!file.endsWith('.json')) continue;
 
       // Parse filename: {client}-{timestamp}.json
-      const match = file.match(/^(.+)-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)\.json$/);
+      const match = file.match(
+        /^(.+)-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)\.json$/,
+      );
       if (!match) continue;
 
       const [, fileClient, timestamp] = match;
@@ -129,7 +131,10 @@ export class BackupService {
    * @param timestamp - Backup timestamp
    * @returns Backup metadata or null if not found
    */
-  async getBackup(client: ClientName, timestamp: string): Promise<BackupMetadata | null> {
+  async getBackup(
+    client: ClientName,
+    timestamp: string,
+  ): Promise<BackupMetadata | null> {
     const backups = await this.listBackups(client);
     return backups.find((b) => b.timestamp === timestamp) || null;
   }

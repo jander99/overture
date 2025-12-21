@@ -209,7 +209,7 @@ describe('NodeEnvironmentAdapter', () => {
     it('should have env as a property getter', () => {
       const descriptor = Object.getOwnPropertyDescriptor(
         Object.getPrototypeOf(adapter),
-        'env'
+        'env',
       );
 
       expect(descriptor).toBeDefined();

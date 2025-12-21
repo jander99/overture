@@ -17,7 +17,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateEnvVarReferences, getFixSuggestion } from './env-var-validator';
+import {
+  validateEnvVarReferences,
+  getFixSuggestion,
+} from './env-var-validator';
 import type { OvertureConfig } from '@overture/config-types';
 
 describe('validateEnvVarReferences', () => {
@@ -189,7 +192,8 @@ describe('validateEnvVarReferences', () => {
             command: 'npx',
             args: [],
             env: {
-              POSTGRES_CONNECTION_STRING: 'postgres://user:password@localhost:5432/db',
+              POSTGRES_CONNECTION_STRING:
+                'postgres://user:password@localhost:5432/db',
             },
             transport: 'stdio',
           },
@@ -400,7 +404,9 @@ describe('validateEnvVarReferences', () => {
           postgres: {
             command: 'npx',
             args: [],
-            env: { POSTGRES_CONNECTION_STRING: 'postgres://user:pass@localhost/db' },
+            env: {
+              POSTGRES_CONNECTION_STRING: 'postgres://user:pass@localhost/db',
+            },
             transport: 'stdio',
           },
         },
@@ -537,11 +543,7 @@ describe('getFixSuggestion', () => {
   });
 
   it('should work with multiple issues', () => {
-    const issues = [
-      'WARNING: Issue 1',
-      'WARNING: Issue 2',
-      'WARNING: Issue 3',
-    ];
+    const issues = ['WARNING: Issue 1', 'WARNING: Issue 2', 'WARNING: Issue 3'];
 
     const suggestion = getFixSuggestion(issues);
 

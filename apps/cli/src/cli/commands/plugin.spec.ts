@@ -73,7 +73,9 @@ describe('plugin command', () => {
   describe('plugin list subcommand', () => {
     beforeEach(() => {
       // Mock plugin comparison data
-      vi.mocked(deps.pluginExporter.compareInstalledWithConfig).mockResolvedValue({
+      vi.mocked(
+        deps.pluginExporter.compareInstalledWithConfig,
+      ).mockResolvedValue({
         both: [
           {
             name: 'python-development',
@@ -100,12 +102,14 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'list']);
 
       expect(deps.pluginExporter.compareInstalledWithConfig).toHaveBeenCalled();
-      expect(deps.output.info).toHaveBeenCalledWith('Installed Claude Code Plugins:');
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('python-development')
+        'Installed Claude Code Plugins:',
       );
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('kubernetes-operations')
+        expect.stringContaining('python-development'),
+      );
+      expect(deps.output.info).toHaveBeenCalledWith(
+        expect.stringContaining('kubernetes-operations'),
       );
     });
 
@@ -115,11 +119,13 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'list', '--config-only']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('python-development')
+        expect.stringContaining('python-development'),
       );
       // kubernetes-operations should not be shown (installedOnly)
       const infoCalls = vi.mocked(deps.output.info).mock.calls;
-      const hasK8s = infoCalls.some((call) => call[0]?.includes('kubernetes-operations'));
+      const hasK8s = infoCalls.some((call) =>
+        call[0]?.includes('kubernetes-operations'),
+      );
       expect(hasK8s).toBe(false);
     });
 
@@ -129,11 +135,13 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'list', '--installed-only']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('kubernetes-operations')
+        expect.stringContaining('kubernetes-operations'),
       );
       // python-development should not be shown (in both)
       const infoCalls = vi.mocked(deps.output.info).mock.calls;
-      const hasPython = infoCalls.some((call) => call[0]?.includes('python-development'));
+      const hasPython = infoCalls.some((call) =>
+        call[0]?.includes('python-development'),
+      );
       expect(hasPython).toBe(false);
     });
 
@@ -159,7 +167,9 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'list']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('📊 Summary: 2 plugin(s) installed, 1 in config')
+        expect.stringContaining(
+          '📊 Summary: 2 plugin(s) installed, 1 in config',
+        ),
       );
     });
 
@@ -170,12 +180,14 @@ describe('plugin command', () => {
 
       expect(deps.output.info).toHaveBeenCalledWith('💡 Tips:');
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('overture plugin export')
+        expect.stringContaining('overture plugin export'),
       );
     });
 
     it('should handle no plugins found', async () => {
-      vi.mocked(deps.pluginExporter.compareInstalledWithConfig).mockResolvedValue({
+      vi.mocked(
+        deps.pluginExporter.compareInstalledWithConfig,
+      ).mockResolvedValue({
         both: [],
         installedOnly: [],
         configOnly: [],
@@ -186,26 +198,28 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'list']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        '  No plugins found matching filter criteria.'
+        '  No plugins found matching filter criteria.',
       );
     });
 
     it('should handle errors gracefully', async () => {
-      vi.mocked(deps.pluginExporter.compareInstalledWithConfig).mockRejectedValue(
-        new Error('Failed to read plugins')
-      );
+      vi.mocked(
+        deps.pluginExporter.compareInstalledWithConfig,
+      ).mockRejectedValue(new Error('Failed to read plugins'));
 
       const command = createPluginCommand(deps);
 
-      await expect(command.parseAsync(['node', 'plugin', 'list'])).rejects.toThrow(
-        'process.exit:1'
-      );
+      await expect(
+        command.parseAsync(['node', 'plugin', 'list']),
+      ).rejects.toThrow('process.exit:1');
     });
   });
 
   describe('plugin export subcommand', () => {
     beforeEach(() => {
-      vi.mocked(deps.pluginExporter.exportAllPlugins).mockResolvedValue(undefined);
+      vi.mocked(deps.pluginExporter.exportAllPlugins).mockResolvedValue(
+        undefined,
+      );
       vi.mocked(deps.pluginExporter.exportPlugins).mockResolvedValue(undefined);
     });
 
@@ -215,7 +229,7 @@ describe('plugin command', () => {
       await command.parseAsync(['node', 'plugin', 'export']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        'Starting interactive plugin export...'
+        'Starting interactive plugin export...',
       );
       expect(deps.pluginExporter.exportPlugins).toHaveBeenCalledWith({
         interactive: true,
@@ -227,14 +241,22 @@ describe('plugin command', () => {
 
       await command.parseAsync(['node', 'plugin', 'export', '--all']);
 
-      expect(deps.output.info).toHaveBeenCalledWith('Exporting all installed plugins...');
+      expect(deps.output.info).toHaveBeenCalledWith(
+        'Exporting all installed plugins...',
+      );
       expect(deps.pluginExporter.exportAllPlugins).toHaveBeenCalled();
     });
 
     it('should export specific plugins with --plugin flag', async () => {
       const command = createPluginCommand(deps);
 
-      await command.parseAsync(['node', 'plugin', 'export', '--plugin', 'python-development']);
+      await command.parseAsync([
+        'node',
+        'plugin',
+        'export',
+        '--plugin',
+        'python-development',
+      ]);
 
       expect(deps.output.info).toHaveBeenCalledWith('Exporting 1 plugin(s)...');
       expect(deps.pluginExporter.exportPlugins).toHaveBeenCalledWith({
@@ -265,21 +287,23 @@ describe('plugin command', () => {
 
     it('should handle errors gracefully', async () => {
       vi.mocked(deps.pluginExporter.exportAllPlugins).mockRejectedValue(
-        new Error('Failed to export plugins')
+        new Error('Failed to export plugins'),
       );
 
       const command = createPluginCommand(deps);
 
-      await expect(command.parseAsync(['node', 'plugin', 'export', '--all'])).rejects.toThrow(
-        'process.exit:1'
-      );
+      await expect(
+        command.parseAsync(['node', 'plugin', 'export', '--all']),
+      ).rejects.toThrow('process.exit:1');
     });
   });
 
   describe('negative test cases', () => {
     it('should handle export when both --all and --plugin flags are provided', async () => {
       // The command allows both flags - it's up to the service to handle this case
-      vi.mocked(deps.pluginExporter.exportAllPlugins).mockResolvedValue(undefined);
+      vi.mocked(deps.pluginExporter.exportAllPlugins).mockResolvedValue(
+        undefined,
+      );
 
       const command = createPluginCommand(deps);
 
@@ -300,20 +324,26 @@ describe('plugin command', () => {
 
     it('should handle non-existent plugin name gracefully', async () => {
       vi.mocked(deps.pluginExporter.exportPlugins).mockRejectedValue(
-        new Error('Plugin not found: nonexistent-plugin')
+        new Error('Plugin not found: nonexistent-plugin'),
       );
 
       const command = createPluginCommand(deps);
 
       // Act & Assert
       await expect(
-        command.parseAsync(['node', 'plugin', 'export', '--plugin', 'nonexistent-plugin'])
+        command.parseAsync([
+          'node',
+          'plugin',
+          'export',
+          '--plugin',
+          'nonexistent-plugin',
+        ]),
       ).rejects.toThrow('process.exit:1');
     });
 
     it('should handle multiple nonexistent plugins', async () => {
       vi.mocked(deps.pluginExporter.exportPlugins).mockRejectedValue(
-        new Error('Plugins not found: plugin1, plugin2')
+        new Error('Plugins not found: plugin1, plugin2'),
       );
 
       const command = createPluginCommand(deps);
@@ -328,7 +358,7 @@ describe('plugin command', () => {
           'plugin1',
           '--plugin',
           'plugin2',
-        ])
+        ]),
       ).rejects.toThrow('process.exit:1');
     });
   });

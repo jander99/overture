@@ -13,7 +13,10 @@ import type { Platform, ClientName, TransportType } from './config.types.js';
  *
  * Some clients support both user and project-level configs.
  */
-export type ConfigPathResult = string | { user: string; project: string } | null;
+export type ConfigPathResult =
+  | string
+  | { user: string; project: string }
+  | null;
 
 /**
  * Client adapter interface

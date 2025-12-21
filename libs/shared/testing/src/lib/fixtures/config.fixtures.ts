@@ -180,7 +180,8 @@ export const configWithWSL2 = {
       windows_user_profile: '/mnt/c/Users/testuser',
       windows_binary_paths: ['/mnt/c/Program Files/Custom Apps'],
       windows_config_paths: {
-        'claude-desktop': '/mnt/c/Users/testuser/AppData/Roaming/Claude/config.json',
+        'claude-desktop':
+          '/mnt/c/Users/testuser/AppData/Roaming/Claude/config.json',
       },
     },
   },

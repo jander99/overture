@@ -39,7 +39,9 @@ export async function loadFixture(relativePath: string): Promise<string> {
  * );
  * ```
  */
-export async function loadJsonFixture<T = any>(relativePath: string): Promise<T> {
+export async function loadJsonFixture<T = any>(
+  relativePath: string,
+): Promise<T> {
   const content = await loadFixture(relativePath);
   return JSON.parse(content) as T;
 }
@@ -57,7 +59,9 @@ export async function loadJsonFixture<T = any>(relativePath: string): Promise<T>
  * );
  * ```
  */
-export async function loadYamlFixture<T = any>(relativePath: string): Promise<T> {
+export async function loadYamlFixture<T = any>(
+  relativePath: string,
+): Promise<T> {
   const content = await loadFixture(relativePath);
   return yaml.load(content) as T;
 }

@@ -33,7 +33,7 @@ export interface FilterResult {
 export function filterMcpsForClient(
   mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
-  platform: Platform
+  platform: Platform,
 ): OvertureConfig['mcp'] {
   const filtered: OvertureConfig['mcp'] = {};
 
@@ -58,7 +58,7 @@ export function filterMcpsForClient(
 export function shouldIncludeMcp(
   mcpConfig: OvertureConfig['mcp'][string],
   client: ClientAdapter,
-  platform: Platform
+  platform: Platform,
 ): FilterResult {
   // Check platform exclusions
   if (mcpConfig.platforms?.exclude?.includes(platform)) {
@@ -71,8 +71,14 @@ export function shouldIncludeMcp(
   }
 
   // Check client inclusions (whitelist)
-  if (mcpConfig.clients?.include && !mcpConfig.clients.include.includes(client.name)) {
-    return { included: false, reason: `Client ${client.name} not in include list` };
+  if (
+    mcpConfig.clients?.include &&
+    !mcpConfig.clients.include.includes(client.name)
+  ) {
+    return {
+      included: false,
+      reason: `Client ${client.name} not in include list`,
+    };
   }
 
   // Check transport support
@@ -97,7 +103,7 @@ export function shouldIncludeMcp(
 export function getExcludedMcps(
   mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
-  platform: Platform
+  platform: Platform,
 ): Array<{ name: string; reason: string }> {
   const excluded: Array<{ name: string; reason: string }> = [];
 
@@ -131,7 +137,7 @@ export interface FilterSummary {
 export function getFilterSummary(
   mcps: OvertureConfig['mcp'],
   client: ClientAdapter,
-  platform: Platform
+  platform: Platform,
 ): FilterSummary {
   const summary: FilterSummary = {
     total: Object.keys(mcps).length,
@@ -182,7 +188,7 @@ export function validateRequiredMcps(
   requiredMcps: string[],
   availableMcps: OvertureConfig['mcp'],
   client: ClientAdapter,
-  platform: Platform
+  platform: Platform,
 ): ValidationResult {
   const missingMcps: string[] = [];
   const excludedMcps: Array<{ name: string; reason: string }> = [];
@@ -195,7 +201,11 @@ export function validateRequiredMcps(
     }
 
     // Check if MCP would be excluded
-    const result = shouldIncludeMcp(availableMcps[requiredName], client, platform);
+    const result = shouldIncludeMcp(
+      availableMcps[requiredName],
+      client,
+      platform,
+    );
     if (!result.included && result.reason) {
       excludedMcps.push({ name: requiredName, reason: result.reason });
     }

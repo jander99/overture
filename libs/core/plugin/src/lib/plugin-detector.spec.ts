@@ -15,7 +15,9 @@ import type { ClaudeSettings } from '@overture/config-types';
 import { PluginError } from '@overture/errors';
 
 // Create mock factories
-function createMockFilesystem(files: Record<string, string> = {}): FilesystemPort {
+function createMockFilesystem(
+  files: Record<string, string> = {},
+): FilesystemPort {
   const fileMap = new Map(Object.entries(files));
 
   return {
@@ -51,12 +53,15 @@ function createMockEnvironment(): EnvironmentPort {
 }
 
 function buildClaudeSettings(
-  plugins: Record<string, {
-    marketplace: string;
-    enabled: boolean;
-    installedAt?: string;
-  }>,
-  marketplaces: string[] = []
+  plugins: Record<
+    string,
+    {
+      marketplace: string;
+      enabled: boolean;
+      installedAt?: string;
+    }
+  >,
+  marketplaces: string[] = [],
 ): ClaudeSettings {
   return {
     plugins,
@@ -97,7 +102,7 @@ describe('PluginDetector', () => {
               installedAt: '2025-01-13T08:45:00Z',
             },
           },
-          ['anthropics/claude-code-workflows', 'myorg/custom-marketplace']
+          ['anthropics/claude-code-workflows', 'myorg/custom-marketplace'],
         );
 
         const settingsPath = '/home/testuser/.claude/settings.json';
@@ -148,7 +153,7 @@ describe('PluginDetector', () => {
               enabled: false,
             },
           },
-          []
+          [],
         );
 
         const settingsPath = '/home/testuser/.claude/settings.json';
@@ -158,7 +163,9 @@ describe('PluginDetector', () => {
         detector = new PluginDetector(filesystem, environment);
 
         // Act
-        const plugins = await detector.detectInstalledPlugins({ includeDisabled: false });
+        const plugins = await detector.detectInstalledPlugins({
+          includeDisabled: false,
+        });
 
         // Assert
         expect(plugins).toHaveLength(1);
@@ -198,7 +205,9 @@ describe('PluginDetector', () => {
     describe('error handling', () => {
       it('should return empty array when settings.json not found', async () => {
         // Arrange: No settings file exists
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
 
         // Act
         const plugins = await detector.detectInstalledPlugins();
@@ -218,14 +227,18 @@ describe('PluginDetector', () => {
         });
         detector = new PluginDetector(filesystem, environment);
 
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
 
         // Act
         const plugins = await detector.detectInstalledPlugins();
 
         // Assert
         expect(plugins).toEqual([]);
-        expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Malformed'));
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Malformed'),
+        );
 
         consoleWarnSpy.mockRestore();
       });
@@ -289,7 +302,7 @@ describe('PluginDetector', () => {
               enabled: true,
             },
           },
-          []
+          [],
         );
 
         filesystem = createMockFilesystem({
@@ -298,7 +311,9 @@ describe('PluginDetector', () => {
         detector = new PluginDetector(filesystem, environment);
 
         // Act
-        const plugins = await detector.detectInstalledPlugins({ settingsPath: customPath });
+        const plugins = await detector.detectInstalledPlugins({
+          settingsPath: customPath,
+        });
 
         // Assert
         expect(plugins).toHaveLength(1);
@@ -311,7 +326,7 @@ describe('PluginDetector', () => {
 
         // Act & Assert
         await expect(
-          detector.detectInstalledPlugins({ settingsPath: maliciousPath })
+          detector.detectInstalledPlugins({ settingsPath: maliciousPath }),
         ).rejects.toThrow(PluginError);
       });
 
@@ -321,7 +336,7 @@ describe('PluginDetector', () => {
 
         // Act & Assert
         await expect(
-          detector.detectInstalledPlugins({ settingsPath: maliciousPath })
+          detector.detectInstalledPlugins({ settingsPath: maliciousPath }),
         ).rejects.toThrow(PluginError);
       });
     });
@@ -337,7 +352,7 @@ describe('PluginDetector', () => {
             enabled: true,
           },
         },
-        []
+        [],
       );
 
       const settingsPath = '/home/testuser/.claude/settings.json';
@@ -349,7 +364,7 @@ describe('PluginDetector', () => {
       // Act
       const isInstalled = await detector.isPluginInstalled(
         'python-development',
-        'claude-code-workflows'
+        'claude-code-workflows',
       );
 
       // Assert
@@ -367,7 +382,10 @@ describe('PluginDetector', () => {
       detector = new PluginDetector(filesystem, environment);
 
       // Act
-      const isInstalled = await detector.isPluginInstalled('missing-plugin', 'some-marketplace');
+      const isInstalled = await detector.isPluginInstalled(
+        'missing-plugin',
+        'some-marketplace',
+      );
 
       // Assert
       expect(isInstalled).toBe(false);
@@ -382,7 +400,7 @@ describe('PluginDetector', () => {
             enabled: true,
           },
         },
-        []
+        [],
       );
 
       const settingsPath = '/home/testuser/.claude/settings.json';
@@ -394,7 +412,7 @@ describe('PluginDetector', () => {
       // Act: Check with full marketplace path
       const isInstalled = await detector.isPluginInstalled(
         'python-development',
-        'anthropics/claude-code-workflows'
+        'anthropics/claude-code-workflows',
       );
 
       // Assert: Should match due to normalization

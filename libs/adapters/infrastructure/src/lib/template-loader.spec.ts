@@ -1,4 +1,10 @@
-import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
+import type {
+  Mock,
+  Mocked,
+  MockedObject,
+  MockedFunction,
+  MockInstance,
+} from 'vitest';
 import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import { TemplateLoader } from './template-loader';
@@ -83,7 +89,7 @@ describe('TemplateLoader', () => {
 
       expect(result).toBe('Hello World!');
       expect(FsUtils.readFile).toHaveBeenCalledWith(
-        expect.stringContaining('greeting.hbs')
+        expect.stringContaining('greeting.hbs'),
       );
     });
 
@@ -197,12 +203,12 @@ describe('TemplateLoader', () => {
       const error = new ConfigError('ENOENT: no such file', 'missing.hbs');
       (FsUtils.readFile as Mock).mockRejectedValue(error);
 
-      await expect(
-        TemplateLoader.render('missing.hbs', {})
-      ).rejects.toThrow(ConfigError);
-      await expect(
-        TemplateLoader.render('missing.hbs', {})
-      ).rejects.toThrow('ENOENT');
+      await expect(TemplateLoader.render('missing.hbs', {})).rejects.toThrow(
+        ConfigError,
+      );
+      await expect(TemplateLoader.render('missing.hbs', {})).rejects.toThrow(
+        'ENOENT',
+      );
     });
 
     it('should handle empty template', async () => {

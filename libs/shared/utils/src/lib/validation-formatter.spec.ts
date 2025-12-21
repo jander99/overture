@@ -52,7 +52,9 @@ describe('Validation Formatter', () => {
 
       expect(errors).toHaveLength(1);
       expect(errors[0].type).toBe('invalid_type');
-      expect(errors[0].suggestion).toContain('Change type from number to string');
+      expect(errors[0].suggestion).toContain(
+        'Change type from number to string',
+      );
     });
 
     it('should parse invalid enum error', () => {

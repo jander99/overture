@@ -67,7 +67,7 @@ export class PluginExporter {
     filesystem: FilesystemPort,
     output: OutputPort,
     detector: PluginDetector,
-    environment: EnvironmentPort
+    environment: EnvironmentPort,
   ) {
     this.filesystem = filesystem;
     this.output = output;
@@ -127,18 +127,18 @@ export class PluginExporter {
       if (!options.pluginNames || options.pluginNames.length === 0) {
         throw new PluginError(
           'Non-interactive mode requires pluginNames option',
-          undefined
+          undefined,
         );
       }
 
       selectedPlugins = installedPlugins.filter((plugin) =>
-        options.pluginNames!.includes(plugin.name)
+        options.pluginNames!.includes(plugin.name),
       );
 
       if (selectedPlugins.length === 0) {
         throw new PluginError(
           `No installed plugins match the provided names: ${options.pluginNames.join(', ')}`,
-          undefined
+          undefined,
         );
       }
     }
@@ -146,7 +146,9 @@ export class PluginExporter {
     // Update user config with selected plugins
     await this.updateUserConfig(selectedPlugins);
 
-    this.output.success(`✅ Updated user config with ${selectedPlugins.length} plugins:`);
+    this.output.success(
+      `✅ Updated user config with ${selectedPlugins.length} plugins:`,
+    );
     for (const plugin of selectedPlugins) {
       this.output.info(`   • ${plugin.name}@${plugin.marketplace}`);
     }
@@ -168,7 +170,7 @@ export class PluginExporter {
    * ```
    */
   private async promptPluginSelection(
-    plugins: InstalledPlugin[]
+    plugins: InstalledPlugin[],
   ): Promise<InstalledPlugin[]> {
     // TODO: Implement with inquirer in actual implementation
     // This is a placeholder for the interface design
@@ -196,7 +198,7 @@ export class PluginExporter {
     // ```
 
     throw new PluginError(
-      'Interactive plugin selection not yet implemented. Use non-interactive mode with pluginNames option.'
+      'Interactive plugin selection not yet implemented. Use non-interactive mode with pluginNames option.',
     );
   }
 
@@ -225,7 +227,9 @@ export class PluginExporter {
    * ]);
    * ```
    */
-  private async updateUserConfig(selectedPlugins: InstalledPlugin[]): Promise<void> {
+  private async updateUserConfig(
+    selectedPlugins: InstalledPlugin[],
+  ): Promise<void> {
     const configPath = this.getUserConfigPath();
 
     try {
@@ -274,7 +278,7 @@ export class PluginExporter {
     } catch (error) {
       throw new PluginError(
         `Failed to update user config: ${(error as Error).message}`,
-        undefined
+        undefined,
       );
     }
   }
@@ -301,7 +305,9 @@ export class PluginExporter {
 
     await this.updateUserConfig(installedPlugins);
 
-    this.output.success(`✅ Exported all ${installedPlugins.length} installed plugins to config`);
+    this.output.success(
+      `✅ Exported all ${installedPlugins.length} installed plugins to config`,
+    );
   }
 
   /**
@@ -346,7 +352,9 @@ export class PluginExporter {
       }
     } catch (error) {
       // Log other errors (permission denied, disk full, malformed YAML, etc.)
-      this.output.warn(`⚠️  Could not read config: ${(error as Error).message}`);
+      this.output.warn(
+        `⚠️  Could not read config: ${(error as Error).message}`,
+      );
     }
 
     // Categorize plugins

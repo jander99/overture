@@ -23,43 +23,53 @@ Overture currently focuses on MCP server synchronization across AI development c
 ## Considered Options
 
 ### Option 1: Bidirectional Sync (Auto-detect and Sync Both Ways)
+
 **Approach**: Automatically sync plugins in both directions (installed → config, config → installed) on every `overture sync`.
 
 **Pros**:
+
 - Fully automatic - no user intervention needed
 - Always in sync
 
 **Cons**:
+
 - Surprising behavior (installing a plugin manually would add it to config automatically)
 - Loss of user control over what's in config
 - Complexity in handling conflicts
 - **Rejected**: Too opinionated, reduces user control
 
 ### Option 2: One-way Sync Only (Config → Installed)
+
 **Approach**: `overture sync` only installs plugins from config. No reverse sync.
 
 **Pros**:
+
 - Simple and predictable
 - Config is explicit source of truth
 - No surprising behavior
 
 **Cons**:
+
 - Users must manually edit config to add new plugins
 - Workflow: install plugin → edit YAML → sync elsewhere
 - **Partially Rejected**: Too much friction for users
 
 ### Option 3: Hybrid Approach (One-way Sync + Explicit Export) ✅ SELECTED
+
 **Approach**:
+
 - `overture sync`: Install plugins from config (one-way: config → installed)
 - `overture plugin export`: Capture installed plugins to config (explicit export)
 
 **Pros**:
+
 - User control: explicit action to add plugins to config
 - Simple sync: config is source of truth
 - Flexible: users can experiment with plugins before committing to config
 - Clear intent: separate commands for separate actions
 
 **Cons**:
+
 - Two commands to remember (sync vs export)
 - **Accepted**: Best balance of control and convenience
 
@@ -72,6 +82,7 @@ Overture currently focuses on MCP server synchronization across AI development c
 #### 1. Type Definitions (`domain/plugin.types.ts`)
 
 **Design Decisions**:
+
 - `InstalledPlugin`: Represents detected plugins from `.claude/settings.json`
 - `InstallationResult`: Typed result for installation operations
 - `PluginSyncResult`: Summary result for sync operations
@@ -83,11 +94,13 @@ Overture currently focuses on MCP server synchronization across AI development c
 #### 2. PluginDetector Service (`core/plugin-detector.ts`)
 
 **Responsibilities**:
+
 - Parse `.claude/settings.json` to detect installed plugins
 - Extract plugin name, marketplace, enabled status
 - Handle missing/malformed files gracefully
 
 **Design Decisions**:
+
 - **Defensive Parsing**: `.claude/settings.json` format is undocumented (public beta)
   - Graceful degradation on missing files (return empty array)
   - Detailed error messages for malformed JSON
@@ -100,12 +113,14 @@ Overture currently focuses on MCP server synchronization across AI development c
 #### 3. PluginInstaller Service (`core/plugin-installer.ts`)
 
 **Responsibilities**:
+
 - Execute `claude plugin install name@marketplace` via child_process
 - Handle marketplace auto-addition for known marketplaces
 - Provide dry-run simulation mode
 - Check Claude binary availability
 
 **Design Decisions**:
+
 - **Sequential Installation**: Install plugins one at a time (not parallel)
   - Avoids race conditions in Claude CLI
   - Simpler error handling
@@ -125,12 +140,14 @@ Overture currently focuses on MCP server synchronization across AI development c
 #### 4. PluginExporter Service (`core/plugin-exporter.ts`)
 
 **Responsibilities**:
+
 - Detect installed plugins via PluginDetector
 - Interactive prompt for plugin selection
 - Update `~/.config/overture.yml` with selected plugins
 - Preserve existing config structure and comments
 
 **Design Decisions**:
+
 - **Interactive Mode (Default)**: Checkbox selection for user-friendly export
   - Uses inquirer for prompts (to be implemented)
   - Multi-select capability
@@ -149,11 +166,13 @@ Overture currently focuses on MCP server synchronization across AI development c
 #### 5. MarketplaceRegistry (`domain/marketplace-registry.ts`)
 
 **Responsibilities**:
+
 - Map marketplace shortcuts to full repository paths
 - Provide resolution and validation utilities
 - Extensible for future marketplaces
 
 **Design Decisions**:
+
 - **Static Registry Pattern**: No instance needed, all methods static
   - Simpler usage: `MarketplaceRegistry.resolveMarketplace('shortcut')`
   - Centralized marketplace knowledge
@@ -173,17 +192,20 @@ Overture currently focuses on MCP server synchronization across AI development c
 ### Service Integration Patterns
 
 **Composition Over Inheritance**:
+
 - PluginExporter uses PluginDetector via composition
 - PluginInstaller uses BinaryDetector and MarketplaceRegistry
 - Services are independent and testable
 
 **Error Handling Strategy**:
+
 - Custom `PluginError` extends `OvertureError`
 - Consistent with existing error hierarchy (ConfigError, ValidationError)
 - Errors include context (plugin name, path, operation)
 - Graceful degradation where appropriate (detection failures)
 
 **Async/Await Pattern**:
+
 - All I/O operations are async
 - Consistent with existing Overture services
 - Enables timeout handling with `Promise.race`
@@ -193,11 +215,13 @@ Overture currently focuses on MCP server synchronization across AI development c
 **User Global Only** (`~/.config/overture.yml`):
 
 **Rationale**:
+
 - Claude Code plugins are installed globally for all sessions
 - No user/project distinction in Claude Code itself
 - Project config would not work as expected
 
 **Warning System**:
+
 - Detect plugins in project config (`.overture/config.yaml`)
 - Show clear warning explaining why it won't work
 - Suggest moving to user global config
@@ -205,11 +229,13 @@ Overture currently focuses on MCP server synchronization across AI development c
 ### Marketplace Handling
 
 **Shortcut Format**:
+
 - Config uses shortcuts: `marketplace: claude-code-workflows`
 - MarketplaceRegistry resolves to full paths: `anthropics/claude-code-workflows`
 - Installer auto-adds marketplaces before installation
 
 **Rationale**:
+
 - Simpler config (less typing)
 - More maintainable (marketplace URLs may change)
 - Consistent with user mental model (friendly names)
@@ -219,23 +245,27 @@ Overture currently focuses on MCP server synchronization across AI development c
 **Primary Method**: Parse `.claude/settings.json`
 
 **Rationale**:
+
 - Most reliable source of installed plugin information
 - Contains marketplace information
 - Includes enabled/disabled status
 - Provides installation timestamps
 
 **Challenges**:
+
 - Format is undocumented (public beta)
 - May change without notice
 - Different Claude Code versions may use different formats
 
 **Mitigation**:
+
 - Defensive parsing with comprehensive error handling
 - Support multiple key formats
 - Graceful degradation on parse failures
 - Clear warning messages for users
 
 **Fallback Strategy**:
+
 - If settings.json unavailable, return empty array
 - Log warning but don't fail
 - Allow sync to proceed (will attempt installation)
@@ -255,36 +285,40 @@ Overture currently focuses on MCP server synchronization across AI development c
 ### Negative
 
 1. **Two Commands**: Users must learn both `sync` and `export` commands
-   - *Mitigation*: Clear documentation and help text
+   - _Mitigation_: Clear documentation and help text
 2. **Manual Export**: Users must explicitly export after installing plugins
-   - *Mitigation*: Interactive mode makes export easy
+   - _Mitigation_: Interactive mode makes export easy
 3. **Settings Format Dependency**: Relies on undocumented `.claude/settings.json`
-   - *Mitigation*: Defensive parsing and graceful degradation
+   - _Mitigation_: Defensive parsing and graceful degradation
 4. **No Version Pinning**: Cannot pin plugin versions in v0.3.0
-   - *Future Enhancement*: Add version field to plugin config
+   - _Future Enhancement_: Add version field to plugin config
 
 ## Implementation Notes
 
 ### Testing Strategy
 
 **Unit Tests**:
+
 - PluginDetector: Mock file system, test various settings.json formats
 - PluginInstaller: Mock child_process, test command execution
 - PluginExporter: Mock prompts and file writes
 - MarketplaceRegistry: Pure function tests (no mocks needed)
 
 **Test Fixtures**:
+
 - `__fixtures__/plugin-detector/valid-settings.json`
 - `__fixtures__/plugin-detector/empty-settings.json`
 - `__fixtures__/plugin-detector/malformed-settings.json`
 - `__fixtures__/plugin-detector/various-key-formats.json`
 
 **Integration Tests**:
+
 - Full sync workflow (config → installed)
 - Export workflow (installed → config)
 - Error scenarios (binary not found, malformed files)
 
 **Coverage Goals**:
+
 - Core services: >90%
 - MarketplaceRegistry: 100% (pure functions)
 - Overall: Maintain 83%+ project coverage
@@ -292,14 +326,16 @@ Overture currently focuses on MCP server synchronization across AI development c
 ### Future Enhancements
 
 1. **Version Pinning** (v0.4.0):
+
    ```yaml
    plugins:
      python-development:
        marketplace: claude-code-workflows
-       version: "1.2.0"  # Pin to specific version
+       version: '1.2.0' # Pin to specific version
    ```
 
 2. **Plugin Dependencies** (v0.5.0):
+
    ```yaml
    plugins:
      advanced-plugin:
@@ -348,12 +384,19 @@ Overture currently focuses on MCP server synchronization across AI development c
 ### Plugin Storage in Config
 
 **Option A**: Flat structure
+
 ```yaml
-plugins: [python-development@claude-code-workflows, backend-development@claude-code-workflows]
+plugins:
+  [
+    python-development@claude-code-workflows,
+    backend-development@claude-code-workflows,
+  ]
 ```
+
 **Rejected**: No room for metadata (mcps, enabled, version)
 
 **Option B**: Nested with marketplace shortcuts (SELECTED)
+
 ```yaml
 plugins:
   python-development:
@@ -361,19 +404,23 @@ plugins:
     enabled: true
     mcps: [python-repl, ruff]
 ```
+
 **Selected**: Extensible, readable, supports metadata
 
 ### Detection Methods
 
 **Option A**: Parse settings.json (SELECTED)
+
 - Most reliable, includes marketplace info
 - Undocumented format (defensive parsing needed)
 
 **Option B**: Execute `claude plugin list`
+
 - Doesn't exist in current Claude CLI
 - Would require CLI enhancement
 
 **Option C**: State tracking file
+
 - Requires maintaining separate state
 - Duplicate of Claude's own state
 - **Rejected**: Unnecessary complexity
@@ -381,9 +428,11 @@ plugins:
 ### Error Handling Philosophy
 
 **Strict Mode**: Fail on any detection error
+
 - **Rejected**: Too brittle for undocumented format
 
 **Graceful Degradation** (SELECTED):
+
 - Warn on detection failures
 - Return empty arrays
 - Continue with sync

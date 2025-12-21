@@ -8,7 +8,10 @@
  * @version 0.3.0
  */
 
-import { MarketplaceRegistry, type MarketplaceConfig } from './marketplace-registry';
+import {
+  MarketplaceRegistry,
+  type MarketplaceConfig,
+} from './marketplace-registry';
 
 describe('MarketplaceRegistry', () => {
   // Reset the registry between tests to ensure clean state
@@ -20,7 +23,9 @@ describe('MarketplaceRegistry', () => {
 
   describe('resolveMarketplace', () => {
     it('should resolve known marketplace shortcut to full path', () => {
-      const result = MarketplaceRegistry.resolveMarketplace('claude-code-workflows');
+      const result = MarketplaceRegistry.resolveMarketplace(
+        'claude-code-workflows',
+      );
 
       expect(result).toBe('anthropics/claude-code-workflows');
     });
@@ -53,7 +58,8 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should handle marketplace with special characters', () => {
-      const specialMarketplace = 'org-name/marketplace-with-dashes_and_underscores';
+      const specialMarketplace =
+        'org-name/marketplace-with-dashes_and_underscores';
       const result = MarketplaceRegistry.resolveMarketplace(specialMarketplace);
 
       expect(result).toBe(specialMarketplace);
@@ -61,14 +67,19 @@ describe('MarketplaceRegistry', () => {
 
     it('should be case-sensitive for shortcut matching', () => {
       // Shortcuts are case-sensitive
-      const result = MarketplaceRegistry.resolveMarketplace('Claude-Code-Workflows');
+      const result = MarketplaceRegistry.resolveMarketplace(
+        'Claude-Code-Workflows',
+      );
 
       // Should not match, so returns as-is
       expect(result).toBe('Claude-Code-Workflows');
     });
 
     it('should resolve after custom marketplace is added', () => {
-      MarketplaceRegistry.addCustomMarketplace('custom-market', 'custom-org/market');
+      MarketplaceRegistry.addCustomMarketplace(
+        'custom-market',
+        'custom-org/market',
+      );
 
       const result = MarketplaceRegistry.resolveMarketplace('custom-market');
 
@@ -81,7 +92,9 @@ describe('MarketplaceRegistry', () => {
 
   describe('isKnownMarketplace', () => {
     it('should return true for known marketplace shortcut', () => {
-      const result = MarketplaceRegistry.isKnownMarketplace('claude-code-workflows');
+      const result = MarketplaceRegistry.isKnownMarketplace(
+        'claude-code-workflows',
+      );
 
       expect(result).toBe(true);
     });
@@ -94,7 +107,9 @@ describe('MarketplaceRegistry', () => {
 
     it('should return false for full path of known marketplace', () => {
       // Full path is NOT a known shortcut
-      const result = MarketplaceRegistry.isKnownMarketplace('anthropics/claude-code-workflows');
+      const result = MarketplaceRegistry.isKnownMarketplace(
+        'anthropics/claude-code-workflows',
+      );
 
       expect(result).toBe(false);
     });
@@ -106,19 +121,26 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should return false for local paths', () => {
-      const result = MarketplaceRegistry.isKnownMarketplace('./local-marketplace');
+      const result = MarketplaceRegistry.isKnownMarketplace(
+        './local-marketplace',
+      );
 
       expect(result).toBe(false);
     });
 
     it('should be case-sensitive', () => {
-      const result = MarketplaceRegistry.isKnownMarketplace('Claude-Code-Workflows');
+      const result = MarketplaceRegistry.isKnownMarketplace(
+        'Claude-Code-Workflows',
+      );
 
       expect(result).toBe(false);
     });
 
     it('should return true after custom marketplace is added', () => {
-      MarketplaceRegistry.addCustomMarketplace('test-market', 'test-org/market');
+      MarketplaceRegistry.addCustomMarketplace(
+        'test-market',
+        'test-org/market',
+      );
 
       const result = MarketplaceRegistry.isKnownMarketplace('test-market');
 
@@ -141,7 +163,7 @@ describe('MarketplaceRegistry', () => {
       const marketplaces = MarketplaceRegistry.getAllKnown();
 
       const claudeWorkflows = marketplaces.find(
-        m => m.shortName === 'claude-code-workflows'
+        (m) => m.shortName === 'claude-code-workflows',
       );
 
       expect(claudeWorkflows).toBeDefined();
@@ -171,8 +193,8 @@ describe('MarketplaceRegistry', () => {
 
       const marketplaces = MarketplaceRegistry.getAllKnown();
 
-      const custom1 = marketplaces.find(m => m.shortName === 'custom1');
-      const custom2 = marketplaces.find(m => m.shortName === 'custom2');
+      const custom1 = marketplaces.find((m) => m.shortName === 'custom1');
+      const custom2 = marketplaces.find((m) => m.shortName === 'custom2');
 
       expect(custom1).toBeDefined();
       expect(custom2).toBeDefined();
@@ -196,7 +218,7 @@ describe('MarketplaceRegistry', () => {
   describe('getShortcutForPath', () => {
     it('should return shortcut for known full path', () => {
       const shortcut = MarketplaceRegistry.getShortcutForPath(
-        'anthropics/claude-code-workflows'
+        'anthropics/claude-code-workflows',
       );
 
       expect(shortcut).toBe('claude-code-workflows');
@@ -209,7 +231,9 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should return undefined for shortcut input (not reverse lookup)', () => {
-      const shortcut = MarketplaceRegistry.getShortcutForPath('claude-code-workflows');
+      const shortcut = MarketplaceRegistry.getShortcutForPath(
+        'claude-code-workflows',
+      );
 
       expect(shortcut).toBeUndefined();
     });
@@ -221,14 +245,16 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should return undefined for local paths', () => {
-      const shortcut = MarketplaceRegistry.getShortcutForPath('./local-marketplace');
+      const shortcut = MarketplaceRegistry.getShortcutForPath(
+        './local-marketplace',
+      );
 
       expect(shortcut).toBeUndefined();
     });
 
     it('should be case-sensitive', () => {
       const shortcut = MarketplaceRegistry.getShortcutForPath(
-        'Anthropics/claude-code-workflows'
+        'Anthropics/claude-code-workflows',
       );
 
       expect(shortcut).toBeUndefined();
@@ -255,7 +281,7 @@ describe('MarketplaceRegistry', () => {
 
     it('should convert known full path to shortcut', () => {
       const normalized = MarketplaceRegistry.normalize(
-        'anthropics/claude-code-workflows'
+        'anthropics/claude-code-workflows',
       );
 
       expect(normalized).toBe('claude-code-workflows');
@@ -280,9 +306,14 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should normalize custom marketplace full path to shortcut', () => {
-      MarketplaceRegistry.addCustomMarketplace('custom', 'custom-org/custom-repo');
+      MarketplaceRegistry.addCustomMarketplace(
+        'custom',
+        'custom-org/custom-repo',
+      );
 
-      const normalized = MarketplaceRegistry.normalize('custom-org/custom-repo');
+      const normalized = MarketplaceRegistry.normalize(
+        'custom-org/custom-repo',
+      );
 
       expect(normalized).toBe('custom');
 
@@ -291,7 +322,9 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should be idempotent (normalizing twice yields same result)', () => {
-      const once = MarketplaceRegistry.normalize('anthropics/claude-code-workflows');
+      const once = MarketplaceRegistry.normalize(
+        'anthropics/claude-code-workflows',
+      );
       const twice = MarketplaceRegistry.normalize(once);
 
       expect(once).toBe(twice);
@@ -307,7 +340,10 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should add custom marketplace successfully', () => {
-      MarketplaceRegistry.addCustomMarketplace('test-custom', 'test-org/test-repo');
+      MarketplaceRegistry.addCustomMarketplace(
+        'test-custom',
+        'test-org/test-repo',
+      );
 
       const isKnown = MarketplaceRegistry.isKnownMarketplace('test-custom');
       const resolved = MarketplaceRegistry.resolveMarketplace('test-custom');
@@ -326,10 +362,13 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should add marketplace to getAllKnown() results', () => {
-      MarketplaceRegistry.addCustomMarketplace('test-custom', 'test-org/test-repo');
+      MarketplaceRegistry.addCustomMarketplace(
+        'test-custom',
+        'test-org/test-repo',
+      );
 
       const all = MarketplaceRegistry.getAllKnown();
-      const custom = all.find(m => m.shortName === 'test-custom');
+      const custom = all.find((m) => m.shortName === 'test-custom');
 
       expect(custom).toBeDefined();
       expect(custom?.fullPath).toBe('test-org/test-repo');
@@ -340,8 +379,12 @@ describe('MarketplaceRegistry', () => {
       MarketplaceRegistry.addCustomMarketplace('custom1', 'org1/repo1');
       MarketplaceRegistry.addCustomMarketplace('custom2', 'org2/repo2');
 
-      expect(MarketplaceRegistry.resolveMarketplace('custom1')).toBe('org1/repo1');
-      expect(MarketplaceRegistry.resolveMarketplace('custom2')).toBe('org2/repo2');
+      expect(MarketplaceRegistry.resolveMarketplace('custom1')).toBe(
+        'org1/repo1',
+      );
+      expect(MarketplaceRegistry.resolveMarketplace('custom2')).toBe(
+        'org2/repo2',
+      );
 
       // Clean up
       MarketplaceRegistry.removeCustomMarketplace('custom1');
@@ -349,7 +392,10 @@ describe('MarketplaceRegistry', () => {
     });
 
     it('should handle local paths as full path', () => {
-      MarketplaceRegistry.addCustomMarketplace('local-dev', './local-marketplace');
+      MarketplaceRegistry.addCustomMarketplace(
+        'local-dev',
+        './local-marketplace',
+      );
 
       const resolved = MarketplaceRegistry.resolveMarketplace('local-dev');
 
@@ -362,33 +408,45 @@ describe('MarketplaceRegistry', () => {
 
   describe('removeCustomMarketplace', () => {
     it('should remove custom marketplace successfully', () => {
-      MarketplaceRegistry.addCustomMarketplace('test-custom', 'test-org/test-repo');
+      MarketplaceRegistry.addCustomMarketplace(
+        'test-custom',
+        'test-org/test-repo',
+      );
 
-      const removed = MarketplaceRegistry.removeCustomMarketplace('test-custom');
+      const removed =
+        MarketplaceRegistry.removeCustomMarketplace('test-custom');
 
       expect(removed).toBe(true);
       expect(MarketplaceRegistry.isKnownMarketplace('test-custom')).toBe(false);
     });
 
     it('should return false when removing non-existent marketplace', () => {
-      const removed = MarketplaceRegistry.removeCustomMarketplace('non-existent');
+      const removed =
+        MarketplaceRegistry.removeCustomMarketplace('non-existent');
 
       expect(removed).toBe(false);
     });
 
     it('should prevent removal of built-in marketplace (claude-code-workflows)', () => {
-      const removed = MarketplaceRegistry.removeCustomMarketplace('claude-code-workflows');
+      const removed = MarketplaceRegistry.removeCustomMarketplace(
+        'claude-code-workflows',
+      );
 
       expect(removed).toBe(false);
-      expect(MarketplaceRegistry.isKnownMarketplace('claude-code-workflows')).toBe(true);
+      expect(
+        MarketplaceRegistry.isKnownMarketplace('claude-code-workflows'),
+      ).toBe(true);
     });
 
     it('should remove marketplace from getAllKnown() results', () => {
-      MarketplaceRegistry.addCustomMarketplace('test-custom', 'test-org/test-repo');
+      MarketplaceRegistry.addCustomMarketplace(
+        'test-custom',
+        'test-org/test-repo',
+      );
       MarketplaceRegistry.removeCustomMarketplace('test-custom');
 
       const all = MarketplaceRegistry.getAllKnown();
-      const custom = all.find(m => m.shortName === 'test-custom');
+      const custom = all.find((m) => m.shortName === 'test-custom');
 
       expect(custom).toBeUndefined();
     });
@@ -396,8 +454,9 @@ describe('MarketplaceRegistry', () => {
     it('should return false when trying to remove built-in marketplace', () => {
       const builtInMarketplaces = ['claude-code-workflows'];
 
-      builtInMarketplaces.forEach(marketplace => {
-        const removed = MarketplaceRegistry.removeCustomMarketplace(marketplace);
+      builtInMarketplaces.forEach((marketplace) => {
+        const removed =
+          MarketplaceRegistry.removeCustomMarketplace(marketplace);
         expect(removed).toBe(false);
       });
     });
@@ -415,7 +474,9 @@ describe('MarketplaceRegistry', () => {
     it('should handle special characters in custom marketplace names', () => {
       MarketplaceRegistry.addCustomMarketplace('test-_123', 'org/repo-_123');
 
-      expect(MarketplaceRegistry.resolveMarketplace('test-_123')).toBe('org/repo-_123');
+      expect(MarketplaceRegistry.resolveMarketplace('test-_123')).toBe(
+        'org/repo-_123',
+      );
 
       // Clean up
       MarketplaceRegistry.removeCustomMarketplace('test-_123');
@@ -429,7 +490,9 @@ describe('MarketplaceRegistry', () => {
 
       expect(MarketplaceRegistry.getAllKnown().length).toBe(initialCount + 1);
       expect(MarketplaceRegistry.isKnownMarketplace('temp')).toBe(true);
-      expect(MarketplaceRegistry.resolveMarketplace('temp')).toBe('temp-org/temp-repo');
+      expect(MarketplaceRegistry.resolveMarketplace('temp')).toBe(
+        'temp-org/temp-repo',
+      );
 
       MarketplaceRegistry.removeCustomMarketplace('temp');
 
@@ -506,7 +569,7 @@ describe('MarketplaceRegistry', () => {
     it('should return consistent types from getAllKnown()', () => {
       const marketplaces = MarketplaceRegistry.getAllKnown();
 
-      marketplaces.forEach(marketplace => {
+      marketplaces.forEach((marketplace) => {
         // TypeScript compile-time check + runtime validation
         const config: MarketplaceConfig = marketplace;
         expect(config.shortName).toBeDefined();
@@ -524,27 +587,25 @@ describe('MarketplaceRegistry', () => {
         '',
       ];
 
-      inputs.forEach(input => {
+      inputs.forEach((input) => {
         const result = MarketplaceRegistry.resolveMarketplace(input);
         expect(typeof result).toBe('string');
       });
     });
 
     it('should always return boolean from isKnownMarketplace()', () => {
-      const inputs = [
-        'claude-code-workflows',
-        'unknown-marketplace',
-        '',
-      ];
+      const inputs = ['claude-code-workflows', 'unknown-marketplace', ''];
 
-      inputs.forEach(input => {
+      inputs.forEach((input) => {
         const result = MarketplaceRegistry.isKnownMarketplace(input);
         expect(typeof result).toBe('boolean');
       });
     });
 
     it('should return string | undefined from getShortcutForPath()', () => {
-      const result1 = MarketplaceRegistry.getShortcutForPath('anthropics/claude-code-workflows');
+      const result1 = MarketplaceRegistry.getShortcutForPath(
+        'anthropics/claude-code-workflows',
+      );
       const result2 = MarketplaceRegistry.getShortcutForPath('unknown/path');
 
       expect(typeof result1).toBe('string');

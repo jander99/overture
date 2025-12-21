@@ -123,14 +123,18 @@ copilot-instructions.md (generated)
 Instead of duplicating knowledge in components, **extract it to CLAUDE.md**:
 
 **Before:**
+
 ```markdown
 # agents/test-engineer.md
+
 ---
-name: test-engineer
----
+
+## name: test-engineer
+
 You are a test engineer specializing in Python.
 
 Use pytest with these conventions:
+
 - AAA pattern (Arrange, Act, Assert)
 - Fixtures in conftest.py
 - Parametrize for multiple cases
@@ -138,11 +142,14 @@ Use pytest with these conventions:
 ```
 
 **After:**
+
 ```markdown
 # agents/test-engineer.md
+
 ---
-name: test-engineer
----
+
+## name: test-engineer
+
 You are a test engineer specializing in Python.
 
 Follow the project's testing conventions documented in CLAUDE.md.
@@ -150,10 +157,12 @@ Focus on writing comprehensive, maintainable tests.
 ```
 
 **CLAUDE.md:**
+
 ```markdown
 ## Testing Conventions
 
 All tests follow these standards:
+
 - AAA pattern (Arrange, Act, Assert)
 - Fixtures in conftest.py
 - Parametrize for multiple cases
@@ -161,6 +170,7 @@ All tests follow these standards:
 ```
 
 **Benefits:**
+
 - ✅ Single update point for conventions
 - ✅ Subagent focuses on role, not repeated conventions
 - ✅ CLAUDE.md always in context (automatic)
@@ -176,16 +186,19 @@ CLAUDE.md can serve as **tool documentation hub**:
 ## Available MCP Tools
 
 ### pytest-runner
+
 **Purpose**: Execute pytest test suites
 **Usage**: Invoke for running tests, supports markers and filters
 **When to use**: Test writing, debugging, CI validation
 
 ### git-tools
+
 **Purpose**: Git operations (status, diff, commit, push)
 **Usage**: All git interactions
 **When to use**: Version control operations
 
 ### black-formatter
+
 **Purpose**: Python code formatting
 **Usage**: Format Python files to project standards
 **When to use**: Before committing code
@@ -202,6 +215,7 @@ subagents:
 ```
 
 **Benefits:**
+
 - ✅ Subagents know tool purpose without documentation duplication
 - ✅ Update tool docs once, all components benefit
 - ✅ New team members read CLAUDE.md to understand tooling
@@ -218,7 +232,7 @@ Components **inherit** conventions from CLAUDE.md implicitly:
 - Python: Black formatter, 88 line length, isort for imports
 - TypeScript: Prettier, 2-space indent
 - Git: Conventional commits (feat:, fix:, docs:)
-- Tests: Co-located with source in __tests__/
+- Tests: Co-located with source in **tests**/
 ```
 
 **All components automatically follow these** because CLAUDE.md is always loaded.
@@ -237,24 +251,28 @@ CLAUDE.md documents **big-picture architecture**:
 This is a FastAPI backend with React frontend.
 
 ### Backend (`/backend`)
+
 - FastAPI app in `app/main.py`
 - Models in `app/models/`
 - Routes in `app/routes/`
 - Tests in `tests/`
 
 ### Frontend (`/frontend`)
+
 - React + TypeScript
 - Components in `src/components/`
 - State: Redux in `src/store/`
 - API client: `src/api/`
 
 ### Shared Conventions
+
 - API follows REST conventions
 - Authentication via JWT tokens
 - All dates in ISO 8601 format
 ```
 
 **Subagents benefit from this context:**
+
 - Backend agent knows where to find models
 - Frontend agent understands API contract
 - Test agent knows test location conventions
@@ -270,6 +288,7 @@ CLAUDE.md can define **cross-component workflows**:
 ## Development Workflow
 
 ### Adding a New Feature
+
 1. Create feature branch: `git checkout -b feat/feature-name`
 2. Implement with tests (TDD encouraged)
 3. Run full test suite: `pytest`
@@ -278,6 +297,7 @@ CLAUDE.md can define **cross-component workflows**:
 6. Push and create PR
 
 ### Code Review Standards
+
 - All tests passing
 - Code coverage > 80%
 - No linter warnings
@@ -285,6 +305,7 @@ CLAUDE.md can define **cross-component workflows**:
 ```
 
 **Components coordinate around this:**
+
 - Hooks can enforce workflow steps
 - Commands can implement workflow shortcuts
 - Subagents understand the process
@@ -299,7 +320,7 @@ Overture generates CLAUDE.md from plugin configuration:
 ```yaml
 # overture.yaml
 plugin:
-  name: "python-dev"
+  name: 'python-dev'
 
   # This metadata generates CLAUDE.md sections
   conventions:
@@ -314,9 +335,9 @@ plugin:
       branch_prefix: true
 
   project_info:
-    architecture: "FastAPI backend with React frontend"
-    backend_dir: "/backend"
-    frontend_dir: "/frontend"
+    architecture: 'FastAPI backend with React frontend'
+    backend_dir: '/backend'
+    frontend_dir: '/frontend'
 ```
 
 **Overture generates:**
@@ -331,17 +352,20 @@ This project uses the `python-dev` plugin.
 ## Code Conventions
 
 ### Python
+
 - Formatter: Black (88 line length)
 - Test framework: pytest
 - Test pattern: AAA (Arrange, Act, Assert)
 
 ### Git
+
 - Commit style: Conventional commits
 - Branch prefixes: Required
 
 ## Architecture
 
 FastAPI backend with React frontend
+
 - Backend: `/backend`
 - Frontend: `/frontend`
 ```
@@ -352,14 +376,18 @@ Components explicitly reference CLAUDE.md sections:
 
 ```markdown
 # agents/test-engineer.md
+
 ---
+
 name: test-engineer
 claude_md_sections: [python_conventions, testing_standards]
+
 ---
 
 You are a test engineer.
 
 Follow conventions in CLAUDE.md sections:
+
 - Python conventions
 - Testing standards
 
@@ -367,6 +395,7 @@ Your role: Write comprehensive, maintainable tests.
 ```
 
 **Overture validation:**
+
 - Checks referenced sections exist in CLAUDE.md
 - Warns if sections missing
 - Suggests adding sections to overture.yaml
@@ -410,7 +439,7 @@ def analyze_duplication(plugin_config):
 # overture.yaml
 
 plugin:
-  name: "python-dev"
+  name: 'python-dev'
 
 # Generate CLAUDE.md from this
 claude_md:
@@ -427,13 +456,13 @@ claude_md:
 
       git:
         commit_format: conventional
-        branch_naming: "type/description"
+        branch_naming: 'type/description'
 
     development_commands:
-      test: "pytest"
-      lint: "ruff check ."
-      format: "black . && isort ."
-      dev_server: "uvicorn app.main:app --reload"
+      test: 'pytest'
+      lint: 'ruff check .'
+      format: 'black . && isort .'
+      dev_server: 'uvicorn app.main:app --reload'
 
     testing_standards: |
       All tests follow AAA pattern:
@@ -445,7 +474,7 @@ claude_md:
       Parametrize for multiple test cases.
 
   imports:
-    - docs/architecture.md  # Import detailed docs
+    - docs/architecture.md # Import detailed docs
     - docs/api-conventions.md
 
 # Components implicitly benefit from CLAUDE.md
@@ -471,39 +500,45 @@ CLAUDE.md (master)
 
 ### Mapping Strategy
 
-| CLAUDE.md Section | Copilot Instructions |
-|-------------------|---------------------|
-| Conventions | Coding guidelines |
-| Architecture | Project structure context |
-| Commands | Document as workflows |
-| Testing Standards | Testing guidelines |
-| Tool Registry | (Skip - Copilot doesn't have MCP) |
-| Subagent Workflows | Document as patterns |
+| CLAUDE.md Section  | Copilot Instructions              |
+| ------------------ | --------------------------------- |
+| Conventions        | Coding guidelines                 |
+| Architecture       | Project structure context         |
+| Commands           | Document as workflows             |
+| Testing Standards  | Testing guidelines                |
+| Tool Registry      | (Skip - Copilot doesn't have MCP) |
+| Subagent Workflows | Document as patterns              |
 
 ### Generation Example
 
 **Input (CLAUDE.md):**
+
 ```markdown
 ## Python Conventions
+
 - Formatter: Black (88 line length)
 - Linter: Ruff
 - Test framework: pytest with AAA pattern
 
 ## Architecture
+
 FastAPI backend in `/backend`
 React frontend in `/frontend`
 ```
 
 **Output (.github/copilot-instructions.md):**
+
 ```markdown
 # GitHub Copilot Instructions
 
 ## Python Code Style
+
 Format all Python code with Black (88 character line length).
 Lint with Ruff before committing.
 Write tests using pytest following AAA pattern (Arrange, Act, Assert).
 
 ## Project Structure
+
 This project has a FastAPI backend in the `/backend` directory and a React frontend in `/frontend`.
 When working on backend code, follow FastAPI conventions.
 When working on frontend code, use React best practices.
@@ -538,17 +573,17 @@ All layers merge into context. Overture can manage each layer:
 # overture.yaml
 claude_md:
   layers:
-    project:  # Root CLAUDE.md
-      sections: {...}
+    project: # Root CLAUDE.md
+      sections: { ... }
 
     subdirectories:
-      backend:  # backend/CLAUDE.md
+      backend: # backend/CLAUDE.md
         sections:
-          database: "SQLAlchemy ORM, Alembic for migrations"
+          database: 'SQLAlchemy ORM, Alembic for migrations'
 
-      frontend:  # frontend/CLAUDE.md
+      frontend: # frontend/CLAUDE.md
         sections:
-          state_management: "Redux with TypeScript"
+          state_management: 'Redux with TypeScript'
 ```
 
 ### Pattern: Dynamic Imports
@@ -559,23 +594,27 @@ CLAUDE.md can import documentation:
 # CLAUDE.md
 
 ## Architecture
+
 @docs/architecture.md
 
 ## API Design
+
 @docs/api-conventions.md
 
 ## Database Schema
+
 @docs/schema.md
 ```
 
 **Overture ensures imports exist:**
+
 ```yaml
 claude_md:
   imports:
     - path: docs/architecture.md
-      required: true  # Build fails if missing
+      required: true # Build fails if missing
     - path: docs/performance.md
-      required: false  # Optional
+      required: false # Optional
 ```
 
 ### Pattern: Tool-Specific Contexts
@@ -584,10 +623,12 @@ claude_md:
 # CLAUDE.md
 
 ## For Claude Code
+
 This project uses MCP servers: pytest-runner, git-tools, black-formatter.
 Invoke these tools when appropriate.
 
 ## For GitHub Copilot
+
 Note: This project has automated tooling via Claude Code MCP servers.
 When suggesting code, assume formatting and testing can be automated.
 ```
@@ -598,13 +639,13 @@ Overture can filter sections for each tool:
 claude_md:
   sections:
     conventions:
-      for: [claude, copilot]  # Both tools see this
+      for: [claude, copilot] # Both tools see this
 
     mcp_tools:
-      for: [claude]  # Only Claude Code sees this
+      for: [claude] # Only Claude Code sees this
 
     manual_workflows:
-      for: [copilot]  # Only Copilot sees this
+      for: [copilot] # Only Copilot sees this
 ```
 
 ## Token Budget Considerations
@@ -627,6 +668,7 @@ overture build --optimize-tokens
 ```
 
 Analyzes CLAUDE.md and suggests:
+
 - Remove redundant statements
 - Consolidate similar points
 - Use more concise phrasing
@@ -640,9 +682,9 @@ claude_md:
   token_budget:
     max_lines: 100
     priority:
-      - conventions: high  # Always include
-      - commands: medium   # Include if space
-      - examples: low      # Skip if over budget
+      - conventions: high # Always include
+      - commands: medium # Include if space
+      - examples: low # Skip if over budget
 ```
 
 ## Implementation in Overture
@@ -658,8 +700,8 @@ Generates CLAUDE.md from `overture.yaml`:
 ```yaml
 claude_md:
   sections:
-    project_overview: "..."
-    conventions: {...}
+    project_overview: '...'
+    conventions: { ... }
 ```
 
 ### Phase 2: Duplication Detection
@@ -669,6 +711,7 @@ overture validate --check-duplication
 ```
 
 Scans subagent/skill files, detects duplicated knowledge:
+
 ```
 ⚠ Duplication detected:
   - "pytest AAA pattern" appears in:
@@ -693,6 +736,7 @@ overture extract --from agents --to claude-md
 ```
 
 Automatically extracts common knowledge from components to CLAUDE.md:
+
 1. Analyzes all component files
 2. Finds repeated patterns
 3. Creates CLAUDE.md sections
@@ -704,11 +748,11 @@ Automatically extracts common knowledge from components to CLAUDE.md:
 ### overture.yaml (with CLAUDE.md config)
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
 plugin:
-  name: "python-web-dev"
-  version: "1.0.0"
+  name: 'python-web-dev'
+  version: '1.0.0'
 
 # CLAUDE.md generation config
 claude_md:
@@ -733,13 +777,13 @@ claude_md:
 
       git:
         commit_style: conventional
-        branch_format: "type/description"
+        branch_format: 'type/description'
 
     commands:
-      test: "pytest -v"
-      lint: "ruff check . && mypy ."
-      format: "black . && isort ."
-      dev: "uvicorn app.main:app --reload"
+      test: 'pytest -v'
+      lint: 'ruff check . && mypy .'
+      format: 'black . && isort .'
+      dev: 'uvicorn app.main:app --reload'
 
     architecture: |
       ## Backend Structure
@@ -771,12 +815,12 @@ mcp_servers:
   pytest-runner:
     type: stdio
     command: npx
-    args: ["-y", "pytest-mcp"]
+    args: ['-y', 'pytest-mcp']
 
 # Subagents (reference CLAUDE.md implicitly)
 subagents:
   test-engineer:
-    description: "Writes comprehensive tests"
+    description: 'Writes comprehensive tests'
     file: ./agents/test-engineer.md
     tools: [pytest-runner]
     # No need to duplicate testing conventions - they're in CLAUDE.md
@@ -784,7 +828,7 @@ subagents:
 # Skills (reference CLAUDE.md sections)
 skills:
   write-api-endpoint:
-    description: "Create new FastAPI endpoint"
+    description: 'Create new FastAPI endpoint'
     directory: ./skills/write-api-endpoint/
     # Inherits Python conventions from CLAUDE.md
 ```
@@ -794,11 +838,12 @@ skills:
 ```markdown
 # CLAUDE.md
 
-*Auto-generated by Overture from python-web-dev plugin*
+_Auto-generated by Overture from python-web-dev plugin_
 
 ## Project Overview
 
 Full-stack Python web application:
+
 - Backend: FastAPI + SQLAlchemy
 - Frontend: React + TypeScript
 - Database: PostgreSQL
@@ -806,16 +851,19 @@ Full-stack Python web application:
 ## Code Conventions
 
 ### Python
+
 - Formatter: Black (88 line length)
 - Linter: Ruff
 - Type checker: MyPy
 
 ### Testing
+
 - Framework: pytest
 - Pattern: AAA (Arrange, Act, Assert)
 - IMPORTANT: Minimum 80% code coverage required
 
 ### Git
+
 - Commit style: Conventional commits (feat:, fix:, docs:)
 - Branch format: type/description (e.g., feat/user-authentication)
 
@@ -829,6 +877,7 @@ Full-stack Python web application:
 ## Architecture
 
 ### Backend Structure
+
 - app/main.py: FastAPI application entry point
 - app/models/: SQLAlchemy ORM models
 - app/routes/: API endpoint definitions
@@ -836,6 +885,7 @@ Full-stack Python web application:
 - tests/: Test suite
 
 ### Frontend Structure
+
 - src/components/: React components
 - src/store/: Redux state management
 - src/api/: Backend API client
@@ -855,7 +905,7 @@ Full-stack Python web application:
 ```markdown
 # GitHub Copilot Custom Instructions
 
-*Generated by Overture from python-web-dev plugin*
+_Generated by Overture from python-web-dev plugin_
 
 ## Python Code Style
 
@@ -866,6 +916,7 @@ Follow type hints for all function signatures.
 ## Testing Guidelines
 
 Write tests using pytest following the AAA pattern:
+
 - **Arrange**: Set up test data and conditions
 - **Act**: Execute the code being tested
 - **Assert**: Verify expected outcomes
@@ -875,6 +926,7 @@ Maintain minimum 80% code coverage for all new code.
 ## Git Workflow
 
 Use conventional commit messages:
+
 - feat: New features
 - fix: Bug fixes
 - docs: Documentation changes
@@ -885,17 +937,20 @@ Branch naming: `type/description` (e.g., `feat/user-authentication`)
 ## Project Architecture
 
 This is a full-stack Python web application with:
+
 - **Backend**: FastAPI + SQLAlchemy in the root directory
 - **Frontend**: React + TypeScript in the `/frontend` directory
 - **Database**: PostgreSQL
 
 When working on the backend:
+
 - Place models in `app/models/`
 - Add routes in `app/routes/`
 - Implement business logic in `app/services/`
 - Write tests in `tests/`
 
 When working on the frontend:
+
 - Create components in `src/components/`
 - Manage state in `src/store/` using Redux
 - Define API calls in `src/api/`
@@ -904,31 +959,37 @@ When working on the frontend:
 ## Benefits Summary
 
 ### 1. Single Source of Truth ✅
+
 - Update conventions once in CLAUDE.md
 - All components benefit immediately
 - No duplication, no drift
 
 ### 2. Automatic Context ✅
+
 - CLAUDE.md always loaded
 - Components don't repeat what's already there
 - Cleaner, more focused components
 
 ### 3. Team Coordination ✅
+
 - CLAUDE.md checked into git
 - Team shares same conventions
 - New members read one file to understand project
 
 ### 4. Token Efficiency ✅
+
 - Conventions in CLAUDE.md, not repeated in every component
 - Overture optimizes CLAUDE.md for token budget
 - More tokens available for actual work
 
 ### 5. Cross-Tool Sync ✅
+
 - Generate copilot-instructions.md from CLAUDE.md
 - Maintain consistency across tools
 - Update once, sync everywhere
 
 ### 6. Validation ✅
+
 - Overture detects duplication
 - Warns about missing conventions
 - Suggests extraction to CLAUDE.md

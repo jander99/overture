@@ -83,7 +83,9 @@ export class PluginDetector {
    * });
    * ```
    */
-  async detectInstalledPlugins(options: DetectionOptions = {}): Promise<InstalledPlugin[]> {
+  async detectInstalledPlugins(
+    options: DetectionOptions = {},
+  ): Promise<InstalledPlugin[]> {
     const includeDisabled = options.includeDisabled ?? true;
 
     // Determine settings path
@@ -99,7 +101,10 @@ export class PluginDetector {
       const settings = await this.parseClaudeSettings(settingsPath);
 
       // Extract plugins from settings
-      const plugins = this.extractPluginsFromSettings(settings, includeDisabled);
+      const plugins = this.extractPluginsFromSettings(
+        settings,
+        includeDisabled,
+      );
 
       return plugins;
     } catch (error) {
@@ -135,14 +140,14 @@ export class PluginDetector {
   async isPluginInstalled(
     name: string,
     marketplace: string,
-    options: DetectionOptions = {}
+    options: DetectionOptions = {},
   ): Promise<boolean> {
     const plugins = await this.detectInstalledPlugins(options);
     return plugins.some(
       (plugin) =>
         plugin.name === name &&
         (plugin.marketplace === marketplace ||
-          plugin.marketplace === this.normalizeMarketplace(marketplace))
+          plugin.marketplace === this.normalizeMarketplace(marketplace)),
     );
   }
 
@@ -160,14 +165,16 @@ export class PluginDetector {
    *
    * @internal
    */
-  private async parseClaudeSettings(settingsPath: string): Promise<ClaudeSettings> {
+  private async parseClaudeSettings(
+    settingsPath: string,
+  ): Promise<ClaudeSettings> {
     try {
       // Check if file exists
       const exists = await this.filesystem.exists(settingsPath);
       if (!exists) {
         throw new PluginError(
           `.claude/settings.json not found at ${settingsPath}. Assuming no plugins installed.`,
-          undefined
+          undefined,
         );
       }
 
@@ -188,14 +195,14 @@ export class PluginDetector {
       if (error instanceof SyntaxError) {
         throw new PluginError(
           `Malformed .claude/settings.json at ${settingsPath}: ${error.message}`,
-          undefined
+          undefined,
         );
       }
 
       // Unknown error
       throw new PluginError(
         `Failed to read .claude/settings.json: ${(error as Error).message}`,
-        undefined
+        undefined,
       );
     }
   }
@@ -228,7 +235,7 @@ export class PluginDetector {
    */
   private extractPluginsFromSettings(
     settings: ClaudeSettings,
-    includeDisabled: boolean
+    includeDisabled: boolean,
   ): InstalledPlugin[] {
     // No plugins section
     if (!settings.plugins || typeof settings.plugins !== 'object') {
@@ -286,7 +293,7 @@ export class PluginDetector {
    */
   private parsePluginKey(
     key: string,
-    entry: { marketplace?: string; [key: string]: unknown }
+    entry: { marketplace?: string; [key: string]: unknown },
   ): { name: string; marketplace: string } {
     // Format: "name@marketplace"
     if (key.includes('@')) {
@@ -362,7 +369,7 @@ export class PluginDetector {
     if (settingsPath.includes('\0')) {
       throw new PluginError(
         `Settings path must be within .claude directory: ${settingsPath.replace(/\0/g, '\\0')}`,
-        undefined
+        undefined,
       );
     }
 
@@ -371,7 +378,7 @@ export class PluginDetector {
     if (!normalizedPath.includes('/.claude/')) {
       throw new PluginError(
         `Settings path must be within .claude directory: ${settingsPath}`,
-        undefined
+        undefined,
       );
     }
   }

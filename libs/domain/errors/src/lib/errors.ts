@@ -9,7 +9,7 @@ export class OvertureError extends Error {
   constructor(
     message: string,
     public code: string,
-    public exitCode = 1
+    public exitCode = 1,
   ) {
     super(message);
     this.name = 'OvertureError';
@@ -33,7 +33,10 @@ export class OvertureError extends Error {
  * Used for YAML parsing errors, missing config files, and schema violations.
  */
 export class ConfigError extends OvertureError {
-  constructor(message: string, public filePath?: string) {
+  constructor(
+    message: string,
+    public filePath?: string,
+  ) {
     super(message, 'CONFIG_ERROR', 2);
     this.name = 'ConfigError';
   }
@@ -54,7 +57,10 @@ export class ConfigError extends OvertureError {
  * Can contain multiple issues for aggregate validation results.
  */
 export class ValidationError extends OvertureError {
-  constructor(message: string, public issues: string[] = []) {
+  constructor(
+    message: string,
+    public issues: string[] = [],
+  ) {
     super(message, 'VALIDATION_ERROR', 3);
     this.name = 'ValidationError';
   }
@@ -74,7 +80,10 @@ export class ValidationError extends OvertureError {
  * Used for plugin installation, loading, and execution errors.
  */
 export class PluginError extends OvertureError {
-  constructor(message: string, public pluginName?: string) {
+  constructor(
+    message: string,
+    public pluginName?: string,
+  ) {
     super(message, 'PLUGIN_ERROR', 4);
     this.name = 'PluginError';
   }
@@ -94,7 +103,10 @@ export class PluginError extends OvertureError {
  * Used for MCP server startup, validation, and communication errors.
  */
 export class McpError extends OvertureError {
-  constructor(message: string, public mcpName?: string) {
+  constructor(
+    message: string,
+    public mcpName?: string,
+  ) {
     super(message, 'MCP_ERROR', 5);
     this.name = 'McpError';
   }

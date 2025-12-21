@@ -164,18 +164,21 @@ Run 'overture validate' to check your config.
 ### Wizard Options Explained
 
 **Option 1: Use existing local directory**
+
 - User already has an Overture config repo
 - Prompts for path
 - Validates it's a proper Overture config
 - Creates symlink
 
 **Option 2: Clone from GitHub repository**
+
 - Prompts for GitHub URL
 - Clones to default location (e.g., `~/.overture-configs/{repo-name}`)
 - Creates symlink
 - Useful for team configs
 
 **Option 3: Create new config**
+
 - Creates new Overture config at `~/.overture-configs`
 - Initializes with templates
 - Optionally runs `git init`
@@ -263,12 +266,14 @@ $ overture generate
 During `overture init`, user chooses where Claude Code configuration is generated:
 
 **Global Installation** (`~/.claude/`)
+
 - Configuration available in **all projects**
 - Good for personal preferences, MCP servers
 - Not shared with team
 - Single source for all your work
 
 **Local Installation** (`./.claude/`)
+
 - Configuration specific to **this project only**
 - Can be version controlled (if desired)
 - Team members can share configuration
@@ -277,11 +282,13 @@ During `overture init`, user chooses where Claude Code configuration is generate
 ### Recommendation: Start with One or the Other
 
 **Phase 1 Implementation**: Support only one scope per project
+
 - Avoids deduplication complexity
 - Simpler mental model
 - Clearer ownership
 
 **Potential issues with both global and local:**
+
 1. Duplicate commands - Overridden (probably fine)
 2. Duplicate hooks - Might execute twice! 🚨
 3. Duplicate MCP servers - Unclear merge behavior
@@ -296,13 +303,13 @@ target:
 
   # Explicitly control what goes where
   global:
-    - mcp-servers.filesystem  # Personal filesystem access
-    - commands.personal.*     # Personal commands
+    - mcp-servers.filesystem # Personal filesystem access
+    - commands.personal.* # Personal commands
 
   local:
-    - commands.team.*         # Team commands
-    - hooks.*                 # All hooks (project-specific)
-    - agents.*                # All agents
+    - commands.team.* # Team commands
+    - hooks.* # All hooks (project-specific)
+    - agents.* # All agents
 ```
 
 ## Version Control Strategy
@@ -312,6 +319,7 @@ target:
 Two approaches:
 
 **Approach A: .claude/ is gitignored (recommended)**
+
 - Generated artifact, not source
 - Team shares the Overture config repo instead
 - Each developer runs `overture generate` locally
@@ -319,6 +327,7 @@ Two approaches:
 - Requires Overture to be installed
 
 **Approach B: .claude/ is committed**
+
 - Team doesn't need Overture installed
 - Works immediately after clone
 - Generated files in version control
@@ -358,6 +367,7 @@ fi
 Initialize Overture in current directory.
 
 **Options:**
+
 - `--config <path>`: Use specific config directory
 - `--clone <url>`: Clone config from GitHub
 - `--create`: Create new config
@@ -384,6 +394,7 @@ overture init --create --scope global
 Generate `.claude/` configuration from config repo.
 
 **Behavior:**
+
 1. Follows `.overture` symlink
 2. Validates config
 3. Checks git status (if repo)
@@ -391,6 +402,7 @@ Generate `.claude/` configuration from config repo.
 5. Updates .gitignore if needed
 
 **Options:**
+
 - `--force`: Skip git checks and prompts
 - `--dry-run`: Show what would be generated
 - `--verbose`: Detailed output
@@ -413,6 +425,7 @@ overture generate --dry-run
 Validate configuration without generating.
 
 **Checks:**
+
 - YAML syntax
 - Schema validation
 - File references exist
@@ -470,6 +483,7 @@ $ overture info
 Watch config repo for changes and auto-regenerate.
 
 **Behavior:**
+
 - Monitors config repo for file changes
 - Automatically runs `overture generate`
 - Useful during development
@@ -514,7 +528,7 @@ overture link ~/different-config
 
 ### Scenario 1: Team Lead Sets Up Shared Config
 
-```bash
+````bash
 # Create team config repo
 mkdir ~/team-overture-config
 cd ~/team-overture-config
@@ -548,23 +562,26 @@ Shared Claude Code configuration for our team.
 git clone git@github.com:company/overture-config.git ~/work/team-config
 cd ~/work/your-project
 overture init --config ~/work/team-config
-```
+````
 
 ## Usage
 
 After making changes:
+
 ```bash
 cd ~/work/team-config
 git pull
 cd ~/work/your-project
 overture generate
 ```
+
 EOF
 
 git add README.md
 git commit -m "Add setup instructions"
 git push
-```
+
+````
 
 ### Scenario 2: Team Member Uses Shared Config
 
@@ -584,7 +601,7 @@ overture init --config ~/work/team-config --scope local
 
 # Ready to work
 claude
-```
+````
 
 ### Scenario 3: Team Member Updates Config
 
@@ -632,13 +649,13 @@ overture init --config ~/work/team-config
 
 ```yaml
 # ~/work/team-config/config.yaml
-version: "1.0"
+version: '1.0'
 
 # Team standards
 hooks:
   - matcher:
       tool: Edit
-      pattern: "**/*.ts"
+      pattern: '**/*.ts'
     events:
       postToolUse:
         - command: npx prettier --write "${CLAUDE_FILE_PATH}"
@@ -646,7 +663,7 @@ hooks:
 
 ```yaml
 # ~/.overture-configs/config.yaml
-version: "1.0"
+version: '1.0'
 
 # Extend team config
 extends: ~/work/team-config/config.yaml
@@ -657,8 +674,8 @@ mcp-servers:
     transport: stdio
     command: npx
     args:
-      - "@modelcontextprotocol/server-filesystem"
-      - "${env.HOME}/Documents"
+      - '@modelcontextprotocol/server-filesystem'
+      - '${env.HOME}/Documents'
 ```
 
 ## File Reference Resolution
@@ -668,15 +685,16 @@ With symlink-based configs, `@` file references work as follows:
 ### In Overture Source Files
 
 ```markdown
-<!-- ~/overture-configs/commands/review.md -->
----
-description: "Code review with team standards"
----
+## <!-- ~/overture-configs/commands/review.md -->
+
+## description: "Code review with team standards"
+
 Please review following our checklist:
 @templates/review-checklist.md
 ```
 
 When referenced in **Overture source files**, paths are relative to **config repo root**:
+
 - `@templates/foo.md` → `~/overture-configs/templates/foo.md`
 
 ### During Generation
@@ -686,11 +704,13 @@ Overture processes `@` references in two ways:
 **Option 1: Copy and Rewrite**
 
 Source:
+
 ```markdown
 @templates/review-checklist.md
 ```
 
 Generated (`.claude/commands/review.md`):
+
 ```markdown
 @.claude/templates/review-checklist.md
 ```
@@ -700,13 +720,16 @@ Overture copies `templates/review-checklist.md` to `.claude/templates/review-che
 **Option 2: Inline**
 
 Source:
+
 ```markdown
 @templates/review-checklist.md
 ```
 
 Generated (`.claude/commands/review.md`):
+
 ```markdown
 ## Review Checklist
+
 - [ ] Code quality
 - [ ] Security
 - [ ] Performance
@@ -730,32 +753,38 @@ Claude Code expands:
 ## Benefits of Symlink Approach
 
 ### 1. Clear Separation of Concerns
+
 - Configuration source (Overture repo) is separate from projects
 - Generated artifacts (`.claude/`) are clearly identified
 - No confusion about what to edit vs what is generated
 
 ### 2. Reusability
+
 - One Overture config can serve many projects
 - Personal config for all your side projects
 - Team config for all work projects
 - No duplication of configuration across projects
 
 ### 3. Version Control Clarity
+
 - Config repo has clear ownership and history
 - Projects don't need to track generated files
 - Team can review config changes through PRs
 
 ### 4. Discoverability
+
 - `.overture` symlink is visible in directory listing
 - `ls -la` shows where config comes from
 - Easy to audit which config a project uses
 
 ### 5. Flexibility
+
 - Easy to switch configs with `overture link`
 - Can test config changes locally before sharing
 - Support both personal and team workflows
 
 ### 6. Simplicity
+
 - Run `overture` from any project directory
 - No need to remember where config lives
 - Symlink makes relationship explicit
@@ -821,7 +850,7 @@ extends:
 # Override specific items
 hooks:
   - override: team-base-config.prettier-hook
-    disabled: true  # Don't use team's prettier hook
+    disabled: true # Don't use team's prettier hook
 ```
 
 ## Next Steps

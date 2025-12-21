@@ -104,7 +104,9 @@ describe('validate command', () => {
       await command.parseAsync(['node', 'validate']);
 
       expect(deps.configLoader.loadConfig).toHaveBeenCalledWith(process.cwd());
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration is valid');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration is valid',
+      );
       expect(exitSpy).toHaveBeenCalledWith(0);
     });
 
@@ -134,7 +136,9 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration is valid');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration is valid',
+      );
     });
 
     it('should validate configuration with client overrides', async () => {
@@ -165,7 +169,9 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration is valid');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration is valid',
+      );
     });
 
     it('should validate configuration with environment variables', async () => {
@@ -188,7 +194,9 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration is valid');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration is valid',
+      );
     });
   });
 
@@ -208,11 +216,13 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith('Validation errors:');
       expect(deps.output.error).toHaveBeenCalledWith(
-        '  - MCP "test-mcp": command is required and cannot be empty'
+        '  - MCP "test-mcp": command is required and cannot be empty',
       );
       expect(exitSpy).toHaveBeenCalledWith(3);
     });
@@ -232,10 +242,12 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        '  - MCP "test-mcp": transport is required'
+        '  - MCP "test-mcp": transport is required',
       );
       expect(exitSpy).toHaveBeenCalledWith(3);
     });
@@ -260,10 +272,14 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid platform in exclusion list: "invalid-platform"')
+        expect.stringContaining(
+          'invalid platform in exclusion list: "invalid-platform"',
+        ),
       );
     });
 
@@ -287,10 +303,14 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid platform in commandOverrides: "invalid-os"')
+        expect.stringContaining(
+          'invalid platform in commandOverrides: "invalid-os"',
+        ),
       );
     });
 
@@ -303,7 +323,7 @@ describe('validate command', () => {
             transport: 'stdio',
             platforms: {
               argsOverrides: {
-                'freebsd': ['--arg'],
+                freebsd: ['--arg'],
               } as any,
             },
           },
@@ -314,10 +334,12 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid platform in argsOverrides: "freebsd"')
+        expect.stringContaining('invalid platform in argsOverrides: "freebsd"'),
       );
     });
   });
@@ -341,10 +363,14 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid client in exclusion list: "invalid-client"')
+        expect.stringContaining(
+          'invalid client in exclusion list: "invalid-client"',
+        ),
       );
     });
 
@@ -366,10 +392,14 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid client in include list: "unknown-client"')
+        expect.stringContaining(
+          'invalid client in include list: "unknown-client"',
+        ),
       );
     });
 
@@ -395,10 +425,12 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('invalid client in overrides: "bad-client"')
+        expect.stringContaining('invalid client in overrides: "bad-client"'),
       );
     });
   });
@@ -430,13 +462,15 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Environment variable validation errors')
+        expect.stringContaining('Environment variable validation errors'),
       );
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid variable name')
+        expect.stringContaining('Invalid variable name'),
       );
     });
 
@@ -466,13 +500,15 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Environment variable validation errors')
+        expect.stringContaining('Environment variable validation errors'),
       );
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Unclosed')
+        expect.stringContaining('Unclosed'),
       );
     });
 
@@ -508,13 +544,15 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Environment variable validation errors')
+        expect.stringContaining('Environment variable validation errors'),
       );
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid variable name')
+        expect.stringContaining('Invalid variable name'),
       );
     });
   });
@@ -539,10 +577,12 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Duplicate MCP name (case-insensitive)')
+        expect.stringContaining('Duplicate MCP name (case-insensitive)'),
       );
     });
   });
@@ -566,10 +606,14 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 3');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 3',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid client in sync.enabledClients: "invalid-client"')
+        expect.stringContaining(
+          'Invalid client in sync.enabledClients: "invalid-client"',
+        ),
       );
     });
   });
@@ -599,7 +643,9 @@ describe('validate command', () => {
       await command.parseAsync(['node', 'validate', '--client', 'claude-code']);
 
       expect(deps.adapterRegistry.get).toHaveBeenCalledWith('claude-code');
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration is valid');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration is valid',
+      );
     });
 
     it('should error on invalid --client option', async () => {
@@ -618,11 +664,11 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
 
       await expect(
-        command.parseAsync(['node', 'validate', '--client', 'invalid-client'])
+        command.parseAsync(['node', 'validate', '--client', 'invalid-client']),
       ).rejects.toThrow('Process exit: 3');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid --client option: "invalid-client"')
+        expect.stringContaining('Invalid --client option: "invalid-client"'),
       );
     });
 
@@ -643,11 +689,13 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
 
       await expect(
-        command.parseAsync(['node', 'validate', '--client', 'claude-code'])
+        command.parseAsync(['node', 'validate', '--client', 'claude-code']),
       ).rejects.toThrow('Process exit: 3');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('No adapter registered for client: "claude-code"')
+        expect.stringContaining(
+          'No adapter registered for client: "claude-code"',
+        ),
       );
     });
   });
@@ -686,9 +734,11 @@ describe('validate command', () => {
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
-      expect(deps.output.warn).toHaveBeenCalledWith('Transport compatibility warnings:');
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Transport "sse" may not be supported')
+        'Transport compatibility warnings:',
+      );
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Transport "sse" may not be supported'),
       );
     });
 
@@ -709,7 +759,8 @@ describe('validate command', () => {
         validateTransport: vi.fn().mockReturnValue(true),
       } as any);
 
-      const { getTransportValidationSummary } = await import('@overture/sync-core');
+      const { getTransportValidationSummary } =
+        await import('@overture/sync-core');
       vi.mocked(getTransportValidationSummary).mockReturnValue({
         total: 5,
         supported: 4,
@@ -717,9 +768,17 @@ describe('validate command', () => {
       });
 
       const command = createValidateCommand(deps);
-      await command.parseAsync(['node', 'validate', '--client', 'claude-code', '--verbose']);
+      await command.parseAsync([
+        'node',
+        'validate',
+        '--client',
+        'claude-code',
+        '--verbose',
+      ]);
 
-      expect(deps.output.info).toHaveBeenCalledWith('\nTransport validation summary:');
+      expect(deps.output.info).toHaveBeenCalledWith(
+        '\nTransport validation summary:',
+      );
       expect(deps.output.info).toHaveBeenCalledWith('  Total MCPs: 5');
       expect(deps.output.info).toHaveBeenCalledWith('  Supported: 4');
       expect(deps.output.info).toHaveBeenCalledWith('  Unsupported: 1');
@@ -732,32 +791,47 @@ describe('validate command', () => {
 
       const command = createValidateCommand(deps);
 
-      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow('Process exit: 2');
+      await expect(command.parseAsync(['node', 'validate'])).rejects.toThrow(
+        'Process exit: 2',
+      );
 
       expect(deps.output.error).toHaveBeenCalledWith('No configuration found');
       expect(exitSpy).toHaveBeenCalledWith(2);
     });
 
     it('should handle ConfigError', async () => {
-      const error = new ConfigError('Invalid YAML syntax', '/path/to/config.yaml');
+      const error = new ConfigError(
+        'Invalid YAML syntax',
+        '/path/to/config.yaml',
+      );
       vi.mocked(deps.configLoader.loadConfig).mockRejectedValue(error);
 
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
       const { ErrorHandler } = await import('@overture/utils');
-      expect(ErrorHandler.handleCommandError).toHaveBeenCalledWith(error, 'validate', undefined);
+      expect(ErrorHandler.handleCommandError).toHaveBeenCalledWith(
+        error,
+        'validate',
+        undefined,
+      );
     });
 
     it('should handle ValidationError', async () => {
-      const error = new ValidationError('Schema validation failed', ['field is required']);
+      const error = new ValidationError('Schema validation failed', [
+        'field is required',
+      ]);
       vi.mocked(deps.configLoader.loadConfig).mockRejectedValue(error);
 
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate']);
 
       const { ErrorHandler } = await import('@overture/utils');
-      expect(ErrorHandler.handleCommandError).toHaveBeenCalledWith(error, 'validate', undefined);
+      expect(ErrorHandler.handleCommandError).toHaveBeenCalledWith(
+        error,
+        'validate',
+        undefined,
+      );
     });
   });
 });

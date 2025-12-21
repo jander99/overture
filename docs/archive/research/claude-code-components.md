@@ -5,6 +5,7 @@
 This document provides comprehensive research on the core extensibility components of Claude Code. These components form the building blocks of Claude Code's ecosystem and were analyzed during Overture's design phase to understand configuration patterns, potential duplication, and integration opportunities.
 
 The five core component types are:
+
 1. **MCP Servers** - Tool integration layer (Model Context Protocol)
 2. **Hooks** - Event-driven automation triggers
 3. **Plugins** - Bundled collections of multiple components
@@ -45,12 +46,15 @@ MCP servers can be configured in multiple locations:
 ### Configuration Methods
 
 #### 1. CLI Wizard (Default)
+
 ```bash
 claude mcp add
 ```
+
 Interactive wizard that guides through MCP server setup.
 
 #### 2. Direct File Editing (Recommended)
+
 Edit `~/.claude.json` directly for more control:
 
 ```json
@@ -70,6 +74,7 @@ Edit `~/.claude.json` directly for more control:
 ```
 
 #### 3. Docker Integration
+
 Docker Desktop provides one-click MCP server setup via Docker MCP Toolkit.
 
 ### Transport Types
@@ -117,6 +122,7 @@ MCP servers can be configured at three levels:
 ### Example Configurations
 
 **Simple stdio server:**
+
 ```json
 {
   "mcpServers": {
@@ -130,6 +136,7 @@ MCP servers can be configured at three levels:
 ```
 
 **HTTP server:**
+
 ```json
 {
   "mcpServers": {
@@ -142,6 +149,7 @@ MCP servers can be configured at three levels:
 ```
 
 **Server with environment:**
+
 ```json
 {
   "mcpServers": {
@@ -200,6 +208,7 @@ Plugins (bundle servers with other features)
 ### Tool Sharing vs Duplication
 
 **Shared Tools**: Multiple features can use the same MCP server:
+
 - Subagent "test-engineer" uses `pytest-runner` MCP tool
 - Skill "run-tests" uses same `pytest-runner` MCP tool
 - Hook validates test results from `pytest-runner`
@@ -219,6 +228,7 @@ Examples from the ecosystem:
 ## Docker Integration
 
 Docker Desktop includes MCP Toolkit for Claude Code:
+
 - One-click MCP server setup
 - Secure container-based execution
 - Pre-configured popular servers
@@ -227,11 +237,13 @@ Docker Desktop includes MCP Toolkit for Claude Code:
 ## Potential for Duplication
 
 **MCP Server Duplication**: Same server configured multiple times:
+
 - **Risk**: Configuring identical server at user and project level
 - **Impact**: Ambiguity about which configuration is used
 - **Recommendation for Overture**: Detect duplicate server names across scopes
 
 **Tool vs Implementation**: Different MCP servers providing similar capabilities:
+
 - **Example**: Multiple git integration servers
 - **Approach**: Allow users to choose preferred implementation
 - **Overture Strategy**: Support server aliases/preferences
@@ -241,10 +253,12 @@ Docker Desktop includes MCP Toolkit for Claude Code:
 ### Claude Code ↔ Copilot
 
 **Challenge**: MCP is specific to Claude ecosystem (as of 2025)
+
 - GitHub Copilot doesn't currently support MCP protocol
 - Copilot has different extension mechanisms
 
 **Overture Strategies**:
+
 1. **MCP as Claude-Only**: Keep MCP configurations in Claude-specific section
 2. **Capability Mapping**: Map MCP tool capabilities to Copilot alternatives where possible
 3. **Documentation**: Note which MCP servers have Copilot equivalents
@@ -303,31 +317,23 @@ Hooks are defined in the `hooks` object within settings files:
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "commands": [
-          "echo 'About to run bash command'"
-        ]
+        "commands": ["echo 'About to run bash command'"]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "*",
-        "commands": [
-          "echo 'Tool completed: $CLAUDE_TOOL_NAME'"
-        ]
+        "commands": ["echo 'Tool completed: $CLAUDE_TOOL_NAME'"]
       }
     ],
     "UserPromptSubmit": [
       {
-        "commands": [
-          "echo 'User submitted: $CLAUDE_USER_PROMPT'"
-        ]
+        "commands": ["echo 'User submitted: $CLAUDE_USER_PROMPT'"]
       }
     ],
     "SessionStart": [
       {
-        "commands": [
-          "echo 'Session started in $CLAUDE_PROJECT_DIR'"
-        ]
+        "commands": ["echo 'Session started in $CLAUDE_PROJECT_DIR'"]
       }
     ]
   }
@@ -353,6 +359,7 @@ Available event types:
 ### Environment Variables
 
 Hooks have access to environment variables:
+
 - `CLAUDE_PROJECT_DIR`: The current project directory
 - `CLAUDE_TOOL_NAME`: Name of the tool being used (for tool-related hooks)
 - `CLAUDE_USER_PROMPT`: User's submitted prompt (for UserPromptSubmit hook)
@@ -362,6 +369,7 @@ Hooks have access to environment variables:
 ### /hooks Command
 
 Use the interactive `/hooks` command to configure hooks through a menu interface:
+
 - Lists all available hooks
 - Easier than manually editing JSON
 - Changes made via `/hooks` require review for security
@@ -382,16 +390,19 @@ Common hook applications:
 ## Potential for Duplication
 
 **Hooks vs Skills**: Hooks that perform task-specific work might overlap with skills:
+
 - **Hooks**: Event-driven, always execute when triggered
 - **Skills**: Claude decides when to invoke based on relevance
 - **Overlap Risk**: A hook that formats code on PostToolUse might duplicate a "code-formatting" skill
 
 **Hooks vs Subagents**: Complex hooks that make decisions might duplicate subagent logic:
+
 - **Hooks**: Simple shell command execution
 - **Subagents**: Full AI reasoning with context
 - **Design Principle**: Hooks should be simple automation, not complex decision-making
 
 **Recommendation for Overture**:
+
 - Hooks are implementation-specific (shell commands differ across systems)
 - Consider extracting hook "intent" vs exact commands
 - Allow hooks to invoke skills or trigger subagents for complex logic
@@ -436,6 +447,7 @@ Plugins are custom collections that bundle slash commands, agents (subagents), M
 ### Installation
 
 Plugins are installed using the `/plugin` command:
+
 ```
 /plugin install <plugin-name>
 ```
@@ -453,6 +465,7 @@ A plugin can contain:
 ### Plugin Bundle Format
 
 While the exact format isn't fully documented yet, plugins appear to package:
+
 - Configuration files for each component type
 - MCP server definitions that auto-configure
 - Metadata for plugin identification and versioning
@@ -488,11 +501,13 @@ Plugin
 ## Potential for Duplication
 
 **Plugins vs Manual Configuration**: Plugins automate what users could configure manually:
+
 - **Plugin Approach**: Single install command, pre-configured components
 - **Manual Approach**: Individual configuration of each component type
 - **Design Goal**: Plugins eliminate duplication by bundling related components
 
 **Inter-Plugin Conflicts**: Multiple plugins might provide overlapping functionality:
+
 - **Conflict Risk**: Two plugins both providing git-related subagents or commands
 - **Namespace Management**: Plugin system likely handles command/agent name conflicts
 - **Recommendation for Overture**: Track which features come from which plugin to avoid conflicts
@@ -522,6 +537,7 @@ Overture should consider:
 **Challenge**: GitHub Copilot doesn't have an equivalent plugin system (as of 2025)
 
 **Strategies**:
+
 - **Decomposition**: Expand plugins into constituent parts for Copilot
 - **Metadata Preservation**: Track plugin origin for potential future Copilot plugin support
 - **Partial Sync**: Sync compatible components only (e.g., MCP servers) while noting unsupported features
@@ -565,6 +581,7 @@ Skills are modular capabilities that extend Claude's functionality through organ
 ## Configuration
 
 ### Locations
+
 Skills can be stored in two locations:
 
 1. **Personal Skills**: `~/.claude/skills/my-skill/SKILL.md`
@@ -603,11 +620,14 @@ description: Generates clear commit messages from git diffs. Use when writing co
 ```
 
 ### Frontmatter Fields
+
 - `name`: Display name for the skill
 - `description`: Brief description that helps Claude decide when to invoke the skill
 
 ### Body Content
+
 The markdown body contains:
+
 - Detailed instructions for performing the skill
 - Examples and templates
 - Best practices and patterns
@@ -623,16 +643,19 @@ The markdown body contains:
 ## Potential for Duplication
 
 **Skills vs Subagents**: Skills can overlap with subagent capabilities:
+
 - **Skills**: Instructions loaded into Claude's current context when relevant
 - **Subagents**: Separate AI instance with isolated context and dedicated tools
 - **Overlap Risk**: A "generate-tests" skill could duplicate a "test-engineer" subagent's purpose
 
 **Skills vs Hooks**: Skills that trigger on specific events might overlap with hooks:
+
 - **Skills**: Claude decides when to invoke based on task relevance
 - **Hooks**: Automatically triggered by specific events (tool use, user submit, etc.)
 - **Overlap Risk**: A "pre-commit-validation" skill might overlap with a pre-tool-use hook
 
 **Recommendation for Overture**:
+
 - Allow skills to be referenced in subagent definitions (avoid duplicating instructions)
 - Detect when skill descriptions match subagent purposes
 - Consider skills as "lightweight" capabilities vs subagents as "heavyweight" isolated workers
@@ -670,10 +693,12 @@ Subagents are specialized AI assistants in Claude Code that can be invoked to ha
 ## Configuration
 
 ### Location
+
 - **Project-Level**: `.claude/agents/` within your project
 - Subagent files are automatically detected and loaded by Claude Code
 
 ### File Structure
+
 Subagent configuration files use Markdown with YAML frontmatter:
 
 ```markdown
@@ -688,12 +713,15 @@ Role definition and expertise...
 ```
 
 ### Frontmatter Fields
+
 - `name`: Identifier for the subagent
 - `description`: Brief description of capabilities (used for task matching)
 - `tools`: List of MCP tools the subagent has access to
 
 ### Body Content
+
 The markdown body after the frontmatter contains:
+
 - Role definition
 - Expertise areas
 - Behavioral instructions
@@ -713,11 +741,13 @@ Use the `/agents` command to modify tool access through an interactive interface
 ## Potential for Duplication
 
 **Skills vs Subagents**: Subagents may possess the same capabilities as first-class Skills. Key differences:
+
 - **Skills**: Model-invoked, Claude decides when to use them based on task
 - **Subagents**: Delegated to with full context isolation and separate tool access
 - **Overlap Risk**: A skill for "writing tests" could overlap with a "test-engineer" subagent
 
 **Recommendation**: When designing Overture's configuration system, consider:
+
 - Detecting when a subagent's description matches a skill's purpose
 - Allowing skills to be referenced within subagent configurations
 - Providing warnings when creating redundant capabilities
@@ -787,6 +817,7 @@ Based on this research, Overture should:
 ## Evolution of Claude Code Ecosystem
 
 The component system has evolved rapidly:
+
 - **2024**: MCP protocol introduced, basic hook support
 - **2025**: Skills, Subagents, and Plugins all released
 - **Future**: Likely continued standardization and tooling improvements
@@ -795,4 +826,4 @@ This rapid evolution means configuration management tools like Overture need to 
 
 ---
 
-*This document was compiled from individual component research files as part of Overture's documentation consolidation effort. Last updated: 2025-01-13*
+_This document was compiled from individual component research files as part of Overture's documentation consolidation effort. Last updated: 2025-01-13_

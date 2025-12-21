@@ -51,7 +51,7 @@ export interface McpDetectionResult {
  */
 export function compareMcpConfigs(
   overtureMcps: Record<string, McpServerConfig>,
-  clientMcps: Record<string, any>
+  clientMcps: Record<string, any>,
 ): McpDetectionResult {
   const overtureNames = new Set(Object.keys(overtureMcps));
 
@@ -117,7 +117,7 @@ export function compareMcpConfigs(
  */
 export function getUnmanagedMcps(
   existingClientConfig: Record<string, any>,
-  overtureMcps: Record<string, McpServerConfig>
+  overtureMcps: Record<string, McpServerConfig>,
 ): Record<string, any> {
   const overtureNames = new Set(Object.keys(overtureMcps));
   const preserved: Record<string, any> = {};

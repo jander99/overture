@@ -17,7 +17,7 @@ describe('path-utils', () => {
 
     it('should handle paths with mixed slashes', () => {
       expect(getDirname('/home/user\\subdir/file.txt')).toBe(
-        '/home/user\\subdir'
+        '/home/user\\subdir',
       );
     });
 

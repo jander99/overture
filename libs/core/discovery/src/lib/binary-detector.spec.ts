@@ -18,8 +18,14 @@ describe('BinaryDetector', () => {
   describe('detectBinary', () => {
     it('should detect binary in PATH with version', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
-        ['claude --version', { stdout: 'Claude Code 2.1.0\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
+        [
+          'claude --version',
+          { stdout: 'Claude Code 2.1.0\n', stderr: '', exitCode: 0 },
+        ],
       ]);
       const commandExists = new Map([['claude', true]]);
 
@@ -29,7 +35,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectBinary('claude');
@@ -41,7 +47,14 @@ describe('BinaryDetector', () => {
 
     it('should detect binary on Windows using where command', async () => {
       const execResults = new Map([
-        ['where claude', { stdout: 'C:\\Program Files\\Claude\\claude.exe\n', stderr: '', exitCode: 0 }],
+        [
+          'where claude',
+          {
+            stdout: 'C:\\Program Files\\Claude\\claude.exe\n',
+            stderr: '',
+            exitCode: 0,
+          },
+        ],
         ['claude --version', { stdout: '2.1.0\n', stderr: '', exitCode: 0 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -52,7 +65,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectBinary('claude');
@@ -69,7 +82,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectBinary('nonexistent');
@@ -81,7 +94,10 @@ describe('BinaryDetector', () => {
 
     it('should detect binary even if version command fails', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
         ['claude --version', { stdout: '', stderr: 'error', exitCode: 1 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -92,7 +108,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectBinary('claude');
@@ -116,10 +132,12 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        () => ''
+        () => '',
       );
 
-      const result = await detector.detectAppBundle(['/Applications/Claude.app']);
+      const result = await detector.detectAppBundle([
+        '/Applications/Claude.app',
+      ]);
 
       expect(result.found).toBe(true);
       expect(result.path).toBe('/Applications/Claude.app');
@@ -132,7 +150,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectAppBundle([
@@ -156,7 +174,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        () => ''
+        () => '',
       );
 
       const result = await detector.detectAppBundle([
@@ -182,7 +200,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        readFile
+        readFile,
       );
 
       const result = detector.validateConfigFile('/config.json');
@@ -202,7 +220,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        readFile
+        readFile,
       );
 
       const result = detector.validateConfigFile('/config.json');
@@ -217,7 +235,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const result = detector.validateConfigFile('/nonexistent.json');
@@ -229,7 +247,10 @@ describe('BinaryDetector', () => {
   describe('detectClient', () => {
     it('should detect client with binary and config', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
         ['claude --version', { stdout: '2.1.0\n', stderr: '', exitCode: 0 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -245,7 +266,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        readFile
+        readFile,
       );
 
       const adapter = createMockAdapter('claude-code', {
@@ -269,7 +290,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         () => false,
-        () => ''
+        () => '',
       );
 
       const adapter = createMockAdapter('claude-code', {
@@ -280,7 +301,9 @@ describe('BinaryDetector', () => {
       const result = await detector.detectClient(adapter, 'linux');
 
       expect(result.status).toBe('not-found');
-      expect(result.warnings).toContain("Required binary 'claude' not found in PATH");
+      expect(result.warnings).toContain(
+        "Required binary 'claude' not found in PATH",
+      );
     });
 
     it('should detect app bundle when binary is not required', async () => {
@@ -295,7 +318,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        () => ''
+        () => '',
       );
 
       const adapter = createMockAdapter('claude-desktop', {
@@ -312,7 +335,10 @@ describe('BinaryDetector', () => {
 
     it('should warn about invalid config but still report found', async () => {
       const execResults = new Map([
-        ['which claude', { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 }],
+        [
+          'which claude',
+          { stdout: '/usr/local/bin/claude\n', stderr: '', exitCode: 0 },
+        ],
         ['claude --version', { stdout: '2.1.0\n', stderr: '', exitCode: 0 }],
       ]);
       const commandExists = new Map([['claude', true]]);
@@ -328,7 +354,7 @@ describe('BinaryDetector', () => {
         processPort,
         environmentPort,
         fileExists,
-        readFile
+        readFile,
       );
 
       const adapter = createMockAdapter('claude-code', {
@@ -340,7 +366,9 @@ describe('BinaryDetector', () => {
 
       expect(result.status).toBe('found');
       expect(result.configValid).toBe(false);
-      expect(result.warnings?.[0]).toContain('Config file exists but is invalid JSON');
+      expect(result.warnings?.[0]).toContain(
+        'Config file exists but is invalid JSON',
+      );
     });
   });
 });

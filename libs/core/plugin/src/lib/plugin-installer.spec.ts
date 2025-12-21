@@ -13,7 +13,10 @@ import type { ProcessPort, ExecResult } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
 
 // Create mock factories
-function createMockProcess(commandExists = true, execResults: ExecResult[] = []): ProcessPort {
+function createMockProcess(
+  commandExists = true,
+  execResults: ExecResult[] = [],
+): ProcessPort {
   let execIndex = 0;
 
   return {
@@ -61,7 +64,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        const result = await installer.installPlugin('python-development', 'claude-code-workflows');
+        const result = await installer.installPlugin(
+          'python-development',
+          'claude-code-workflows',
+        );
 
         // Assert
         expect(result.success).toBe(true);
@@ -97,7 +103,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        await installer.installPlugin('python-development', 'claude-code-workflows');
+        await installer.installPlugin(
+          'python-development',
+          'claude-code-workflows',
+        );
 
         // Assert
         expect(process.exec).toHaveBeenCalledWith('claude', [
@@ -123,7 +132,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        const result = await installer.installPlugin('test-plugin', 'claude-code-workflows');
+        const result = await installer.installPlugin(
+          'test-plugin',
+          'claude-code-workflows',
+        );
 
         // Assert
         expect(result.success).toBe(true);
@@ -134,20 +146,28 @@ describe('PluginInstaller', () => {
     describe('dry run mode', () => {
       it('should simulate installation in dry run mode', async () => {
         // Act
-        const result = await installer.installPlugin('test-plugin', 'test-marketplace', {
-          dryRun: true,
-        });
+        const result = await installer.installPlugin(
+          'test-plugin',
+          'test-marketplace',
+          {
+            dryRun: true,
+          },
+        );
 
         // Assert
         expect(result.success).toBe(true);
         expect(result.output).toContain('[DRY RUN]');
         expect(process.exec).not.toHaveBeenCalled();
-        expect(output.info).toHaveBeenCalledWith(expect.stringContaining('[DRY RUN]'));
+        expect(output.info).toHaveBeenCalledWith(
+          expect.stringContaining('[DRY RUN]'),
+        );
       });
 
       it('should not check Claude binary in dry run mode', async () => {
         // Act
-        await installer.installPlugin('test-plugin', 'test-marketplace', { dryRun: true });
+        await installer.installPlugin('test-plugin', 'test-marketplace', {
+          dryRun: true,
+        });
 
         // Assert
         expect(process.commandExists).not.toHaveBeenCalled();
@@ -161,7 +181,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        const result = await installer.installPlugin('test-plugin', 'test-marketplace');
+        const result = await installer.installPlugin(
+          'test-plugin',
+          'test-marketplace',
+        );
 
         // Assert
         expect(result.success).toBe(false);
@@ -170,7 +193,10 @@ describe('PluginInstaller', () => {
 
       it('should return error for invalid plugin name', async () => {
         // Act
-        const result = await installer.installPlugin('Invalid-Plugin-Name', 'test-marketplace');
+        const result = await installer.installPlugin(
+          'Invalid-Plugin-Name',
+          'test-marketplace',
+        );
 
         // Assert
         expect(result.success).toBe(false);
@@ -196,7 +222,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        const result = await installer.installPlugin('missing-plugin', 'claude-code-workflows');
+        const result = await installer.installPlugin(
+          'missing-plugin',
+          'claude-code-workflows',
+        );
 
         // Assert
         expect(result.success).toBe(false);
@@ -216,9 +245,13 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        const result = await installer.installPlugin('slow-plugin', 'test-marketplace', {
-          timeout: 100, // Very short timeout
-        });
+        const result = await installer.installPlugin(
+          'slow-plugin',
+          'test-marketplace',
+          {
+            timeout: 100, // Very short timeout
+          },
+        );
 
         // Assert
         expect(result.success).toBe(false);
@@ -236,7 +269,10 @@ describe('PluginInstaller', () => {
         installer = new PluginInstaller(process, output);
 
         // Act
-        await installer.installPlugin('custom-plugin', 'myorg/custom-marketplace');
+        await installer.installPlugin(
+          'custom-plugin',
+          'myorg/custom-marketplace',
+        );
 
         // Assert
         // Should only call exec once for install (no marketplace add)
@@ -334,14 +370,20 @@ describe('PluginInstaller', () => {
   describe('static validators', () => {
     describe('isValidPluginName', () => {
       it('should accept valid plugin names', () => {
-        expect(PluginInstaller.isValidPluginName('python-development')).toBe(true);
-        expect(PluginInstaller.isValidPluginName('backend-development')).toBe(true);
+        expect(PluginInstaller.isValidPluginName('python-development')).toBe(
+          true,
+        );
+        expect(PluginInstaller.isValidPluginName('backend-development')).toBe(
+          true,
+        );
         expect(PluginInstaller.isValidPluginName('my-plugin-v2')).toBe(true);
         expect(PluginInstaller.isValidPluginName('test_plugin')).toBe(true);
       });
 
       it('should reject invalid plugin names', () => {
-        expect(PluginInstaller.isValidPluginName('Python-Development')).toBe(false); // uppercase
+        expect(PluginInstaller.isValidPluginName('Python-Development')).toBe(
+          false,
+        ); // uppercase
         expect(PluginInstaller.isValidPluginName('my plugin')).toBe(false); // space
         expect(PluginInstaller.isValidPluginName('my/plugin')).toBe(false); // slash
         expect(PluginInstaller.isValidPluginName('my@plugin')).toBe(false); // @
@@ -351,11 +393,23 @@ describe('PluginInstaller', () => {
 
     describe('isValidMarketplace', () => {
       it('should accept valid marketplace identifiers', () => {
-        expect(PluginInstaller.isValidMarketplace('claude-code-workflows')).toBe(true);
-        expect(PluginInstaller.isValidMarketplace('anthropics/claude-code-workflows')).toBe(true);
-        expect(PluginInstaller.isValidMarketplace('myorg/custom-marketplace')).toBe(true);
-        expect(PluginInstaller.isValidMarketplace('./local-marketplace')).toBe(true);
-        expect(PluginInstaller.isValidMarketplace('/abs/path/marketplace')).toBe(true);
+        expect(
+          PluginInstaller.isValidMarketplace('claude-code-workflows'),
+        ).toBe(true);
+        expect(
+          PluginInstaller.isValidMarketplace(
+            'anthropics/claude-code-workflows',
+          ),
+        ).toBe(true);
+        expect(
+          PluginInstaller.isValidMarketplace('myorg/custom-marketplace'),
+        ).toBe(true);
+        expect(PluginInstaller.isValidMarketplace('./local-marketplace')).toBe(
+          true,
+        );
+        expect(
+          PluginInstaller.isValidMarketplace('/abs/path/marketplace'),
+        ).toBe(true);
       });
 
       it('should reject invalid marketplace identifiers', () => {

@@ -4,6 +4,7 @@
 **Status:** Complete
 **Version:** v1
 **Related Documents:**
+
 - `/home/jeff/workspaces/ai/overture/docs/multi-cli-roadmap.md`
 - `/home/jeff/workspaces/ai/overture/docs/PURPOSE.md`
 - `/home/jeff/workspaces/ai/overture/docs/architecture.md`
@@ -40,12 +41,13 @@ This research investigated GitHub Copilot's custom agent configuration format to
 ### 1.1 File Format: `.agent.md` with YAML Frontmatter
 
 **Structure:**
+
 ```markdown
 ---
 name: python-development
-description: "Expert Python developer with modern tooling"
-version: "1.0"
-author: "Organization Name"
+description: 'Expert Python developer with modern tooling'
+version: '1.0'
+author: 'Organization Name'
 tools:
   - read
   - edit
@@ -86,34 +88,35 @@ You are an expert Python developer specializing in modern Python 3.12+ developme
 
 ### 1.2 YAML Frontmatter Schema
 
-| Field | Type | Required | Description | Example |
-|-------|------|----------|-------------|---------|
-| `name` | string | Yes | Unique agent identifier | `python-development` |
-| `description` | string | Yes | Brief agent summary | `Expert Python developer` |
-| `version` | string | No | Semantic version | `1.0.0` |
-| `author` | string | No | Creator name | `Acme Corp` |
-| `tools` | array | No | Allowed tool categories | `["read", "edit", "python/*"]` |
-| `mcp-servers` | array | No | MCP server references | `["python-repl", "ruff"]` |
-| `max_tokens` | integer | No | Response token limit | `4096` |
-| `temperature` | float | No | Response randomness | `0.7` |
-| `model` | string | No | Specific model override | `gpt-4-turbo` |
+| Field         | Type    | Required | Description             | Example                        |
+| ------------- | ------- | -------- | ----------------------- | ------------------------------ |
+| `name`        | string  | Yes      | Unique agent identifier | `python-development`           |
+| `description` | string  | Yes      | Brief agent summary     | `Expert Python developer`      |
+| `version`     | string  | No       | Semantic version        | `1.0.0`                        |
+| `author`      | string  | No       | Creator name            | `Acme Corp`                    |
+| `tools`       | array   | No       | Allowed tool categories | `["read", "edit", "python/*"]` |
+| `mcp-servers` | array   | No       | MCP server references   | `["python-repl", "ruff"]`      |
+| `max_tokens`  | integer | No       | Response token limit    | `4096`                         |
+| `temperature` | float   | No       | Response randomness     | `0.7`                          |
+| `model`       | string  | No       | Specific model override | `gpt-4-turbo`                  |
 
 ### 1.3 Tool Categories
 
 **Built-in Tool Categories:**
 
-| Category | Permissions | Example Operations |
-|----------|-------------|-------------------|
-| `read` | Read-only file access | View files, search code |
-| `edit` | File modification | Update code, refactor |
-| `search` | Code search | Find references, grep |
-| `terminal` | Shell command execution | Run tests, build |
-| `git/*` | Git operations | Commit, push, branch |
-| `github/*` | GitHub API access | Create issues, PRs |
-| `python/*` | Python-specific tools | Run scripts, debug |
-| `javascript/*` | JS-specific tools | npm commands, linting |
+| Category       | Permissions             | Example Operations      |
+| -------------- | ----------------------- | ----------------------- |
+| `read`         | Read-only file access   | View files, search code |
+| `edit`         | File modification       | Update code, refactor   |
+| `search`       | Code search             | Find references, grep   |
+| `terminal`     | Shell command execution | Run tests, build        |
+| `git/*`        | Git operations          | Commit, push, branch    |
+| `github/*`     | GitHub API access       | Create issues, PRs      |
+| `python/*`     | Python-specific tools   | Run scripts, debug      |
+| `javascript/*` | JS-specific tools       | npm commands, linting   |
 
 **Wildcard Support:**
+
 - `*` — All tools (use cautiously)
 - `python/*` — All Python-related tools
 - `git/*` — All Git operations
@@ -127,6 +130,7 @@ You are an expert Python developer specializing in modern Python 3.12+ developme
 **Critical Constraint:** MCP servers are configured at the **GitHub organization level**, not in repository files.
 
 **GitHub Organization Settings:**
+
 ```
 Organization Settings
 └── Copilot
@@ -147,6 +151,7 @@ Organization Settings
 ```
 
 **Implications for Overture:**
+
 - `.agent.md` files reference MCPs by name only (`mcp-servers: [python-repl]`)
 - Actual MCP command/args configuration is elsewhere
 - Overture must generate **documentation** of required org-level MCP setup
@@ -155,6 +160,7 @@ Organization Settings
 ### 2.2 Agent MCP Reference Pattern
 
 **In `.agent.md` file:**
+
 ```yaml
 ---
 name: database-admin
@@ -174,6 +180,7 @@ mcp-servers:
 ```
 
 **NOT Allowed (no inline config):**
+
 ```yaml
 # ❌ This is NOT valid in .agent.md
 mcp-servers:
@@ -187,6 +194,7 @@ mcp-servers:
 **Generated Files:**
 
 1. **Repository Level** — `.agent.md` files
+
    ```markdown
    ---
    name: python-development
@@ -197,20 +205,24 @@ mcp-servers:
    ```
 
 2. **Documentation Level** — `COPILOT-MCP-SETUP.md`
+
    ```markdown
    # Required GitHub Organization MCP Configuration
 
    To use the agents in this repository, configure these MCP servers in your GitHub Organization settings:
 
    ## python-repl
+
    - Command: `npx`
    - Args: `@modelcontextprotocol/server-python-repl`
 
    ## ruff
+
    - Command: `uvx`
    - Args: `mcp-server-ruff`
 
    **Setup Instructions:**
+
    1. Go to Organization Settings → Copilot → MCP Servers
    2. Add each server listed above
    3. Enable the servers for this repository
@@ -223,6 +235,7 @@ mcp-servers:
 ### 3.1 Directory Structure
 
 **Option 1: Root-Level (Recommended)**
+
 ```
 project/
 ├── .agent.md                       # Default agent
@@ -233,6 +246,7 @@ project/
 ```
 
 **Option 2: `.github/agents/` Directory (Deprecated)**
+
 ```
 project/
 └── .github/
@@ -253,11 +267,13 @@ project/
 3. **User Preferences** — Personal Copilot settings (lowest priority)
 
 **Precedence Rules:**
+
 - More specific overrides general
 - Repository agents can extend/override organization defaults
 - User cannot override organization policies
 
 **Example:**
+
 ```
 Organization Agent: "python-development" (conservative, strict linting)
 Repository Agent: "python-development" (extends with repo-specific patterns)
@@ -267,6 +283,7 @@ Result: Repository version used, inherits org restrictions
 ### 3.3 Agent Selection
 
 **User Invocation:**
+
 ```
 # In Copilot chat
 @python-development Help me refactor this function
@@ -285,12 +302,13 @@ Result: Repository version used, inherits org restrictions
 ### 4.1 Example 1: Python Development Agent
 
 **File: `python-dev.agent.md`**
-```markdown
+
+````markdown
 ---
 name: python-development
-description: "Modern Python 3.12+ development specialist"
-version: "1.0.0"
-author: "Acme Engineering"
+description: 'Modern Python 3.12+ development specialist'
+version: '1.0.0'
+author: 'Acme Engineering'
 tools:
   - read
   - edit
@@ -319,21 +337,27 @@ You are an expert Python developer with deep knowledge of Python 3.12+ features,
 ## MCP Server Usage
 
 ### python-repl
+
 Use for:
+
 - Interactive code execution and testing
 - Validating logic before committing
 - Debugging complex expressions
 - REPL-driven development
 
 ### ruff
+
 Use for:
+
 - Linting code (replaces flake8, pylint)
 - Auto-formatting (replaces black)
 - Import sorting (replaces isort)
 - Fast execution (<10ms)
 
 ### pytest
+
 Use for:
+
 - Running test suites
 - Debugging test failures
 - Coverage reporting
@@ -342,6 +366,7 @@ Use for:
 ## Coding Standards
 
 ### Type Hints
+
 ```python
 # ✅ Good: Comprehensive type hints
 def process_data(
@@ -354,8 +379,10 @@ def process_data(
 def process_data(items, filter_func):
     return [item for item in items if filter_func(item)]
 ```
+````
 
 ### Async Best Practices
+
 ```python
 # ✅ Good: Proper async/await usage
 async def fetch_multiple(urls: list[str]) -> list[dict]:
@@ -369,6 +396,7 @@ async def fetch_multiple(urls: list[str]) -> list[dict]:
 ```
 
 ### Error Handling
+
 ```python
 # ✅ Good: Specific exceptions
 try:
@@ -390,6 +418,7 @@ except:  # Too broad!
 ## Common Tasks
 
 ### Running Tests
+
 ```bash
 # Full test suite
 pytest
@@ -405,6 +434,7 @@ ptw -- --cov=src
 ```
 
 ### Code Quality Checks
+
 ```bash
 # Lint
 ruff check .
@@ -420,6 +450,7 @@ mypy src/
 ```
 
 ### Package Management
+
 ```bash
 # Create venv
 uv venv
@@ -437,6 +468,7 @@ uv pip install -r requirements.txt --upgrade
 ## Project-Specific Context
 
 This project uses:
+
 - **Framework**: FastAPI 0.104+
 - **ORM**: SQLAlchemy 2.0+ (async)
 - **Database**: PostgreSQL 15
@@ -444,6 +476,7 @@ This project uses:
 - **CI/CD**: GitHub Actions
 
 ### Key Files
+
 - `src/main.py` — FastAPI app entrypoint
 - `src/models/` — SQLAlchemy models
 - `src/api/` — API route handlers
@@ -451,7 +484,8 @@ This project uses:
 - `tests/` — Test suite
 
 Character count: ~2,800 (well under 30K limit)
-```
+
+````
 
 ### 4.2 Example 2: Infrastructure Agent
 
@@ -532,9 +566,10 @@ variable "cidr_block" {
     error_message = "Must be valid IPv4 CIDR."
   }
 }
-```
+````
 
 ### Kubernetes Deployment
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -553,28 +588,29 @@ spec:
         app: api
     spec:
       containers:
-      - name: api
-        image: myapp:latest
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
+        - name: api
+          image: myapp:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: '128Mi'
+              cpu: '100m'
+            limits:
+              memory: '256Mi'
+              cpu: '200m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
 ```
 
 ## Common Commands
 
 ### Terraform
+
 ```bash
 # Initialize
 terraform init
@@ -590,6 +626,7 @@ terraform destroy
 ```
 
 ### Kubernetes
+
 ```bash
 # Apply manifests
 kubectl apply -f k8s/
@@ -605,7 +642,8 @@ kubectl scale deployment/api-server --replicas=5
 ```
 
 Character count: ~2,600
-```
+
+````
 
 ### 4.3 Example 3: Partner Agent (MongoDB)
 
@@ -675,39 +713,44 @@ MongoDB Shell integration:
   author_id: ObjectId("..."),  // Reference to users collection
   comment_ids: [ObjectId("..."), ObjectId("...")]
 }
-```
+````
 
 ### Aggregation Pipelines
+
 ```javascript
 db.orders.aggregate([
-  { $match: { status: "completed" } },
-  { $group: {
-      _id: "$customer_id",
-      total_spent: { $sum: "$amount" },
-      order_count: { $sum: 1 }
-  }},
+  { $match: { status: 'completed' } },
+  {
+    $group: {
+      _id: '$customer_id',
+      total_spent: { $sum: '$amount' },
+      order_count: { $sum: 1 },
+    },
+  },
   { $sort: { total_spent: -1 } },
-  { $limit: 10 }
-])
+  { $limit: 10 },
+]);
 ```
 
 ### Indexing Strategy
+
 ```javascript
 // Compound index for common query pattern
 db.products.createIndex(
   { category: 1, price: -1 },
-  { name: "category_price_idx" }
-)
+  { name: 'category_price_idx' },
+);
 
 // Text index for search
 db.articles.createIndex(
-  { title: "text", content: "text" },
-  { weights: { title: 10, content: 5 } }
-)
+  { title: 'text', content: 'text' },
+  { weights: { title: 10, content: 5 } },
+);
 ```
 
 Character count: ~1,900
-```
+
+````
 
 **Partner Agent Benefits:**
 - Maintained by vendors (MongoDB, Terraform, etc.)
@@ -865,11 +908,12 @@ export class CopilotAgentGenerator {
     return doc;
   }
 }
-```
+````
 
 ### 5.3 Example Transpilation
 
 **Input (.overture/config.yaml):**
+
 ```yaml
 version: "1.0"
 
@@ -897,11 +941,12 @@ mcp:
 ```
 
 **Output 1: `python-development.agent.md`**
+
 ```markdown
 ---
 name: python-development
-description: "Modern Python 3.12+ development specialist"
-version: "1.0.0"
+description: 'Modern Python 3.12+ development specialist'
+version: '1.0.0'
 tools:
   - read
   - edit
@@ -922,12 +967,15 @@ Expert Python developer specializing in modern Python 3.12+ features and best pr
 ## MCP Server Usage
 
 ### python-repl
+
 Execute Python code interactively for testing and debugging.
 
 ### ruff
+
 Fast Python linter and formatter (replaces flake8, black, isort).
 
 ### pytest
+
 Run test suites and generate coverage reports.
 
 ## Best Practices
@@ -939,6 +987,7 @@ Run test suites and generate coverage reports.
 ```
 
 **Output 2: `COPILOT-MCP-SETUP.md`**
+
 ```markdown
 # GitHub Copilot MCP Server Setup
 
@@ -979,6 +1028,7 @@ This repository requires the following MCP servers to be configured in your GitH
 **Challenge:** Agent prompts (Markdown body) are limited to 30K characters.
 
 **Comparison:**
+
 - **30,000 characters** ≈ 7,500 words ≈ 15 pages
 - CLAUDE.md for Overture: ~12,000 characters (fits comfortably)
 - Comprehensive agent: ~8,000-12,000 characters (optimal)
@@ -986,23 +1036,25 @@ This repository requires the following MCP servers to be configured in your GitH
 
 **Content Prioritization Strategy:**
 
-| Priority | Content Type | Typical Size | Include If... |
-|----------|--------------|--------------|---------------|
-| **High** | MCP usage guidance | 500-1,000 chars | Always |
-| **High** | Core capabilities | 300-500 chars | Always |
-| **High** | Best practices (concise) | 2,000-3,000 chars | Always |
-| **Medium** | Code examples (key patterns) | 1,500-2,500 chars | Space available |
-| **Medium** | Common commands | 500-1,000 chars | Space available |
-| **Low** | Extensive examples | 5,000+ chars | Link to external docs |
-| **Low** | Full API reference | 10,000+ chars | Link to external docs |
+| Priority   | Content Type                 | Typical Size      | Include If...         |
+| ---------- | ---------------------------- | ----------------- | --------------------- |
+| **High**   | MCP usage guidance           | 500-1,000 chars   | Always                |
+| **High**   | Core capabilities            | 300-500 chars     | Always                |
+| **High**   | Best practices (concise)     | 2,000-3,000 chars | Always                |
+| **Medium** | Code examples (key patterns) | 1,500-2,500 chars | Space available       |
+| **Medium** | Common commands              | 500-1,000 chars   | Space available       |
+| **Low**    | Extensive examples           | 5,000+ chars      | Link to external docs |
+| **Low**    | Full API reference           | 10,000+ chars     | Link to external docs |
 
 ### 6.2 Content Optimization Techniques
 
 **Technique 1: Link to External Documentation**
+
 ```markdown
 ## Detailed Examples
 
 For comprehensive examples, see:
+
 - [Python Best Practices](./docs/python-best-practices.md)
 - [API Reference](./docs/api-reference.md)
 - [Testing Guide](./docs/testing-guide.md)
@@ -1013,10 +1065,12 @@ For comprehensive examples, see:
 ```
 
 **Technique 2: Concise Code Examples**
-```markdown
+
+````markdown
 ## Error Handling
 
 ✅ **Good:**
+
 ```python
 try:
     result = await api_call()
@@ -1024,15 +1078,18 @@ except ClientError as e:
     logger.error(f"Failed: {e}")
     raise
 ```
+````
 
 ❌ **Bad:**
+
 ```python
 try:
     result = await api_call()
 except:
     pass  # Silent failure
 ```
-```
+
+````
 
 **Technique 3: Bulleted Lists Over Prose**
 ```markdown
@@ -1042,11 +1099,12 @@ except:
 - Prefer `dict[str, Any]` over bare `dict`
 - Use `Callable[[int], str]` for function types
 - Apply `TypedDict` for complex dicts
-```
+````
 
 ### 6.3 Size Validation
 
 **Overture Generator Checks:**
+
 ```typescript
 private validateAgentSize(content: string, name: string): void {
   const charCount = content.length;
@@ -1077,6 +1135,7 @@ private validateAgentSize(content: string, name: string): void {
 ```
 
 **CLI Feedback:**
+
 ```bash
 $ overture generate copilot-agents
 
@@ -1104,22 +1163,22 @@ Total size: 43,581 chars
 
 ### 7.2 Testing Requirements
 
-| Scenario | Test Approach | Priority |
-|----------|---------------|----------|
-| 30K character limit | Generate large agent, test Copilot behavior | High |
-| MCP reference errors | Reference non-existent MCP, check error | High |
-| Tool permission violations | Attempt disallowed operations | Medium |
-| Agent precedence | Org + repo agents with overlaps | Medium |
-| Partner agent extension | Extend MongoDB agent, test overrides | Low |
+| Scenario                   | Test Approach                               | Priority |
+| -------------------------- | ------------------------------------------- | -------- |
+| 30K character limit        | Generate large agent, test Copilot behavior | High     |
+| MCP reference errors       | Reference non-existent MCP, check error     | High     |
+| Tool permission violations | Attempt disallowed operations               | Medium   |
+| Agent precedence           | Org + repo agents with overlaps             | Medium   |
+| Partner agent extension    | Extend MongoDB agent, test overrides        | Low      |
 
 ### 7.3 Assumptions Requiring Validation
 
-| Assumption | Confidence | Validation Method |
-|------------|------------|-------------------|
-| 30K limit is per-agent | High | Tested with large agents |
-| MCP servers are org-level only | High | GitHub docs confirm |
-| YAML frontmatter is required | Medium | Tested with missing frontmatter |
-| Agent files must end in `.agent.md` | Medium | Tested with `.md` extension |
+| Assumption                          | Confidence | Validation Method               |
+| ----------------------------------- | ---------- | ------------------------------- |
+| 30K limit is per-agent              | High       | Tested with large agents        |
+| MCP servers are org-level only      | High       | GitHub docs confirm             |
+| YAML frontmatter is required        | Medium     | Tested with missing frontmatter |
+| Agent files must end in `.agent.md` | Medium     | Tested with `.md` extension     |
 
 ---
 
@@ -1128,6 +1187,7 @@ Total size: 43,581 chars
 ### 8.1 Generator Features
 
 **Phase 1: Basic Generator (1-2 weeks)**
+
 - Generate `.agent.md` files from Overture config
 - Create YAML frontmatter with plugin metadata
 - Generate MCP usage sections
@@ -1135,6 +1195,7 @@ Total size: 43,581 chars
 - Create COPILOT-MCP-SETUP.md documentation
 
 **Phase 2: Content Optimization (1 week)**
+
 - Fetch plugin descriptions from marketplace
 - Generate best practices from templates
 - Add code examples (size-aware)
@@ -1142,6 +1203,7 @@ Total size: 43,581 chars
 - Optimize content to stay under 30K
 
 **Phase 3: Advanced Features (1-2 weeks)**
+
 - Partner agent template integration
 - Tool permission inference
 - Custom template support
@@ -1187,7 +1249,9 @@ describe('CopilotAgentGenerator', () => {
     const largeConfig = createLargePluginConfig();
     const generator = new CopilotAgentGenerator();
 
-    await expect(generator.generate(largeConfig)).rejects.toThrow(/30K character limit/);
+    await expect(generator.generate(largeConfig)).rejects.toThrow(
+      /30K character limit/,
+    );
   });
 
   it('should generate MCP setup documentation', async () => {
@@ -1202,8 +1266,8 @@ describe('CopilotAgentGenerator', () => {
   it('should infer appropriate tool permissions', async () => {
     const config = {
       plugins: {
-        'python-development': { mcps: ['python-repl'] }
-      }
+        'python-development': { mcps: ['python-repl'] },
+      },
     };
 
     const generator = new CopilotAgentGenerator();
@@ -1250,16 +1314,19 @@ describe('CopilotAgentGenerator', () => {
 ### 10.2 Recommendations for Overture v0.3
 
 **Priority 1: Implement Basic Generator**
+
 - Generate `.agent.md` files with YAML frontmatter
 - Create MCP usage sections
 - Add size validation
 
 **Priority 2: MCP Setup Documentation**
+
 - Generate COPILOT-MCP-SETUP.md
 - Document org-level configuration requirements
 - Provide setup instructions
 
 **Priority 3: Content Optimization**
+
 - Enforce 30K limit with helpful error messages
 - Link to external docs for extensive content
 - Provide size feedback during generation
@@ -1267,17 +1334,20 @@ describe('CopilotAgentGenerator', () => {
 ### 10.3 Implementation Roadmap
 
 **Week 1-2: Core Generator**
+
 - Implement `CopilotAgentGenerator` class
 - YAML frontmatter generation
 - Basic Markdown body generation
 - Size validation
 
 **Week 3: MCP Documentation**
+
 - Generate COPILOT-MCP-SETUP.md
 - Add setup instructions
 - Document org-level requirements
 
 **Week 4: Testing & Polish**
+
 - Comprehensive tests (>90% coverage)
 - Integration with `overture sync`
 - Documentation and examples
@@ -1288,4 +1358,4 @@ describe('CopilotAgentGenerator', () => {
 
 **End of Research Document**
 
-*This research confirms GitHub Copilot's two-tier MCP architecture (org-level config + agent-level references) as a unique constraint for Overture. The generator must produce both `.agent.md` files and comprehensive org-level setup documentation to fully support Copilot users.*
+_This research confirms GitHub Copilot's two-tier MCP architecture (org-level config + agent-level references) as a unique constraint for Overture. The generator must produce both `.agent.md` files and comprehensive org-level setup documentation to fully support Copilot users._
