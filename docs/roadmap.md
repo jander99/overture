@@ -21,7 +21,70 @@
 
 ## Near-Term (v0.4 - Q1 2025)
 
-### 1. Configuration Repository Template ⭐ HIGH PRIORITY
+### 1. Import & Cleanup Commands ✅ SHIPPED
+
+**Problem:** Users with existing MCP configurations need an easy migration path to Overture without manually recreating their configs.
+
+**Solution:** Two new commands to streamline adoption:
+
+**`overture import`** - Discover and import unmanaged MCPs:
+
+- Reads MCP configs from all 3 supported clients (Claude Code, Copilot CLI, OpenCode)
+- Detects Claude Code's directory-based `~/.claude.json → projects[path].mcpServers` overrides
+- Interactive TUI (using @clack/prompts) for selecting which MCPs to import
+- Auto-converts hardcoded secrets to `${ENV_VAR}` syntax with user guidance
+- Infers scope (global vs project) based on source location
+- Warns on conflicts (same MCP name, different configs across clients)
+
+```bash
+overture import --client all
+overture import --client claude-code --scope project
+```
+
+**`overture cleanup`** - Remove redundant Claude Code directory configs:
+
+- Identifies directories in `~/.claude.json → projects` that have Overture configs
+- Removes only the `mcpServers` sections managed by Overture
+- Preserves unmanaged MCPs with warnings
+- Preserves all other project settings (trust dialogs, allowed tools, etc.)
+- Creates timestamped backups before modifications
+
+```bash
+overture cleanup --dry-run
+overture cleanup --directory /path/to/project
+```
+
+**User Workflow:**
+
+```bash
+# 1. Discover and import existing MCPs
+overture import --client all
+
+# 2. Review imported config
+cat ~/.config/overture/config.yaml
+
+# 3. Sync to all clients (now from single source)
+overture sync
+
+# 4. Clean up redundant Claude Code directory configs
+overture cleanup
+```
+
+**Benefits:**
+
+- ✅ Zero-friction migration from existing MCP setups
+- ✅ Preserves all working configurations
+- ✅ Guides users on environment variable setup
+- ✅ Eliminates configuration drift between clients
+- ✅ Clear path from "MCP chaos" to "single source of truth"
+
+**Status:** ✅ **Released in v0.4.0** (January 2025)
+
+**Documentation:** See [Importing Existing Configs](howtos/importing-existing-configs.md)
+
+---
+
+### 2. Configuration Repository Template ⭐ HIGH PRIORITY
 
 **Problem:** Users need a starting point for their Overture configuration.
 
