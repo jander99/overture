@@ -121,3 +121,9 @@ export {
   validateEnvVars,
   expandEnvVarsInArgs,
 } from './lib/env-expander.js';
+
+// Environment Variable Validator (Config-level)
+export {
+  validateConfigEnvVars,
+  formatEnvVarWarnings as formatConfigEnvVarWarnings,
+} from './lib/env-var-validator.js';

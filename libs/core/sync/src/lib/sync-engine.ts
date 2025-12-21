@@ -33,6 +33,10 @@ import {
 import { expandEnvVarsInClientConfig } from './client-env-service.js';
 import { generateDiff } from './config-diff.js';
 import { getUnmanagedMcps } from './mcp-detector.js';
+import {
+  validateConfigEnvVars,
+  formatEnvVarWarnings,
+} from './env-var-validator.js';
 
 /**
  * Sync options
@@ -179,6 +183,20 @@ export class SyncEngine {
         projectConfig,
       );
       warnings.push(...configWarnings);
+
+      // Validate environment variables
+      const envVarWarnings = validateConfigEnvVars(
+        overtureConfig,
+        this.deps.environment.env,
+      );
+      if (envVarWarnings.length > 0) {
+        warnings.push(...envVarWarnings);
+        // Show formatted warnings to user
+        const formatted = formatEnvVarWarnings(envVarWarnings);
+        if (formatted) {
+          this.deps.output.warn(formatted);
+        }
+      }
 
       // Get MCP sources (user vs project)
       const mcpSources = this.deps.configLoader.getMcpSources(
