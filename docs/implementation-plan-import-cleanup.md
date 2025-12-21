@@ -1,6 +1,6 @@
 # Implementation Plan: Import & Cleanup Commands
 
-**Status:** Foundation Phase Complete  
+**Status:** Services Complete, CLI Commands In Progress  
 **Target Release:** v0.4.0  
 **Last Updated:** 2025-12-21
 
@@ -50,22 +50,22 @@ Both services have TODO markers for full implementation.
 
 ## Remaining Work
 
-### Phase 5: Complete Service Implementation 🚧
+### Phase 5: Complete Service Implementation ✅
 
 **import-service.ts:**
 
-- [ ] Implement `discoverUnmanagedMcps()` with full client adapter integration
-- [ ] Handle Claude Code's directory-based configs in `projects` object
-- [ ] Handle OpenCode env var format conversion
-- [ ] Implement `importMcps()` with proper YAML writing (using `js-yaml`)
-- [ ] Add proper error handling for malformed configs
+- [x] Implement `discoverUnmanagedMcps()` with full client adapter integration
+- [x] Handle Claude Code's directory-based configs in `projects` object
+- [x] Handle OpenCode env var format conversion
+- [x] Implement `importMcps()` with proper YAML writing (using `js-yaml`)
+- [x] Add proper error handling for malformed configs
 
 **cleanup-service.ts:**
 
-- [ ] Implement `findCleanupTargets()` with directory scanning
-- [ ] Integrate with `ClaudeCodeAdapter.cleanupDirectoryMcps()`
-- [ ] Add backup creation before cleanup
-- [ ] Preserve unmanaged MCPs with warnings
+- [x] Implement `findCleanupTargets()` with directory scanning
+- [x] Integrate with `ClaudeCodeAdapter.cleanupDirectoryMcps()`
+- [x] Add backup creation before cleanup
+- [x] Preserve unmanaged MCPs with warnings
 
 ### Phase 6: CLI Commands 🔲
 
@@ -87,11 +87,12 @@ Both services have TODO markers for full implementation.
 - [ ] Support `--dry-run`, `--all`, `--directory` flags
 - [ ] Show backup path after cleanup
 
-### Phase 7: Registration & Integration 🔲
+### Phase 7: Registration & Integration 🚧
 
+- [x] Add to composition root (`apps/cli/src/composition-root.ts`)
+- [x] Wire up dependencies (filesystem, output)
 - [ ] Register commands in `apps/cli/src/cli/index.ts`
-- [ ] Add to composition root (`apps/cli/src/composition-root.ts`)
-- [ ] Wire up dependencies (filesystem, output, adapters)
+- [ ] Complete CLI command implementation
 
 ### Phase 8: Enhanced Sync Validation 🔲
 
