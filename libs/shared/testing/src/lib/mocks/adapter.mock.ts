@@ -82,7 +82,7 @@ export interface MockClientAdapter {
  * ```
  */
 export function createMockAdapter(
-  name: string = 'test-client',
+  name = 'test-client',
   options: {
     enabled?: boolean;
     isDetected?: boolean;

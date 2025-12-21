@@ -116,7 +116,7 @@ export function createFilesystemFunctions(fs: MockFilesystem) {
  * Create a mock ClientAdapter
  */
 export function createMockAdapter(
-  name: string = 'test-client',
+  name = 'test-client',
   overrides: Partial<ClientAdapter> = {}
 ): ClientAdapter {
   return {

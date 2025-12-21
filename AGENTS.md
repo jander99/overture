@@ -27,7 +27,7 @@ This file provides guidance for AI agents (GitHub Copilot, Cursor, Windsurf, etc
 - **CLI Framework:** Commander.js
 - **Schema Validation:** Zod
 - **Config Parsing:** js-yaml
-- **Testing:** Jest (911 tests, 83%+ coverage)
+- **Testing:** Vitest (384+ tests, 83%+ coverage)
 - **Bundler:** esbuild
 
 ### Project Structure
@@ -120,9 +120,9 @@ nx graph
 
 ### Testing Strategy
 
-**Test Framework:** Jest with TypeScript support
+**Test Framework:** Vitest with TypeScript support
 
-- **Total Tests:** 911 passing
+- **Total Tests:** 384+ passing
 - **Coverage:** 83%+ (branches, functions, lines)
 - **Test Files:** Located alongside source files (\*.spec.ts)
 
@@ -182,10 +182,12 @@ chore: maintenance tasks
 
 **Before Committing:**
 
-1. Run tests: `nx test @overture/cli`
-2. Run build: `nx build @overture/cli`
-3. Review changes: `git diff`
-4. Write descriptive commit message with body
+1. Run linter: `nx run-many -t lint --all`
+2. Run formatter: `npx prettier --write .`
+3. Run tests: `nx test @overture/cli`
+4. Run build: `nx build @overture/cli`
+5. Review changes: `git diff`
+6. Write descriptive commit message with body
 
 ## Key Configuration Patterns
 

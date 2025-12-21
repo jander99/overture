@@ -52,7 +52,7 @@ export interface MockPlatformConfig {
  * ```
  */
 export function createLinuxPlatform(
-  homedir: string = '/home/testuser'
+  homedir = '/home/testuser'
 ): MockPlatformConfig {
   return {
     platform: 'linux',
@@ -74,7 +74,7 @@ export function createLinuxPlatform(
  * ```
  */
 export function createMacOSPlatform(
-  homedir: string = '/Users/testuser'
+  homedir = '/Users/testuser'
 ): MockPlatformConfig {
   return {
     platform: 'darwin',
@@ -96,7 +96,7 @@ export function createMacOSPlatform(
  * ```
  */
 export function createWindowsPlatform(
-  homedir: string = 'C:\\Users\\testuser'
+  homedir = 'C:\\Users\\testuser'
 ): MockPlatformConfig {
   return {
     platform: 'win32',
@@ -120,7 +120,7 @@ export function createWindowsPlatform(
  * ```
  */
 export function createWSL2Platform(
-  homedir: string = '/home/testuser'
+  homedir = '/home/testuser'
 ): MockPlatformConfig {
   return {
     platform: 'linux',
@@ -173,7 +173,7 @@ export function configureMockOs(
  */
 export function mockLinuxPlatform(
   osMock: Mocked<typeof os>,
-  homedir: string = '/home/testuser'
+  homedir = '/home/testuser'
 ): void {
   const config = createLinuxPlatform(homedir);
   configureMockOs(config, osMock);
@@ -193,7 +193,7 @@ export function mockLinuxPlatform(
  */
 export function mockMacOSPlatform(
   osMock: Mocked<typeof os>,
-  homedir: string = '/Users/testuser'
+  homedir = '/Users/testuser'
 ): void {
   const config = createMacOSPlatform(homedir);
   configureMockOs(config, osMock);
@@ -213,7 +213,7 @@ export function mockMacOSPlatform(
  */
 export function mockWindowsPlatform(
   osMock: Mocked<typeof os>,
-  homedir: string = 'C:\\Users\\testuser'
+  homedir = 'C:\\Users\\testuser'
 ): void {
   const config = createWindowsPlatform(homedir);
   configureMockOs(config, osMock);
@@ -233,7 +233,7 @@ export function mockWindowsPlatform(
  */
 export function mockWSL2Platform(
   osMock: Mocked<typeof os>,
-  homedir: string = '/home/testuser'
+  homedir = '/home/testuser'
 ): void {
   const config = createWSL2Platform(homedir);
   configureMockOs(config, osMock);

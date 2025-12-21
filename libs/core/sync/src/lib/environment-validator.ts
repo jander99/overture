@@ -17,7 +17,7 @@ import type { ClientAdapter } from '@overture/client-adapters';
  * Matches: ${VAR_NAME} or ${VAR_NAME:-default_value}
  * More permissive to catch invalid syntax for better error messages
  */
-const ENV_VAR_PATTERN = /\$\{([^\}]+)\}/g;
+const ENV_VAR_PATTERN = /\$\{([^}]+)\}/g;
 
 /**
  * Valid environment variable name pattern
@@ -87,7 +87,11 @@ export function extractEnvVars(value: string): Array<{
   hasDefault: boolean;
   defaultValue?: string;
 }> {
-  const vars: Array<{ name: string; hasDefault: boolean; defaultValue?: string }> = [];
+  const vars: Array<{
+    name: string;
+    hasDefault: boolean;
+    defaultValue?: string;
+  }> = [];
   const matches = value.matchAll(ENV_VAR_PATTERN);
 
   for (const match of matches) {
@@ -142,7 +146,8 @@ export function validateEnvVarSyntax(value: string): {
   if (openCount > closeCount) {
     return {
       valid: false,
-      error: 'Unclosed ${. Expected format: ${VAR_NAME} or ${VAR_NAME:-default}',
+      error:
+        'Unclosed ${. Expected format: ${VAR_NAME} or ${VAR_NAME:-default}',
     };
   }
 
@@ -197,7 +202,7 @@ export function validateMcpEnvVars(
   mcpName: string,
   env: Record<string, string> | undefined,
   client: ClientAdapter,
-  processEnv: NodeJS.ProcessEnv = process.env
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): EnvVarValidation[] {
   const results: EnvVarValidation[] = [];
 
@@ -285,13 +290,18 @@ export function validateMcpEnvVars(
 export function getEnvVarErrors(
   config: OvertureConfig,
   client: ClientAdapter,
-  processEnv: NodeJS.ProcessEnv = process.env
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): EnvVarError[] {
   const errors: EnvVarError[] = [];
 
   for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
     // Validate base env vars
-    const baseResults = validateMcpEnvVars(mcpName, mcpConfig.env, client, processEnv);
+    const baseResults = validateMcpEnvVars(
+      mcpName,
+      mcpConfig.env,
+      client,
+      processEnv,
+    );
 
     for (const result of baseResults) {
       if (!result.valid && result.error) {
@@ -306,13 +316,15 @@ export function getEnvVarErrors(
 
     // Validate env vars in client overrides
     if (mcpConfig.clients?.overrides) {
-      for (const [clientName, override] of Object.entries(mcpConfig.clients.overrides)) {
+      for (const [clientName, override] of Object.entries(
+        mcpConfig.clients.overrides,
+      )) {
         if (override.env) {
           const overrideResults = validateMcpEnvVars(
             `${mcpName} (${clientName} override)`,
             override.env,
             client,
-            processEnv
+            processEnv,
           );
 
           for (const result of overrideResults) {
@@ -344,13 +356,18 @@ export function getEnvVarErrors(
 export function getEnvVarWarnings(
   config: OvertureConfig,
   client: ClientAdapter,
-  processEnv: NodeJS.ProcessEnv = process.env
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): EnvVarWarning[] {
   const warnings: EnvVarWarning[] = [];
 
   for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
     // Validate base env vars
-    const baseResults = validateMcpEnvVars(mcpName, mcpConfig.env, client, processEnv);
+    const baseResults = validateMcpEnvVars(
+      mcpName,
+      mcpConfig.env,
+      client,
+      processEnv,
+    );
 
     for (const result of baseResults) {
       if (result.warning) {
@@ -365,13 +382,15 @@ export function getEnvVarWarnings(
 
     // Validate env vars in client overrides
     if (mcpConfig.clients?.overrides) {
-      for (const [clientName, override] of Object.entries(mcpConfig.clients.overrides)) {
+      for (const [clientName, override] of Object.entries(
+        mcpConfig.clients.overrides,
+      )) {
         if (override.env) {
           const overrideResults = validateMcpEnvVars(
             `${mcpName} (${clientName} override)`,
             override.env,
             client,
-            processEnv
+            processEnv,
           );
 
           for (const result of overrideResults) {
@@ -403,7 +422,7 @@ export function getEnvVarWarnings(
 export function getEnvVarValidationSummary(
   config: OvertureConfig,
   client: ClientAdapter,
-  processEnv: NodeJS.ProcessEnv = process.env
+  processEnv: NodeJS.ProcessEnv = process.env,
 ): EnvVarValidationSummary {
   const errors = getEnvVarErrors(config, client, processEnv);
   const warnings = getEnvVarWarnings(config, client, processEnv);
@@ -466,10 +485,17 @@ export function formatEnvVarWarnings(warnings: EnvVarWarning[]): string {
     return 'No environment variable warnings.';
   }
 
-  const lines: string[] = [`Environment Variable Warnings (${warnings.length}):\n`];
+  const lines: string[] = [
+    `Environment Variable Warnings (${warnings.length}):\n`,
+  ];
 
   for (const warning of warnings) {
-    const icon = warning.severity === 'high' ? '⚠️' : warning.severity === 'medium' ? '⚡' : 'ℹ️';
+    const icon =
+      warning.severity === 'high'
+        ? '⚠️'
+        : warning.severity === 'medium'
+          ? '⚡'
+          : 'ℹ️';
     lines.push(`  ${icon} ${warning.mcpName} → ${warning.envKey}`);
     lines.push(`    ${warning.message}`);
   }
@@ -504,7 +530,10 @@ function getSeverity(warning: string): 'low' | 'medium' | 'high' {
     return 'medium';
   }
   // Check for secret-related warnings
-  if (warning.toLowerCase().includes('secret') && !warning.includes('Hardcoded')) {
+  if (
+    warning.toLowerCase().includes('secret') &&
+    !warning.includes('Hardcoded')
+  ) {
     return 'high';
   }
   return 'low';

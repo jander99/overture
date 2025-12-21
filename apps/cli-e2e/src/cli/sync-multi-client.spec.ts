@@ -19,7 +19,14 @@
 
 import { execSync } from 'child_process';
 import { join } from 'path';
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync } from 'fs';
+import {
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  rmSync,
+  readdirSync,
+} from 'fs';
 import { tmpdir } from 'os';
 
 describe('Sync Multi-Client E2E Tests', () => {
@@ -100,7 +107,10 @@ describe('Sync Multi-Client E2E Tests', () => {
   /**
    * Helper: Run overture CLI command
    */
-  function runOverture(args: string, options: { expectError?: boolean; env?: Record<string, string> } = {}): string {
+  function runOverture(
+    args: string,
+    options: { expectError?: boolean; env?: Record<string, string> } = {},
+  ): string {
     const command = `node ${cliPath} ${args}`;
     const env = {
       ...process.env,
@@ -139,10 +149,12 @@ describe('Sync Multi-Client E2E Tests', () => {
   /**
    * Helper: Check if backup exists
    */
-  function hasBackup(dir: string, client: string): boolean {
+  function _hasBackup(dir: string, client: string): boolean {
     if (!existsSync(dir)) return false;
     const files = readdirSync(dir);
-    return files.some(f => f.startsWith(`${client}-backup-`) && f.endsWith('.json'));
+    return files.some(
+      (f) => f.startsWith(`${client}-backup-`) && f.endsWith('.json'),
+    );
   }
 
   /**
@@ -225,7 +237,9 @@ mcp:
       expect(Object.keys(projectConfig2.mcpServers)).toHaveLength(5);
 
       // Verify GitHub token expanded
-      expect(globalConfig.mcpServers.github.env?.GITHUB_TOKEN).toBe('test-token');
+      expect(globalConfig.mcpServers.github.env?.GITHUB_TOKEN).toBe(
+        'test-token',
+      );
 
       // Verify backups created
       const backupDir = join(testDir, '.config', 'overture', 'backups');
@@ -342,7 +356,11 @@ mcp:
       const output = runOverture('sync --dry-run');
 
       // Verify output shows diff
-      expect(output).toContain('dry run' || 'preview' || 'would');
+      expect(
+        output.includes('dry run') ||
+          output.includes('preview') ||
+          output.includes('would'),
+      ).toBe(true);
 
       // Verify config unchanged
       const afterConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
@@ -350,7 +368,9 @@ mcp:
 
       // Verify no new backups created
       const backupDir = join(testDir, '.config', 'overture', 'backups');
-      const backupsBefore = existsSync(backupDir) ? readdirSync(backupDir).length : 0;
+      const backupsBefore = existsSync(backupDir)
+        ? readdirSync(backupDir).length
+        : 0;
       expect(readdirSync(backupDir).length).toBe(backupsBefore);
     });
   });
@@ -397,7 +417,10 @@ mcp:
       expect(globalOnly.mcpServers['python-repl']).toBeUndefined();
 
       // Reset config
-      writeFileSync(join(globalMcpDir, 'mcp.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+      writeFileSync(
+        join(globalMcpDir, 'mcp.json'),
+        JSON.stringify({ mcpServers: {} }, null, 2),
+      );
 
       // Sync only project
       runOverture('sync --scope project');
@@ -406,7 +429,10 @@ mcp:
       expect(projectOnly.mcpServers.filesystem).toBeUndefined();
 
       // Reset config
-      writeFileSync(join(globalMcpDir, 'mcp.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+      writeFileSync(
+        join(globalMcpDir, 'mcp.json'),
+        JSON.stringify({ mcpServers: {} }, null, 2),
+      );
 
       // Sync all
       runOverture('sync');
@@ -461,7 +487,10 @@ mcp:
       expect(darwinConfig.mcpServers['linux-only']).toBeUndefined();
 
       // Reset
-      writeFileSync(join(globalMcpDir, 'mcp.json'), JSON.stringify({ mcpServers: {} }, null, 2));
+      writeFileSync(
+        join(globalMcpDir, 'mcp.json'),
+        JSON.stringify({ mcpServers: {} }, null, 2),
+      );
 
       // Sync for linux
       runOverture('sync --platform linux');
@@ -500,17 +529,17 @@ mcp:
       const output = runOverture('sync', { expectError: true });
 
       // Verify warning mentioned (transport/HTTP/unsupported)
-      const hasWarning = 
-        output.includes('transport') || 
-        output.includes('HTTP') || 
+      const hasWarning =
+        output.includes('transport') ||
+        output.includes('HTTP') ||
         output.includes('unsupported') ||
         output.includes('warning');
-      
+
       // If warning shown, verify --force overrides
       if (hasWarning) {
         const forceOutput = runOverture('sync --force');
         expect(forceOutput).toBeTruthy();
-        
+
         // Verify config written despite warning
         const config2 = readJsonFile(join(globalMcpDir, 'mcp.json'));
         expect(config2.mcpServers['http-server']).toBeDefined();
@@ -552,12 +581,12 @@ mcp:
       expect(output).toBeTruthy(); // Got some output
 
       // If there was an error, verify it's about JSON/parsing
-      const hasError = 
+      const hasError =
         output.includes('error') ||
         output.includes('Error') ||
         output.includes('failed') ||
         output.includes('invalid');
-      
+
       expect(hasError).toBe(true);
     });
   });
@@ -658,12 +687,26 @@ mcp:
       writeFileSync(userConfigPath, config);
 
       // Create additional client dirs
-      const vscodeDir = join(testDir, '.config', 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev');
-      const cursorDir = join(testDir, '.config', 'Cursor', 'User', 'globalStorage', 'saoudrizwan.claude-dev');
-      
+      const vscodeDir = join(
+        testDir,
+        '.config',
+        'Code',
+        'User',
+        'globalStorage',
+        'saoudrizwan.claude-dev',
+      );
+      const cursorDir = join(
+        testDir,
+        '.config',
+        'Cursor',
+        'User',
+        'globalStorage',
+        'saoudrizwan.claude-dev',
+      );
+
       mkdirSync(vscodeDir, { recursive: true });
       mkdirSync(cursorDir, { recursive: true });
-      
+
       const emptyConfig = JSON.stringify({ mcpServers: {} }, null, 2);
       writeFileSync(join(vscodeDir, 'mcp.json'), emptyConfig);
       writeFileSync(join(cursorDir, 'mcp.json'), emptyConfig);
@@ -677,7 +720,7 @@ mcp:
       // Verify both configs updated
       const vscodeConfig = readJsonFile(join(vscodeDir, 'mcp.json'));
       const cursorConfig = readJsonFile(join(cursorDir, 'mcp.json'));
-      
+
       expect(vscodeConfig.mcpServers.filesystem).toBeDefined();
       expect(cursorConfig.mcpServers.filesystem).toBeDefined();
     });
@@ -721,7 +764,9 @@ mcp:
       expect(config2.mcpServers.github).toBeDefined();
 
       // Verify env vars expanded
-      expect(config2.mcpServers.github.env?.GITHUB_TOKEN).toBe('test-github-token-12345');
+      expect(config2.mcpServers.github.env?.GITHUB_TOKEN).toBe(
+        'test-github-token-12345',
+      );
       expect(config2.mcpServers.github.env?.API_KEY).toBe('test-api-key-67890');
     });
   });

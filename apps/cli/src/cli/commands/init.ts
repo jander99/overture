@@ -94,9 +94,13 @@ ${yamlContent}`;
         output.nl();
         output.info('Next steps:');
         output.info('  1. Edit .overture/config.yaml to add MCP servers');
-        output.info('  2. Run \`overture sync\` to generate client configurations');
+        output.info(
+          '  2. Run `overture sync` to generate client configurations',
+        );
       } catch (error) {
-        output.error(`Failed to initialize configuration: ${(error as Error).message}`);
+        output.error(
+          `Failed to initialize configuration: ${(error as Error).message}`,
+        );
         process.exit(1);
       }
     });

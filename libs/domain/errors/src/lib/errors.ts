@@ -9,7 +9,7 @@ export class OvertureError extends Error {
   constructor(
     message: string,
     public code: string,
-    public exitCode: number = 1
+    public exitCode = 1
   ) {
     super(message);
     this.name = 'OvertureError';

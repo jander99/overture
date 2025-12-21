@@ -151,7 +151,7 @@ export class BackupService {
    * @param client - Client name
    * @param keepCount - Number of backups to keep (default: 10)
    */
-  async cleanupOldBackups(client: ClientName, keepCount: number = 10): Promise<void> {
+  async cleanupOldBackups(client: ClientName, keepCount = 10): Promise<void> {
     const backups = await this.listBackups(client);
 
     // Delete backups beyond the keep count

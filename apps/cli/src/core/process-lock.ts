@@ -10,18 +10,17 @@
  * - Automatic cleanup on process exit
  *
  * @module core/process-lock
- * @version 2.0
+ * @version 3.0
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { getLockFilePath } from './path-resolver';
 import { ConfigError } from '@overture/errors';
 
 /**
  * Lock metadata stored in lock file
  */
-interface LockData {
+export interface LockData {
   pid: number;
   timestamp: number;
   operation: string;
@@ -30,7 +29,7 @@ interface LockData {
 /**
  * Lock configuration
  */
-interface LockOptions {
+export interface LockOptions {
   /**
    * Maximum age of lock file in milliseconds before considering it stale
    * Default: 10000 (10 seconds)
@@ -64,13 +63,33 @@ const DEFAULT_OPTIONS: Required<LockOptions> = {
 };
 
 /**
+ * Function type for getting lock file path
+ */
+export type GetLockFilePath = () => string;
+
+/**
  * Acquire process lock
  *
+ * @param getLockFilePath - Function that returns the lock file path
  * @param options - Lock configuration options
  * @returns true if lock acquired successfully
  * @throws Error if lock cannot be acquired after retries
+ *
+ * @example
+ * ```typescript
+ * import { acquireLock } from './process-lock';
+ * import { PathResolver } from '@overture/config-core';
+ *
+ * const pathResolver = new PathResolver(environment, filesystem);
+ * const getLockPath = () => pathResolver.getLockFilePath();
+ *
+ * const acquired = await acquireLock(getLockPath, { operation: 'sync' });
+ * ```
  */
-export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
+export async function acquireLock(
+  getLockFilePath: GetLockFilePath,
+  options: LockOptions = {},
+): Promise<boolean> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const lockPath = getLockFilePath();
   const lockDir = path.dirname(lockPath);
@@ -100,7 +119,7 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
       });
 
       // Lock acquired successfully
-      registerCleanupHandler(lockPath);
+      registerCleanupHandler(getLockFilePath);
       return true;
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
@@ -116,7 +135,7 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
           if (lockAge > opts.staleTimeout) {
             // Stale lock detected, remove it and retry immediately
             console.warn(
-              `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`
+              `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`,
             );
             fs.unlinkSync(lockPath);
             // Don't increment attempts for stale lock removal
@@ -127,7 +146,7 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
           if (attempts === opts.maxRetries) {
             throw new ConfigError(
               `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`,
-              lockPath
+              lockPath,
             );
           }
 
@@ -161,9 +180,10 @@ export async function acquireLock(options: LockOptions = {}): Promise<boolean> {
 /**
  * Release process lock
  *
+ * @param getLockFilePath - Function that returns the lock file path
  * @throws Error if lock file does not exist or belongs to different process
  */
-export function releaseLock(): void {
+export function releaseLock(getLockFilePath: GetLockFilePath): void {
   const lockPath = getLockFilePath();
 
   if (!fs.existsSync(lockPath)) {
@@ -179,7 +199,7 @@ export function releaseLock(): void {
     if (lockData.pid !== process.pid) {
       throw new ConfigError(
         `Cannot release lock: Lock belongs to different process (PID ${lockData.pid})`,
-        lockPath
+        lockPath,
       );
     }
 
@@ -197,9 +217,14 @@ export function releaseLock(): void {
 /**
  * Check if lock is currently held
  *
+ * @param getLockFilePath - Function that returns the lock file path
+ * @param staleTimeout - Timeout in ms to consider lock stale (default: 10000)
  * @returns true if lock file exists and is not stale
  */
-export function isLocked(staleTimeout: number = DEFAULT_OPTIONS.staleTimeout): boolean {
+export function isLocked(
+  getLockFilePath: GetLockFilePath,
+  staleTimeout: number = DEFAULT_OPTIONS.staleTimeout,
+): boolean {
   const lockPath = getLockFilePath();
 
   if (!fs.existsSync(lockPath)) {
@@ -221,9 +246,10 @@ export function isLocked(staleTimeout: number = DEFAULT_OPTIONS.staleTimeout): b
 /**
  * Get current lock information
  *
+ * @param getLockFilePath - Function that returns the lock file path
  * @returns Lock data or null if not locked
  */
-export function getLockInfo(): LockData | null {
+export function getLockInfo(getLockFilePath: GetLockFilePath): LockData | null {
   const lockPath = getLockFilePath();
 
   if (!fs.existsSync(lockPath)) {
@@ -242,8 +268,10 @@ export function getLockInfo(): LockData | null {
  * Force remove lock file (use with caution!)
  *
  * Only use this if you're certain the lock is stale and can't be released normally.
+ *
+ * @param getLockFilePath - Function that returns the lock file path
  */
-export function forceReleaseLock(): void {
+export function forceReleaseLock(getLockFilePath: GetLockFilePath): void {
   const lockPath = getLockFilePath();
   if (fs.existsSync(lockPath)) {
     fs.unlinkSync(lockPath);
@@ -261,12 +289,12 @@ function sleep(ms: number): Promise<void> {
  * Register cleanup handlers to release lock on process exit
  */
 let cleanupRegistered = false;
-function registerCleanupHandler(lockPath: string): void {
+function registerCleanupHandler(getLockFilePath: GetLockFilePath): void {
   if (cleanupRegistered) return;
 
   const cleanup = () => {
     try {
-      releaseLock();
+      releaseLock(getLockFilePath);
     } catch {
       // Ignore errors during cleanup
     }

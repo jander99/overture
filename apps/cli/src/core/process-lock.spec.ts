@@ -1,10 +1,10 @@
-import type { Mock, Mocked, MockedObject, MockedFunction, MockInstance } from 'vitest';
 /**
  * Process Lock Tests
  *
  * @module core/process-lock.spec
  */
 
+import type { Mocked } from 'vitest';
 import * as fs from 'fs';
 import {
   acquireLock,
@@ -12,21 +12,20 @@ import {
   isLocked,
   getLockInfo,
   forceReleaseLock,
+  type GetLockFilePath,
 } from './process-lock';
 
 // Mock fs module
 vi.mock('fs');
 const mockFs = fs as Mocked<typeof fs>;
 
-// Mock path-resolver
-vi.mock('./path-resolver', () => ({
-  getLockFilePath: vi.fn(() => '/home/user/.config/overture/overture.lock'),
-}));
-
 describe('Process Lock', () => {
   const mockLockPath = '/home/user/.config/overture/overture.lock';
   const mockLockDir = '/home/user/.config/overture';
   const originalPid = process.pid;
+
+  // Mock getLockFilePath function
+  const mockGetLockFilePath: GetLockFilePath = () => mockLockPath;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,41 +34,45 @@ describe('Process Lock', () => {
   });
 
   afterEach(() => {
-    Object.defineProperty(process, 'pid', { value: originalPid, writable: true });
+    Object.defineProperty(process, 'pid', {
+      value: originalPid,
+      writable: true,
+    });
   });
 
   describe('acquireLock', () => {
     it('should create lock file when no lock exists', async () => {
-      mockFs.existsSync.mockImplementation((p) => {
+      mockFs.existsSync.mockImplementation(() => {
         // Lock dir doesn't exist, lock file doesn't exist
         return false;
       });
       mockFs.mkdirSync.mockReturnValue(undefined);
 
-      const result = await acquireLock({ operation: 'test-sync' });
+      const result = await acquireLock(mockGetLockFilePath, {
+        operation: 'test-sync',
+      });
 
       expect(result).toBe(true);
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"pid": 12345'),
-        { encoding: 'utf-8', flag: 'wx' }
+        { encoding: 'utf-8', flag: 'wx' },
       );
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"operation": "test-sync"'),
-        { encoding: 'utf-8', flag: 'wx' }
+        { encoding: 'utf-8', flag: 'wx' },
       );
     });
 
     it('should create lock directory if it does not exist', async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await acquireLock();
+      await acquireLock(mockGetLockFilePath);
 
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith(
-        mockLockDir,
-        { recursive: true }
-      );
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockLockDir, {
+        recursive: true,
+      });
     });
 
     it('should throw error if active lock exists after retries', async () => {
@@ -93,8 +96,10 @@ describe('Process Lock', () => {
 
       mockFs.readFileSync.mockReturnValue(activeLock);
 
-      await expect(acquireLock({ maxRetries: 0, retryDelay: 10 })).rejects.toThrow(
-        /Cannot acquire lock.*Another Overture process.*PID 99999/
+      await expect(
+        acquireLock(mockGetLockFilePath, { maxRetries: 0, retryDelay: 10 }),
+      ).rejects.toThrow(
+        /Cannot acquire lock.*Another Overture process.*PID 99999/,
       );
     });
 
@@ -128,14 +133,16 @@ describe('Process Lock', () => {
         lockFileRemoved = true;
       });
 
-      const result = await acquireLock({ staleTimeout: 10000 });
+      const result = await acquireLock(mockGetLockFilePath, {
+        staleTimeout: 10000,
+      });
 
       expect(result).toBe(true);
       expect(mockFs.unlinkSync).toHaveBeenCalledWith(mockLockPath);
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"pid": 12345'),
-        { encoding: 'utf-8', flag: 'wx' }
+        { encoding: 'utf-8', flag: 'wx' },
       );
     });
 
@@ -165,7 +172,10 @@ describe('Process Lock', () => {
 
       mockFs.readFileSync.mockReturnValue(activeLock);
 
-      const result = await acquireLock({ maxRetries: 3, retryDelay: 10 });
+      const result = await acquireLock(mockGetLockFilePath, {
+        maxRetries: 3,
+        retryDelay: 10,
+      });
 
       expect(result).toBe(true);
       expect(mockFs.writeFileSync).toHaveBeenCalled();
@@ -175,12 +185,12 @@ describe('Process Lock', () => {
     it('should use default options when not specified', async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await acquireLock();
+      await acquireLock(mockGetLockFilePath);
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockLockPath,
         expect.stringContaining('"operation": "sync"'),
-        { encoding: 'utf-8', flag: 'wx' }
+        { encoding: 'utf-8', flag: 'wx' },
       );
     });
   });
@@ -196,7 +206,7 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(ownLock);
 
-      releaseLock();
+      releaseLock(mockGetLockFilePath);
 
       expect(mockFs.unlinkSync).toHaveBeenCalledWith(mockLockPath);
     });
@@ -211,15 +221,15 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(otherLock);
 
-      expect(() => releaseLock()).toThrow(
-        /Cannot release lock.*different process.*PID 99999/
+      expect(() => releaseLock(mockGetLockFilePath)).toThrow(
+        /Cannot release lock.*different process.*PID 99999/,
       );
     });
 
     it('should not throw error if lock does not exist', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      expect(() => releaseLock()).not.toThrow();
+      expect(() => releaseLock(mockGetLockFilePath)).not.toThrow();
     });
 
     it('should not throw error if lock file was already removed', () => {
@@ -230,7 +240,7 @@ describe('Process Lock', () => {
         throw error;
       });
 
-      expect(() => releaseLock()).not.toThrow();
+      expect(() => releaseLock(mockGetLockFilePath)).not.toThrow();
     });
   });
 
@@ -238,7 +248,7 @@ describe('Process Lock', () => {
     it('should return false if lock file does not exist', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      expect(isLocked()).toBe(false);
+      expect(isLocked(mockGetLockFilePath)).toBe(false);
     });
 
     it('should return true if lock file exists and is not stale', () => {
@@ -251,7 +261,7 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(activeLock);
 
-      expect(isLocked()).toBe(true);
+      expect(isLocked(mockGetLockFilePath)).toBe(true);
     });
 
     it('should return false if lock file is stale', () => {
@@ -264,14 +274,14 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(staleLock);
 
-      expect(isLocked(10000)).toBe(false);
+      expect(isLocked(mockGetLockFilePath, 10000)).toBe(false);
     });
 
     it('should return false if lock file is invalid', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('invalid json');
 
-      expect(isLocked()).toBe(false);
+      expect(isLocked(mockGetLockFilePath)).toBe(false);
     });
   });
 
@@ -286,7 +296,7 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(JSON.stringify(lockData));
 
-      const info = getLockInfo();
+      const info = getLockInfo(mockGetLockFilePath);
 
       expect(info).toEqual(lockData);
     });
@@ -294,7 +304,7 @@ describe('Process Lock', () => {
     it('should return null if lock does not exist', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      const info = getLockInfo();
+      const info = getLockInfo(mockGetLockFilePath);
 
       expect(info).toBeNull();
     });
@@ -303,7 +313,7 @@ describe('Process Lock', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue('invalid json');
 
-      const info = getLockInfo();
+      const info = getLockInfo(mockGetLockFilePath);
 
       expect(info).toBeNull();
     });
@@ -313,7 +323,7 @@ describe('Process Lock', () => {
     it('should remove lock file if it exists', () => {
       mockFs.existsSync.mockReturnValue(true);
 
-      forceReleaseLock();
+      forceReleaseLock(mockGetLockFilePath);
 
       expect(mockFs.unlinkSync).toHaveBeenCalledWith(mockLockPath);
     });
@@ -321,7 +331,7 @@ describe('Process Lock', () => {
     it('should not throw error if lock file does not exist', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      expect(() => forceReleaseLock()).not.toThrow();
+      expect(() => forceReleaseLock(mockGetLockFilePath)).not.toThrow();
       expect(mockFs.unlinkSync).not.toHaveBeenCalled();
     });
   });

@@ -55,7 +55,7 @@ export function buildMcpServer(
  * ```
  */
 export function buildClientConfig(
-  enabled: boolean = true,
+  enabled = true,
   overrides: Record<string, any> = {}
 ) {
   return {
@@ -78,8 +78,8 @@ export function buildClientConfig(
  * ```
  */
 export function buildPluginConfig(
-  marketplace: string = 'claude-code-workflows',
-  enabled: boolean = true,
+  marketplace = 'claude-code-workflows',
+  enabled = true,
   mcps: string[] = []
 ) {
   return {
@@ -370,7 +370,7 @@ export function buildBinaryDetectionResult(
  * ```
  */
 export function buildSyncResult(
-  success: boolean = true,
+  success = true,
   clientResults: Record<string, any> = {}
 ) {
   const clients = Object.values(clientResults);
@@ -410,7 +410,7 @@ export function buildSyncResult(
  * ```
  */
 export function buildClientSyncResult(
-  success: boolean = true,
+  success = true,
   synced: string[] = [],
   skipped: string[] = [],
   overrides: Record<string, any> = {}

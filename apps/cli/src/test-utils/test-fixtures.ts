@@ -185,8 +185,8 @@ export function createSkippedClient(
  * ```
  */
 export function createWSL2Report(
-  distroName: string = 'Ubuntu-22.04',
-  windowsUserProfile: string = '/mnt/c/Users/TestUser',
+  distroName = 'Ubuntu-22.04',
+  windowsUserProfile = '/mnt/c/Users/TestUser',
   clients: ClientDetection[] = []
 ): DiscoveryReport {
   return {

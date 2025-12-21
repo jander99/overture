@@ -56,9 +56,9 @@ export interface MockProcessExecutor {
  * ```
  */
 export function buildExecResult(
-  stdout: string = '',
-  stderr: string = '',
-  exitCode: number = 0
+  stdout = '',
+  stderr = '',
+  exitCode = 0
 ): ExecResult {
   return { stdout, stderr, exitCode };
 }
@@ -126,7 +126,7 @@ export function createMockProcess(
  * // Always returns: { stdout: 'Plugin installed\n', stderr: '', exitCode: 0 }
  * ```
  */
-export function createSuccessProcess(output: string = ''): MockProcessExecutor {
+export function createSuccessProcess(output = ''): MockProcessExecutor {
   return createMockProcess([buildExecResult(output)]);
 }
 
@@ -145,8 +145,8 @@ export function createSuccessProcess(output: string = ''): MockProcessExecutor {
  * ```
  */
 export function createFailureProcess(
-  error: string = 'Command failed',
-  exitCode: number = 1
+  error = 'Command failed',
+  exitCode = 1
 ): MockProcessExecutor {
   return createMockProcess([buildExecResult('', error, exitCode)]);
 }

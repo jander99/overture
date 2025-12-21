@@ -105,7 +105,7 @@ export class PluginInstaller {
   async installPlugin(
     name: string,
     marketplace: string,
-    options: InstallationOptions = {}
+    options: InstallationOptions = {},
   ): Promise<InstallationResult> {
     const dryRun = options.dryRun ?? false;
     const timeout = options.timeout ?? DEFAULT_INSTALLATION_TIMEOUT;
@@ -138,7 +138,8 @@ export class PluginInstaller {
             success: false,
             plugin: name,
             marketplace,
-            error: 'Claude CLI not found. Install from https://claude.com/claude-code',
+            error:
+              'Claude CLI not found. Install from https://claude.com/claude-code',
           };
         }
       }
@@ -164,7 +165,7 @@ export class PluginInstaller {
       const result = await Promise.race([
         this.process.exec('claude', installArgs),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Installation timeout')), timeout)
+          setTimeout(() => reject(new Error('Installation timeout')), timeout),
         ),
       ]);
 
@@ -190,7 +191,9 @@ export class PluginInstaller {
       }
     } catch (error) {
       // Handle errors (timeout, command execution failure, etc.)
-      this.output.error(`❌ Error installing ${name}@${marketplace}: ${(error as Error).message}`);
+      this.output.error(
+        `❌ Error installing ${name}@${marketplace}: ${(error as Error).message}`,
+      );
       return {
         success: false,
         plugin: name,
@@ -240,11 +243,15 @@ export class PluginInstaller {
 
       // Ignore errors (marketplace may already be added)
       if (result.exitCode !== 0) {
-        this.output.warn(`⚠️  Marketplace add returned non-zero exit: ${result.stderr}`);
+        this.output.warn(
+          `⚠️  Marketplace add returned non-zero exit: ${result.stderr}`,
+        );
       }
     } catch (error) {
       // Ignore errors - marketplace may already be added
-      this.output.warn(`⚠️  Failed to add marketplace ${fullPath}: ${(error as Error).message}`);
+      this.output.warn(
+        `⚠️  Failed to add marketplace ${fullPath}: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -296,7 +303,7 @@ export class PluginInstaller {
    */
   async installPlugins(
     plugins: Array<[string, string]>,
-    options: InstallationOptions = {}
+    options: InstallationOptions = {},
   ): Promise<InstallationResult[]> {
     const results: InstallationResult[] = [];
 
@@ -362,7 +369,7 @@ export class PluginInstaller {
     // - Local: starts with . or /
     const shortcutRegex = /^[a-z0-9][a-z0-9-_]*$/;
     const githubRegex = /^[a-z0-9-_]+\/[a-z0-9-_]+$/i;
-    const localRegex = /^[.\/]/;
+    const localRegex = /^[./]/;
 
     return (
       shortcutRegex.test(marketplace) ||

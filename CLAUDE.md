@@ -23,10 +23,11 @@ This project is in **active development** with architecture and documentation co
 - [x] **CLI Implementation** — Complete CLI with 9 commands (init, sync, validate, doctor, mcp, plugin, user, audit, backup)
 - [x] **Configuration Generator** — Generates .mcp.json and CLAUDE.md from config
 - [x] **Validation Engine** — Validates MCP availability and configuration
-- [x] **Test Suite** — Comprehensive Jest tests with 83%+ code coverage (911 tests passing)
+- [x] **Test Suite** — Comprehensive Vitest tests with 83%+ code coverage (384+ tests passing)
 - [ ] **E2E Tests** — End-to-end testing in apps/cli-e2e/
 
 Current workspace structure:
+
 ```
 overture/
 ├── apps/
@@ -47,6 +48,7 @@ overture/
 Overture solves a critical gap in the Claude Code ecosystem: **plugins and MCP servers have no awareness of each other.**
 
 **The Problem:**
+
 - Plugins (python-development, kubernetes-operations) provide agents/skills/commands
 - MCP servers (python-repl, kubectl, sqlite) provide tools and integrations
 - No mechanism connects them
@@ -55,6 +57,7 @@ Overture solves a critical gap in the Claude Code ecosystem: **plugins and MCP s
 - Configuration is duplicated across projects unnecessarily
 
 **The Solution:**
+
 - Project-level `.overture/config.yaml` declares plugins and MCP requirements
 - Overture generates `.mcp.json` with project-appropriate MCP servers
 - Overture generates `CLAUDE.md` with explicit MCP usage guidance for Claude
@@ -85,10 +88,12 @@ Claude Reads CLAUDE.md:
 ### Key Files
 
 **Input:**
+
 - `.overture/config.yaml` — Project configuration (plugins + MCPs + mappings)
 - `~/.config/overture.yml` — User global configuration (optional)
 
 **Output:**
+
 - `.mcp.json` — Project-scoped MCP servers
 - `CLAUDE.md` — Generated plugin↔MCP guidance (preserves custom sections)
 
@@ -96,7 +101,7 @@ Claude Reads CLAUDE.md:
 
 ```yaml
 # .overture/config.yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-api
@@ -126,7 +131,7 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 ## Required MCP Servers for Development
@@ -134,9 +139,11 @@ mcp:
 The following MCP servers are configured for working on Overture:
 
 ### sequentialthinking
+
 **When to use**: Complex, multi-step problem-solving and architectural planning.
 
 Use when:
+
 - Breaking down CLI implementation into components
 - Analyzing configuration schema design
 - Planning plugin registry structure
@@ -144,9 +151,11 @@ Use when:
 - Any task requiring systematic thinking
 
 ### filesystem
+
 **When to use**: All file operations.
 
 Use when:
+
 - Reading, writing, or editing configuration files
 - Creating directory structures
 - Reading example configurations in docs/
@@ -154,9 +163,11 @@ Use when:
 - Working with test fixtures
 
 ### context7
+
 **When to use**: Retrieving up-to-date library documentation.
 
 Use when:
+
 - Looking up Commander.js or yargs CLI API
 - Finding Zod schema validation patterns
 - Checking js-yaml parsing API
@@ -164,25 +175,30 @@ Use when:
 - Looking up Nx workspace patterns
 
 ### memory
+
 **When to use**: Maintaining project context across conversations.
 
 Use when:
+
 - Tracking architectural decisions
 - Recording plugin-to-MCP mappings
 - Maintaining knowledge about configuration schema
 - Preserving implementation patterns
 
 ### nx (nx-mcp)
+
 **Scope**: Project-scoped (managed by Overture)
 **When to use**: Monorepo management and build orchestration.
 
 Use when:
+
 - Running build, test, or lint tasks
 - Analyzing project dependencies
 - Understanding workspace structure
 - Looking up Nx configuration best practices
 
 **Important:** Always run tasks through `nx`:
+
 - `nx build @overture/cli` (not `npm run build`)
 - `nx test @overture/cli` (not direct test commands)
 - Use `nx_workspace` MCP tool for workspace structure
@@ -194,21 +210,25 @@ Use when:
 ## MCP Usage Guidance for This Project
 
 ### When implementing CLI commands
+
 - **Read config files** → Use `filesystem` MCP
 - **Validate command arguments** → Use `context7` for CLI library docs
 - **Generate .mcp.json** → Use `filesystem` to write files
 
 ### When working on plugin registry
+
 - **Look up plugin structures** → Use `context7` for wshobson/agents repo
 - **Store plugin mappings** → Use `filesystem` for registry files
 - **Track MCP recommendations** → Use `memory` for cross-conversation context
 
 ### When generating CLAUDE.md
+
 - **Read templates** → Use `filesystem`
 - **Merge custom sections** → Use `filesystem` to preserve edits
 - **Generate MCP guidance** → Use plugin registry + templates
 
 ### When implementing validation
+
 - **Check command existence** → Use `filesystem` for PATH checks
 - **Validate schema** → Use `context7` for Zod patterns
 - **Test MCP servers** → Execute validation commands
@@ -216,6 +236,7 @@ Use when:
 ## Development Workflow
 
 ### Starting a new feature
+
 1. Use `nx_workspace` to understand current structure
 2. Use `sequentialthinking` to break down the feature
 3. Create todo list with `TodoWrite`
@@ -223,6 +244,7 @@ Use when:
 5. Test with `nx test @overture/cli`
 
 ### Testing changes
+
 ```bash
 nx test @overture/cli          # Run unit tests
 nx build @overture/cli          # Build CLI
@@ -230,13 +252,16 @@ node dist/apps/cli/main.js init # Test CLI manually
 ```
 
 ### Committing changes
+
 Follow git commit message conventions from the project history:
+
 - `feat:` for new features
 - `fix:` for bug fixes
 - `docs:` for documentation changes
 - `refactor:` for code refactoring
 
 Include Claude Code attribution:
+
 ```
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -252,49 +277,58 @@ This project uses Nx for monorepo management and build orchestration. **Always u
 The Nx MCP server provides several tools for workspace management:
 
 #### `nx_workspace`
+
 **Purpose:** Get an overview of the entire workspace structure, projects, and dependency graph.
 
 **When to use:**
+
 - Starting work on the project (session start checklist)
 - Understanding project relationships
 - Checking for project graph errors
 - Getting a high-level view of the monorepo architecture
 
 **Example:**
+
 ```typescript
 // Get full workspace overview
-mcp__nx-mcp__nx_workspace()
+mcp__nx - mcp__nx_workspace();
 
 // Filter to specific projects
-mcp__nx-mcp__nx_workspace({ filter: "cli" })
-mcp__nx-mcp__nx_workspace({ filter: "tag:type:app" })
+mcp__nx - mcp__nx_workspace({ filter: 'cli' });
+mcp__nx - mcp__nx_workspace({ filter: 'tag:type:app' });
 ```
 
 #### `nx_project_details`
+
 **Purpose:** Get detailed configuration for a specific project including targets, dependencies, and options.
 
 **When to use:**
+
 - Understanding what tasks are available for a project
 - Checking project configuration before running commands
 - Analyzing build/test configurations
 - Understanding project dependencies
 
 **Example:**
+
 ```typescript
 // Get full project details
-mcp__nx-mcp__nx_project_details({ projectName: "@overture/cli" })
+mcp__nx - mcp__nx_project_details({ projectName: '@overture/cli' });
 
 // Get specific configuration path
-mcp__nx-mcp__nx_project_details({
-  projectName: "@overture/cli",
-  filter: "targets.build"
-})
+mcp__nx -
+  mcp__nx_project_details({
+    projectName: '@overture/cli',
+    filter: 'targets.build',
+  });
 ```
 
 #### `nx_docs`
+
 **Purpose:** Retrieve up-to-date Nx documentation relevant to your query.
 
 **When to use:**
+
 - Questions about Nx configuration
 - Learning about Nx features
 - Understanding best practices
@@ -302,15 +336,18 @@ mcp__nx-mcp__nx_project_details({
 - **ALWAYS use this instead of assuming Nx behavior**
 
 **Example:**
+
 ```typescript
-mcp__nx-mcp__nx_docs({ userQuery: "how to configure esbuild in nx" })
-mcp__nx-mcp__nx_docs({ userQuery: "nx migrate workflow" })
+mcp__nx - mcp__nx_docs({ userQuery: 'how to configure esbuild in nx' });
+mcp__nx - mcp__nx_docs({ userQuery: 'nx migrate workflow' });
 ```
 
 #### `nx_generators` & `nx_generator_schema`
+
 **Purpose:** List available generators and get their schemas.
 
 **When to use:**
+
 - Creating new projects, libraries, or components
 - Understanding generator options before scaffolding
 
@@ -365,6 +402,7 @@ git commit -m "build(deps): update Nx to vX.Y.Z"
 ```
 
 **Why `nx migrate` is required:**
+
 - Updates all Nx packages with correct version alignment
 - Pins Nx packages to exact versions (removes `^` prefix)
 - Generates code migrations for breaking changes
@@ -373,6 +411,7 @@ git commit -m "build(deps): update Nx to vX.Y.Z"
 ### Common Nx Workflows for This Project
 
 #### Running Tests
+
 ```bash
 # Run all tests for CLI
 nx test @overture/cli
@@ -388,6 +427,7 @@ nx affected --target=test
 ```
 
 #### Building
+
 ```bash
 # Build for development
 nx build @overture/cli
@@ -400,6 +440,7 @@ nx affected --target=build
 ```
 
 #### Analyzing Dependencies
+
 ```bash
 # See dependency graph
 nx graph
@@ -412,6 +453,7 @@ nx graph --affected
 ```
 
 #### Workspace Information
+
 ```bash
 # List all projects
 nx show projects
@@ -434,6 +476,7 @@ nx list
    - Build optimization
 
 3. **Validate with Nx commands** — Before committing:
+
    ```bash
    nx build @overture/cli  # Ensure build works
    nx test @overture/cli   # Ensure tests pass
@@ -441,6 +484,7 @@ nx list
    ```
 
 4. **Use affected commands** — For efficiency in CI/CD:
+
    ```bash
    nx affected --target=test --base=main
    nx affected --target=build --base=main
@@ -483,6 +527,8 @@ nx list
 
 **Claude: Validate this list before ANY git commit**
 
+- [ ] **Run linter** — Execute `nx run-many -t lint --all` to ensure no lint errors
+- [ ] **Run formatter** — Execute `npx prettier --write .` for consistent formatting
 - [ ] **Run tests** — Execute `nx test @overture/cli` to ensure all tests pass
 - [ ] **Run build** — Execute `nx build @overture/cli` to ensure clean build
 - [ ] **Review diff** — Check `git diff` to ensure commit is focused (< 500 lines ideal)
@@ -540,13 +586,13 @@ nx list
 ```typescript
 // Example memory update pattern
 mcp__memory__add_observations({
-  entityName: "Overture CLI Implementation",
+  entityName: 'Overture CLI Implementation',
   contents: [
-    "YYYY-MM-DD: Coverage: XX.X% (branches), YY.Y% (functions), ZZ.Z% (lines)",
-    "YYYY-MM-DD: Test count: NNN passing, 0 failing",
-    "YYYY-MM-DD: Build time: X.Xs, Bundle size: YYY KB"
-  ]
-})
+    'YYYY-MM-DD: Coverage: XX.X% (branches), YY.Y% (functions), ZZ.Z% (lines)',
+    'YYYY-MM-DD: Test count: NNN passing, 0 failing',
+    'YYYY-MM-DD: Build time: X.Xs, Bundle size: YYY KB',
+  ],
+});
 ```
 
 ### 🚨 Common Anti-Patterns to Avoid
@@ -554,6 +600,9 @@ mcp__memory__add_observations({
 **Claude: Actively warn when detecting these patterns**
 
 ❌ **Don't:**
+
+- Skip running linter before commits
+- Commit code with lint errors or warnings
 - Commit without running tests
 - Write implementation before tests (unless prototyping)
 - Guess at library APIs instead of using context7
@@ -567,6 +616,9 @@ mcp__memory__add_observations({
 - Skip `nx migrate` for Nx version updates
 
 ✅ **Do:**
+
+- Run linter and formatter before every commit
+- Fix all lint errors immediately (don't defer)
 - Follow TDD: test first, then implementation
 - Use context7 to look up correct library usage
 - Create focused, single-purpose commits
@@ -606,7 +658,7 @@ See docs/related-projects.md for detailed analysis.
 ## Overture Project Configuration
 
 **Project:** overture
- (typescript-tooling)
+(typescript-tooling)
 
 Configuration orchestrator and documentation generator for AI-assisted development ecosystem
 
@@ -629,8 +681,6 @@ No plugin→MCP mappings defined.
 
 ---
 
-*This section is managed by Overture. To preserve custom content, add it above or below the Overture markers.*
-
+_This section is managed by Overture. To preserve custom content, add it above or below the Overture markers._
 
 <!-- overture configuration end-->
-

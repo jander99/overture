@@ -394,11 +394,12 @@ export class PathResolver {
     // or $XDG_CONFIG_HOME/.copilot/mcp-config.json if XDG_CONFIG_HOME is set
     switch (targetPlatform) {
       case 'darwin':
-      case 'linux':
+      case 'linux': {
         // On Linux/macOS, when XDG_CONFIG_HOME is not set, use ~/.copilot directly
         // When XDG_CONFIG_HOME is set, use $XDG_CONFIG_HOME/.copilot
         const configBase = this.environment.env.XDG_CONFIG_HOME || homeDir;
         return this.joinPaths(configBase, '.copilot', 'mcp-config.json');
+      }
       case 'win32':
         // On Windows, always use %USERPROFILE%\.copilot
         return this.joinPaths(homeDir, '.copilot', 'mcp-config.json');

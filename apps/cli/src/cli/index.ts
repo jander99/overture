@@ -11,6 +11,12 @@ import { createBackupCommand } from './commands/backup';
 import { createDoctorCommand } from './commands/doctor';
 
 /**
+ * CLI version - synchronized with package.json
+ * This should be updated when releasing new versions.
+ */
+const CLI_VERSION = '0.3.0';
+
+/**
  * Creates and configures the Overture CLI program.
  *
  * The CLI provides commands for managing Claude Code plugins and MCP servers:
@@ -32,7 +38,7 @@ export function createProgram(deps: AppDependencies): Command {
   program
     .name('overture')
     .description('Orchestration layer for Claude Code plugins and MCP servers')
-    .version('1.0.0');
+    .version(CLI_VERSION);
 
   // Register all commands with dependencies
   program.addCommand(createInitCommand(deps));
