@@ -8,23 +8,40 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createBackupCommand } from './backup';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
-import { createMockBackupMetadata, createMockBackups } from '../../test-utils/test-fixtures';
+import {
+  createMockBackupMetadata,
+  createMockBackups,
+} from '../../test-utils/test-fixtures';
 import type { AppDependencies } from '../../composition-root';
 import type { BackupMetadata } from '@overture/sync-core';
 import { UserCancelledError } from '@overture/utils';
 
 // Mock chalk to avoid ANSI codes in test assertions
-vi.mock('chalk', () => ({
-  default: {
-    bold: { cyan: (s: string) => s },
-    gray: (s: string) => s,
-    dim: (s: string) => s,
-    cyan: (s: string) => s,
-    yellow: (s: string) => s,
-  },
-}));
+vi.mock('chalk', () => {
+  const identity = (s: string) => s;
+  const bold = Object.assign(identity, {
+    cyan: identity,
+    red: identity,
+    blue: identity,
+  });
+  return {
+    default: {
+      bold,
+      gray: identity,
+      dim: identity,
+      cyan: identity,
+      yellow: identity,
+      red: identity,
+      green: identity,
+      blue: identity,
+      white: identity,
+      magenta: identity,
+    },
+  };
+});
 
-// Mock Prompts and ErrorHandler modules
+// Mock Prompts and ErrorHandler modules - ErrorHandler.handleCommandError calls process.exit
+// which is mocked in beforeEach to throw an error for testing
 vi.mock('@overture/utils', async () => {
   const actual = await vi.importActual('@overture/utils');
   return {
@@ -32,18 +49,7 @@ vi.mock('@overture/utils', async () => {
     Prompts: {
       confirm: vi.fn(),
     },
-    ErrorHandler: {
-      handleCommandError: vi.fn((error, context, verbose) => {
-        // Re-throw errors during tests so we can see what's failing
-        if (error && typeof error === 'object' && 'exitCode' in error) {
-          // Don't throw for expected errors with exitCode
-          return;
-        }
-        if (error instanceof Error) {
-          throw error;
-        }
-      }),
-    },
+    // Use actual ErrorHandler - it will call process.exit which is mocked in tests
   };
 });
 
@@ -101,14 +107,24 @@ describe('backup command', () => {
     });
 
     it('should filter backups by client', async () => {
-      const backups: BackupMetadata[] = [createMockBackupMetadata({ client: 'claude-code' })];
+      const backups: BackupMetadata[] = [
+        createMockBackupMetadata({ client: 'claude-code' }),
+      ];
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue(backups);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
+      await command.parseAsync([
+        'node',
+        'backup',
+        'list',
+        '--client',
+        'claude-code',
+      ]);
 
-      expect(deps.backupService.listBackups).toHaveBeenCalledWith('claude-code');
+      expect(deps.backupService.listBackups).toHaveBeenCalledWith(
+        'claude-code',
+      );
       expect(deps.output.info).toHaveBeenCalledWith('Backups for claude-code:');
     });
 
@@ -125,9 +141,17 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'backup', 'list', '--client', 'claude-code']);
+      await command.parseAsync([
+        'node',
+        'backup',
+        'list',
+        '--client',
+        'claude-code',
+      ]);
 
-      expect(deps.output.warn).toHaveBeenCalledWith('No backups found for client: claude-code');
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        'No backups found for client: claude-code',
+      );
     });
   });
 
@@ -144,8 +168,10 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
+        mockBackup,
+      );
+      vi.mocked(deps.restoreService.restoreLatest).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.claude.json',
@@ -161,9 +187,13 @@ describe('backup command', () => {
         '--no-confirm',
       ]);
 
-      expect(deps.backupService.getLatestBackup).toHaveBeenCalledWith('claude-code');
-      expect(deps.restoreService.restoreLatestBackup).toHaveBeenCalled();
-      expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+      expect(deps.backupService.getLatestBackup).toHaveBeenCalledWith(
+        'claude-code',
+      );
+      expect(deps.restoreService.restoreLatest).toHaveBeenCalled();
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Backup restored successfully',
+      );
     });
 
     it('should restore specific backup by timestamp', async () => {
@@ -177,7 +207,7 @@ describe('backup command', () => {
       } as any);
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue([mockBackup]);
-      vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
+      vi.mocked(deps.restoreService.restore).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.claude.json',
@@ -193,13 +223,17 @@ describe('backup command', () => {
         '--no-confirm',
       ]);
 
-      expect(deps.backupService.listBackups).toHaveBeenCalledWith('claude-code');
-      expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+      expect(deps.backupService.listBackups).toHaveBeenCalledWith(
+        'claude-code',
+      );
+      expect(deps.restoreService.restore).toHaveBeenCalledWith(
         'claude-code',
         '2025-01-11T14-30-45-123Z',
-        '/home/user/.claude.json'
+        '/home/user/.claude.json',
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Backup restored successfully',
+      );
     });
 
     it('should display backup details before restore', async () => {
@@ -212,8 +246,10 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
+        mockBackup,
+      );
+      vi.mocked(deps.restoreService.restoreLatest).mockResolvedValue({
         success: true,
         backupPath: mockBackup.path,
         restoredPath: '/home/user/.claude.json',
@@ -230,26 +266,39 @@ describe('backup command', () => {
       ]);
 
       expect(deps.output.info).toHaveBeenCalledWith('Backup details:');
-      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Client: claude-code'));
-      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Size:'));
-      expect(deps.output.info).toHaveBeenCalledWith(expect.stringContaining('Age:'));
+      expect(deps.output.info).toHaveBeenCalledWith(
+        expect.stringContaining('Client: claude-code'),
+      );
+      expect(deps.output.info).toHaveBeenCalledWith(
+        expect.stringContaining('Size:'),
+      );
+      expect(deps.output.info).toHaveBeenCalledWith(
+        expect.stringContaining('Age:'),
+      );
     });
 
     it('should error on unknown client', async () => {
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
-      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
-
-      const command = createBackupCommand(deps);
-      await command.parseAsync([
-        'node',
-        'backup',
-        'restore',
-        'unknown-client',
-        '--latest',
-        '--no-confirm',
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(undefined);
+      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue([
+        'claude-code',
+        'copilot-cli',
       ]);
 
-      expect(deps.output.error).toHaveBeenCalledWith('Unknown client: unknown-client');
+      const command = createBackupCommand(deps);
+      await expect(
+        command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'unknown-client',
+          '--latest',
+          '--no-confirm',
+        ]),
+      ).rejects.toThrow('process.exit:2');
+
+      expect(deps.output.error).toHaveBeenCalledWith(
+        'Unknown client: unknown-client',
+      );
       expect(deps.output.info).toHaveBeenCalledWith('Available clients:');
     });
 
@@ -266,16 +315,20 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(null);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync([
-        'node',
-        'backup',
-        'restore',
-        'claude-code',
-        '--latest',
-        '--no-confirm',
-      ]);
+      await expect(
+        command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          '--latest',
+          '--no-confirm',
+        ]),
+      ).rejects.toThrow('process.exit:2');
 
-      expect(deps.output.error).toHaveBeenCalledWith('No backups found for claude-code');
+      expect(deps.output.error).toHaveBeenCalledWith(
+        'No backups found for claude-code',
+      );
     });
 
     it('should error when specific backup not found', async () => {
@@ -291,17 +344,19 @@ describe('backup command', () => {
       vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync([
-        'node',
-        'backup',
-        'restore',
-        'claude-code',
-        '2025-01-11T14-30-45-123Z',
-        '--no-confirm',
-      ]);
+      await expect(
+        command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          '2025-01-11T14-30-45-123Z',
+          '--no-confirm',
+        ]),
+      ).rejects.toThrow('process.exit:2');
 
       expect(deps.output.error).toHaveBeenCalledWith(
-        'Backup not found: claude-code at 2025-01-11T14-30-45-123Z'
+        'Backup not found: claude-code at 2025-01-11T14-30-45-123Z',
       );
     });
 
@@ -315,23 +370,28 @@ describe('backup command', () => {
         validateTransport: vi.fn(),
       } as any);
 
-      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(mockBackup);
-      vi.mocked(deps.restoreService.restoreLatestBackup).mockResolvedValue({
+      vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
+        mockBackup,
+      );
+      vi.mocked(deps.restoreService.restoreLatest).mockResolvedValue({
         success: false,
+        backupPath: mockBackup.path,
+        restoredPath: '/home/user/.claude.json',
         error: 'Permission denied',
       });
 
       const command = createBackupCommand(deps);
-      await expect(command.parseAsync([
-        'node',
-        'backup',
-        'restore',
-        'claude-code',
-        '--latest',
-        '--no-confirm',
-      ])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith('Restore failed: Permission denied');
+      // ErrorHandler logs errors via Logger, not deps.output
+      await expect(
+        command.parseAsync([
+          'node',
+          'backup',
+          'restore',
+          'claude-code',
+          '--latest',
+          '--no-confirm',
+        ]),
+      ).rejects.toThrow('process.exit:1');
     });
 
     describe('edge cases - timestamp formats', () => {
@@ -351,19 +411,21 @@ describe('backup command', () => {
 
         const command = createBackupCommand(deps);
 
-        // Act
-        await command.parseAsync([
-          'node',
-          'backup',
-          'restore',
-          'claude-code',
-          'invalid-timestamp',
-          '--no-confirm',
-        ]);
+        // Act - throws because backup with invalid timestamp won't be found
+        await expect(
+          command.parseAsync([
+            'node',
+            'backup',
+            'restore',
+            'claude-code',
+            'invalid-timestamp',
+            '--no-confirm',
+          ]),
+        ).rejects.toThrow('process.exit:2');
 
         // Assert
         expect(deps.output.error).toHaveBeenCalledWith(
-          'Backup not found: claude-code at invalid-timestamp'
+          'Backup not found: claude-code at invalid-timestamp',
         );
       });
 
@@ -374,8 +436,10 @@ describe('backup command', () => {
           timestamp: '2025-01-11T14:30:45.123+00:00',
         });
 
-        vi.mocked(deps.backupService.listBackups).mockResolvedValue([invalidBackup]);
-        vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
+        vi.mocked(deps.backupService.listBackups).mockResolvedValue([
+          invalidBackup,
+        ]);
+        vi.mocked(deps.restoreService.restore).mockResolvedValue({
           success: true,
           backupPath: invalidBackup.path,
           restoredPath: '/home/user/.claude.json',
@@ -394,10 +458,10 @@ describe('backup command', () => {
         ]);
 
         // Assert
-        expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+        expect(deps.restoreService.restore).toHaveBeenCalledWith(
           'claude-code',
           '2025-01-11T14:30:45.123+00:00',
-          '/home/user/.claude.json'
+          '/home/user/.claude.json',
         );
       });
 
@@ -408,8 +472,10 @@ describe('backup command', () => {
           timestamp: '1969-12-31T23-59-59-999Z',
         });
 
-        vi.mocked(deps.backupService.listBackups).mockResolvedValue([oldBackup]);
-        vi.mocked(deps.restoreService.restoreBackup).mockResolvedValue({
+        vi.mocked(deps.backupService.listBackups).mockResolvedValue([
+          oldBackup,
+        ]);
+        vi.mocked(deps.restoreService.restore).mockResolvedValue({
           success: true,
           backupPath: oldBackup.path,
           restoredPath: '/home/user/.claude.json',
@@ -428,19 +494,24 @@ describe('backup command', () => {
         ]);
 
         // Assert
-        expect(deps.restoreService.restoreBackup).toHaveBeenCalledWith(
+        expect(deps.restoreService.restore).toHaveBeenCalledWith(
           'claude-code',
           '1969-12-31T23-59-59-999Z',
-          '/home/user/.claude.json'
+          '/home/user/.claude.json',
         );
-        expect(deps.output.success).toHaveBeenCalledWith('Backup restored successfully');
+        expect(deps.output.success).toHaveBeenCalledWith(
+          'Backup restored successfully',
+        );
       });
     });
   });
 
   describe('backup cleanup', () => {
     beforeEach(() => {
-      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue(['claude-code', 'claude-desktop']);
+      vi.mocked(deps.adapterRegistry.getAllNames).mockReturnValue([
+        'claude-code',
+        'claude-desktop',
+      ]);
     });
 
     it('should cleanup all clients by default', async () => {
@@ -449,19 +520,46 @@ describe('backup command', () => {
           { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
           { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
-        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }])
         .mockResolvedValueOnce([
-          { client: 'claude-desktop', timestamp: '1', size: 150, path: '/path3' },
-          { client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' },
+          { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
-        .mockResolvedValueOnce([{ client: 'claude-desktop', timestamp: '2', size: 150, path: '/path4' }]);
+        .mockResolvedValueOnce([
+          {
+            client: 'claude-desktop',
+            timestamp: '1',
+            size: 150,
+            path: '/path3',
+          },
+          {
+            client: 'claude-desktop',
+            timestamp: '2',
+            size: 150,
+            path: '/path4',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            client: 'claude-desktop',
+            timestamp: '2',
+            size: 150,
+            path: '/path4',
+          },
+        ]);
 
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup']);
 
-      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
-      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-desktop', 10);
-      expect(deps.output.success).toHaveBeenCalledWith('Cleaned up 2 backup(s)');
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith(
+        'claude-code',
+        10,
+      );
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith(
+        'claude-desktop',
+        10,
+      );
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Cleaned up 2 backup(s)',
+      );
     });
 
     it('should cleanup specific client with --client flag', async () => {
@@ -470,18 +568,31 @@ describe('backup command', () => {
           { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
           { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
         ])
-        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '2', size: 100, path: '/path2' }]);
+        .mockResolvedValueOnce([
+          { client: 'claude-code', timestamp: '2', size: 100, path: '/path2' },
+        ]);
 
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'backup', 'cleanup', '--client', 'claude-code']);
+      await command.parseAsync([
+        'node',
+        'backup',
+        'cleanup',
+        '--client',
+        'claude-code',
+      ]);
 
-      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 10);
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith(
+        'claude-code',
+        10,
+      );
       expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledTimes(1);
     });
 
     it('should use custom keep count with --keep flag', async () => {
       vi.mocked(deps.backupService.listBackups)
-        .mockResolvedValueOnce([{ client: 'claude-code', timestamp: '1', size: 100, path: '/path1' }])
+        .mockResolvedValueOnce([
+          { client: 'claude-code', timestamp: '1', size: 100, path: '/path1' },
+        ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
@@ -489,14 +600,21 @@ describe('backup command', () => {
       const command = createBackupCommand(deps);
       await command.parseAsync(['node', 'backup', 'cleanup', '--keep', '5']);
 
-      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith('claude-code', 5);
+      expect(deps.backupService.cleanupOldBackups).toHaveBeenCalledWith(
+        'claude-code',
+        5,
+      );
     });
 
     it('should error on invalid keep count', async () => {
       const command = createBackupCommand(deps);
-      await command.parseAsync(['node', 'backup', 'cleanup', '--keep', 'invalid']);
+      await expect(
+        command.parseAsync(['node', 'backup', 'cleanup', '--keep', 'invalid']),
+      ).rejects.toThrow('process.exit:2');
 
-      expect(deps.output.error).toHaveBeenCalledWith('Keep count must be a positive integer');
+      expect(deps.output.error).toHaveBeenCalledWith(
+        'Keep count must be a positive integer',
+      );
     });
 
     it('should handle no backups to cleanup', async () => {

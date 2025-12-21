@@ -15,6 +15,7 @@
 import { Command } from 'commander';
 import * as os from 'os';
 import type { Platform, ClientName } from '@overture/config-types';
+import { SUPPORTED_CLIENTS } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
 import chalk from 'chalk';
 import type { AppDependencies } from '../../composition-root';
@@ -30,9 +31,9 @@ function getCurrentPlatform(): Platform {
 }
 
 /**
- * All client names
+ * All supported client names (imported from centralized constants)
  */
-const ALL_CLIENTS: ClientName[] = ['claude-code', 'copilot-cli', 'opencode'];
+const ALL_CLIENTS: readonly ClientName[] = SUPPORTED_CLIENTS;
 
 /**
  * Validate if a config file exists and contains valid JSON

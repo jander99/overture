@@ -71,7 +71,9 @@ describe('user command', () => {
 
       const initCommand = subcommands.find((cmd) => cmd.name() === 'init');
       expect(initCommand).toBeDefined();
-      expect(initCommand?.description()).toContain('Initialize user global configuration');
+      expect(initCommand?.description()).toContain(
+        'Initialize user global configuration',
+      );
     });
 
     it('should have show subcommand', () => {
@@ -80,14 +82,20 @@ describe('user command', () => {
 
       const showCommand = subcommands.find((cmd) => cmd.name() === 'show');
       expect(showCommand).toBeDefined();
-      expect(showCommand?.description()).toContain('Display user global configuration');
+      expect(showCommand?.description()).toContain(
+        'Display user global configuration',
+      );
     });
   });
 
   describe('user init subcommand', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
-      vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue('/home/user/.config');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
+      vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue(
+        '/home/user/.config',
+      );
       vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
@@ -95,7 +103,10 @@ describe('user command', () => {
 
     it('should create user configuration with selected MCPs', async () => {
       // Arrange
-      vi.mocked(Prompts.multiSelect).mockResolvedValue(['filesystem', 'memory']);
+      vi.mocked(Prompts.multiSelect).mockResolvedValue([
+        'filesystem',
+        'memory',
+      ]);
       vi.mocked(Prompts.confirm).mockResolvedValue(true);
 
       const command = createUserCommand(deps);
@@ -107,14 +118,14 @@ describe('user command', () => {
       expect(Prompts.multiSelect).toHaveBeenCalled();
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         '/home/user/.config/overture.yml',
-        expect.stringContaining('filesystem')
+        expect.stringContaining('filesystem'),
       );
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         '/home/user/.config/overture.yml',
-        expect.stringContaining('memory')
+        expect.stringContaining('memory'),
       );
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('User configuration created')
+        expect.stringContaining('User configuration created'),
       );
     });
 
@@ -124,12 +135,11 @@ describe('user command', () => {
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:1');
+      // Act & Assert - ErrorHandler logs via Logger, not deps.output
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:1');
 
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('already exists')
-      );
       expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
     });
 
@@ -147,27 +157,25 @@ describe('user command', () => {
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalled();
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('User configuration created')
+        expect.stringContaining('User configuration created'),
       );
     });
 
     it('should handle no MCPs selected and prompt for confirmation', async () => {
       // Arrange
       vi.mocked(Prompts.multiSelect).mockResolvedValue([]);
-      vi.mocked(Prompts.confirm)
-        .mockResolvedValueOnce(false); // Continue without MCPs? No
+      vi.mocked(Prompts.confirm).mockResolvedValueOnce(false); // Continue without MCPs? No
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:0');
+      // Act & Assert - UserCancelledError uses exit code 5
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:5');
 
       expect(Prompts.confirm).toHaveBeenCalledWith(
         expect.stringContaining('Continue without any MCP servers'),
-        false
-      );
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Configuration cancelled')
+        false,
       );
     });
 
@@ -195,12 +203,11 @@ describe('user command', () => {
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:0');
+      // Act & Assert - UserCancelledError uses exit code 5
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:5');
 
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Configuration cancelled')
-      );
       expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
     });
 
@@ -217,7 +224,9 @@ describe('user command', () => {
       await command.parseAsync(['node', 'user', 'init']);
 
       // Assert
-      expect(deps.filesystem.createDirectory).toHaveBeenCalledWith('/home/user/.config');
+      expect(deps.filesystem.createDirectory).toHaveBeenCalledWith(
+        '/home/user/.config',
+      );
     });
 
     it('should handle validation errors gracefully', async () => {
@@ -225,14 +234,16 @@ describe('user command', () => {
       // We'll test validation by providing invalid data through the prompt
       // Since we can't easily make validation fail with current mocks,
       // we'll test error handling path indirectly
-      vi.mocked(Prompts.multiSelect).mockRejectedValue(new Error('Prompt failed'));
+      vi.mocked(Prompts.multiSelect).mockRejectedValue(
+        new Error('Prompt failed'),
+      );
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalled();
+      // Act & Assert - ErrorHandler logs via Logger, not deps.output
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:1');
     });
   });
 
@@ -259,7 +270,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -270,10 +283,10 @@ describe('user command', () => {
       expect(deps.configLoader.hasUserConfig).toHaveBeenCalled();
       expect(deps.configLoader.loadUserConfig).toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('User Global Configuration')
+        expect.stringContaining('User Global Configuration'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('filesystem')
+        expect.stringContaining('filesystem'),
       );
     });
 
@@ -292,7 +305,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -301,29 +316,27 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"memory"')
+        expect.stringContaining('"memory"'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"version"')
+        expect.stringContaining('"version"'),
       );
     });
 
     it('should handle missing user configuration', async () => {
       // Arrange
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(false);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'show'])).rejects.toThrow('process.exit:2');
-
-      expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('User configuration not found')
-      );
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('overture user init')
-      );
+      // Act & Assert - ErrorHandler logs via Logger, not deps.output
+      // Exit code 2 is used for config errors
+      await expect(
+        command.parseAsync(['node', 'user', 'show']),
+      ).rejects.toThrow('process.exit:2');
     });
 
     it('should handle invalid format option', async () => {
@@ -332,32 +345,28 @@ describe('user command', () => {
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'show', '--format', 'xml'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid format')
-      );
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Valid formats: yaml, json')
-      );
+      // Act & Assert - ErrorHandler logs via Logger, not deps.output
+      await expect(
+        command.parseAsync(['node', 'user', 'show', '--format', 'xml']),
+      ).rejects.toThrow('process.exit:1');
     });
 
     it('should handle config loading errors', async () => {
       // Arrange
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockRejectedValue(
-        new ConfigError('Failed to parse YAML', '/home/user/.config/overture.yml')
+        new ConfigError(
+          'Failed to parse YAML',
+          '/home/user/.config/overture.yml',
+        ),
       );
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'show'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to load user configuration')
-      );
+      // Act & Assert - ErrorHandler uses exit code 2 for ConfigError
+      await expect(
+        command.parseAsync(['node', 'user', 'show']),
+      ).rejects.toThrow('process.exit:2');
     });
 
     it('should display client configuration section', async () => {
@@ -373,7 +382,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -382,16 +393,16 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Clients')
+        expect.stringContaining('Clients'),
       );
       // Client names are logged with two arguments: name and status
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('claude-code:'),
-        expect.any(String)
+        expect.any(String),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('vscode:'),
-        expect.any(String)
+        expect.any(String),
       );
     });
 
@@ -409,7 +420,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -418,10 +431,10 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Sync Options')
+        expect.stringContaining('Sync Options'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('backup')
+        expect.stringContaining('backup'),
       );
     });
 
@@ -434,7 +447,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -443,7 +458,7 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('No MCP servers configured')
+        expect.stringContaining('No MCP servers configured'),
       );
     });
 
@@ -464,7 +479,9 @@ describe('user command', () => {
 
       vi.mocked(deps.configLoader.hasUserConfig).mockReturnValue(true);
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
 
       const command = createUserCommand(deps);
 
@@ -473,15 +490,19 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('2 MCP servers, 3 clients')
+        expect.stringContaining('2 MCP servers, 3 clients'),
       );
     });
   });
 
   describe('edge cases - user interaction', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
-      vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue('/home/user/.config');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
+      vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue(
+        '/home/user/.config',
+      );
       vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
@@ -495,7 +516,9 @@ describe('user command', () => {
       const command = createUserCommand(deps);
 
       // Act & Assert - exits with code 1 due to error
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:1');
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:1');
 
       expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
     });
@@ -521,7 +544,8 @@ describe('user command', () => {
 
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalled();
-      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock
+        .calls[0][1];
       expect(writtenContent).toContain('filesystem');
       expect(writtenContent).toContain('memory');
       expect(writtenContent).toContain('sequentialthinking');
@@ -540,15 +564,14 @@ describe('user command', () => {
 
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'init'])).rejects.toThrow('process.exit:0');
+      // Act & Assert - UserCancelledError uses exit code 5
+      await expect(
+        command.parseAsync(['node', 'user', 'init']),
+      ).rejects.toThrow('process.exit:5');
 
       expect(Prompts.confirm).toHaveBeenCalledWith(
         expect.stringContaining('Continue without any MCP servers'),
-        false
-      );
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Configuration cancelled')
+        false,
       );
       expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
     });
@@ -567,7 +590,9 @@ describe('user command', () => {
           },
         },
       });
-      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue('/home/user/.config/overture.yml');
+      vi.mocked(deps.pathResolver.getUserConfigPath).mockReturnValue(
+        '/home/user/.config/overture.yml',
+      );
     });
 
     it('should handle uppercase format option (JSON)', async () => {
@@ -578,10 +603,10 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"filesystem"')
+        expect.stringContaining('"filesystem"'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"version"')
+        expect.stringContaining('"version"'),
       );
     });
 
@@ -593,10 +618,10 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('User Global Configuration')
+        expect.stringContaining('User Global Configuration'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('filesystem')
+        expect.stringContaining('filesystem'),
       );
     });
 
@@ -608,7 +633,7 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"filesystem"')
+        expect.stringContaining('"filesystem"'),
       );
     });
 
@@ -620,10 +645,10 @@ describe('user command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('User Global Configuration')
+        expect.stringContaining('User Global Configuration'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('filesystem')
+        expect.stringContaining('filesystem'),
       );
     });
 
@@ -631,22 +656,19 @@ describe('user command', () => {
       const command = createUserCommand(deps);
 
       // Act & Assert - whitespace is not trimmed, so this is invalid
-      await expect(command.parseAsync(['node', 'user', 'show', '--format', ' JSON '])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid format')
-      );
+      // ErrorHandler displays error via Logger, not output.error
+      await expect(
+        command.parseAsync(['node', 'user', 'show', '--format', ' JSON ']),
+      ).rejects.toThrow('process.exit:1');
     });
 
     it('should error on empty format string', async () => {
       const command = createUserCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'user', 'show', '--format', ''])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid format')
-      );
+      // Act & Assert - ErrorHandler displays error via Logger, not output.error
+      await expect(
+        command.parseAsync(['node', 'user', 'show', '--format', '']),
+      ).rejects.toThrow('process.exit:1');
     });
   });
 });

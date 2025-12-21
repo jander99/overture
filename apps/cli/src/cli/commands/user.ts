@@ -1,31 +1,69 @@
 import * as yaml from 'js-yaml';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { Prompts, Logger } from '@overture/utils';
+import { Prompts, Logger, ErrorHandler } from '@overture/utils';
 import { OvertureConfigSchema } from '@overture/config-schema';
-import { ConfigError } from '@overture/errors';
+import { UserCancelledError } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
-import { validateEnvVarReferences, getFixSuggestion } from '../../lib/validators/env-var-validator';
+import {
+  validateEnvVarReferences,
+  getFixSuggestion,
+} from '../../lib/validators/env-var-validator';
 
 /**
  * Common MCP servers available for global configuration
  */
-const COMMON_MCP_SERVERS: Array<{ name: string; value: string; checked?: boolean }> = [
-  { name: 'filesystem - File operations and directory management', value: 'filesystem', checked: true },
-  { name: 'memory - Cross-conversation knowledge graph', value: 'memory', checked: true },
-  { name: 'sequentialthinking - Complex problem-solving', value: 'sequentialthinking', checked: true },
-  { name: 'context7 - Up-to-date library documentation', value: 'context7', checked: true },
-  { name: 'nx - Monorepo management and build orchestration', value: 'nx', checked: false },
+const COMMON_MCP_SERVERS: Array<{
+  name: string;
+  value: string;
+  checked?: boolean;
+}> = [
+  {
+    name: 'filesystem - File operations and directory management',
+    value: 'filesystem',
+    checked: true,
+  },
+  {
+    name: 'memory - Cross-conversation knowledge graph',
+    value: 'memory',
+    checked: true,
+  },
+  {
+    name: 'sequentialthinking - Complex problem-solving',
+    value: 'sequentialthinking',
+    checked: true,
+  },
+  {
+    name: 'context7 - Up-to-date library documentation',
+    value: 'context7',
+    checked: true,
+  },
+  {
+    name: 'nx - Monorepo management and build orchestration',
+    value: 'nx',
+    checked: false,
+  },
   { name: 'github - GitHub API integration', value: 'github', checked: false },
-  { name: 'sqlite - SQLite database operations', value: 'sqlite', checked: false },
-  { name: 'postgres - PostgreSQL database operations', value: 'postgres', checked: false },
+  {
+    name: 'sqlite - SQLite database operations',
+    value: 'sqlite',
+    checked: false,
+  },
+  {
+    name: 'postgres - PostgreSQL database operations',
+    value: 'postgres',
+    checked: false,
+  },
 ];
 
 /**
  * MCP server configurations with sensible defaults
  */
-const MCP_SERVER_DEFAULTS: Record<string, Partial<OvertureConfig['mcp'][string]>> = {
+const MCP_SERVER_DEFAULTS: Record<
+  string,
+  Partial<OvertureConfig['mcp'][string]>
+> = {
   filesystem: {
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-filesystem', '/home'],
@@ -99,7 +137,9 @@ export function createUserCommand(deps: AppDependencies): Command {
   // user init subcommand
   command
     .command('init')
-    .description('Initialize user global configuration at ~/.config/overture.yml')
+    .description(
+      'Initialize user global configuration at ~/.config/overture.yml',
+    )
     .option('-f, --force', 'Overwrite existing configuration')
     .action(async (options) => {
       try {
@@ -108,10 +148,12 @@ export function createUserCommand(deps: AppDependencies): Command {
 
         // Check if config already exists
         if (filesystem.fileExists(userConfigPath) && !options.force) {
-          output.error('User configuration already exists');
-          output.info(`Location: ${userConfigPath}`);
-          output.info('Use --force to overwrite or edit the file directly');
-          process.exit(1);
+          throw Object.assign(
+            new Error(
+              `User configuration already exists at ${userConfigPath}. Use --force to overwrite or edit the file directly`,
+            ),
+            { exitCode: 1 },
+          );
         }
 
         output.info('Initializing user global configuration...');
@@ -120,19 +162,18 @@ export function createUserCommand(deps: AppDependencies): Command {
         // Prompt for MCP servers to enable
         const selectedMcps = await Prompts.multiSelect(
           'Select MCP servers to enable globally:',
-          COMMON_MCP_SERVERS
+          COMMON_MCP_SERVERS,
         );
 
         if (selectedMcps.length === 0) {
           output.warn('No MCP servers selected');
           const shouldContinue = await Prompts.confirm(
             'Continue without any MCP servers?',
-            false
+            false,
           );
 
           if (!shouldContinue) {
-            output.info('Configuration cancelled');
-            process.exit(0);
+            throw new UserCancelledError('Configuration cancelled');
           }
         }
 
@@ -175,9 +216,12 @@ export function createUserCommand(deps: AppDependencies): Command {
         // Validate configuration
         const validationResult = OvertureConfigSchema.safeParse(userConfig);
         if (!validationResult.success) {
-          output.error('Configuration validation failed');
-          output.error(validationResult.error.message);
-          process.exit(1);
+          throw Object.assign(
+            new Error(
+              `Configuration validation failed: ${validationResult.error.message}`,
+            ),
+            { exitCode: 3 },
+          );
         }
 
         // Validate environment variable security (detect hardcoded credentials)
@@ -185,7 +229,9 @@ export function createUserCommand(deps: AppDependencies): Command {
         if (!envVarValidation.valid) {
           output.nl();
           output.warn('⚠️  Environment variable security warnings:');
-          envVarValidation.issues.forEach((issue) => output.warn(`  - ${issue}`));
+          envVarValidation.issues.forEach((issue) =>
+            output.warn(`  - ${issue}`),
+          );
           output.info(getFixSuggestion(envVarValidation.issues));
           output.nl();
         }
@@ -204,12 +250,11 @@ export function createUserCommand(deps: AppDependencies): Command {
 
         const shouldProceed = await Prompts.confirm(
           'Create user configuration?',
-          true
+          true,
         );
 
         if (!shouldProceed) {
-          output.info('Configuration cancelled');
-          process.exit(0);
+          throw new UserCancelledError('Configuration cancelled');
         }
 
         // Create config directory if it doesn't exist
@@ -232,16 +277,16 @@ export function createUserCommand(deps: AppDependencies): Command {
         output.nl();
         output.info('Next steps:');
         output.info('  1. Review and customize the configuration file');
-        output.info('  2. Set any required environment variables (e.g., GITHUB_TOKEN)');
-        output.info('  3. Run `overture sync` to apply configuration to clients');
+        output.info(
+          '  2. Set any required environment variables (e.g., GITHUB_TOKEN)',
+        );
+        output.info(
+          '  3. Run `overture sync` to apply configuration to clients',
+        );
       } catch (error) {
-        // Don't handle process.exit() errors - let them propagate
-        if (error instanceof Error && error.message.startsWith('process.exit:')) {
-          throw error;
-        }
-
-        output.error(`Failed to initialize user configuration: ${(error as Error).message}`);
-        process.exit((error as any).exitCode || 1);
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        ErrorHandler.handleCommandError(error, 'user init', verbose);
       }
     });
 
@@ -256,20 +301,21 @@ export function createUserCommand(deps: AppDependencies): Command {
 
         // Check if config exists
         if (!configLoader.hasUserConfig()) {
-          output.warn('User configuration not found');
-          output.info(`Expected location: ${configPath}`);
-          output.nl();
-          output.info('Create a user config to define global MCP servers that apply to all projects.');
-          output.info('Run `overture user init` to create a user configuration.');
-          process.exit(2);
+          throw Object.assign(
+            new Error(
+              `User configuration not found. Expected location: ${configPath}. Run \`overture user init\` to create a user configuration.`,
+            ),
+            { exitCode: 2 },
+          );
         }
 
         // Validate format option
         const format = options.format.toLowerCase();
         if (format !== 'yaml' && format !== 'json') {
-          output.error(`Invalid format: ${format}`);
-          output.info('Valid formats: yaml, json');
-          process.exit(1);
+          throw Object.assign(
+            new Error(`Invalid format: ${format}. Valid formats: yaml, json`),
+            { exitCode: 1 },
+          );
         }
 
         // Load config
@@ -278,22 +324,9 @@ export function createUserCommand(deps: AppDependencies): Command {
         // Display config
         displayUserConfig(config, configPath, format as OutputFormat);
       } catch (error) {
-        // Don't handle process.exit() errors - let them propagate
-        if (error instanceof Error && error.message.startsWith('process.exit:')) {
-          throw error;
-        }
-
-        if (error instanceof ConfigError) {
-          output.error('Failed to load user configuration');
-          output.error(error.message);
-          if (error.filePath) {
-            output.debug(`Path: ${error.filePath}`);
-          }
-          process.exit(1);
-        }
-
-        output.error(`Failed to display user configuration: ${(error as Error).message}`);
-        process.exit(1);
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        ErrorHandler.handleCommandError(error, 'user show', verbose);
       }
     });
 
@@ -307,7 +340,11 @@ export function createUserCommand(deps: AppDependencies): Command {
  * @param configPath - Path to config file
  * @param format - Output format (yaml or json)
  */
-function displayUserConfig(config: OvertureConfig, configPath: string, format: OutputFormat): void {
+function displayUserConfig(
+  config: OvertureConfig,
+  configPath: string,
+  format: OutputFormat,
+): void {
   // Header
   Logger.nl();
   console.log(chalk.bold.cyan('User Global Configuration'));
@@ -331,13 +368,17 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
   if (config.clients && Object.keys(config.clients).length > 0) {
     console.log(chalk.bold('Clients:'));
     for (const [clientName, clientConfig] of Object.entries(config.clients)) {
-      const enabledText = clientConfig.enabled !== false ? chalk.green('enabled') : chalk.red('disabled');
+      const enabledText =
+        clientConfig.enabled !== false
+          ? chalk.green('enabled')
+          : chalk.red('disabled');
       console.log(chalk.cyan(`  ${clientName}:`), enabledText);
 
       if (clientConfig.configPath) {
-        const pathDisplay = typeof clientConfig.configPath === 'string'
-          ? clientConfig.configPath
-          : JSON.stringify(clientConfig.configPath);
+        const pathDisplay =
+          typeof clientConfig.configPath === 'string'
+            ? clientConfig.configPath
+            : JSON.stringify(clientConfig.configPath);
         console.log(chalk.gray(`    config-path: ${pathDisplay}`));
       }
 
@@ -373,16 +414,28 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
 
       if (mcp.clients) {
         if (mcp.clients.exclude && mcp.clients.exclude.length > 0) {
-          console.log(chalk.gray(`    exclude-clients: [${mcp.clients.exclude.join(', ')}]`));
+          console.log(
+            chalk.gray(
+              `    exclude-clients: [${mcp.clients.exclude.join(', ')}]`,
+            ),
+          );
         }
         if (mcp.clients.include && mcp.clients.include.length > 0) {
-          console.log(chalk.gray(`    include-clients: [${mcp.clients.include.join(', ')}]`));
+          console.log(
+            chalk.gray(
+              `    include-clients: [${mcp.clients.include.join(', ')}]`,
+            ),
+          );
         }
       }
 
       if (mcp.platforms) {
         if (mcp.platforms.exclude && mcp.platforms.exclude.length > 0) {
-          console.log(chalk.gray(`    exclude-platforms: [${mcp.platforms.exclude.join(', ')}]`));
+          console.log(
+            chalk.gray(
+              `    exclude-platforms: [${mcp.platforms.exclude.join(', ')}]`,
+            ),
+          );
         }
       }
     }
@@ -398,7 +451,9 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
     console.log(chalk.bold('Sync Options:'));
 
     if (config.sync.backup !== undefined) {
-      const backupText = config.sync.backup ? chalk.green('enabled') : chalk.red('disabled');
+      const backupText = config.sync.backup
+        ? chalk.green('enabled')
+        : chalk.red('disabled');
       console.log(`  backup: ${backupText}`);
     }
 
@@ -407,7 +462,9 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
     }
 
     if (config.sync.backupRetention !== undefined) {
-      console.log(chalk.gray(`  backup-retention: ${config.sync.backupRetention}`));
+      console.log(
+        chalk.gray(`  backup-retention: ${config.sync.backupRetention}`),
+      );
     }
 
     Logger.nl();
@@ -417,6 +474,10 @@ function displayUserConfig(config: OvertureConfig, configPath: string, format: O
   const mcpCount = config.mcp ? Object.keys(config.mcp).length : 0;
   const clientCount = config.clients ? Object.keys(config.clients).length : 0;
 
-  console.log(chalk.gray(`Total: ${mcpCount} MCP servers, ${clientCount} clients configured`));
+  console.log(
+    chalk.gray(
+      `Total: ${mcpCount} MCP servers, ${clientCount} clients configured`,
+    ),
+  );
   Logger.nl();
 }

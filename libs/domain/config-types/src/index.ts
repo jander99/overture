@@ -7,6 +7,14 @@
  * @module @overture/config-types
  */
 
+// Client name constants and types
+export { SUPPORTED_CLIENTS, ALL_KNOWN_CLIENTS } from './lib/client-names.js';
+
+export type {
+  SupportedClientName,
+  KnownClientName,
+} from './lib/client-names.js';
+
 // Configuration types
 export type {
   Platform,
@@ -62,7 +70,4 @@ export type {
 } from './lib/discovery.types.js';
 
 // Adapter types
-export type {
-  ClientAdapter,
-  ConfigPathResult,
-} from './lib/adapter.types.js';
+export type { ClientAdapter, ConfigPathResult } from './lib/adapter.types.js';

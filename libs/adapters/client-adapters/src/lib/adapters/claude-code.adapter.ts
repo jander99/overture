@@ -14,9 +14,15 @@
 
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
-import { BaseClientAdapter, type ConfigPathResult, type ClientMcpConfig, type ClientMcpServerDef } from '../client-adapter.interface.js';
+import {
+  BaseClientAdapter,
+  type ConfigPathResult,
+  type ClientMcpConfig,
+  type ClientMcpServerDef,
+} from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
 import { McpError } from '@overture/errors';
+import { getDirname } from '@overture/utils';
 
 /**
  * Claude Code adapter implementation with dependency injection
@@ -27,7 +33,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 
   constructor(
     private readonly filesystem: FilesystemPort,
-    private readonly environment: EnvironmentPort
+    private readonly environment: EnvironmentPort,
   ) {
     super();
   }
@@ -61,14 +67,17 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 
       return parsed;
     } catch (error) {
-      throw new McpError(`Failed to read Claude Code config at ${path}: ${(error as Error).message}`, this.name);
+      throw new McpError(
+        `Failed to read Claude Code config at ${path}: ${(error as Error).message}`,
+        this.name,
+      );
     }
   }
 
   async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
     try {
       // Ensure directory exists
-      const dir = this.getDirname(path);
+      const dir = getDirname(path);
       const dirExists = await this.filesystem.exists(dir);
       if (!dirExists) {
         await this.filesystem.mkdir(dir, { recursive: true });
@@ -77,11 +86,17 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
       const content = JSON.stringify(config, null, 2);
       await this.filesystem.writeFile(path, content);
     } catch (error) {
-      throw new McpError(`Failed to write Claude Code config to ${path}: ${(error as Error).message}`, this.name);
+      throw new McpError(
+        `Failed to write Claude Code config to ${path}: ${(error as Error).message}`,
+        this.name,
+      );
     }
   }
 
-  convertFromOverture(overtureConfig: OvertureConfig, platform: Platform): ClientMcpConfig {
+  convertFromOverture(
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+  ): ClientMcpConfig {
     const mcpServers: Record<string, ClientMcpServerDef> = {};
 
     for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
@@ -140,11 +155,5 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
   private getClaudeCodeProjectPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
     return `${root}/.mcp.json`;
-  }
-
-  private getDirname(filePath: string): string {
-    // Cross-platform dirname (handles both / and \)
-    const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-    return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
   }
 }

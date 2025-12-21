@@ -5,12 +5,20 @@ import {
   getTransportValidationSummary,
   getEnvVarErrors,
   getEnvVarWarnings,
-  type TransportWarning
+  type TransportWarning,
 } from '@overture/sync-core';
 import { ErrorHandler } from '@overture/utils';
-import type { Platform, ClientName } from '@overture/config-types';
+import type {
+  Platform,
+  ClientName,
+  KnownClientName,
+} from '@overture/config-types';
+import { ALL_KNOWN_CLIENTS } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
-import { validateEnvVarReferences, getFixSuggestion } from '../../lib/validators/env-var-validator';
+import {
+  validateEnvVarReferences,
+  getFixSuggestion,
+} from '../../lib/validators/env-var-validator';
 
 /**
  * Valid platform names
@@ -18,19 +26,10 @@ import { validateEnvVarReferences, getFixSuggestion } from '../../lib/validators
 const VALID_PLATFORMS: Platform[] = ['darwin', 'linux', 'win32'];
 
 /**
- * Valid client names
+ * Valid client names (imported from centralized constants)
+ * Includes all known clients for validation purposes
  */
-const VALID_CLIENT_NAMES: ClientName[] = [
-  'claude-code',
-  'claude-desktop',
-  'vscode',
-  'cursor',
-  'windsurf',
-  'copilot-cli',
-  'jetbrains-copilot',
-  'codex',
-  'gemini-cli',
-];
+const VALID_CLIENT_NAMES: readonly KnownClientName[] = ALL_KNOWN_CLIENTS;
 
 /**
  * Creates the 'validate' command for validating Overture configuration.
@@ -57,7 +56,10 @@ export function createValidateCommand(deps: AppDependencies): Command {
 
   command
     .description('Validate configuration schema and MCP availability')
-    .option('--platform <platform>', 'Validate for specific platform (darwin, linux, win32)')
+    .option(
+      '--platform <platform>',
+      'Validate for specific platform (darwin, linux, win32)',
+    )
     .option('--client <client>', 'Validate for specific client')
     .option('--verbose', 'Show detailed validation output')
     .action(async (options) => {
@@ -77,7 +79,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
         for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
           // Validate required fields
           if (!mcpConfig.command || mcpConfig.command.trim() === '') {
-            errors.push(`MCP "${mcpName}": command is required and cannot be empty`);
+            errors.push(
+              `MCP "${mcpName}": command is required and cannot be empty`,
+            );
           }
 
           if (!mcpConfig.transport) {
@@ -88,25 +92,35 @@ export function createValidateCommand(deps: AppDependencies): Command {
           if (mcpConfig.platforms?.exclude) {
             for (const platform of mcpConfig.platforms.exclude) {
               if (!VALID_PLATFORMS.includes(platform)) {
-                errors.push(`MCP "${mcpName}": invalid platform in exclusion list: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid platform in exclusion list: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
+                );
               }
             }
           }
 
           // Validate platform names in commandOverrides
           if (mcpConfig.platforms?.commandOverrides) {
-            for (const platform of Object.keys(mcpConfig.platforms.commandOverrides)) {
+            for (const platform of Object.keys(
+              mcpConfig.platforms.commandOverrides,
+            )) {
               if (!VALID_PLATFORMS.includes(platform as Platform)) {
-                errors.push(`MCP "${mcpName}": invalid platform in commandOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid platform in commandOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
+                );
               }
             }
           }
 
           // Validate platform names in argsOverrides
           if (mcpConfig.platforms?.argsOverrides) {
-            for (const platform of Object.keys(mcpConfig.platforms.argsOverrides)) {
+            for (const platform of Object.keys(
+              mcpConfig.platforms.argsOverrides,
+            )) {
               if (!VALID_PLATFORMS.includes(platform as Platform)) {
-                errors.push(`MCP "${mcpName}": invalid platform in argsOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid platform in argsOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
+                );
               }
             }
           }
@@ -115,7 +129,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
           if (mcpConfig.clients?.exclude) {
             for (const client of mcpConfig.clients.exclude) {
               if (!VALID_CLIENT_NAMES.includes(client)) {
-                errors.push(`MCP "${mcpName}": invalid client in exclusion list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid client in exclusion list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+                );
               }
             }
           }
@@ -124,7 +140,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
           if (mcpConfig.clients?.include) {
             for (const client of mcpConfig.clients.include) {
               if (!VALID_CLIENT_NAMES.includes(client)) {
-                errors.push(`MCP "${mcpName}": invalid client in include list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid client in include list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+                );
               }
             }
           }
@@ -133,7 +151,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
           if (mcpConfig.clients?.overrides) {
             for (const client of Object.keys(mcpConfig.clients.overrides)) {
               if (!VALID_CLIENT_NAMES.includes(client as ClientName)) {
-                errors.push(`MCP "${mcpName}": invalid client in overrides: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`);
+                errors.push(
+                  `MCP "${mcpName}": invalid client in overrides: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+                );
               }
             }
           }
@@ -147,7 +167,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
         for (const name of mcpNames) {
           const lower = name.toLowerCase();
           if (lowerCaseNames.has(lower)) {
-            errors.push(`Duplicate MCP name (case-insensitive): "${name}" and "${lowerCaseNames.get(lower)}"`);
+            errors.push(
+              `Duplicate MCP name (case-insensitive): "${name}" and "${lowerCaseNames.get(lower)}"`,
+            );
           } else {
             lowerCaseNames.set(lower, name);
           }
@@ -157,7 +179,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
         const envVarValidation = validateEnvVarReferences(config);
         if (!envVarValidation.valid) {
           output.warn('Environment variable security warnings:');
-          envVarValidation.issues.forEach((issue) => output.warn(`  - ${issue}`));
+          envVarValidation.issues.forEach((issue) =>
+            output.warn(`  - ${issue}`),
+          );
           if (options.verbose) {
             output.info(getFixSuggestion(envVarValidation.issues));
           }
@@ -167,7 +191,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
         if (config.sync?.enabledClients) {
           for (const client of config.sync.enabledClients) {
             if (!VALID_CLIENT_NAMES.includes(client)) {
-              errors.push(`Invalid client in sync.enabledClients: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`);
+              errors.push(
+                `Invalid client in sync.enabledClients: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+              );
             }
           }
         }
@@ -175,12 +201,16 @@ export function createValidateCommand(deps: AppDependencies): Command {
         // Validate --client option if provided
         if (options.client) {
           if (!VALID_CLIENT_NAMES.includes(options.client)) {
-            errors.push(`Invalid --client option: "${options.client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`);
+            errors.push(
+              `Invalid --client option: "${options.client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+            );
           } else {
             // Check if client adapter exists
             const adapter = adapterRegistry.get(options.client);
             if (!adapter) {
-              errors.push(`No adapter registered for client: "${options.client}"`);
+              errors.push(
+                `No adapter registered for client: "${options.client}"`,
+              );
             }
           }
         }
@@ -202,7 +232,9 @@ export function createValidateCommand(deps: AppDependencies): Command {
           clientsToValidate.push(...config.sync.enabledClients);
         } else if (config.clients) {
           // Fallback: extract enabled clients from clients section
-          for (const [clientName, clientConfig] of Object.entries(config.clients)) {
+          for (const [clientName, clientConfig] of Object.entries(
+            config.clients,
+          )) {
             if ((clientConfig as any).enabled !== false) {
               clientsToValidate.push(clientName as ClientName);
             }
@@ -220,7 +252,11 @@ export function createValidateCommand(deps: AppDependencies): Command {
         }
 
         // Run environment variable validation for each client
-        const allEnvErrors: Array<{ client: string; error: string; suggestion?: string }> = [];
+        const allEnvErrors: Array<{
+          client: string;
+          error: string;
+          suggestion?: string;
+        }> = [];
         const allEnvWarnings: Array<{ client: string; warning: string }> = [];
 
         for (const clientName of clientsToValidate) {
@@ -290,7 +326,10 @@ export function createValidateCommand(deps: AppDependencies): Command {
         process.exit(0);
       } catch (error) {
         // Re-throw if this is a process.exit error (from test mocking)
-        if (error instanceof Error && error.message.startsWith('Process exit:')) {
+        if (
+          error instanceof Error &&
+          error.message.startsWith('Process exit:')
+        ) {
           throw error;
         }
 

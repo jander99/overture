@@ -22,6 +22,7 @@ import {
 } from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
 import { McpError } from '@overture/errors';
+import { getDirname } from '@overture/utils';
 
 export class CopilotCliAdapter extends BaseClientAdapter {
   readonly name = 'copilot-cli' as const;
@@ -69,7 +70,7 @@ export class CopilotCliAdapter extends BaseClientAdapter {
 
   async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
     try {
-      const dir = this.getDirname(path);
+      const dir = getDirname(path);
       const dirExists = await this.filesystem.exists(dir);
       if (!dirExists) {
         await this.filesystem.mkdir(dir, { recursive: true });
@@ -154,13 +155,5 @@ export class CopilotCliAdapter extends BaseClientAdapter {
   private getCopilotCliProjectPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
     return `${root}/.github/mcp.json`;
-  }
-
-  private getDirname(filePath: string): string {
-    const lastSlash = Math.max(
-      filePath.lastIndexOf('/'),
-      filePath.lastIndexOf('\\'),
-    );
-    return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
   }
 }

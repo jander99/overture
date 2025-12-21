@@ -48,7 +48,9 @@ describe('init command', () => {
 
     it('should have a description', () => {
       const command = createInitCommand(deps);
-      expect(command.description()).toBe('Initialize .overture/config.yaml with defaults');
+      expect(command.description()).toBe(
+        'Initialize .overture/config.yaml with defaults',
+      );
     });
 
     it('should have --force option', () => {
@@ -57,17 +59,19 @@ describe('init command', () => {
 
       const forceOption = options.find((opt) => opt.long === '--force');
       expect(forceOption).toBeDefined();
-      expect(forceOption?.description).toContain('Overwrite existing configuration');
+      expect(forceOption?.description).toContain(
+        'Overwrite existing configuration',
+      );
     });
   });
 
   describe('config initialization', () => {
     beforeEach(() => {
       vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml'
+        '/home/user/project/.overture/config.yaml',
       );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture'
+        '/home/user/project/.overture',
       );
       vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
@@ -79,12 +83,16 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      expect(deps.pathResolver.resolveProjectConfig).toHaveBeenCalledWith('/home/user/project');
+      expect(deps.pathResolver.resolveProjectConfig).toHaveBeenCalledWith(
+        '/home/user/project',
+      );
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         '/home/user/project/.overture/config.yaml',
-        expect.stringContaining('version: "2.0"')
+        expect.stringContaining('version: "2.0"'),
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
     });
 
     it('should include helpful comments in config', async () => {
@@ -92,9 +100,12 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock
+        .calls[0][1];
       expect(writtenContent).toContain('# Overture Configuration (v0.2)');
-      expect(writtenContent).toContain('# Multi-client MCP configuration orchestrator');
+      expect(writtenContent).toContain(
+        '# Multi-client MCP configuration orchestrator',
+      );
       expect(writtenContent).toContain('# Supported clients:');
       expect(writtenContent).toContain('claude-code');
     });
@@ -104,7 +115,8 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock
+        .calls[0][1];
       expect(writtenContent).toContain('claude-code:');
       expect(writtenContent).toContain('enabled: true');
     });
@@ -117,7 +129,7 @@ describe('init command', () => {
       await command.parseAsync(['node', 'init']);
 
       expect(deps.filesystem.createDirectory).toHaveBeenCalledWith(
-        '/home/user/project/.overture'
+        '/home/user/project/.overture',
       );
     });
 
@@ -138,10 +150,10 @@ describe('init command', () => {
 
       expect(deps.output.info).toHaveBeenCalledWith('Next steps:');
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Edit .overture/config.yaml')
+        expect.stringContaining('Edit .overture/config.yaml'),
       );
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('overture sync')
+        expect.stringContaining('overture sync'),
       );
     });
 
@@ -151,7 +163,7 @@ describe('init command', () => {
       await command.parseAsync(['node', 'init']);
 
       expect(deps.output.info).toHaveBeenCalledWith(
-        'Location: /home/user/project/.overture/config.yaml'
+        'Location: /home/user/project/.overture/config.yaml',
       );
     });
   });
@@ -159,10 +171,10 @@ describe('init command', () => {
   describe('existing config handling', () => {
     beforeEach(() => {
       vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml'
+        '/home/user/project/.overture/config.yaml',
       );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture'
+        '/home/user/project/.overture',
       );
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
     });
@@ -172,11 +184,15 @@ describe('init command', () => {
 
       const command = createInitCommand(deps);
 
-      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow('process.exit:1');
+      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow(
+        'process.exit:1',
+      );
 
-      expect(deps.output.error).toHaveBeenCalledWith('Configuration already exists');
+      expect(deps.output.error).toHaveBeenCalledWith(
+        'Configuration already exists',
+      );
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Use --force to overwrite')
+        expect.stringContaining('Use --force to overwrite'),
       );
       expect(deps.filesystem.writeFile).not.toHaveBeenCalled();
     });
@@ -190,17 +206,19 @@ describe('init command', () => {
       await command.parseAsync(['node', 'init', '--force']);
 
       expect(deps.filesystem.writeFile).toHaveBeenCalled();
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
     });
   });
 
   describe('error handling', () => {
     beforeEach(() => {
       vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml'
+        '/home/user/project/.overture/config.yaml',
       );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture'
+        '/home/user/project/.overture',
       );
       vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
@@ -213,13 +231,9 @@ describe('init command', () => {
 
       const command = createInitCommand(deps);
 
-      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to initialize configuration')
-      );
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Permission denied')
+      // ErrorHandler logs errors via Logger, not deps.output
+      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow(
+        'process.exit:1',
       );
     });
 
@@ -231,10 +245,9 @@ describe('init command', () => {
 
       const command = createInitCommand(deps);
 
-      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to initialize configuration')
+      // ErrorHandler logs errors via Logger, not deps.output
+      await expect(command.parseAsync(['node', 'init'])).rejects.toThrow(
+        'process.exit:1',
       );
     });
   });
@@ -242,10 +255,10 @@ describe('init command', () => {
   describe('config structure validation', () => {
     beforeEach(() => {
       vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml'
+        '/home/user/project/.overture/config.yaml',
       );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture'
+        '/home/user/project/.overture',
       );
       vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
       vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
@@ -257,7 +270,8 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock
+        .calls[0][1];
 
       // Should have version
       expect(writtenContent).toContain('version:');
@@ -274,7 +288,8 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock.calls[0][1];
+      const writtenContent = vi.mocked(deps.filesystem.writeFile).mock
+        .calls[0][1];
 
       // MCP section should be empty (no actual servers configured)
       expect(writtenContent).toContain('mcp: {}');
@@ -290,10 +305,13 @@ describe('init command', () => {
 
     it('should handle project paths with spaces', async () => {
       // Arrange
-      const pathWithSpaces = '/home/user/my project folder/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(pathWithSpaces);
+      const pathWithSpaces =
+        '/home/user/my project folder/.overture/config.yaml';
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
+        pathWithSpaces,
+      );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my project folder/.overture'
+        '/home/user/my project folder/.overture',
       );
       cwdSpy.mockReturnValue('/home/user/my project folder');
 
@@ -305,20 +323,24 @@ describe('init command', () => {
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         pathWithSpaces,
-        expect.any(String)
+        expect.any(String),
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
       expect(deps.output.info).toHaveBeenCalledWith(
-        `Location: ${pathWithSpaces}`
+        `Location: ${pathWithSpaces}`,
       );
     });
 
     it('should handle project paths with Unicode characters', async () => {
       // Arrange
       const unicodePath = '/home/user/プロジェクト/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(unicodePath);
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
+        unicodePath,
+      );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/プロジェクト/.overture'
+        '/home/user/プロジェクト/.overture',
       );
       cwdSpy.mockReturnValue('/home/user/プロジェクト');
 
@@ -330,17 +352,21 @@ describe('init command', () => {
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         unicodePath,
-        expect.any(String)
+        expect.any(String),
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
     });
 
     it('should handle project paths with emoji characters', async () => {
       // Arrange
       const emojiPath = '/home/user/my-app-🚀/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(emojiPath);
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
+        emojiPath,
+      );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my-app-🚀/.overture'
+        '/home/user/my-app-🚀/.overture',
       );
       cwdSpy.mockReturnValue('/home/user/my-app-🚀');
 
@@ -352,17 +378,21 @@ describe('init command', () => {
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         emojiPath,
-        expect.any(String)
+        expect.any(String),
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
     });
 
     it('should handle paths with special characters (dashes, underscores, dots)', async () => {
       // Arrange
       const specialPath = '/home/user/my-app_v1.2.3/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(specialPath);
+      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
+        specialPath,
+      );
       vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my-app_v1.2.3/.overture'
+        '/home/user/my-app_v1.2.3/.overture',
       );
       cwdSpy.mockReturnValue('/home/user/my-app_v1.2.3');
 
@@ -374,9 +404,11 @@ describe('init command', () => {
       // Assert
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         specialPath,
-        expect.any(String)
+        expect.any(String),
       );
-      expect(deps.output.success).toHaveBeenCalledWith('Configuration created!');
+      expect(deps.output.success).toHaveBeenCalledWith(
+        'Configuration created!',
+      );
     });
   });
 });

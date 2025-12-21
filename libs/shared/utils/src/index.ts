@@ -35,10 +35,7 @@ export {
   UserCancelledError,
   DependencyError,
 } from './lib/error-handler.js';
-export type {
-  ErrorContext,
-  FormattedError,
-} from './lib/error-handler.js';
+export type { ErrorContext, FormattedError } from './lib/error-handler.js';
 
 // Validation formatting
 export {
@@ -54,3 +51,6 @@ export type {
   ValidationSummary,
   ValidationReport,
 } from './lib/validation-formatter.js';
+
+// Path utilities
+export { getDirname } from './lib/path-utils.js';

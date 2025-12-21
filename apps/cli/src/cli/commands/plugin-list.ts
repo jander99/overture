@@ -44,7 +44,10 @@ export function createPluginListCommand(deps: AppDependencies): Command {
           plugins = comparison.both.map((p) => ({ ...p, inConfig: true }));
         } else if (options.installedOnly) {
           // Only plugins installed but not in config
-          plugins = comparison.installedOnly.map((p) => ({ ...p, inConfig: false }));
+          plugins = comparison.installedOnly.map((p) => ({
+            ...p,
+            inConfig: false,
+          }));
         } else {
           // All installed plugins
           plugins = [
@@ -65,7 +68,8 @@ export function createPluginListCommand(deps: AppDependencies): Command {
               installedAt: p.installedAt,
             })),
             summary: {
-              totalInstalled: comparison.both.length + comparison.installedOnly.length,
+              totalInstalled:
+                comparison.both.length + comparison.installedOnly.length,
               inConfig: comparison.both.length,
               notInConfig: comparison.installedOnly.length,
             },
@@ -85,29 +89,39 @@ export function createPluginListCommand(deps: AppDependencies): Command {
               const configStatus = plugin.inConfig ? 'Yes' : 'No';
 
               output.info(`${statusIcon} ${plugin.name}@${plugin.marketplace}`);
-              output.info(`  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`);
+              output.info(
+                `  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`,
+              );
               output.info(`  In config: ${configStatus}`);
               output.nl();
             }
           }
 
           // Summary
-          const totalInstalled = comparison.both.length + comparison.installedOnly.length;
+          const totalInstalled =
+            comparison.both.length + comparison.installedOnly.length;
           const inConfig = comparison.both.length;
 
-          output.info(`📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`);
+          output.info(
+            `📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`,
+          );
 
           // Tips
           if (comparison.installedOnly.length > 0 && !options.installedOnly) {
             output.nl();
             output.info('💡 Tips:');
-            output.info("   • Use 'overture plugin export' to add plugins to config");
-            output.info("   • Use 'overture sync' to install plugins from config");
+            output.info(
+              "   • Use 'overture plugin export' to add plugins to config",
+            );
+            output.info(
+              "   • Use 'overture sync' to install plugins from config",
+            );
           }
         }
       } catch (error) {
-        ErrorHandler.handleCommandError(error, 'plugin list');
-        process.exit(1);
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        ErrorHandler.handleCommandError(error, 'plugin list', verbose);
       }
     });
 

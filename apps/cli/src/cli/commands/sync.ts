@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import type { AppDependencies } from '../../composition-root';
 import type { ClientName } from '@overture/config-types';
 import { formatDiff } from '@overture/sync-core';
+import { ErrorHandler } from '@overture/utils';
 
 /**
  * Determines if a warning is critical and should be displayed.
@@ -380,16 +381,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           process.exit(1);
         }
       } catch (error) {
-        // Use output for error handling instead of ErrorHandler
-        if (error instanceof Error) {
-          output.error(`Sync failed: ${error.message}`);
-          if (process.env.DEBUG && error.stack) {
-            output.debug(error.stack);
-          }
-        } else {
-          output.error('Sync failed with unknown error');
-        }
-        process.exit(1);
+        ErrorHandler.handleCommandError(error, 'sync');
       }
     });
 

@@ -24,7 +24,12 @@ export function createPluginExportCommand(deps: AppDependencies): Command {
 
   command
     .description('Export installed plugins to user config')
-    .option('--plugin <name>', 'Export specific plugin(s) (can specify multiple)', collect, [])
+    .option(
+      '--plugin <name>',
+      'Export specific plugin(s) (can specify multiple)',
+      collect,
+      [],
+    )
     .option('--all', 'Export all installed plugins without prompting')
     .action(async (options) => {
       try {
@@ -48,8 +53,9 @@ export function createPluginExportCommand(deps: AppDependencies): Command {
           });
         }
       } catch (error) {
-        ErrorHandler.handleCommandError(error, 'plugin export');
-        process.exit(1);
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        ErrorHandler.handleCommandError(error, 'plugin export', verbose);
       }
     });
 

@@ -224,9 +224,8 @@ export function createMockAppDependencies(): AppDependencies {
     },
 
     restoreService: {
-      restoreBackup: vi.fn().mockReturnValue({ success: true }),
-      restoreLatestBackup: vi.fn().mockReturnValue({ success: true }),
-      listBackups: vi.fn().mockReturnValue([]),
+      restore: vi.fn().mockReturnValue({ success: true }),
+      restoreLatest: vi.fn().mockReturnValue({ success: true }),
     },
 
     auditService: {

@@ -22,6 +22,7 @@ import {
 } from '../client-adapter.interface.js';
 import type { Platform, OvertureConfig } from '@overture/config-types';
 import { McpError, ValidationError } from '@overture/errors';
+import { getDirname } from '@overture/utils';
 
 /**
  * OpenCode adapter implementation with dependency injection
@@ -100,7 +101,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
       };
 
       // Ensure directory exists
-      const dir = this.getDirname(path);
+      const dir = getDirname(path);
       const dirExists = await this.filesystem.exists(dir);
       if (!dirExists) {
         await this.filesystem.mkdir(dir, { recursive: true });
@@ -220,14 +221,5 @@ export class OpenCodeAdapter extends BaseClientAdapter {
   private getOpenCodeProjectPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
     return `${root}/opencode.json`;
-  }
-
-  private getDirname(filePath: string): string {
-    // Cross-platform dirname (handles both / and \)
-    const lastSlash = Math.max(
-      filePath.lastIndexOf('/'),
-      filePath.lastIndexOf('\\'),
-    );
-    return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
   }
 }

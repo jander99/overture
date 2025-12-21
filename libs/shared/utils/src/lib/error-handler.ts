@@ -73,7 +73,12 @@ export class FileSystemError extends Error {
   public operation?: string;
   public override cause?: Error;
 
-  constructor(message: string, path?: string, operation?: string, cause?: Error) {
+  constructor(
+    message: string,
+    path?: string,
+    operation?: string,
+    cause?: Error,
+  ) {
     super(message);
     this.name = 'FileSystemError';
     this.path = path;
@@ -90,7 +95,12 @@ export class NetworkError extends Error {
   public statusCode?: number;
   public override cause?: Error;
 
-  constructor(message: string, url?: string, statusCode?: number, cause?: Error) {
+  constructor(
+    message: string,
+    url?: string,
+    statusCode?: number,
+    cause?: Error,
+  ) {
     super(message);
     this.name = 'NetworkError';
     this.url = url;
@@ -166,7 +176,7 @@ export class ErrorHandler {
   static handleCommandError(
     error: unknown,
     commandName?: string,
-    verbose = false
+    verbose = false,
   ): never {
     const formatted = this.formatError(error, verbose);
     const context: ErrorContext = { command: commandName };
@@ -246,9 +256,15 @@ export class ErrorHandler {
 
     // Handle standard Error
     if (error instanceof Error) {
+      // Check for custom exitCode property
+      const exitCode =
+        'exitCode' in error &&
+        typeof (error as { exitCode?: number }).exitCode === 'number'
+          ? (error as { exitCode: number }).exitCode
+          : ExitCode.GENERAL_ERROR;
       return {
         message: error.message || 'An unexpected error occurred',
-        exitCode: ExitCode.GENERAL_ERROR,
+        exitCode,
         stack: verbose && error.stack ? error.stack : undefined,
       };
     }
@@ -270,7 +286,7 @@ export class ErrorHandler {
    */
   static getErrorSuggestion(
     error: unknown,
-    context: ErrorContext
+    context: ErrorContext,
   ): string | undefined {
     // Config not found errors
     if (
@@ -349,10 +365,16 @@ export class ErrorHandler {
     ) {
       if (error instanceof DependencyError && error.dependency) {
         // Try to be smart about installation method
-        if (error.dependency.includes('uvx') || error.dependency.includes('pipx')) {
+        if (
+          error.dependency.includes('uvx') ||
+          error.dependency.includes('pipx')
+        ) {
           return `Install ${error.dependency}:\n  pip install ${error.dependency}\n  # Or with pipx:\n  pipx install ${error.dependency}`;
         }
-        if (error.dependency.startsWith('@') || error.dependency.includes('npm')) {
+        if (
+          error.dependency.startsWith('@') ||
+          error.dependency.includes('npm')
+        ) {
           return `Install ${error.dependency}:\n  npm install -g ${error.dependency}`;
         }
         return `Install ${error.dependency} and ensure it's on your PATH`;
@@ -467,7 +489,7 @@ export class ErrorHandler {
   static logError(
     formatted: FormattedError,
     suggestion?: string,
-    verbose = false
+    verbose = false,
   ): void {
     Logger.nl();
     Logger.error(chalk.bold(formatted.message));
@@ -500,10 +522,7 @@ export class ErrorHandler {
    * @returns Error category
    */
   static getErrorCategory(error: unknown): ErrorCategory {
-    if (
-      error instanceof ConfigurationError ||
-      error instanceof ConfigError
-    ) {
+    if (error instanceof ConfigurationError || error instanceof ConfigError) {
       return ErrorCategory.CONFIGURATION;
     }
 
@@ -560,7 +579,7 @@ export class ErrorHandler {
    * Get filesystem error details
    */
   private static getFileSystemErrorDetails(
-    error: FileSystemError
+    error: FileSystemError,
   ): string | undefined {
     const parts: string[] = [];
 
@@ -579,7 +598,7 @@ export class ErrorHandler {
    * Get network error details
    */
   private static getNetworkErrorDetails(
-    error: NetworkError
+    error: NetworkError,
   ): string | undefined {
     const parts: string[] = [];
 

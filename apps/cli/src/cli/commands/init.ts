@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { CONFIG_PATH } from '@overture/config-core';
+import { ErrorHandler } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
 
@@ -98,10 +99,7 @@ ${yamlContent}`;
           '  2. Run `overture sync` to generate client configurations',
         );
       } catch (error) {
-        output.error(
-          `Failed to initialize configuration: ${(error as Error).message}`,
-        );
-        process.exit(1);
+        ErrorHandler.handleCommandError(error, 'init');
       }
     });
 

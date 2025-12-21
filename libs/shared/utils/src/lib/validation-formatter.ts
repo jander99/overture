@@ -20,7 +20,13 @@ export interface ValidationError {
   path: string;
   message: string;
   suggestion?: string;
-  type: 'required' | 'invalid_type' | 'invalid_enum' | 'unrecognized_keys' | 'custom' | 'other';
+  type:
+    | 'required'
+    | 'invalid_type'
+    | 'invalid_enum'
+    | 'unrecognized_keys'
+    | 'custom'
+    | 'other';
 }
 
 /**
@@ -40,7 +46,7 @@ export interface ValidationSummary {
  */
 function formatPath(path: PropertyKey[]): string {
   if (path.length === 0) return 'config';
-  return path.map(p => String(p)).join('.');
+  return path.map((p) => String(p)).join('.');
 }
 
 /**
@@ -49,14 +55,21 @@ function formatPath(path: PropertyKey[]): string {
 function generateSuggestion(issue: ZodIssue): string | undefined {
   switch (issue.code) {
     case 'invalid_type':
-      if (issue.expected === 'string' && 'received' in issue && (issue as Record<string, unknown>).received === 'undefined') {
+      if (
+        issue.expected === 'string' &&
+        'received' in issue &&
+        (issue as unknown as Record<string, unknown>).received === 'undefined'
+      ) {
         return `Add missing field to configuration`;
       }
       if (issue.expected === 'array') {
         return `Change to array format: []`;
       }
       {
-        const received = 'received' in issue ? (issue as Record<string, unknown>).received : 'unknown';
+        const received =
+          'received' in issue
+            ? (issue as unknown as Record<string, unknown>).received
+            : 'unknown';
         return `Change type from ${received} to ${issue.expected}`;
       }
 
@@ -82,7 +95,8 @@ function generateSuggestion(issue: ZodIssue): string | undefined {
     default:
       // Handle enum-related errors
       if ('options' in issue) {
-        const validOptions = (issue as Record<string, unknown>).options || [];
+        const validOptions =
+          (issue as unknown as Record<string, unknown>).options || [];
         return `Use one of: ${(validOptions as string[]).join(', ')}`;
       }
       return undefined;
@@ -147,7 +161,10 @@ export function formatError(error: ValidationError): string {
 /**
  * Format multiple validation errors for display
  */
-export function formatErrors(errors: ValidationError[], title = 'Schema Errors'): string {
+export function formatErrors(
+  errors: ValidationError[],
+  title = 'Schema Errors',
+): string {
   if (errors.length === 0) {
     return '';
   }
@@ -201,14 +218,26 @@ export function formatValidationSummary(summary: ValidationSummary): string {
   if (summary.isValid && summary.totalWarnings === 0) {
     lines.push(chalk.green(`Summary: No errors or warnings`));
   } else if (summary.isValid && summary.totalWarnings > 0) {
-    lines.push(chalk.yellow(`Summary: ${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`));
+    lines.push(
+      chalk.yellow(
+        `Summary: ${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
+      ),
+    );
   } else {
     const parts: string[] = [];
     if (summary.totalErrors > 0) {
-      parts.push(chalk.red(`${summary.totalErrors} ${summary.totalErrors === 1 ? 'error' : 'errors'}`));
+      parts.push(
+        chalk.red(
+          `${summary.totalErrors} ${summary.totalErrors === 1 ? 'error' : 'errors'}`,
+        ),
+      );
     }
     if (summary.totalWarnings > 0) {
-      parts.push(chalk.yellow(`${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`));
+      parts.push(
+        chalk.yellow(
+          `${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
+        ),
+      );
     }
     lines.push(`Summary: ${parts.join(', ')}`);
   }
@@ -222,7 +251,7 @@ export function formatValidationSummary(summary: ValidationSummary): string {
 export function createValidationSummary(
   errors: ValidationError[],
   warnings: ValidationError[] = [],
-  passed: string[] = []
+  passed: string[] = [],
 ): ValidationSummary {
   return {
     errors,
@@ -256,18 +285,23 @@ export function formatValidationReport(report: ValidationReport): string {
   for (const section of report.sections) {
     lines.push('');
 
-    const icon = section.passed && section.warnings.length === 0
-      ? chalk.green('\u2713')
-      : section.errors.length > 0
-      ? chalk.red('\u2717')
-      : chalk.yellow('\u26A0');
+    const icon =
+      section.passed && section.warnings.length === 0
+        ? chalk.green('\u2713')
+        : section.errors.length > 0
+          ? chalk.red('\u2717')
+          : chalk.yellow('\u26A0');
 
     let title = `${icon} ${section.title}`;
     if (section.errors.length > 0) {
-      title += chalk.red(` (${section.errors.length} ${section.errors.length === 1 ? 'error' : 'errors'})`);
+      title += chalk.red(
+        ` (${section.errors.length} ${section.errors.length === 1 ? 'error' : 'errors'})`,
+      );
     }
     if (section.warnings.length > 0) {
-      title += chalk.yellow(` (${section.warnings.length} ${section.warnings.length === 1 ? 'warning' : 'warnings'})`);
+      title += chalk.yellow(
+        ` (${section.warnings.length} ${section.warnings.length === 1 ? 'warning' : 'warnings'})`,
+      );
     }
 
     lines.push(title);
@@ -280,7 +314,9 @@ export function formatValidationReport(report: ValidationReport): string {
     // Show warnings
     section.warnings.forEach((warning) => {
       const warnIcon = chalk.yellow('\u26A0');
-      lines.push(`  ${warnIcon} ${chalk.cyan(warning.path)} - ${warning.message}`);
+      lines.push(
+        `  ${warnIcon} ${chalk.cyan(warning.path)} - ${warning.message}`,
+      );
       if (warning.suggestion) {
         lines.push(`    ${chalk.gray('\u2192')} ${warning.suggestion}`);
       }
@@ -291,18 +327,32 @@ export function formatValidationReport(report: ValidationReport): string {
   lines.push(chalk.gray('\u2501'.repeat(50)));
 
   // Overall summary
-  const totalErrors = report.sections.reduce((sum, s) => sum + s.errors.length, 0);
-  const totalWarnings = report.sections.reduce((sum, s) => sum + s.warnings.length, 0);
+  const totalErrors = report.sections.reduce(
+    (sum, s) => sum + s.errors.length,
+    0,
+  );
+  const totalWarnings = report.sections.reduce(
+    (sum, s) => sum + s.warnings.length,
+    0,
+  );
 
   if (totalErrors === 0 && totalWarnings === 0) {
     lines.push(chalk.green('Summary: \u2713 All validations passed'));
   } else {
     const parts: string[] = [];
     if (totalErrors > 0) {
-      parts.push(chalk.red(`\u2717 ${totalErrors} ${totalErrors === 1 ? 'error' : 'errors'}`));
+      parts.push(
+        chalk.red(
+          `\u2717 ${totalErrors} ${totalErrors === 1 ? 'error' : 'errors'}`,
+        ),
+      );
     }
     if (totalWarnings > 0) {
-      parts.push(chalk.yellow(`\u26A0 ${totalWarnings} ${totalWarnings === 1 ? 'warning' : 'warnings'}`));
+      parts.push(
+        chalk.yellow(
+          `\u26A0 ${totalWarnings} ${totalWarnings === 1 ? 'warning' : 'warnings'}`,
+        ),
+      );
     }
     lines.push(`Summary: ${parts.join(', ')}`);
   }

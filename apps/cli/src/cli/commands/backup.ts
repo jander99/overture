@@ -16,7 +16,13 @@ import type { AppDependencies } from '../../composition-root';
  * - overture backup cleanup                   - Remove old backups (keep last 10)
  */
 export function createBackupCommand(deps: AppDependencies): Command {
-  const { backupService, restoreService, adapterRegistry, pathResolver, output } = deps;
+  const {
+    backupService,
+    restoreService,
+    adapterRegistry,
+    pathResolver,
+    output,
+  } = deps;
   const command = new Command('backup');
 
   command.description('Manage client MCP configuration backups');
@@ -40,9 +46,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
         }
 
         output.info(
-          options.client
-            ? `Backups for ${options.client}:`
-            : 'All backups:'
+          options.client ? `Backups for ${options.client}:` : 'All backups:',
         );
         output.nl();
 
@@ -65,7 +69,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
             const timestamp = formatTimestamp(backup.timestamp);
 
             console.log(
-              `  ${chalk.gray(timestamp)} ${chalk.dim('•')} ${size} ${chalk.dim('•')} ${age}`
+              `  ${chalk.gray(timestamp)} ${chalk.dim('•')} ${size} ${chalk.dim('•')} ${age}`,
             );
           }
 
@@ -74,7 +78,8 @@ export function createBackupCommand(deps: AppDependencies): Command {
 
         output.info(`Total: ${backups.length} backup(s)`);
       } catch (error) {
-        const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
         ErrorHandler.handleCommandError(error, 'backup list', verbose);
       }
     });
@@ -91,7 +96,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
       async (
         client: ClientName,
         timestamp: string | undefined,
-        options: { latest?: boolean; confirm: boolean }
+        options: { latest?: boolean; confirm: boolean },
       ) => {
         try {
           // Validate client
@@ -115,11 +120,14 @@ export function createBackupCommand(deps: AppDependencies): Command {
 
             if (!backupToRestore) {
               output.error(`No backups found for ${client}`);
-              throw Object.assign(new Error('No backups found'), { exitCode: 2 });
+              throw Object.assign(new Error('No backups found'), {
+                exitCode: 2,
+              });
             }
           } else {
             const backups = await backupService.listBackups(client);
-            backupToRestore = backups.find((b) => b.timestamp === timestamp) || null;
+            backupToRestore =
+              backups.find((b) => b.timestamp === timestamp) || null;
 
             if (!backupToRestore) {
               output.error(`Backup not found: ${client} at ${timestamp}`);
@@ -127,14 +135,18 @@ export function createBackupCommand(deps: AppDependencies): Command {
               backups.forEach((b) => {
                 output.info(`  - ${b.timestamp}`);
               });
-              throw Object.assign(new Error('Backup not found'), { exitCode: 2 });
+              throw Object.assign(new Error('Backup not found'), {
+                exitCode: 2,
+              });
             }
           }
 
           // Show backup details
           output.info('Backup details:');
           output.info(`  Client: ${chalk.cyan(backupToRestore.client)}`);
-          output.info(`  Timestamp: ${formatTimestamp(backupToRestore.timestamp)}`);
+          output.info(
+            `  Timestamp: ${formatTimestamp(backupToRestore.timestamp)}`,
+          );
           output.info(`  Size: ${formatSize(backupToRestore.size)}`);
           output.info(`  Age: ${formatAge(backupToRestore.timestamp)}`);
           if (isLatest) {
@@ -146,7 +158,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
           if (options.confirm) {
             const confirmed = await Prompts.confirm(
               `Restore this backup? This will overwrite the current ${client} configuration.`,
-              false
+              false,
             );
 
             if (!confirmed) {
@@ -159,33 +171,40 @@ export function createBackupCommand(deps: AppDependencies): Command {
           const configPaths = adapter.detectConfigPath(platform);
 
           if (!configPaths) {
-            output.error(`Client ${client} is not installed on this platform`);
-            process.exit(2);
+            throw Object.assign(
+              new Error(`Client ${client} is not installed on this platform`),
+              { exitCode: 2 },
+            );
           }
 
           // Use user config for restore (most clients only have user config)
-          const configPath = typeof configPaths === 'string'
-            ? configPaths
-            : configPaths.user;
+          const configPath =
+            typeof configPaths === 'string' ? configPaths : configPaths.user;
 
           // Perform restore
           const result = await (isLatest
-            ? restoreService.restoreLatestBackup(client, configPath)
-            : restoreService.restoreBackup(client, backupToRestore.timestamp, configPath));
+            ? restoreService.restoreLatest(client, configPath)
+            : restoreService.restore(
+                client,
+                backupToRestore.timestamp,
+                configPath,
+              ));
 
           if (result.success) {
             output.success('Backup restored successfully');
             output.info(`  From: ${result.backupPath}`);
             output.info(`  To: ${result.restoredPath}`);
           } else {
-            output.error(`Restore failed: ${result.error}`);
-            process.exit(1);
+            throw Object.assign(new Error(`Restore failed: ${result.error}`), {
+              exitCode: 1,
+            });
           }
         } catch (error) {
-          const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+          const verbose =
+            process.env.DEBUG === '1' || process.env.DEBUG === 'true';
           ErrorHandler.handleCommandError(error, 'backup restore', verbose);
         }
-      }
+      },
     );
 
   // backup cleanup subcommand
@@ -193,7 +212,11 @@ export function createBackupCommand(deps: AppDependencies): Command {
     .command('cleanup')
     .description('Remove old backups (keep last 10 per client)')
     .option('-c, --client <name>', 'Cleanup backups for specific client only')
-    .option('-k, --keep <count>', 'Number of backups to keep (default: 10)', '10')
+    .option(
+      '-k, --keep <count>',
+      'Number of backups to keep (default: 10)',
+      '10',
+    )
     .action(async (options: { client?: ClientName; keep: string }) => {
       try {
         const keepCount = parseInt(options.keep, 10);
@@ -219,7 +242,7 @@ export function createBackupCommand(deps: AppDependencies): Command {
 
           if (deleted > 0) {
             output.info(
-              `${chalk.cyan(client)}: Removed ${deleted} old backup(s), kept ${afterCount}`
+              `${chalk.cyan(client)}: Removed ${deleted} old backup(s), kept ${afterCount}`,
             );
             totalDeleted += deleted;
           }
@@ -232,7 +255,8 @@ export function createBackupCommand(deps: AppDependencies): Command {
           output.info('No backups to clean up');
         }
       } catch (error) {
-        const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
         ErrorHandler.handleCommandError(error, 'backup cleanup', verbose);
       }
     });
@@ -250,8 +274,10 @@ export function createBackupCommand(deps: AppDependencies): Command {
 function formatTimestamp(timestamp: string): string {
   // Convert from filename format: 2025-01-11T14-30-45-123Z
   // to ISO format: 2025-01-11T14:30:45.123Z
-  const isoTimestamp = timestamp
-    .replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, 'T$1:$2:$3.$4Z');
+  const isoTimestamp = timestamp.replace(
+    /T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
+    'T$1:$2:$3.$4Z',
+  );
 
   const date = new Date(isoTimestamp);
   return date.toLocaleString();
@@ -277,8 +303,10 @@ function formatSize(bytes: number): string {
  */
 function formatAge(timestamp: string): string {
   // Convert from filename format to ISO format
-  const isoTimestamp = timestamp
-    .replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, 'T$1:$2:$3.$4Z');
+  const isoTimestamp = timestamp.replace(
+    /T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
+    'T$1:$2:$3.$4Z',
+  );
 
   const date = new Date(isoTimestamp);
   const now = new Date();

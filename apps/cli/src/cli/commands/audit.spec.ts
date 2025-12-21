@@ -46,7 +46,9 @@ describe('audit command', () => {
 
     it('should have a description', () => {
       const command = createAuditCommand(deps);
-      expect(command.description()).toBe('Detect MCPs in client configs that are not managed by Overture');
+      expect(command.description()).toBe(
+        'Detect MCPs in client configs that are not managed by Overture',
+      );
     });
 
     it('should support --client option', () => {
@@ -65,16 +67,24 @@ describe('audit command', () => {
       const mockConfig = {
         version: '1.0' as const,
         mcp: {
-          filesystem: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem'] },
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+          },
         },
       };
 
       const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
-      vi.mocked(deps.auditService.auditClient).mockReturnValue(['memory', 'github']);
+      vi.mocked(deps.auditService.auditClient).mockReturnValue([
+        'memory',
+        'github',
+      ]);
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue([
         'Add memory to .overture/config.yaml',
         'Add github to .overture/config.yaml',
@@ -90,10 +100,10 @@ describe('audit command', () => {
       expect(deps.auditService.auditClient).toHaveBeenCalledWith(
         mockAdapter,
         mockConfig,
-        'linux'
+        'linux',
       );
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Found 2 unmanaged MCP')
+        expect.stringContaining('Found 2 unmanaged MCP'),
       );
     });
 
@@ -105,18 +115,17 @@ describe('audit command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(undefined);
 
       const command = createAuditCommand(deps);
 
-      // Act & Assert
-      await expect(command.parseAsync(['node', 'audit', '--client', 'unknown-client'])).rejects.toThrow('process.exit:1');
-
-      expect(deps.output.error).toHaveBeenCalledWith('Unknown client: unknown-client');
-      expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Available clients:')
-      );
+      // Act & Assert - ErrorHandler logs the error via Logger, not deps.output
+      await expect(
+        command.parseAsync(['node', 'audit', '--client', 'unknown-client']),
+      ).rejects.toThrow('process.exit:1');
     });
 
     it('should handle client not installed', async () => {
@@ -136,7 +145,9 @@ describe('audit command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
 
       const command = createAuditCommand(deps);
@@ -146,10 +157,10 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('is not installed')
+        expect.stringContaining('is not installed'),
       );
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
     });
 
@@ -158,14 +169,19 @@ describe('audit command', () => {
       const mockConfig = {
         version: '1.0' as const,
         mcp: {
-          filesystem: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem'] },
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+          },
         },
       };
 
       const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
 
@@ -176,7 +192,7 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
     });
   });
@@ -195,11 +211,15 @@ describe('audit command', () => {
       ];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(
+        mockAdapters,
+      );
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({
         'claude-code': ['memory'],
-        'vscode': ['github'],
+        vscode: ['github'],
       });
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue([
         'Add memory to .overture/config.yaml',
@@ -212,14 +232,16 @@ describe('audit command', () => {
       await command.parseAsync(['node', 'audit']);
 
       // Assert
-      expect(deps.adapterRegistry.getInstalledAdapters).toHaveBeenCalledWith('linux');
+      expect(deps.adapterRegistry.getInstalledAdapters).toHaveBeenCalledWith(
+        'linux',
+      );
       expect(deps.auditService.auditAllClients).toHaveBeenCalledWith(
         mockAdapters,
         mockConfig,
-        'linux'
+        'linux',
       );
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Found 2 unmanaged MCP')
+        expect.stringContaining('Found 2 unmanaged MCP'),
       );
     });
 
@@ -231,7 +253,9 @@ describe('audit command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue([]);
 
       const command = createAuditCommand(deps);
@@ -241,10 +265,10 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('No installed AI clients detected')
+        expect.stringContaining('No installed AI clients detected'),
       );
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
     });
 
@@ -258,8 +282,12 @@ describe('audit command', () => {
       const mockAdapters = [createMockAdapter('claude-code')];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(
+        mockAdapters,
+      );
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({});
 
       const command = createAuditCommand(deps);
@@ -269,10 +297,10 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('All client MCPs are managed by Overture')
+        expect.stringContaining('All client MCPs are managed by Overture'),
       );
     });
   });
@@ -293,10 +321,17 @@ describe('audit command', () => {
       ];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
-      vi.mocked(deps.auditService.auditClient).mockReturnValue(['memory', 'github']);
-      vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(mockSuggestions);
+      vi.mocked(deps.auditService.auditClient).mockReturnValue([
+        'memory',
+        'github',
+      ]);
+      vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(
+        mockSuggestions,
+      );
 
       const command = createAuditCommand(deps);
 
@@ -307,10 +342,10 @@ describe('audit command', () => {
       expect(deps.auditService.generateSuggestions).toHaveBeenCalled();
       expect(deps.output.info).toHaveBeenCalledWith('Suggestions:');
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Add memory to .overture/config.yaml')
+        expect.stringContaining('Add memory to .overture/config.yaml'),
       );
       expect(deps.output.info).toHaveBeenCalledWith(
-        expect.stringContaining('Add github to .overture/config.yaml')
+        expect.stringContaining('Add github to .overture/config.yaml'),
       );
     });
 
@@ -324,7 +359,9 @@ describe('audit command', () => {
       const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
 
@@ -336,7 +373,9 @@ describe('audit command', () => {
       // Assert
       expect(deps.auditService.generateSuggestions).not.toHaveBeenCalled();
       const infoCalls = vi.mocked(deps.output.info).mock.calls;
-      const hasSuggestions = infoCalls.some(call => call[0]?.includes('Suggestions:'));
+      const hasSuggestions = infoCalls.some((call) =>
+        call[0]?.includes('Suggestions:'),
+      );
       expect(hasSuggestions).toBe(false);
     });
   });
@@ -345,13 +384,15 @@ describe('audit command', () => {
     it('should handle config loading errors', async () => {
       // Arrange
       vi.mocked(deps.configLoader.loadConfig).mockRejectedValue(
-        new Error('Failed to load config')
+        new Error('Failed to load config'),
       );
 
       const command = createAuditCommand(deps);
 
       // Act & Assert - ErrorHandler.handleCommandError should be called, which logs and exits
-      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow('process.exit:1');
+      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow(
+        'process.exit:1',
+      );
 
       // We verify that the error path was taken by checking the config loader was called
       expect(deps.configLoader.loadConfig).toHaveBeenCalled();
@@ -370,7 +411,9 @@ describe('audit command', () => {
       };
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
       vi.mocked(deps.auditService.auditClient).mockImplementation(() => {
         throw new Error('Audit failed');
@@ -379,7 +422,9 @@ describe('audit command', () => {
       const command = createAuditCommand(deps);
 
       // Act & Assert
-      await expect(command.parseAsync(['node', 'audit', '--client', 'claude-code'])).rejects.toThrow('process.exit:1');
+      await expect(
+        command.parseAsync(['node', 'audit', '--client', 'claude-code']),
+      ).rejects.toThrow('process.exit:1');
 
       expect(deps.auditService.auditClient).toHaveBeenCalled();
     });
@@ -394,8 +439,12 @@ describe('audit command', () => {
       const mockAdapters = [createMockAdapter('claude-code')];
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(
+        mockAdapters,
+      );
       vi.mocked(deps.auditService.auditAllClients).mockImplementation(() => {
         throw new Error('Audit all failed');
       });
@@ -403,7 +452,9 @@ describe('audit command', () => {
       const command = createAuditCommand(deps);
 
       // Act & Assert
-      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow('process.exit:1');
+      await expect(command.parseAsync(['node', 'audit'])).rejects.toThrow(
+        'process.exit:1',
+      );
 
       expect(deps.auditService.auditAllClients).toHaveBeenCalled();
     });
@@ -415,7 +466,9 @@ describe('audit command', () => {
         version: '1.0' as const,
         mcp: {},
       });
-      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue('linux' as const);
+      vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
+        'linux' as const,
+      );
     });
 
     it('should handle empty MCP configuration', async () => {
@@ -439,7 +492,7 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
     });
 
@@ -456,7 +509,9 @@ describe('audit command', () => {
         },
       ];
 
-      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(mockAdapters as any);
+      vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(
+        mockAdapters as any,
+      );
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({});
 
       const command = createAuditCommand(deps);
@@ -466,7 +521,7 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.success).toHaveBeenCalledWith(
-        expect.stringContaining('No unmanaged MCPs found')
+        expect.stringContaining('No unmanaged MCPs found'),
       );
     });
 
@@ -486,7 +541,7 @@ describe('audit command', () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
       vi.mocked(deps.auditService.auditClient).mockReturnValue(largeMcpList);
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(
-        largeMcpList.map(mcp => `Add ${mcp} to .overture/config.yaml`)
+        largeMcpList.map((mcp) => `Add ${mcp} to .overture/config.yaml`),
       );
 
       const command = createAuditCommand(deps);
@@ -496,7 +551,7 @@ describe('audit command', () => {
 
       // Assert
       expect(deps.output.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Found 50 unmanaged MCP')
+        expect.stringContaining('Found 50 unmanaged MCP'),
       );
     });
   });

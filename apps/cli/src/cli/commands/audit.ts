@@ -20,12 +20,18 @@ import type { AppDependencies } from '../../composition-root';
  * @returns Commander Command instance
  */
 export function createAuditCommand(deps: AppDependencies): Command {
-  const { auditService, adapterRegistry, configLoader, pathResolver, output } = deps;
+  const { auditService, adapterRegistry, configLoader, pathResolver, output } =
+    deps;
   const command = new Command('audit');
 
   command
-    .description('Detect MCPs in client configs that are not managed by Overture')
-    .option('--client <name>', 'Audit specific client only (e.g., claude-code, vscode)')
+    .description(
+      'Detect MCPs in client configs that are not managed by Overture',
+    )
+    .option(
+      '--client <name>',
+      'Audit specific client only (e.g., claude-code, vscode)',
+    )
     .action(async (options) => {
       try {
         output.info('Loading Overture configuration...');
@@ -37,13 +43,19 @@ export function createAuditCommand(deps: AppDependencies): Command {
         // Determine which clients to audit
         if (options.client) {
           // Audit specific client
-          await auditSingleClient(deps, options.client as ClientName, overtureConfig, platform);
+          await auditSingleClient(
+            deps,
+            options.client as ClientName,
+            overtureConfig,
+            platform,
+          );
         } else {
           // Audit all installed clients
           await auditAllInstalledClients(deps, overtureConfig, platform);
         }
       } catch (error) {
-        const verbose = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+        const verbose =
+          process.env.DEBUG === '1' || process.env.DEBUG === 'true';
         ErrorHandler.handleCommandError(error, 'audit', verbose);
       }
     });
@@ -58,16 +70,19 @@ async function auditSingleClient(
   deps: AppDependencies,
   clientName: ClientName,
   overtureConfig: any,
-  platform: string
+  platform: string,
 ): Promise<void> {
   // Get adapter for client
   const { adapterRegistry, auditService, output } = deps;
   const adapter = adapterRegistry.get(clientName);
 
   if (!adapter) {
-    output.error(`Unknown client: ${clientName}`);
-    output.info('Available clients: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
-    process.exit(1);
+    throw Object.assign(
+      new Error(
+        `Unknown client: ${clientName}. Available clients: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot`,
+      ),
+      { exitCode: 1 },
+    );
   }
 
   // Check if client is installed
@@ -80,7 +95,11 @@ async function auditSingleClient(
   output.info(`Auditing client: ${clientName}...\n`);
 
   // Audit the client
-  const unmanaged = auditService.auditClient(adapter, overtureConfig, platform as any);
+  const unmanaged = auditService.auditClient(
+    adapter,
+    overtureConfig,
+    platform as any,
+  );
 
   // Display results
   if (unmanaged.length === 0) {
@@ -95,7 +114,9 @@ async function auditSingleClient(
     output.nl();
 
     // Generate suggestions
-    const suggestions = deps.auditService.generateSuggestions({ [clientName]: unmanaged } as Record<ClientName, string[]>);
+    const suggestions = deps.auditService.generateSuggestions({
+      [clientName]: unmanaged,
+    } as Record<ClientName, string[]>);
     displaySuggestions(deps, suggestions);
   }
 }
@@ -106,16 +127,20 @@ async function auditSingleClient(
 async function auditAllInstalledClients(
   deps: AppDependencies,
   overtureConfig: any,
-  platform: string
+  platform: string,
 ): Promise<void> {
   const { adapterRegistry, auditService, output } = deps;
-  
+
   // Get installed adapters
-  const installedAdapters = adapterRegistry.getInstalledAdapters(platform as any);
+  const installedAdapters = adapterRegistry.getInstalledAdapters(
+    platform as any,
+  );
 
   if (installedAdapters.length === 0) {
     output.warn('No installed AI clients detected');
-    output.info('Overture supports: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot');
+    output.info(
+      'Overture supports: claude-code, claude-desktop, vscode, cursor, windsurf, copilot-cli, jetbrains-copilot',
+    );
     output.success('No unmanaged MCPs found (no clients installed)');
     return;
   }
@@ -123,15 +148,24 @@ async function auditAllInstalledClients(
   output.info(`Auditing ${installedAdapters.length} installed client(s)...\n`);
 
   // Audit all clients
-  const unmanagedByClient = auditService.auditAllClients(installedAdapters, overtureConfig, platform as any);
+  const unmanagedByClient = auditService.auditAllClients(
+    installedAdapters,
+    overtureConfig,
+    platform as any,
+  );
 
   // Display results
   if (Object.keys(unmanagedByClient).length === 0) {
     output.success('No unmanaged MCPs found in any client');
     output.info('All client MCPs are managed by Overture');
   } else {
-    const totalUnmanaged = Object.values(unmanagedByClient).reduce((sum, mcps) => sum + mcps.length, 0);
-    output.warn(`Found ${totalUnmanaged} unmanaged MCP(s) across ${Object.keys(unmanagedByClient).length} client(s):`);
+    const totalUnmanaged = Object.values(unmanagedByClient).reduce(
+      (sum, mcps) => sum + mcps.length,
+      0,
+    );
+    output.warn(
+      `Found ${totalUnmanaged} unmanaged MCP(s) across ${Object.keys(unmanagedByClient).length} client(s):`,
+    );
     output.nl();
 
     // Display by client
@@ -144,7 +178,9 @@ async function auditAllInstalledClients(
     }
 
     // Generate suggestions
-    const suggestions = auditService.generateSuggestions(unmanagedByClient as any);
+    const suggestions = auditService.generateSuggestions(
+      unmanagedByClient as any,
+    );
     displaySuggestions(deps, suggestions);
   }
 }
@@ -152,9 +188,12 @@ async function auditAllInstalledClients(
 /**
  * Display suggestions for adding unmanaged MCPs
  */
-function displaySuggestions(deps: AppDependencies, suggestions: string[]): void {
+function displaySuggestions(
+  deps: AppDependencies,
+  suggestions: string[],
+): void {
   const { output } = deps;
-  
+
   if (suggestions.length === 0) {
     return;
   }
@@ -168,5 +207,7 @@ function displaySuggestions(deps: AppDependencies, suggestions: string[]): void 
   });
 
   output.nl();
-  output.info('Note: You will need to manually configure command, args, and transport for each MCP');
+  output.info(
+    'Note: You will need to manually configure command, args, and transport for each MCP',
+  );
 }
