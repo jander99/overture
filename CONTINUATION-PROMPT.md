@@ -1,13 +1,13 @@
 # Continuation Prompt: Streamline Overture to 3 Clients
 
-## Context
+## ✅ ALL PHASES COMPLETE!
 
-You are continuing a refactoring effort to streamline Overture from supporting 10 AI clients down to just 3:
+The refactoring effort to streamline Overture from 10 AI clients down to 3 has been successfully completed.
 
-- **Keep:** Claude Code, GitHub Copilot CLI, OpenCode
-- **Remove:** Claude Desktop, VSCode, Cursor, Windsurf, JetBrains, Codex, Gemini CLI
+- **Supported Clients:** Claude Code, GitHub Copilot CLI, OpenCode
+- **Removed Clients:** Claude Desktop, VSCode, Cursor, Windsurf, JetBrains, Codex, Gemini CLI
 
-## Progress So Far
+## Completion Summary
 
 ✅ **Phase 1 Complete** (commit d588210)
 
@@ -21,332 +21,97 @@ You are continuing a refactoring effort to streamline Overture from supporting 1
 - Removed references to deleted clients
 - Fixed all path resolver tests (61 passing)
 
-## What's Next
+✅ **Phase 3 Complete** (commit 2c03f21)
 
-### Phase 3: Implement Copilot CLI Adapter (HIGH PRIORITY)
+- Implemented GitHub Copilot CLI adapter
+- Created copilot-cli.adapter.ts with full feature support
+- Created comprehensive test suite (39+ tests)
+- Registered adapter in adapter-factory.ts
+- Exported from index.ts
 
-**Research Available:**
+✅ **Phase 4 Complete** (commit 2c03f21)
+
+- Updated sync engine client prioritization
+- All sync operations working with 3 clients
+
+✅ **Phase 5 Complete** (commit cc05067)
+
+- Updated test utilities and mocks
+- All mock adapters return 3 clients
+
+✅ **Phase 6 Complete** (commit 02c9d62)
+
+- Updated command tests for 3-client architecture
+- All sync tests passing
+
+✅ **Phase 7 Complete** (commit e48f257)
+
+- Updated README.md
+- Updated docs/user-guide.md
+- Updated AGENTS.md
+- Cleaned up research documentation
+- Added deprecation notes where needed
+
+✅ **Phase 8 Complete** (commit 02c9d62)
+
+- Updated integration tests
+- All e2e tests passing with 3 clients
+
+✅ **Phase 9 Complete** (commit e8fc5b0)
+
+- All 911 tests passing
+- Code coverage maintained at 83%+
+- Manual testing validated
+- v0.3.0 released
+
+## Additional Improvements
+
+✅ **Bug Fixes** (commits 0f9228c, 17a3faf, 3ab59e1, a0e0d95)
+
+- Fixed global/project MCP separation
+- Corrected GitHub Copilot CLI config paths
+- Added validation warnings for invalid configs
+- Fixed OpenCode adapter format
+
+✅ **Project Cleanup** (commits dd33e33, 26d41c9)
+
+- Reorganized directory structure
+- Moved research to docs/archive
+- Removed unused directories (.claude, .cursor, packages)
+- Removed Jest artifacts, standardized on Vitest
+
+## Original Implementation Details (For Reference)
+
+### Phase 3 Implementation (COMPLETED)
+
+**Research Used:**
 
 - Comprehensive research doc at: `docs/archive/copilot-agent-schema-research-2025-12-14.md`
-- Path resolution already configured in path-resolver.ts (getCopilotCliPath method exists)
+- Path resolution configured in path-resolver.ts (getCopilotCliPath method)
 - WSL2 detection configured in libs/core/discovery
 
-**Implementation Needed:**
+**Files Created:**
 
-1. **Create copilot-cli.adapter.ts** at `libs/adapters/client-adapters/src/lib/adapters/copilot-cli.adapter.ts`
+- `copilot-cli.adapter.ts` - Full adapter implementation
+- `copilot-cli.adapter.spec.ts` - Comprehensive test suite (39+ tests)
 
-```typescript
-/**
- * Copilot CLI Adapter
- *
- * Adapter for GitHub Copilot CLI client.
- * Supports both user-level and project-level MCP configurations.
- *
- * Config locations:
- * - User: ~/.copilot/mcp-config.json (all platforms, respects XDG_CONFIG_HOME on Linux)
- * - Project: ./.github/mcp.json
- *
- * @module adapters/copilot-cli.adapter
- * @version 3.0 - Hexagonal Architecture with Dependency Injection
- */
+## Final Stats
 
-import type { FilesystemPort } from '@overture/ports-filesystem';
-import type { EnvironmentPort } from '@overture/ports-process';
-import {
-  BaseClientAdapter,
-  type ConfigPathResult,
-  type ClientMcpConfig,
-  type ClientMcpServerDef,
-} from '../client-adapter.interface.js';
-import type { Platform, OvertureConfig } from '@overture/config-types';
-import { McpError } from '@overture/errors';
+- **Tests:** 911 passing (100%)
+- **Coverage:** 83%+ maintained
+- **Build:** Clean, no errors
+- **Version:** v0.3.0 released
 
-export class CopilotCliAdapter extends BaseClientAdapter {
-  readonly name = 'copilot-cli' as const;
-  readonly schemaRootKey = 'mcpServers' as const;
+## Project State
 
-  constructor(
-    private readonly filesystem: FilesystemPort,
-    private readonly environment: EnvironmentPort,
-  ) {
-    super();
-  }
+The project is now fully streamlined to support exactly 3 clients:
 
-  detectConfigPath(platform: Platform, projectRoot?: string): ConfigPathResult {
-    const userPath = this.getCopilotCliGlobalPath(platform);
-    const projectPath = this.getCopilotCliProjectPath(projectRoot);
+1. **Claude Code** - AI-powered code editor
+2. **GitHub Copilot CLI** - Terminal-based AI assistant
+3. **OpenCode** - Alternative code AI client
 
-    return {
-      user: userPath,
-      project: projectPath,
-    };
-  }
+All legacy client code has been removed, documentation updated, and the codebase cleaned of obsolete artifacts.
 
-  async readConfig(path: string): Promise<ClientMcpConfig> {
-    const exists = await this.filesystem.exists(path);
-    if (!exists) {
-      return { mcpServers: {} };
-    }
+---
 
-    try {
-      const content = await this.filesystem.readFile(path);
-      const parsed = JSON.parse(content);
-
-      if (!parsed.mcpServers) {
-        return { mcpServers: {} };
-      }
-
-      return parsed;
-    } catch (error) {
-      throw new McpError(
-        `Failed to read Copilot CLI config at ${path}: ${(error as Error).message}`,
-        this.name,
-      );
-    }
-  }
-
-  async writeConfig(path: string, config: ClientMcpConfig): Promise<void> {
-    try {
-      const dir = this.getDirname(path);
-      const dirExists = await this.filesystem.exists(dir);
-      if (!dirExists) {
-        await this.filesystem.mkdir(dir, { recursive: true });
-      }
-
-      const content = JSON.stringify(config, null, 2);
-      await this.filesystem.writeFile(path, content);
-    } catch (error) {
-      throw new McpError(
-        `Failed to write Copilot CLI config to ${path}: ${(error as Error).message}`,
-        this.name,
-      );
-    }
-  }
-
-  convertFromOverture(
-    overtureConfig: OvertureConfig,
-    platform: Platform,
-  ): ClientMcpConfig {
-    const mcpServers: Record<string, ClientMcpServerDef> = {};
-
-    for (const [name, mcpConfig] of Object.entries(overtureConfig.mcp)) {
-      // Skip GitHub MCP - Copilot CLI bundles it by default
-      if (name === 'github') {
-        continue;
-      }
-
-      if (!this.shouldSyncMcp(mcpConfig, platform)) {
-        continue;
-      }
-
-      const serverConfig = this.buildServerConfig(mcpConfig, platform);
-
-      mcpServers[name] = {
-        command: serverConfig.command,
-        args: serverConfig.args,
-        env: serverConfig.env,
-      };
-    }
-
-    return { mcpServers };
-  }
-
-  supportsTransport(transport: 'stdio' | 'http' | 'sse'): boolean {
-    return true; // Copilot CLI supports all transport types
-  }
-
-  needsEnvVarExpansion(): boolean {
-    return false; // Copilot CLI has native ${VAR} support
-  }
-
-  override getBinaryNames(): string[] {
-    return ['copilot', 'github-copilot-cli'];
-  }
-
-  override getAppBundlePaths(_platform: Platform): string[] {
-    return []; // CLI-only client
-  }
-
-  override requiresBinary(): boolean {
-    return true;
-  }
-
-  private getCopilotCliGlobalPath(platform: Platform): string {
-    const env = this.environment.env;
-    const homeDir = env.HOME || env.USERPROFILE || '/';
-
-    switch (platform) {
-      case 'darwin':
-      case 'linux': {
-        const configBase = env.XDG_CONFIG_HOME || `${homeDir}/.config`;
-        return `${configBase}/.copilot/mcp-config.json`;
-      }
-      case 'win32': {
-        return `${homeDir}\\.copilot\\mcp-config.json`;
-      }
-      default:
-        throw new McpError(`Unsupported platform: ${platform}`, this.name);
-    }
-  }
-
-  private getCopilotCliProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
-    return `${root}/.github/mcp.json`;
-  }
-
-  private getDirname(filePath: string): string {
-    const lastSlash = Math.max(
-      filePath.lastIndexOf('/'),
-      filePath.lastIndexOf('\\'),
-    );
-    return lastSlash === -1 ? '.' : filePath.substring(0, lastSlash);
-  }
-}
-```
-
-2. **Create copilot-cli.adapter.spec.ts** - Follow opencode.adapter.spec.ts pattern (39 tests)
-
-3. **Register in adapter-factory.ts:**
-
-```typescript
-import { CopilotCliAdapter } from './adapters/copilot-cli.adapter.js';
-
-// In createAdapterRegistry():
-registry.register(new ClaudeCodeAdapter(filesystem, environment));
-registry.register(new CopilotCliAdapter(filesystem, environment));  // ADD THIS
-registry.register(new OpenCodeAdapter(filesystem, environment));
-
-// In createAdapter():
-case 'copilot-cli':
-  return new CopilotCliAdapter(filesystem, environment);
-```
-
-4. **Export from index.ts:**
-
-```typescript
-export { CopilotCliAdapter } from './lib/adapters/copilot-cli.adapter.js';
-```
-
-### Phase 4: Update Sync Engine
-
-File: `libs/core/sync/src/lib/sync-engine.ts`
-
-Update client prioritization (around line 189):
-
-```typescript
-const prioritizedClients = ['claude-code', 'copilot-cli', 'opencode'];
-```
-
-### Phase 5: Update Test Utilities
-
-File: `apps/cli/src/test-utils/app-dependencies.mock.ts` (lines 152-153)
-
-```typescript
-getAllNames: vi.fn().mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
-listAdapters: vi.fn().mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
-```
-
-### Phase 6: Update Command Tests
-
-**Already done in sync.spec.ts** - Verify these are correct, may need minor updates
-
-### Phase 7: Update Documentation (LARGE)
-
-1. **README.md**
-   - Lines 18-23: Simplify problem statement (remove VSCode, Cursor, etc.)
-   - Line 34: Update client detection list
-   - Lines 526-536: Update roadmap
-   - Lines 683-761: Simplify comparison matrix to 3 clients
-   - Add Copilot CLI features to matrix
-
-2. **docs/user-guide.md**
-   - Line 18: Update client list
-   - Lines 99-107: Update doctor examples
-   - Lines 428-439: Update other examples
-
-3. **AGENTS.md**
-   - Line 197: Update from "8 clients" to "3 clients"
-
-4. **Delete Research Docs:**
-   - `docs/archive/codex-cli-research-2025-12-14.md`
-   - `docs/archive/gemini-cli-research-2025-12-14.md`
-5. **Update with deprecation note:**
-   - `docs/archive/mcp-format-differences-2025-12-14.md` (add note at top)
-   - `docs/archive/multi-cli-roadmap-2025-12-18.md` (add note at top)
-
-### Phase 8: Update Integration Tests
-
-File: `apps/cli-e2e/src/cli/sync-multi-client.spec.ts`
-
-- Remove tests for deleted clients
-- Update to use only: claude-code, copilot-cli, opencode
-
-### Phase 9: Final Validation
-
-```bash
-# Run all tests
-npx nx test @overture/cli
-
-# Check coverage
-npx nx test @overture/cli --coverage
-
-# Build
-npx nx build @overture/cli
-
-# Test manually
-node dist/apps/cli/main.js doctor
-node dist/apps/cli/main.js sync --dry-run
-```
-
-## Commands to Run
-
-```bash
-# See current changes
-git status
-
-# Run specific test suites
-npx nx test @overture/client-adapters --run
-npx nx test @overture/config-core --run
-npx nx test @overture/config-schema --run
-
-# Build
-npx nx build @overture/cli
-```
-
-## Key Notes
-
-1. **Copilot CLI Special Handling:** Skip syncing 'github' MCP (bundled by default)
-2. **Path Format:** User: `~/.copilot/mcp-config.json`, Project: `./.github/mcp.json`
-3. **Schema:** Uses standard `mcpServers` root key (same as Claude Code)
-4. **Native env expansion:** Supports `${VAR}` syntax natively
-
-## Testing Strategy
-
-After implementing adapter:
-
-1. Unit tests for adapter (39+ tests following OpenCode pattern)
-2. Integration tests in sync-multi-client.spec.ts
-3. Manual testing with `overture doctor` and `overture sync`
-
-## Success Criteria
-
-- ✅ All tests passing (target: 900+ tests)
-- ✅ Code coverage maintained (83%+)
-- ✅ Copilot CLI adapter fully functional
-- ✅ Documentation updated
-- ✅ Research docs cleaned up
-
-## Known Issues to Fix
-
-There are TypeScript errors in files that reference deleted clients:
-
-1. **`libs/core/discovery/src/lib/wsl2-detector.ts` (line 46)** - Remove 'claude-desktop' entry
-2. **`apps/cli/src/cli/commands/doctor.ts` (lines 37-44, 359)** - Remove references to deleted clients in installation URLs map
-
-These will need to be fixed as part of the implementation.
-
-## Starting Point
-
-You are at commit `d588210`. Continue from Phase 3: Implement Copilot CLI Adapter.
-
-Good luck!
+**This continuation prompt is now archived. All phases are complete!**
