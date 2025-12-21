@@ -9,6 +9,8 @@ import { createUserCommand } from './commands/user';
 import { createAuditCommand } from './commands/audit';
 import { createBackupCommand } from './commands/backup';
 import { createDoctorCommand } from './commands/doctor';
+import { createImportCommand } from './commands/import';
+import { createCleanupCommand } from './commands/cleanup';
 
 /**
  * CLI version - synchronized with package.json
@@ -28,6 +30,8 @@ const CLI_VERSION = '0.3.0';
  * - user: Manage user global configuration
  * - audit: Audit MCP configurations across clients
  * - backup: Backup and restore MCP configurations
+ * - import: Import unmanaged MCPs from client configs
+ * - cleanup: Remove Overture-managed MCPs from directory configs
  *
  * @param deps - Application dependencies from composition root
  * @returns Configured Commander Program instance
@@ -50,6 +54,8 @@ export function createProgram(deps: AppDependencies): Command {
   program.addCommand(createUserCommand(deps));
   program.addCommand(createAuditCommand(deps));
   program.addCommand(createBackupCommand(deps));
+  program.addCommand(createImportCommand(deps));
+  program.addCommand(createCleanupCommand(deps));
 
   return program;
 }
