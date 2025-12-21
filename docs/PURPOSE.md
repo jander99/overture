@@ -28,6 +28,7 @@ Developers using AI-assisted development tools face **configuration chaos**:
 ### The Documentation Gap
 
 Project-generated `CLAUDE.md` files are minimal:
+
 - "Here's what we found via grep" - basic codebase info
 - No workflow guidance
 - No MCP usage instructions
@@ -39,6 +40,7 @@ Project-generated `CLAUDE.md` files are minimal:
 **Overture v0.2.5 is a comprehensive multi-platform MCP configuration orchestrator with intelligent client detection.**
 
 Currently implemented (911/911 tests passing, 83%+ coverage):
+
 - ✅ User global config (`~/.config/overture/config.yml`)
 - ✅ Project-level config (`.overture/config.yaml`)
 - ✅ User/project config merging with proper precedence
@@ -70,6 +72,7 @@ Currently implemented (911/911 tests passing, 83%+ coverage):
 **Problem:** MCP servers configured inconsistently across multiple AI tools and config levels.
 
 **Solution:**
+
 - **Single source of truth:** `~/.config/overture/config.yml` (user global) + `.overture/config.yaml` (project)
 - **Multi-platform sync:** Generate configs for Claude Desktop, Claude Code, Copilot CLI, VSCode, IntelliJ
 - **Smart precedence:** User global MCPs override project duplicates (no duplication)
@@ -77,6 +80,7 @@ Currently implemented (911/911 tests passing, 83%+ coverage):
 - **Audit & cleanup:** Scan existing configs, report conflicts, consolidate
 
 **Example workflow:**
+
 ```bash
 # User declares canonical MCP config once
 ~/.config/overture/config.yml:
@@ -102,12 +106,14 @@ overture sync
 **Problem:** Plugins installed globally but only needed for specific projects. No precedence model.
 
 **Solution:**
+
 - **User/project precedence:** User can have global plugins; project can declare additional plugins
 - **Smart installation:** Only install plugins not already in user global config
 - **Activation context:** Document which plugins are "active" for this project in `CLAUDE.md`
 - **Version management:** (future) Pin plugin versions per project
 
 **Example:**
+
 ```yaml
 # User global: ~/.config/overture/config.yml
 plugins:
@@ -126,8 +132,10 @@ plugins:
 ```
 
 **Generated CLAUDE.md:**
+
 ```markdown
 ## Active Plugins for This Project
+
 - python-development (from user global config)
 - kubernetes-operations (project-specific)
 ```
@@ -137,26 +145,28 @@ plugins:
 **Problem:** Basic `CLAUDE.md` files don't capture workflows, MCP usage patterns, or orchestration strategies.
 
 **Solution:**
+
 - **Enhanced templates:** User-defined workflow instructions
 - **MCP usage guidance:** "When using context7, distill summaries into memory"
 - **Agent/Skill → MCP mappings:** (research-heavy) Connect plugin agents to optimal MCPs
 - **Team best practices:** Codify "how we use AI on this project"
 
 **Example configuration:**
+
 ```yaml
 # .overture/config.yaml
 documentation:
   workflows:
-    - name: "TDD with AI assistance"
-      trigger: "When writing tests"
+    - name: 'TDD with AI assistance'
+      trigger: 'When writing tests'
       instructions: |
         1. Use context7 MCP to look up testing library best practices
         2. Use memory MCP to check previous test patterns in this project
         3. Use python-repl MCP to validate test assertions
         4. Store new patterns in memory for future reference
 
-    - name: "API implementation"
-      trigger: "When implementing API endpoints"
+    - name: 'API implementation'
+      trigger: 'When implementing API endpoints'
       instructions: |
         1. Use context7 to fetch latest FastAPI documentation
         2. Use memory to retrieve project API design patterns
@@ -165,9 +175,9 @@ documentation:
   agent_mcp_mappings:
     python-development:python-pro:
       mcps:
-        memory: "Persist architectural decisions and patterns discovered"
-        context7: "Always look up latest library docs before implementing"
-        python-repl: "Validate complex logic before committing"
+        memory: 'Persist architectural decisions and patterns discovered'
+        context7: 'Always look up latest library docs before implementing'
+        python-repl: 'Validate complex logic before committing'
 ```
 
 **Generated CLAUDE.md** includes rich workflow instructions that orchestrate multiple MCPs together.
@@ -175,6 +185,7 @@ documentation:
 ### Stitching It Together: The Magic
 
 When Overture configuration declares:
+
 ```yaml
 plugins:
   python-development:
@@ -182,7 +193,7 @@ plugins:
 
 documentation:
   workflows:
-    - name: "Research-driven development"
+    - name: 'Research-driven development'
       instructions: |
         1. context7: Look up latest docs
         2. memory: Store distilled summary
@@ -190,10 +201,12 @@ documentation:
 ```
 
 The generated `CLAUDE.md` tells Claude:
+
 ```markdown
 ## Workflow: Research-driven development
 
 When researching a new library:
+
 1. Use **context7 MCP** to fetch up-to-date documentation
 2. Use **memory MCP** to persist a distilled summary for future sessions
 3. Use **python-repl MCP** to validate your understanding with code
@@ -241,6 +254,7 @@ This creates a learning loop where each library researched enriches the project 
 ## Phased Roadmap
 
 ### Phase 1: Foundation (v0.1)
+
 - [x] Basic CLI infrastructure
 - [x] Project-level config for Claude Code
 - [x] Plugin installation via Claude CLI
@@ -251,6 +265,7 @@ This creates a learning loop where each library researched enriches the project 
 **Status:** ✅ COMPLETE (98%+ test coverage)
 
 ### Phase 2: Multi-Platform MCP Manager (v0.2)
+
 - [x] User global config: `~/.config/overture/config.yml`
 - [x] User/project precedence and deduplication
 - [x] Multi-platform adapters:
@@ -272,6 +287,7 @@ This creates a learning loop where each library researched enriches the project 
 **Goal:** Eliminate MCP configuration duplication across platforms. ✅ ACHIEVED
 
 ### Phase 2.5: Intelligent Client Detection (v0.2.5)
+
 - [x] Binary detection service (CLI binaries + GUI applications)
 - [x] Version extraction via --version flags
 - [x] Config file JSON validation
@@ -295,6 +311,7 @@ This creates a learning loop where each library researched enriches the project 
 **Decision:** Use paired HTML comment markers for managed sections (Nx MCP pattern)
 
 **Pattern:**
+
 ```markdown
 <!-- overture configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
@@ -315,18 +332,22 @@ This creates a learning loop where each library researched enriches the project 
 **Alternatives considered:**
 
 1. **Split-point marker** (original v0.1 approach):
+
    ```markdown
    <!-- Custom sections below this comment will be preserved -->
    ```
+
    - ❌ Less robust - assumes linear structure (managed above, custom below)
    - ❌ Cannot handle multiple tools injecting sections
    - ❌ Less clear about what's managed vs user-written
 
 2. **XML-style tags**:
+
    ```markdown
    <overture:managed>
    </overture:managed>
    ```
+
    - ❌ Not valid markdown comments
    - ❌ May interfere with markdown rendering
 
@@ -336,10 +357,11 @@ This creates a learning loop where each library researched enriches the project 
    - ❌ Breaks existing CLAUDE.md files
 
 **Implementation:**
+
 - `apps/cli/src/domain/constants.ts` - Marker constants
 - `apps/cli/src/core/generator.ts` - `updateManagedSection()` method
 - `apps/cli/src/core/generator.spec.ts` - 37 tests covering all edge cases
-- Research documented in `research/claude-md-coordination.md` (from agent)
+- Research documented in `docs/archive/research/claude-md-coordination.md` (from agent)
 
 **Placement strategy:** Append at end of file to avoid disrupting user-written content.
 
@@ -390,18 +412,21 @@ Overture succeeds when:
 ## Why This Matters
 
 As AI-assisted development becomes standard, developers will use multiple tools:
+
 - Claude Code for complex tasks
 - Copilot for inline suggestions
 - ChatGPT/Claude for research
 - Multiple MCP servers for specialized capabilities
 
 **Without Overture:**
+
 - Configuration hell across tools
 - Manual duplication and drift
 - No shared team practices
 - AI tools don't know how to work together
 
 **With Overture:**
+
 - Single source of truth for config
 - Automatic sync across platforms
 - Documented workflows and patterns

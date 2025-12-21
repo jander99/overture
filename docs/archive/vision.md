@@ -16,6 +16,7 @@ This document captures future ideas, feature concepts, and long-term vision for 
 **The Dream**: Write one configuration file, sync to all tools, share with your team, and maintain consistency effortlessly.
 
 **Key Principles**:
+
 - **User Scope**: Global configurations for individual developers
 - **Project Scope**: Team-shared configurations that live in repositories
 - **Seamless Integration**: Configurations merge intelligently across scopes
@@ -54,6 +55,7 @@ my-overture-config/
 ```
 
 **User Workflow**:
+
 ```bash
 # Clone your config repo
 git clone git@github.com:username/my-overture-config.git ~/overture-configs
@@ -69,6 +71,7 @@ claude
 ```
 
 **Benefits**:
+
 - ✅ Pre-configured directory structure
 - ✅ Working examples to learn from
 - ✅ Best practices baked in
@@ -76,6 +79,7 @@ claude
 - ✅ Version controlled configuration
 
 **Team Workflow**:
+
 ```bash
 # Team creates shared config repo
 git clone git@github.com:company/team-overture-config.git ~/work/team-config
@@ -107,12 +111,14 @@ Available templates:
 ```
 
 **Usage**:
+
 ```bash
 overture new my-plugin --template python
 overture new my-api --template fastapi
 ```
 
 **Community Templates**:
+
 ```bash
 overture templates add --url github:username/my-template
 overture new my-plugin --template username/my-template
@@ -158,6 +164,7 @@ overture new my-plugin --interactive
 **Vision**: Centralized discovery and installation of community plugins
 
 **Features**:
+
 - Browse plugins by category
 - Search and filter
 - Ratings and reviews
@@ -165,6 +172,7 @@ overture new my-plugin --interactive
 - Version management
 
 **CLI Integration**:
+
 ```bash
 # Search
 overture search python testing
@@ -182,6 +190,7 @@ overture marketplace publish
 ```
 
 **Web Interface**:
+
 ```
 https://overture.dev/marketplace
 ├── Browse plugins
@@ -204,8 +213,8 @@ plugin:
 
 # Inherit from base plugins
 extends:
-  - python-dev@1.0.0       # Get Python tools
-  - git-workflow@2.0.0     # Get git conventions
+  - python-dev@1.0.0 # Get Python tools
+  - git-workflow@2.0.0 # Get git conventions
 
 # Add or override
 mcp_servers:
@@ -223,6 +232,7 @@ subagents:
 ```
 
 **Benefits**:
+
 - ✅ Reuse existing plugins
 - ✅ Build on community work
 - ✅ Override specific pieces
@@ -237,6 +247,7 @@ subagents:
 **Features**:
 
 1. **Token Budget Analysis**:
+
 ```bash
 overture analyze tokens
 
@@ -252,6 +263,7 @@ Budget: 800 tokens (62% used)
 ```
 
 2. **Duplication Detection**:
+
 ```bash
 overture analyze duplication
 
@@ -271,6 +283,7 @@ Suggestions:
 ```
 
 3. **Auto-Extraction**:
+
 ```bash
 overture optimize --auto-extract
 
@@ -293,6 +306,7 @@ Token savings: 165 tokens (25% reduction)
 **Vision**: Browser-based GUI for creating and managing plugins
 
 **Features**:
+
 - Visual plugin builder
 - Drag-and-drop component creation
 - Real-time validation
@@ -301,6 +315,7 @@ Token savings: 165 tokens (25% reduction)
 - Team collaboration
 
 **Technology Stack**:
+
 - Frontend: React + TypeScript
 - Backend: Rust (Axum/Actix)
 - Desktop App: Tauri
@@ -330,6 +345,7 @@ Shall I proceed? (Y/n):
 ```
 
 **Features**:
+
 - Natural language plugin description
 - AI suggests components
 - Generates configuration
@@ -345,6 +361,7 @@ Shall I proceed? (Y/n):
 **Features**:
 
 1. **Usage Tracking** (opt-in):
+
 ```bash
 overture analytics show
 
@@ -361,6 +378,7 @@ Most Used Commands:
 ```
 
 2. **Optimization Suggestions**:
+
 ```
 Based on usage patterns:
 → Consider extracting common code review patterns to a skill
@@ -369,6 +387,7 @@ Based on usage patterns:
 ```
 
 3. **Community Insights**:
+
 ```
 Popular plugins in your category:
 → pytest-professional (1.2k installs, 4.8★)
@@ -384,6 +403,7 @@ Consider adopting patterns from top-rated plugins
 **Vision**: Native integration with VS Code and JetBrains IDEs
 
 **VS Code Extension**:
+
 - Manage plugins from VS Code
 - Edit overture.yaml with autocomplete
 - Validate configurations inline
@@ -391,6 +411,7 @@ Consider adopting patterns from top-rated plugins
 - View plugin marketplace
 
 **JetBrains Plugin**:
+
 - Same features adapted to IntelliJ platform
 
 **Implementation Priority**: Month 12+
@@ -400,6 +421,7 @@ Consider adopting patterns from top-rated plugins
 **Vision**: Support additional AI coding assistants
 
 **Potential Integrations**:
+
 - Cursor (uses custom rules)
 - Aider (uses .aider files)
 - Cody (uses Sourcegraph context)
@@ -407,6 +429,7 @@ Consider adopting patterns from top-rated plugins
 - Future tools
 
 **Configuration**:
+
 ```yaml
 plugin:
   sync_to:
@@ -443,6 +466,7 @@ All tests passed!
 ```
 
 **Test Types**:
+
 1. Schema validation
 2. Dependency resolution
 3. File existence
@@ -466,15 +490,16 @@ All tests passed!
 @overture:plugin python-dev
 
 @overture:mcp-server pytest-runner
-  type: stdio
-  command: npx -y pytest-mcp
+type: stdio
+command: npx -y pytest-mcp
 
 @overture:subagent test-engineer
-  tools: pytest-runner
-  description: Writes comprehensive tests
+tools: pytest-runner
+description: Writes comprehensive tests
 ```
 
 **Benefits**:
+
 - Single file for everything
 - CLAUDE.md as source of truth
 - Generate overture.yaml from CLAUDE.md
@@ -486,6 +511,7 @@ All tests passed!
 **Concept**: Real-time collaboration on plugin configurations
 
 **Features**:
+
 - Shared editing sessions
 - Live validation
 - Conflict resolution
@@ -498,6 +524,7 @@ All tests passed!
 **Concept**: Run untrusted plugins safely
 
 **Features**:
+
 - Permissions system (what plugins can access)
 - Sandboxed execution (containers/VMs)
 - Audit logging
@@ -523,6 +550,7 @@ Migration complete with 2 warnings.
 ```
 
 **Features**:
+
 - Automatic schema migrations
 - Deprecation warnings
 - Migration guides
@@ -537,6 +565,7 @@ Migration complete with 2 warnings.
 **Concept**: Official "Overture Certified" badge for quality plugins
 
 **Requirements**:
+
 - Comprehensive documentation
 - Example usage
 - Test coverage
@@ -544,6 +573,7 @@ Migration complete with 2 warnings.
 - Community feedback
 
 **Benefits**:
+
 - Users trust certified plugins
 - Quality standard established
 - Community participation
@@ -553,6 +583,7 @@ Migration complete with 2 warnings.
 **Concept**: Fund development of valuable plugins
 
 **Categories**:
+
 - Language ecosystems
 - Framework support
 - Tool integrations
@@ -563,6 +594,7 @@ Migration complete with 2 warnings.
 **Concept**: Community gathering for plugin developers
 
 **Topics**:
+
 - Plugin development workshops
 - Best practices sharing
 - Tool integration updates
@@ -580,7 +612,7 @@ Migration complete with 2 warnings.
 
 ```yaml
 # overture.yaml
-schema_version: "2.0"  # Explicit version
+schema_version: '2.0' # Explicit version
 
 plugin:
   name: my-plugin
@@ -588,6 +620,7 @@ plugin:
 ```
 
 **Tooling**:
+
 ```bash
 overture upgrade schema  # Upgrade to latest schema
 overture validate --schema 1.0  # Validate against specific version
@@ -598,6 +631,7 @@ overture validate --schema 1.0  # Validate against specific version
 **Policy**: Support N-2 versions
 
 **Example**:
+
 - Current: 3.0
 - Support: 3.0, 2.x, 1.x
 - Deprecate: 0.x
@@ -611,17 +645,20 @@ overture validate --schema 1.0  # Validate against specific version
 ### Product Metrics
 
 **Adoption**:
+
 - Installations per month
 - Active users (weekly, monthly)
 - Plugins created
 - Public plugins published
 
 **Engagement**:
+
 - Daily commands run
 - Sync operations per user
 - Plugin updates frequency
 
 **Quality**:
+
 - Error rate (failed builds/syncs)
 - Time to first working plugin
 - User satisfaction (NPS score)
@@ -629,12 +666,14 @@ overture validate --schema 1.0  # Validate against specific version
 ### Ecosystem Health
 
 **Community**:
+
 - GitHub stars
 - Contributors
 - Issues/PRs per month
 - Discord/forum activity
 
 **Plugins**:
+
 - Total plugins available
 - Average plugin rating
 - Plugin update frequency
@@ -647,12 +686,14 @@ overture validate --schema 1.0  # Validate against specific version
 ### 1. Pricing & Business Model
 
 **Options**:
+
 - Free & open source (community-driven)
 - Freemium (basic free, advanced paid)
 - Enterprise licensing
 - Marketplace revenue share
 
 **Considerations**:
+
 - Sustainability
 - Team size needs
 - Infrastructure costs
@@ -661,6 +702,7 @@ overture validate --schema 1.0  # Validate against specific version
 ### 2. Hosting & Infrastructure
 
 **Decisions Needed**:
+
 - Self-hosted vs cloud service
 - Plugin storage (GitHub? CDN? Own servers?)
 - Build service (local only? Cloud builds?)
@@ -669,6 +711,7 @@ overture validate --schema 1.0  # Validate against specific version
 ### 3. Governance
 
 **Questions**:
+
 - Open source foundation?
 - Community governance model?
 - Decision-making process?
@@ -740,6 +783,7 @@ This document is **living and evolving**. As Overture grows:
 4. **New ideas** → Add to this document
 
 **How to Contribute**:
+
 - Open issues for new ideas
 - Comment on existing proposals
 - Submit PRs for vision updates
@@ -769,7 +813,7 @@ The key is to **start simple**, **iterate quickly**, and **listen to users**.
 
 ## Quick Links
 
-- [Architecture Recommendations](./research/architecture-recommendations.md)
-- [User Experience Design](./research/user-experience.md)
-- [CLAUDE.md Coordination](./research/claude-md-coordination.md)
-- [Theory Validation](./research/theory-validation.md)
+- [Architecture Recommendations](research/architecture-recommendations.md)
+- [User Experience Design](research/archive/user-experience.md)
+- [CLAUDE.md Coordination](research/claude-md-coordination.md)
+- [Theory Validation](research/archive/theory-validation.md)
