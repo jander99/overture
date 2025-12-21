@@ -4,48 +4,6 @@
   "include": [],
   "references": [
     {
-      "path": "../../libs/core/import"
-    },
-    {
-      "path": "../../libs/ports/output"
-    },
-    {
-      "path": "../../libs/ports/process"
-    },
-    {
-      "path": "../../libs/ports/filesystem"
-    },
-    {
-      "path": "../../libs/shared/utils"
-    },
-    {
-      "path": "../../libs/adapters/infrastructure"
-    },
-    {
-      "path": "../../libs/adapters/client-adapters"
-    },
-    {
-      "path": "../../libs/core/sync"
-    },
-    {
-      "path": "../../libs/core/plugin"
-    },
-    {
-      "path": "../../libs/core/discovery"
-    },
-    {
-      "path": "../../libs/core/config"
-    },
-    {
-      "path": "../../libs/domain/config-schema"
-    },
-    {
-      "path": "../../libs/domain/errors"
-    },
-    {
-      "path": "../../libs/domain/config-types"
-    },
-    {
       "path": "./tsconfig.app.json"
     },
     {

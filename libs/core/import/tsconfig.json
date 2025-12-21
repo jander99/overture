@@ -4,18 +4,6 @@
   "include": [],
   "references": [
     {
-      "path": "../../adapters/client-adapters"
-    },
-    {
-      "path": "../../ports/output"
-    },
-    {
-      "path": "../../ports/filesystem"
-    },
-    {
-      "path": "../../domain/config-types"
-    },
-    {
       "path": "./tsconfig.lib.json"
     },
     {

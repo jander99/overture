@@ -4,42 +4,6 @@
   "include": [],
   "references": [
     {
-      "path": "../../shared/testing"
-    },
-    {
-      "path": "../../shared/utils"
-    },
-    {
-      "path": "../../ports/output"
-    },
-    {
-      "path": "../../ports/process"
-    },
-    {
-      "path": "../../ports/filesystem"
-    },
-    {
-      "path": "../discovery"
-    },
-    {
-      "path": "../plugin"
-    },
-    {
-      "path": "../../adapters/client-adapters"
-    },
-    {
-      "path": "../../domain/errors"
-    },
-    {
-      "path": "../../domain/config-schema"
-    },
-    {
-      "path": "../config"
-    },
-    {
-      "path": "../../domain/config-types"
-    },
-    {
       "path": "./tsconfig.lib.json"
     },
     {

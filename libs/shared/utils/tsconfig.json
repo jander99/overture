@@ -4,12 +4,6 @@
   "include": [],
   "references": [
     {
-      "path": "../../domain/errors"
-    },
-    {
-      "path": "../../ports/output"
-    },
-    {
       "path": "./tsconfig.lib.json"
     },
     {
