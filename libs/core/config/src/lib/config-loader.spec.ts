@@ -82,12 +82,16 @@ mcp:
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       await expect(loader.loadUserConfig()).rejects.toThrow(ConfigError);
-      await expect(loader.loadUserConfig()).rejects.toThrow('User config file not found');
+      await expect(loader.loadUserConfig()).rejects.toThrow(
+        'User config file not found',
+      );
     });
 
     it('should throw ConfigError on YAML parse error', async () => {
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue('invalid: yaml: [unclosed');
+      vi.mocked(mockFilesystem.readFile).mockResolvedValue(
+        'invalid: yaml: [unclosed',
+      );
 
       await expect(loader.loadUserConfig()).rejects.toThrow(ConfigError);
     });
@@ -119,7 +123,9 @@ mcp:
 `);
 
       await expect(loader.loadUserConfig()).rejects.toThrow(ValidationError);
-      await expect(loader.loadUserConfig()).rejects.toThrow(/deprecated 'scope' field/i);
+      await expect(loader.loadUserConfig()).rejects.toThrow(
+        /deprecated 'scope' field/i,
+      );
     });
 
     it('should format YAML errors with line numbers', async () => {
@@ -137,7 +143,9 @@ mcp:
   describe('loadProjectConfig', () => {
     it('should load and parse valid project config', async () => {
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue(validProjectConfigYaml);
+      vi.mocked(mockFilesystem.readFile).mockResolvedValue(
+        validProjectConfigYaml,
+      );
 
       const config = await loader.loadProjectConfig();
 
@@ -156,17 +164,23 @@ mcp:
 
     it('should use provided project root', async () => {
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue(validProjectConfigYaml);
+      vi.mocked(mockFilesystem.readFile).mockResolvedValue(
+        validProjectConfigYaml,
+      );
 
       const config = await loader.loadProjectConfig('/custom/project');
 
-      expect(mockFilesystem.exists).toHaveBeenCalledWith('/custom/project/.overture/config.yaml');
+      expect(mockFilesystem.exists).toHaveBeenCalledWith(
+        '/custom/project/.overture/config.yaml',
+      );
       expect(config).toBeDefined();
     });
 
     it('should throw ConfigError on read error', async () => {
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
-      vi.mocked(mockFilesystem.readFile).mockRejectedValue(new Error('Permission denied'));
+      vi.mocked(mockFilesystem.readFile).mockRejectedValue(
+        new Error('Permission denied'),
+      );
 
       await expect(loader.loadProjectConfig()).rejects.toThrow(ConfigError);
     });
@@ -354,7 +368,9 @@ mcp:
         return path === '/home/user/project/.overture/config.yaml';
       });
 
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue(validProjectConfigYaml);
+      vi.mocked(mockFilesystem.readFile).mockResolvedValue(
+        validProjectConfigYaml,
+      );
 
       const config = await loader.loadConfig();
 
@@ -366,7 +382,9 @@ mcp:
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       await expect(loader.loadConfig()).rejects.toThrow(ConfigError);
-      await expect(loader.loadConfig()).rejects.toThrow(/No configuration found/);
+      await expect(loader.loadConfig()).rejects.toThrow(
+        /No configuration found/,
+      );
     });
 
     it('should use provided project root', async () => {
@@ -401,7 +419,9 @@ mcp:
       const result = await loader.hasUserConfig();
 
       expect(result).toBe(true);
-      expect(mockFilesystem.exists).toHaveBeenCalledWith('/home/user/.config/overture.yml');
+      expect(mockFilesystem.exists).toHaveBeenCalledWith(
+        '/home/user/.config/overture/config.yaml',
+      );
     });
 
     it('should return false if user config does not exist', async () => {
@@ -420,7 +440,9 @@ mcp:
       const result = await loader.hasProjectConfig();
 
       expect(result).toBe(true);
-      expect(mockFilesystem.exists).toHaveBeenCalledWith('/home/user/project/.overture/config.yaml');
+      expect(mockFilesystem.exists).toHaveBeenCalledWith(
+        '/home/user/project/.overture/config.yaml',
+      );
     });
 
     it('should return false if project config does not exist', async () => {
@@ -436,7 +458,9 @@ mcp:
 
       await loader.hasProjectConfig('/custom/project');
 
-      expect(mockFilesystem.exists).toHaveBeenCalledWith('/custom/project/.overture/config.yaml');
+      expect(mockFilesystem.exists).toHaveBeenCalledWith(
+        '/custom/project/.overture/config.yaml',
+      );
     });
   });
 });

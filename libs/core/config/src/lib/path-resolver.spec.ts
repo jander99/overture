@@ -124,7 +124,7 @@ describe('PathResolver', () => {
       mockEnvironment.env.XDG_CONFIG_HOME = '/custom/config';
 
       const result = resolver.getUserConfigPath();
-      expect(result).toBe('/custom/config/overture.yml');
+      expect(result).toBe('/custom/config/overture/config.yaml');
     });
 
     it('should use ~/.config on Linux if XDG_CONFIG_HOME not set', () => {
@@ -132,21 +132,21 @@ describe('PathResolver', () => {
       delete mockEnvironment.env.XDG_CONFIG_HOME;
 
       const result = resolver.getUserConfigPath();
-      expect(result).toBe('/home/user/.config/overture.yml');
+      expect(result).toBe('/home/user/.config/overture/config.yaml');
     });
 
     it('should use ~/.config on macOS', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('darwin');
 
       const result = resolver.getUserConfigPath();
-      expect(result).toBe('/home/user/.config/overture.yml');
+      expect(result).toBe('/home/user/.config/overture/config.yaml');
     });
 
     it('should use ~/.config on Windows', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('win32');
 
       const result = resolver.getUserConfigPath();
-      expect(result).toBe('/home/user/.config/overture.yml');
+      expect(result).toBe('/home/user/.config/overture/config.yaml');
     });
   });
 

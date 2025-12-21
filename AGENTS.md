@@ -14,7 +14,7 @@ This file provides guidance for AI agents (GitHub Copilot, Cursor, Windsurf, etc
 
 1. **Multi-Platform Sync** - Generates MCP configs for 3 AI clients (Claude Code, GitHub Copilot CLI, OpenCode)
 2. **Binary Detection** - Automatically detects installed AI clients, versions, and validates configs
-3. **User/Project Config** - Supports global (`~/.config/overture.yml`) and project-specific (`.overture/config.yaml`) configurations
+3. **User/Project Config** - Supports global (`~/.config/overture/config.yaml`) and project-specific (`.overture/config.yaml`) configurations
 4. **Documentation Generation** - Creates CLAUDE.md with plugin→MCP usage guidance
 5. **System Diagnostics** - `overture doctor` command for health checks and troubleshooting
 
@@ -189,7 +189,7 @@ chore: maintenance tasks
 
 ## Key Configuration Patterns
 
-### User Global Config (`~/.config/overture.yml`)
+### User Global Config (`~/.config/overture/config.yaml`)
 
 ```yaml
 version: '1.0'
@@ -238,7 +238,9 @@ mcp:
 **`~/.config/opencode/opencode.json`** - OpenCode user MCP configuration
 **`CLAUDE.md`** - Project guidance with plugin→MCP mappings
 
-All configs generated from single `overture.yml` source of truth (3 clients).
+All configs generated from single `config.yaml` source of truth (3 clients).
+
+**Note:** Both `.yaml` and `.yml` extensions are supported, with `.yaml` as the preferred extension. Using `.yml` will show a deprecation warning.
 
 ## Important Notes
 

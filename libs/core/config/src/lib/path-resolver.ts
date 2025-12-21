@@ -123,14 +123,35 @@ export class PathResolver {
   /**
    * Get user global Overture configuration path
    *
-   * Returns platform-specific path for user global config:
-   * - Linux: $XDG_CONFIG_HOME/overture/config.yml or ~/.config/overture/config.yml
-   * - macOS: ~/.config/overture/config.yml
-   * - Windows: %USERPROFILE%\.config\overture\config.yml
+   * Returns platform-specific path for user global config (primary .yaml):
+   * - Linux: $XDG_CONFIG_HOME/overture/config.yaml or ~/.config/overture/config.yaml
+   * - macOS: ~/.config/overture/config.yaml
+   * - Windows: %USERPROFILE%\.config\overture\config.yaml
    *
-   * @returns User config file path
+   * @returns User config file path (primary .yaml extension)
    */
   getUserConfigPath(): string {
+    const platform = this.getPlatform();
+
+    if (platform === 'linux') {
+      return this.joinPaths(this.getXdgConfigHome(), 'overture', 'config.yaml');
+    }
+
+    // macOS and Windows both use ~/.config/overture
+    return this.joinPaths(
+      this.getHomeDir(),
+      '.config',
+      'overture',
+      'config.yaml',
+    );
+  }
+
+  /**
+   * Get fallback user global configuration path with .yml extension
+   *
+   * @returns User config file path with .yml extension (fallback)
+   */
+  getUserConfigPathYml(): string {
     const platform = this.getPlatform();
 
     if (platform === 'linux') {
@@ -167,11 +188,22 @@ export class PathResolver {
    * Get project-level Overture configuration path
    *
    * @param projectRoot - Project root directory (defaults to cwd)
-   * @returns Project config file path
+   * @returns Project config file path (primary .yaml extension)
    */
   getProjectConfigPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
     return this.joinPaths(root, '.overture', 'config.yaml');
+  }
+
+  /**
+   * Get fallback project-level configuration path with .yml extension
+   *
+   * @param projectRoot - Project root directory (defaults to cwd)
+   * @returns Project config file path with .yml extension (fallback)
+   */
+  getProjectConfigPathYml(projectRoot?: string): string {
+    const root = projectRoot || this.environment.env.PWD || '/';
+    return this.joinPaths(root, '.overture', 'config.yml');
   }
 
   /**
@@ -522,7 +554,7 @@ export class PathResolver {
    * Find the nearest .overture directory by walking up from startDir
    *
    * Searches from the starting directory upward through parent directories
-   * until .overture/config.yaml is found or filesystem root is reached.
+   * until .overture/config.yaml or .overture/config.yml is found or filesystem root is reached.
    *
    * @param startDir - Directory to start searching from (defaults to cwd)
    * @returns Project root directory (containing .overture/) or null if not found
@@ -547,10 +579,14 @@ export class PathResolver {
     const root = this.parsePathRoot(currentDir);
 
     while (currentDir !== root) {
-      const configPath = this.joinPaths(currentDir, '.overture', 'config.yaml');
+      const yamlPath = this.joinPaths(currentDir, '.overture', 'config.yaml');
+      const ymlPath = this.joinPaths(currentDir, '.overture', 'config.yml');
 
-      // Check if .overture/config.yaml exists at this level
-      if (await this.filesystem.exists(configPath)) {
+      // Check if .overture/config.yaml or .overture/config.yml exists at this level
+      if (
+        (await this.filesystem.exists(yamlPath)) ||
+        (await this.filesystem.exists(ymlPath))
+      ) {
         return currentDir;
       }
 
@@ -566,8 +602,12 @@ export class PathResolver {
     }
 
     // Check root directory as last resort
-    const rootConfigPath = this.joinPaths(root, '.overture', 'config.yaml');
-    if (await this.filesystem.exists(rootConfigPath)) {
+    const rootYamlPath = this.joinPaths(root, '.overture', 'config.yaml');
+    const rootYmlPath = this.joinPaths(root, '.overture', 'config.yml');
+    if (
+      (await this.filesystem.exists(rootYamlPath)) ||
+      (await this.filesystem.exists(rootYmlPath))
+    ) {
       return root;
     }
 

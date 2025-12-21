@@ -134,20 +134,25 @@ export class ConfigLoader {
    * ```
    */
   async loadUserConfig(): Promise<OvertureConfig> {
-    const newConfigPath = this.pathResolver.getUserConfigPath();
-    const legacyConfigPath = this.pathResolver.getLegacyUserConfigPath();
-    
-    let configPath = newConfigPath;
-    let isLegacyPath = false;
+    const yamlPath = this.pathResolver.getUserConfigPath(); // .yaml (primary)
+    const ymlPath = this.pathResolver.getUserConfigPathYml(); // .yml (fallback)
+    const legacyConfigPath = this.pathResolver.getLegacyUserConfigPath(); // old location
 
-    // Check new path first, then fall back to legacy path
-    if (await this.filesystem.exists(newConfigPath)) {
-      configPath = newConfigPath;
+    let configPath = yamlPath;
+    let isLegacyPath = false;
+    let isYmlExtension = false;
+
+    // Try .yaml first (primary), then .yml (fallback), then legacy location
+    if (await this.filesystem.exists(yamlPath)) {
+      configPath = yamlPath;
+    } else if (await this.filesystem.exists(ymlPath)) {
+      configPath = ymlPath;
+      isYmlExtension = true;
     } else if (await this.filesystem.exists(legacyConfigPath)) {
       configPath = legacyConfigPath;
       isLegacyPath = true;
     } else {
-      throw new ConfigError(`User config file not found`, newConfigPath);
+      throw new ConfigError(`User config file not found`, yamlPath);
     }
 
     try {
@@ -172,16 +177,38 @@ export class ConfigLoader {
         );
       }
 
+      // Show warning if using .yml extension instead of .yaml
+      if (isYmlExtension && typeof process !== 'undefined' && process.stderr) {
+        const preferredPath = yamlPath.replace(
+          this.pathResolver.getHomeDir(),
+          '~',
+        );
+        const currentPath = ymlPath.replace(
+          this.pathResolver.getHomeDir(),
+          '~',
+        );
+        process.stderr.write(
+          `\n⚠️  WARNING: Using .yml extension (fallback)\n` +
+            `   Current: ${currentPath}\n` +
+            `   Preferred: ${preferredPath}\n` +
+            `   Consider renaming to use .yaml extension.\n` +
+            `   Run: mv ${currentPath} ${preferredPath}\n\n`,
+        );
+      }
+
       // Show deprecation warning if using legacy path
       if (isLegacyPath && typeof process !== 'undefined' && process.stderr) {
-        const newPath = newConfigPath.replace(this.pathResolver.getHomeDir(), '~');
-        const oldPath = legacyConfigPath.replace(this.pathResolver.getHomeDir(), '~');
+        const newPath = yamlPath.replace(this.pathResolver.getHomeDir(), '~');
+        const oldPath = legacyConfigPath.replace(
+          this.pathResolver.getHomeDir(),
+          '~',
+        );
         process.stderr.write(
           `\n⚠️  DEPRECATION WARNING: Using legacy config path\n` +
-          `   Old path: ${oldPath}\n` +
-          `   New path: ${newPath}\n` +
-          `   Please move your config file to the new location.\n` +
-          `   Run: mkdir -p ~/.config/overture && mv ${oldPath} ${newPath}\n\n`
+            `   Old path: ${oldPath}\n` +
+            `   New path: ${newPath}\n` +
+            `   Please move your config file to the new location.\n` +
+            `   Run: mkdir -p ~/.config/overture && mv ${oldPath} ${newPath}\n\n`,
         );
       }
 
@@ -222,10 +249,22 @@ export class ConfigLoader {
   async loadProjectConfig(
     projectRoot?: string,
   ): Promise<OvertureConfig | null> {
-    const configPath = this.pathResolver.getProjectConfigPath(projectRoot);
+    const yamlPath = this.pathResolver.getProjectConfigPath(projectRoot); // .yaml (primary)
+    const ymlPath = this.pathResolver.getProjectConfigPathYml(projectRoot); // .yml (fallback)
 
-    // Check if file exists (project config is optional)
-    if (!(await this.filesystem.exists(configPath))) {
+    let configPath: string | null = null;
+    let isYmlExtension = false;
+
+    // Try .yaml first (primary), then .yml (fallback)
+    if (await this.filesystem.exists(yamlPath)) {
+      configPath = yamlPath;
+    } else if (await this.filesystem.exists(ymlPath)) {
+      configPath = ymlPath;
+      isYmlExtension = true;
+    }
+
+    // Project config is optional
+    if (!configPath) {
       return null;
     }
 
@@ -251,6 +290,16 @@ export class ConfigLoader {
         );
       }
 
+      // Show warning if using .yml extension instead of .yaml
+      if (isYmlExtension && typeof process !== 'undefined' && process.stderr) {
+        process.stderr.write(
+          `\n⚠️  WARNING: Using .yml extension (fallback)\n` +
+            `   Current: .overture/config.yml\n` +
+            `   Preferred: .overture/config.yaml\n` +
+            `   Consider renaming to use .yaml extension.\n` +
+            `   Run: mv .overture/config.yml .overture/config.yaml\n\n`,
+        );
+      }
 
       return result.data;
     } catch (error) {
