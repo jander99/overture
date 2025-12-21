@@ -202,6 +202,32 @@ export class OpenCodeAdapter extends BaseClientAdapter {
     return translated;
   }
 
+  /**
+   * Translate environment variables from OpenCode format to Overture format
+   *
+   * OpenCode: {env:VAR} or {env:VAR:-default}
+   * Overture: ${VAR} or ${VAR:-default}
+   *
+   * @param env - Environment variables from OpenCode config
+   * @returns Translated environment variables in Overture format
+   */
+  translateFromOpenCodeEnv(
+    env: Record<string, string> | undefined,
+  ): Record<string, string> {
+    if (!env) {
+      return {};
+    }
+
+    const translated: Record<string, string> = {};
+
+    for (const [key, value] of Object.entries(env)) {
+      // Replace {env:VAR} or {env:VAR:-default} with ${VAR} or ${VAR:-default}
+      translated[key] = value.replace(/\{env:([^}]+)\}/g, '$${$1}');
+    }
+
+    return translated;
+  }
+
   // Helper methods for path construction
   private getOpenCodeGlobalPath(platform: Platform): string {
     const env = this.environment.env;

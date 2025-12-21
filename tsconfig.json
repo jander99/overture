@@ -50,6 +50,9 @@
     },
     {
       "path": "./libs/core/sync"
+    },
+    {
+      "path": "./libs/core/import"
     }
   ]
 }

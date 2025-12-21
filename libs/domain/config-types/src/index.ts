@@ -71,3 +71,15 @@ export type {
 
 // Adapter types
 export type { ClientAdapter, ConfigPathResult } from './lib/adapter.types.js';
+
+// Import/Cleanup types
+export type {
+  McpSource,
+  DiscoveredMcp,
+  McpConflict,
+  ImportDiscoveryResult,
+  ImportResult,
+  CleanupTarget,
+  CleanupResult,
+  ClaudeCodeFullConfig,
+} from './lib/import.types.js';

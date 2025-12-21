@@ -20,7 +20,12 @@ import {
   type ClientMcpConfig,
   type ClientMcpServerDef,
 } from '../client-adapter.interface.js';
-import type { Platform, OvertureConfig } from '@overture/config-types';
+import type {
+  Platform,
+  OvertureConfig,
+  ClaudeCodeFullConfig,
+  CleanupTarget,
+} from '@overture/config-types';
 import { McpError } from '@overture/errors';
 import { getDirname } from '@overture/utils';
 
@@ -155,5 +160,98 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
   private getClaudeCodeProjectPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
     return `${root}/.mcp.json`;
+  }
+
+  /**
+   * Read the full Claude Code config including directory-based overrides
+   *
+   * Returns both the top-level mcpServers (global) and the projects object
+   * with directory-specific configurations.
+   */
+  async readFullConfig(platform: Platform): Promise<ClaudeCodeFullConfig> {
+    const userPath = this.getClaudeCodeGlobalPath(platform);
+    const exists = await this.filesystem.exists(userPath);
+
+    if (!exists) {
+      return { mcpServers: {}, projects: {} };
+    }
+
+    try {
+      const content = await this.filesystem.readFile(userPath);
+      const parsed = JSON.parse(content) as ClaudeCodeFullConfig;
+
+      return {
+        mcpServers: parsed.mcpServers || {},
+        projects: parsed.projects || {},
+        ...parsed, // Include all other settings
+      };
+    } catch (error) {
+      throw new McpError(
+        `Failed to read full Claude Code config: ${(error as Error).message}`,
+        this.name,
+      );
+    }
+  }
+
+  /**
+   * Clean up directory-based MCP configs for Overture-managed directories
+   *
+   * Removes only the mcpServers entries that are managed by Overture,
+   * preserving all other project settings and unmanaged MCPs.
+   */
+  async cleanupDirectoryMcps(
+    platform: Platform,
+    targets: CleanupTarget[],
+  ): Promise<void> {
+    if (targets.length === 0) {
+      return;
+    }
+
+    const userPath = this.getClaudeCodeGlobalPath(platform);
+    const fullConfig = await this.readFullConfig(platform);
+
+    // Create backup
+    const backupPath = `${userPath}.backup`;
+    const content = JSON.stringify(fullConfig, null, 2);
+    await this.filesystem.writeFile(backupPath, content);
+
+    // Process each cleanup target
+    for (const target of targets) {
+      const projectConfig = fullConfig.projects?.[target.directory];
+      if (!projectConfig || !projectConfig.mcpServers) {
+        continue;
+      }
+
+      // Remove only the managed MCPs
+      for (const mcpName of target.mcpsToRemove) {
+        delete projectConfig.mcpServers[mcpName];
+      }
+
+      // If mcpServers is now empty, remove the key
+      if (Object.keys(projectConfig.mcpServers).length === 0) {
+        delete projectConfig.mcpServers;
+      }
+    }
+
+    // Write back the modified config
+    await this.writeFullConfig(userPath, fullConfig);
+  }
+
+  /**
+   * Write the full Claude Code config (preserves all settings)
+   */
+  private async writeFullConfig(
+    path: string,
+    config: ClaudeCodeFullConfig,
+  ): Promise<void> {
+    try {
+      const content = JSON.stringify(config, null, 2);
+      await this.filesystem.writeFile(path, content);
+    } catch (error) {
+      throw new McpError(
+        `Failed to write full Claude Code config: ${(error as Error).message}`,
+        this.name,
+      );
+    }
   }
 }

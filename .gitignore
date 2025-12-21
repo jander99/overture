@@ -53,3 +53,5 @@ performance-report.txt
 
 vitest.config.*.timestamp*
 vite.config.*.timestamp*graph.json
+
+vite.config.*.timestamp*
