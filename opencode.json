@@ -1,24 +1,5 @@
 {
   "mcp": {
-    "filesystem": {
-      "type": "local",
-      "enabled": true,
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/home"
-      ]
-    },
-    "memory": {
-      "type": "local",
-      "enabled": true,
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
     "nx-mcp": {
       "type": "local",
       "enabled": true,

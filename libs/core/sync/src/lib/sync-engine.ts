@@ -173,6 +173,13 @@ export class SyncEngine {
         projectConfig,
       );
 
+      // Check for config warnings (invalid/deprecated keys)
+      const configWarnings = this.validateConfigForWarnings(
+        userConfig,
+        projectConfig,
+      );
+      warnings.push(...configWarnings);
+
       // Get MCP sources (user vs project)
       const mcpSources = this.deps.configLoader.getMcpSources(
         userConfig,
@@ -447,11 +454,33 @@ export class SyncEngine {
       }
 
       // Filter MCPs for this client
-      const filteredMcps = filterMcpsForClient(
-        overtureConfig.mcp,
-        client,
-        platform,
-      );
+      // When writing to project config, only include project MCPs
+      // When writing to user config, only include global MCPs
+      let mcpsToSync = overtureConfig.mcp;
+      const projectPath =
+        typeof configPathResult === 'object' ? configPathResult.project : null;
+      const userPath =
+        typeof configPathResult === 'object'
+          ? configPathResult.user
+          : configPathResult;
+
+      if (inProject && projectPath && configPath === projectPath) {
+        // Project config: only include MCPs from project source
+        mcpsToSync = Object.fromEntries(
+          Object.entries(overtureConfig.mcp).filter(
+            ([mcpName]) => mcpSources?.[mcpName] === 'project',
+          ),
+        );
+      } else if (!inProject || configPath === userPath) {
+        // User config: only include MCPs from global source
+        mcpsToSync = Object.fromEntries(
+          Object.entries(overtureConfig.mcp).filter(
+            ([mcpName]) => mcpSources?.[mcpName] === 'global',
+          ),
+        );
+      }
+
+      const filteredMcps = filterMcpsForClient(mcpsToSync, client, platform);
 
       // Read existing config (if exists)
       let oldConfig: ClientMcpConfig | null = null;
@@ -479,9 +508,10 @@ export class SyncEngine {
       );
 
       // Preserve manually-added MCPs (not in Overture config)
+      // Compare against full merged config, not just filtered MCPs for this config file
       if (oldConfig) {
         const oldMcps = oldConfig[client.schemaRootKey] || {};
-        const unmanagedMcps = getUnmanagedMcps(oldMcps, filteredMcps);
+        const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
 
         if (Object.keys(unmanagedMcps).length > 0) {
           // Merge: Overture-managed MCPs + preserved manually-added MCPs
@@ -694,6 +724,76 @@ export class SyncEngine {
       failed,
       results,
     };
+  }
+
+  /**
+   * Validate configuration for warnings (non-breaking issues)
+   *
+   * Checks for deprecated or invalid keys that should be updated
+   * but don't break functionality.
+   */
+  private validateConfigForWarnings(
+    userConfig: OvertureConfig | null,
+    projectConfig: OvertureConfig | null,
+  ): string[] {
+    const warnings: string[] = [];
+    const validClients = new Set<string>([
+      'claude-code',
+      'copilot-cli',
+      'opencode',
+    ]);
+
+    // Check user config
+    if (userConfig) {
+      // Check version field
+      if (userConfig.version !== '1.0') {
+        warnings.push(
+          `User config has version '${userConfig.version}' but should be '1.0'. ` +
+            `Update ~/.config/overture.yml to use version: "1.0"`,
+        );
+      }
+
+      // Check for invalid client names
+      if (userConfig.clients) {
+        const invalidClients = Object.keys(userConfig.clients).filter(
+          (client) => !validClients.has(client),
+        );
+        if (invalidClients.length > 0) {
+          warnings.push(
+            `User config references unsupported clients: ${invalidClients.join(', ')}. ` +
+              `Valid clients are: ${Array.from(validClients).join(', ')}. ` +
+              `Remove these from the 'clients' section in ~/.config/overture.yml`,
+          );
+        }
+      }
+    }
+
+    // Check project config
+    if (projectConfig) {
+      // Check version field
+      if (projectConfig.version !== '1.0') {
+        warnings.push(
+          `Project config has version '${projectConfig.version}' but should be '1.0'. ` +
+            `Update .overture/config.yaml to use version: "1.0"`,
+        );
+      }
+
+      // Check for invalid client names
+      if (projectConfig.clients) {
+        const invalidClients = Object.keys(projectConfig.clients).filter(
+          (client) => !validClients.has(client),
+        );
+        if (invalidClients.length > 0) {
+          warnings.push(
+            `Project config references unsupported clients: ${invalidClients.join(', ')}. ` +
+              `Valid clients are: ${Array.from(validClients).join(', ')}. ` +
+              `Remove these from the 'clients' section in .overture/config.yaml`,
+          );
+        }
+      }
+    }
+
+    return warnings;
   }
 
   /**

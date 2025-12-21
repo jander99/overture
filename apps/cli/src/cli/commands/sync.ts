@@ -256,7 +256,13 @@ export function createSyncCommand(deps: AppDependencies): Command {
           client: string;
           warning: string;
         }> = [];
+        const globalWarnings: string[] = [];
         const tips: Set<string> = new Set();
+
+        // Collect global warnings (config validation, etc.)
+        for (const warning of result.warnings) {
+          globalWarnings.push(warning);
+        }
 
         // Collect warnings from client results
         for (const clientResult of result.results) {
@@ -287,11 +293,27 @@ export function createSyncCommand(deps: AppDependencies): Command {
         }
 
         // Display warnings
-        if (criticalWarnings.length > 0 || informationalWarnings.length > 0) {
+        if (
+          globalWarnings.length > 0 ||
+          criticalWarnings.length > 0 ||
+          informationalWarnings.length > 0
+        ) {
           output.section('⚠️  Warnings:');
 
+          // Show global warnings first (config validation issues)
+          if (globalWarnings.length > 0) {
+            output.nl();
+            output.warn('Configuration:');
+            for (const warning of globalWarnings) {
+              output.warn(`  - ${warning}`);
+            }
+          }
+
           if (criticalWarnings.length > 0) {
-            if (detailMode && informationalWarnings.length > 0) {
+            if (
+              detailMode &&
+              (informationalWarnings.length > 0 || globalWarnings.length > 0)
+            ) {
               output.nl();
               output.warn('Critical:');
             }

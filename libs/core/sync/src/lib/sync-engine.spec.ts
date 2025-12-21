@@ -7,7 +7,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SyncEngine, type SyncEngineDeps, type SyncOptions } from './sync-engine.js';
+import {
+  SyncEngine,
+  type SyncEngineDeps,
+  type SyncOptions,
+} from './sync-engine.js';
 import { createMockSyncEngineDeps } from '@overture/testing';
 import type { OvertureConfig, ClientName } from '@overture/config-types';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
@@ -70,14 +74,21 @@ describe('SyncEngine', () => {
       };
 
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(userConfig);
-      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(projectConfig);
+      vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(
+        projectConfig,
+      );
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(projectConfig);
 
       await engine.syncClients({ clients: ['claude-code'] });
 
       expect(deps.configLoader.loadUserConfig).toHaveBeenCalled();
-      expect(deps.configLoader.loadProjectConfig).toHaveBeenCalledWith('/home/user/project');
-      expect(deps.configLoader.mergeConfigs).toHaveBeenCalledWith(userConfig, projectConfig);
+      expect(deps.configLoader.loadProjectConfig).toHaveBeenCalledWith(
+        '/home/user/project',
+      );
+      expect(deps.configLoader.mergeConfigs).toHaveBeenCalledWith(
+        userConfig,
+        projectConfig,
+      );
     });
 
     it('should sync to multiple clients', async () => {
@@ -95,7 +106,9 @@ describe('SyncEngine', () => {
         name: 'claude-desktop' as ClientName,
         schemaRootKey: 'mcpServers',
         isInstalled: vi.fn(() => true),
-        detectConfigPath: vi.fn(() => '/home/user/.config/claude-desktop/mcp.json'),
+        detectConfigPath: vi.fn(
+          () => '/home/user/.config/claude-desktop/mcp.json',
+        ),
         readConfig: vi.fn().mockResolvedValue({ mcpServers: {} }),
         writeConfig: vi.fn().mockResolvedValue(undefined),
         convertFromOverture: vi.fn((config) => ({ mcpServers: config.mcp })),
@@ -107,7 +120,9 @@ describe('SyncEngine', () => {
         return mockAdapter;
       });
 
-      const result = await engine.syncClients({ clients: ['claude-code', 'claude-desktop'] });
+      const result = await engine.syncClients({
+        clients: ['claude-code', 'claude-desktop'],
+      });
 
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(2);
@@ -134,20 +149,32 @@ describe('SyncEngine', () => {
 
     it('should warn when no adapters registered for clients', async () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
-      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({ version: '1.0', mcp: {} });
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0',
+        mcp: {},
+      });
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
 
-      const result = await engine.syncClients({ clients: ['unknown-client' as ClientName] });
+      const result = await engine.syncClients({
+        clients: ['unknown-client' as ClientName],
+      });
 
-      expect(result.warnings).toContain('No adapter registered for unknown-client');
+      expect(result.warnings).toContain(
+        'No adapter registered for unknown-client',
+      );
     });
 
     it('should return error when no valid clients', async () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
-      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({ version: '1.0', mcp: {} });
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
+        version: '1.0',
+        mcp: {},
+      });
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
 
-      const result = await engine.syncClients({ clients: ['unknown-client' as ClientName] });
+      const result = await engine.syncClients({
+        clients: ['unknown-client' as ClientName],
+      });
 
       expect(result.success).toBe(false);
       expect(result.errors).toContain('No valid clients to sync');
@@ -155,7 +182,7 @@ describe('SyncEngine', () => {
 
     it('should handle config loading errors', async () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockRejectedValue(
-        new Error('Config load failed')
+        new Error('Config load failed'),
       );
 
       const result = await engine.syncClients({ clients: ['claude-code'] });
@@ -170,7 +197,9 @@ describe('SyncEngine', () => {
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(config);
 
-      vi.mocked(mockAdapter.writeConfig).mockRejectedValueOnce(new Error('Write failed'));
+      vi.mocked(mockAdapter.writeConfig).mockRejectedValueOnce(
+        new Error('Write failed'),
+      );
 
       const result = await engine.syncClients({ clients: ['claude-code'] });
 
@@ -199,7 +228,7 @@ describe('SyncEngine', () => {
 
     it('should return error result when sync fails', async () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockRejectedValue(
-        new Error('Config not found')
+        new Error('Config not found'),
       );
 
       const result = await engine.syncClient('claude-code');
@@ -224,7 +253,7 @@ describe('SyncEngine', () => {
 
       expect(deps.binaryDetector.detectClient).toHaveBeenCalledWith(
         mockAdapter,
-        'linux'
+        'linux',
       );
     });
 
@@ -250,7 +279,9 @@ describe('SyncEngine', () => {
         warnings: [],
       });
 
-      const result = await engine.syncClient('claude-code', { skipUndetected: true });
+      const result = await engine.syncClient('claude-code', {
+        skipUndetected: true,
+      });
 
       expect(result.success).toBe(true);
       expect(result.error).toBe('Skipped - client not detected on system');
@@ -268,11 +299,13 @@ describe('SyncEngine', () => {
         warnings: [],
       });
 
-      const result = await engine.syncClient('claude-code', { skipUndetected: false });
+      const result = await engine.syncClient('claude-code', {
+        skipUndetected: false,
+      });
 
       expect(result.success).toBe(true);
       expect(result.warnings).toContain(
-        'claude-code binary/application not detected on system. Generating config anyway.'
+        'claude-code binary/application not detected on system. Generating config anyway.',
       );
       expect(mockAdapter.writeConfig).toHaveBeenCalled();
     });
@@ -312,7 +345,8 @@ describe('SyncEngine', () => {
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue(null);
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(config);
 
-      const { hasTransportIssues, getTransportWarnings } = await import('./transport-validator.js');
+      const { hasTransportIssues, getTransportWarnings } =
+        await import('./transport-validator.js');
       vi.mocked(hasTransportIssues).mockReturnValue(true);
       vi.mocked(getTransportWarnings).mockReturnValue([
         {
@@ -326,7 +360,9 @@ describe('SyncEngine', () => {
       const result = await engine.syncClient('claude-code', { force: false });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Transport issues detected. Use --force to sync anyway.');
+      expect(result.error).toContain(
+        'Transport issues detected. Use --force to sync anyway.',
+      );
     });
 
     it('should continue sync when transport issues detected with --force', async () => {
@@ -362,7 +398,8 @@ describe('SyncEngine', () => {
       vi.mocked(deps.filesystem.exists).mockResolvedValue(false);
 
       // Mock transport validators to avoid transport issues
-      const { hasTransportIssues, getTransportWarnings } = await import('./transport-validator.js');
+      const { hasTransportIssues, getTransportWarnings } =
+        await import('./transport-validator.js');
       vi.mocked(hasTransportIssues).mockReturnValue(false);
       vi.mocked(getTransportWarnings).mockReturnValue([]);
 
@@ -403,22 +440,28 @@ describe('SyncEngine', () => {
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(config);
 
       // Mock transport validators to avoid transport issues
-      const { hasTransportIssues, getTransportWarnings } = await import('./transport-validator.js');
+      const { hasTransportIssues, getTransportWarnings } =
+        await import('./transport-validator.js');
       vi.mocked(hasTransportIssues).mockReturnValue(false);
       vi.mocked(getTransportWarnings).mockReturnValue([]);
 
       // Reset adapter with existing config so backup is triggered
       const freshAdapter: ClientAdapter = {
         ...mockAdapter,
-        readConfig: vi.fn().mockResolvedValue({ mcpServers: { 'old-mcp': {} } }),
+        readConfig: vi
+          .fn()
+          .mockResolvedValue({ mcpServers: { 'old-mcp': {} } }),
       };
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(freshAdapter);
+
+      // Mock file exists so backup is triggered
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
 
       const result = await engine.syncClient('claude-code');
 
       expect(deps.backupService.backup).toHaveBeenCalledWith(
         'claude-code',
-        '/home/user/.claude.json'
+        '/home/user/.claude.json',
       );
       expect(result.backupPath).toContain('backup');
     });
@@ -433,16 +476,22 @@ describe('SyncEngine', () => {
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(config);
 
       // Mock transport validators to avoid transport issues
-      const { hasTransportIssues, getTransportWarnings } = await import('./transport-validator.js');
+      const { hasTransportIssues, getTransportWarnings } =
+        await import('./transport-validator.js');
       vi.mocked(hasTransportIssues).mockReturnValue(false);
       vi.mocked(getTransportWarnings).mockReturnValue([]);
 
       // Reset adapter with existing config so backup is triggered
       const freshAdapter: ClientAdapter = {
         ...mockAdapter,
-        readConfig: vi.fn().mockResolvedValue({ mcpServers: { 'old-mcp': {} } }),
+        readConfig: vi
+          .fn()
+          .mockResolvedValue({ mcpServers: { 'old-mcp': {} } }),
       };
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(freshAdapter);
+
+      // Mock file exists so backup is triggered
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
 
       // Mock backup to throw error
       vi.mocked(deps.backupService.backup).mockImplementation(() => {
@@ -492,12 +541,15 @@ describe('SyncEngine', () => {
       vi.mocked(deps.configLoader.mergeConfigs).mockReturnValue(config);
 
       // Mock transport validators to not fail so we reach writeConfig
-      const { hasTransportIssues, getTransportWarnings } = await import('./transport-validator.js');
+      const { hasTransportIssues, getTransportWarnings } =
+        await import('./transport-validator.js');
       vi.mocked(hasTransportIssues).mockReturnValue(false);
       vi.mocked(getTransportWarnings).mockReturnValue([]);
 
       // Mock writeConfig to throw error
-      vi.mocked(mockAdapter.writeConfig).mockRejectedValue(new Error('Permission denied'));
+      vi.mocked(mockAdapter.writeConfig).mockRejectedValue(
+        new Error('Permission denied'),
+      );
 
       const result = await engine.syncClient('claude-code');
 

@@ -1,20 +1,5 @@
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/home"
-      ]
-    },
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
     "nx-mcp": {
       "command": "npx",
       "args": [

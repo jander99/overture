@@ -35,7 +35,12 @@ export function createMockSyncEngineDeps(): any {
       readdir: vi.fn().mockResolvedValue([]),
       unlink: vi.fn().mockResolvedValue(undefined),
       copyFile: vi.fn().mockResolvedValue(undefined),
-      stat: vi.fn().mockResolvedValue({ isFile: () => true, isDirectory: () => false } as any),
+      stat: vi
+        .fn()
+        .mockResolvedValue({
+          isFile: () => true,
+          isDirectory: () => false,
+        } as any),
     },
     process: mockProcess,
     output: {
@@ -59,6 +64,7 @@ export function createMockSyncEngineDeps(): any {
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       mergeConfigs: vi.fn((user, project) => project || user),
       loadConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
+      getMcpSources: vi.fn(() => ({})),
     } as any,
     adapterRegistry: {
       get: vi.fn((name: string) => mockAdapter),
