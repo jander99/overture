@@ -8,6 +8,15 @@
         "nx",
         "mcp"
       ]
+    },
+    "sequentialthinking": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking@latest"
+      ]
     }
   },
   "$schema": "https://opencode.ai/config.json"
