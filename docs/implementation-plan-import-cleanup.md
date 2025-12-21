@@ -41,31 +41,37 @@ This document tracks the implementation of `overture import` and `overture clean
   - `detectConflicts()` - Finds same MCP with different configs across clients
   - `formatConflict()` - Pretty-prints conflict details for user
 
-### Phase 4: Service Skeletons ✅
+### Phase 4: Service Skeletons ✅ (Replaced by Phase 5)
 
-- [x] **import-service.ts** - Placeholder with method signatures
-- [x] **cleanup-service.ts** - Placeholder with method signatures
-
-Both services have TODO markers for full implementation.
-
-## Remaining Work
+- [x] Created service structure
+- [x] Defined method signatures
 
 ### Phase 5: Complete Service Implementation ✅
 
-**import-service.ts:**
+**import-service.ts** (570 lines):
 
-- [x] Implement `discoverUnmanagedMcps()` with full client adapter integration
-- [x] Handle Claude Code's directory-based configs in `projects` object
-- [x] Handle OpenCode env var format conversion
-- [x] Implement `importMcps()` with proper YAML writing (using `js-yaml`)
-- [x] Add proper error handling for malformed configs
+- [x] Implement `discoverFromClaudeCode()` - handles top-level, directory-based, and .mcp.json configs
+- [x] Implement `discoverFromOpenCode()` - includes bidirectional env var conversion
+- [x] Implement `discoverFromCopilotCLI()` - standard user/project config discovery
+- [x] Implement `discoverUnmanagedMcps()` - orchestrates all client discovery
+- [x] Handle Claude Code's complex `projects` object structure
+- [x] Implement `importMcps()` with proper YAML writing using `js-yaml`
+- [x] Add `createDiscoveredMcp()` helper with env var conversion
+- [x] Support dry-run mode for preview
+- [x] Proper error handling with warnings for malformed configs
 
-**cleanup-service.ts:**
+**cleanup-service.ts** (170 lines):
 
-- [x] Implement `findCleanupTargets()` with directory scanning
+- [x] Implement `findCleanupTargets()` with full directory scanning
+- [x] Detect Overture-managed directories (.overture/config.yaml presence)
+- [x] Categorize MCPs as managed (to remove) vs unmanaged (to preserve)
+- [x] Implement `executeCleanup()` with adapter integration
+- [x] Create timestamped backups before modifications
 - [x] Integrate with `ClaudeCodeAdapter.cleanupDirectoryMcps()`
-- [x] Add backup creation before cleanup
-- [x] Preserve unmanaged MCPs with warnings
+- [x] Warn users about preserved unmanaged MCPs
+- [x] Support dry-run mode
+
+## Remaining Work
 
 ### Phase 6: CLI Commands 🔲
 
@@ -145,21 +151,24 @@ Both services have TODO markers for full implementation.
 ```
 libs/
 ├── core/import/                    # NEW library
-│   └── src/lib/
-│       ├── env-var-converter.ts    ✅
-│       ├── conflict-detector.ts    ✅
-│       ├── import-service.ts       🚧 (skeleton)
-│       └── cleanup-service.ts      🚧 (skeleton)
+│   ├── src/lib/
+│   │   ├── env-var-converter.ts    ✅ (200 lines)
+│   │   ├── conflict-detector.ts    ✅ (175 lines)
+│   │   ├── import-service.ts       ✅ (570 lines)
+│   │   └── cleanup-service.ts      ✅ (170 lines)
+│   └── package.json                ✅ (added js-yaml dep)
 ├── domain/config-types/
-│   └── src/lib/import.types.ts     ✅
+│   └── src/lib/import.types.ts     ✅ (150 lines)
 └── adapters/client-adapters/
     └── src/lib/adapters/
-        ├── claude-code.adapter.ts  ✅ (enhanced)
-        └── opencode.adapter.ts     ✅ (enhanced)
+        ├── claude-code.adapter.ts  ✅ (+100 lines)
+        └── opencode.adapter.ts     ✅ (+26 lines)
 
-apps/cli/src/cli/commands/
-├── import.ts                       🔲
-└── cleanup.ts                      🔲
+apps/cli/src/
+├── composition-root.ts             ✅ (services wired)
+└── cli/commands/
+    ├── import.ts                   🔲
+    └── cleanup.ts                  🔲
 ```
 
 ### Design Decisions
@@ -176,15 +185,28 @@ apps/cli/src/cli/commands/
 
 ## Next Steps
 
-1. **Immediate:** Complete `import-service.ts` implementation
-2. **Then:** Complete `cleanup-service.ts` implementation
-3. **Then:** Build CLI commands with @clack/prompts TUI
-4. **Finally:** Write comprehensive tests and documentation
+1. **Immediate:** Build CLI commands with @clack/prompts TUI
+2. **Then:** Register commands in CLI index
+3. **Then:** Add sync env var validation
+4. **Then:** Write comprehensive tests
+5. **Finally:** Write documentation (howto, roadmap, examples)
 
 ## Estimated Effort
 
-- **Remaining:** 8-10 days
-- **Total:** 10-15 days
+- **Completed:** ~7-8 days (Phases 1-5, 7 partial)
+- **Remaining:** ~3-5 days (CLI commands, validation, tests, docs)
+- **Total:** 10-15 days (on track)
+
+## Progress Summary
+
+- **Phase 1-5:** ✅ Complete (100%)
+- **Phase 6:** 🔲 CLI Commands (0%)
+- **Phase 7:** 🚧 Integration (60% - services wired, commands pending)
+- **Phase 8:** 🔲 Sync Validation (0%)
+- **Phase 9:** 🔲 Documentation (0%)
+- **Phase 10:** 🔲 Testing (0%)
+
+**Overall Progress: ~65%**
 
 ## Related Files
 
