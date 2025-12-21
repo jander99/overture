@@ -136,7 +136,7 @@ nx graph
 
 **Key Test Patterns:**
 
-- Use `jest.mock()` for external dependencies
+- Use `vi.mock()` for external dependencies (Vitest)
 - Test both success and error paths
 - Validate generated outputs (JSON, Markdown)
 - Mock file system operations
@@ -252,7 +252,7 @@ nx build @overture/cli
 # ❌ Wrong
 npm test
 npm run build
-jest
+vitest
 ```
 
 ### Nx Dependency Updates

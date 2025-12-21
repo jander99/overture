@@ -37,7 +37,6 @@
     "vitest": "^4.0.0"
   },
   "workspaces": [
-    "packages/*",
     "cli",
     "cli-e2e",
     "libs/shared/*",
