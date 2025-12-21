@@ -28,6 +28,7 @@ import {
   RestoreService,
   AuditService,
 } from '@overture/sync-core';
+import { ImportService, CleanupService } from '@overture/import-core';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
@@ -66,6 +67,10 @@ export interface AppDependencies {
   backupService: BackupService;
   restoreService: RestoreService;
   auditService: AuditService;
+
+  // Import/Cleanup services
+  importService: ImportService;
+  cleanupService: CleanupService;
 }
 
 /**
@@ -198,6 +203,10 @@ export function createAppDependencies(): AppDependencies {
     pathResolver: pathResolverAdapter,
   });
 
+  // Import and Cleanup services
+  const importService = new ImportService(filesystem, output);
+  const cleanupService = new CleanupService(filesystem, output);
+
   return {
     filesystem,
     process,
@@ -214,5 +223,7 @@ export function createAppDependencies(): AppDependencies {
     backupService,
     restoreService,
     auditService,
+    importService,
+    cleanupService,
   };
 }
