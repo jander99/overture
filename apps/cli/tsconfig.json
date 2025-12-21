@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/core/import"
+    },
+    {
       "path": "../../libs/ports/output"
     },
     {

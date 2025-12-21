@@ -19,6 +19,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/core/import/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/ports/output/tsconfig.lib.json"
     },
     {

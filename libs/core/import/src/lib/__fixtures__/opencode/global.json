@@ -1,0 +1,22 @@
+{
+  "mcp": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/user"]
+    },
+    "github": {
+      "command": "mcp-server-github",
+      "args": [],
+      "env": {
+        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
+      }
+    },
+    "openai": {
+      "command": "mcp-server-openai",
+      "args": [],
+      "env": {
+        "OPENAI_API_KEY": "{env:OPENAI_API_KEY}"
+      }
+    }
+  }
+}

@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../adapters/client-adapters"
+    },
+    {
       "path": "../../ports/output"
     },
     {
