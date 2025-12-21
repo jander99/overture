@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-12-21
+
+### Added
+
+- **Import & Cleanup Commands** - New workflow for migrating from client configs to Overture
+  - `overture import` - Discover and import unmanaged MCPs from AI client configs
+    - Interactive TUI with @clack/prompts for beautiful selection experience
+    - Auto-detects MCPs from Claude Code, OpenCode, and Copilot CLI
+    - Converts hardcoded secrets to `${VAR}` environment variable references
+    - Cross-client conflict detection with detailed reporting
+    - Supports both global (`~/.config/overture/config.yaml`) and project (`.overture/config.yaml`) scopes
+    - Automatic scope inference based on source location
+    - Dry-run mode for previewing changes
+  - `overture cleanup` - Remove Overture-managed MCPs from directory configs
+    - Cleans up Claude Code's `~/.claude.json → projects[path].mcpServers`
+    - Interactive directory selection with multiselect
+    - Preserves unmanaged MCPs with warnings
+    - Creates automatic backups before modifications
+    - Dry-run support for safe preview
+- **New Library: `@overture/import-core`** (1,115 lines)
+  - `ImportService` - MCP discovery and import from client configs
+  - `CleanupService` - Directory-based config cleanup
+  - `EnvVarConverter` - Hardcoded secret detection and conversion
+  - `ConflictDetector` - Cross-client configuration conflict detection
+- **Environment Variable Validation** in sync engine
+  - Pre-sync validation of all env vars in Overture config
+  - Missing variable detection with helpful error messages
+  - Export command suggestions for setting required vars
+- **Claude Code Directory Config Support**
+  - Read/write full `~/.claude.json` including `projects` object
+  - `cleanupDirectoryMcps()` method for selective MCP removal
+  - Preserves all other project settings (enabledMcpjsonServers, etc.)
+- **OpenCode Format Conversion**
+  - Bidirectional `{env:VAR}` ↔ `${VAR}` conversion
+  - `translateFromOpenCodeEnv()` and `translateToOpenCodeEnv()` adapters
+- **Comprehensive Test Suite** (56 tests, 78% coverage)
+  - ImportService: 10 tests (58% coverage)
+  - CleanupService: 10 tests (98% coverage)
+  - EnvVarConverter: 25 tests (87% coverage)
+  - ConflictDetector: 11 tests (95% coverage)
+  - Test fixtures for all 3 clients
+- **New Documentation**
+  - `docs/howtos/importing-existing-configs.md` (420 lines)
+    - Complete step-by-step import workflow
+    - Scope inference rules for all clients
+    - Conflict resolution strategies
+    - Environment variable best practices
+    - Cleanup command usage
+    - Troubleshooting guide
+
+### Changed
+
+- **Sync Engine Enhancement**
+  - Added environment variable validation before sync
+  - Shows which MCPs require which env vars
+  - Provides export instructions for missing vars
+- **Client Adapters Enhanced**
+  - `ClaudeCodeAdapter`: Added `readFullConfig()`, `cleanupDirectoryMcps()`, `writeFullConfig()`
+  - `OpenCodeAdapter`: Added `translateFromOpenCodeEnv()`, `translateToOpenCodeEnv()`
+
+### Documentation
+
+- Updated `docs/roadmap.md` with v0.4.0 completion
+- Added import & cleanup as completed features
+- Created comprehensive import workflow documentation
+- Added real-world examples and troubleshooting
+
 ## [0.3.0] - 2025-12-20
 
 ### Breaking Changes
