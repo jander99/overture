@@ -1,69 +1,57 @@
-# Research Archive
+# Deep Archive - EMPTY
 
-This directory contains historical research documents that were created during the design phase but are no longer actively used. They're preserved for reference and historical context.
-
-## Archived Documents
-
-### Decision History
-
-1. **simplification-guide.md** (2025-10-19)
-   - Identified team/enterprise features to remove
-   - Decision: Git handles all collaboration needs
-   - Reason archived: Decision made, simplification completed
-
-2. **SIMPLIFIED-SUMMARY.md** (2025-10-19)
-   - Summary of architectural simplifications
-   - Removed 30-40% of planned features
-   - Reason archived: Changes incorporated into main docs
-
-### Validation & Analysis
-
-3. **validation-summary.md** (2025-10-19)
-   - Research completeness assessment (95%)
-   - Validated 35+ sources across all documents
-   - Reason archived: Research phase complete
-
-4. **theory-validation.md** (2025-10-19)
-   - Validated plugin-as-primary-product theory
-   - Identified missing components (MCP servers, slash commands)
-   - Reason archived: Theory validated and incorporated
-
-## Why These Were Archived
-
-These documents served their purpose during the research and design phase:
-- They captured decision-making processes
-- They validated theories and approaches
-- They guided simplification efforts
-
-Now that decisions are made and incorporated into active documents, these serve as **historical reference only**.
-
-## Active Documents
-
-The following documents remain active in `/research/`:
-- Core feature documentation (subagents, skills, hooks, plugins, MCP servers)
-- Architecture recommendations (needs cleanup for simplification)
-- Implementation plan (needs cleanup for simplification)
-- User experience design (needs cleanup for simplification)
-- CLAUDE.md coordination strategy
-- Configuration files reference
-- Overlaps and duplication analysis
-
-## Document Lifecycle
-
-```
-Research → Validation → Decision → Implementation
-    ↓          ↓          ↓            ↓
-  Active    Active    Archive      Active Docs
-  Docs      Docs      History      (Cleaned Up)
-```
-
-Documents move to archive when:
-1. Their analysis is complete
-2. Their conclusions are incorporated
-3. They're no longer referenced for implementation
-4. They serve only as historical context
+**Status:** All files deleted (2025-01-12)
 
 ---
 
-**Archive Created**: 2025-10-19
-**Purpose**: Preserve decision history without cluttering active documentation
+## What Happened
+
+This directory previously contained 17 research files (~7,500 lines) from Overture's early development:
+
+**Component Research (5 files):**
+
+- Consolidated into `../claude-code-components.md`
+
+**Configuration Research (3 files):**
+
+- Incorporated into `/docs/architecture.md`
+
+**Implementation Planning (4 files):**
+
+- Superseded by actual implementation
+- Implementation details available in git history
+
+**Historical Decisions (4 files):**
+
+- Simplification, validation, theory docs
+- No longer needed
+
+**Workflow Examples (1 file):**
+
+- Jira integration example
+- Not relevant to current scope
+
+---
+
+## Why Deleted
+
+These files were removed because:
+
+1. **Consolidated** - Content merged into active docs
+2. **Superseded** - Replaced by newer research or implementation
+3. **Historical only** - Documented abandoned approaches
+4. **No unique value** - Information available elsewhere
+
+---
+
+## For Current Research
+
+See parent directories:
+
+- `../` - Active research documents (4 high-value decision docs)
+- `../../` - Updated research documents (3-client focus)
+
+---
+
+**Last Updated:** 2025-01-12  
+**Status:** Archive emptied, content consolidated

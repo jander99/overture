@@ -1,12 +1,18 @@
 # MCP Configuration Format Differences Analysis
 
-> **⚠️ DEPRECATION NOTICE**
+> ⚠️ **OVERTURE v0.3 SUPPORTS 3 CLIENTS ONLY**
 >
-> As of Overture v0.3.0 (December 2025), only **3 clients** are supported: **Claude Code**, **GitHub Copilot CLI**, and **OpenCode**.
+> This document contains research on 7 clients. Overture v0.3 **ONLY supports**:
 >
-> This document contains historical research for 7 additional clients (Claude Desktop, VS Code, Cursor, Windsurf, JetBrains, Codex CLI, Gemini CLI) that are **no longer supported**. The MCP format analysis for these clients is preserved for reference but is not maintained.
+> - ✅ Claude Code (primary)
+> - ✅ GitHub Copilot CLI
+> - ✅ OpenCode
 >
-> **Last updated:** 2025-12-14 | **Status:** ARCHIVED | **Supported clients:** 3/10
+> Sections on **Cursor, Windsurf, Claude Desktop, VS Code, JetBrains** are **HISTORICAL ONLY**.
+> Do NOT use this info for implementation.
+>
+> **Last Validated:** 2025-12-14 (7-client version)  
+> **Updated:** 2025-01-12 (3-client deprecation notice)
 
 **Research Date:** 2025-12-14
 **Status:** Complete

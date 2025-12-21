@@ -1,10 +1,27 @@
 # Memory MCP Server Compatibility Research & Testing Plan
 
+> ⚠️ **OVERTURE v0.3 SUPPORTS 3 CLIENTS ONLY**
+>
+> This document contains research on 7 clients. Overture v0.3 **ONLY supports**:
+>
+> - ✅ Claude Code (primary)
+> - ✅ GitHub Copilot CLI
+> - ✅ OpenCode
+>
+> Sections on **Cursor, Windsurf, Claude Desktop, VS Code, JetBrains** are **HISTORICAL ONLY**.
+> Do NOT use this info for implementation.
+>
+> **Last Validated:** 2025-12-14 (7-client version)  
+> **Updated:** 2025-01-12 (3-client deprecation notice)
+
+---
+
 **Research Date:** 2025-12-14
 **Status:** Complete
 **Version:** v1
 **Purpose:** Enable Overture v0.5 memory features
 **Related Documents:**
+
 - `/home/jeff/workspaces/ai/overture/docs/multi-cli-roadmap.md`
 - `/home/jeff/workspaces/ai/overture/docs/PURPOSE.md`
 
@@ -50,6 +67,7 @@ This research investigated memory MCP server options and designed a comprehensiv
 **Description:** Official reference implementation from Model Context Protocol organization. Provides knowledge graph storage with entities, relations, and observations.
 
 **Features:**
+
 - Knowledge graph data model
 - Entities with typed observations
 - Relations between entities
@@ -57,11 +75,13 @@ This research investigated memory MCP server options and designed a comprehensiv
 - Simple API (create_entities, add_observations, read_graph)
 
 **Installation:**
+
 ```bash
 npx @modelcontextprotocol/server-memory
 ```
 
 **Configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -78,23 +98,25 @@ npx @modelcontextprotocol/server-memory
 
 **CLI Compatibility:**
 
-| CLI | Support Level | Notes |
-|-----|---------------|-------|
-| Claude Code | ✅ Full | Native MCP support |
-| Claude Desktop | ✅ Full | Native MCP support |
-| VS Code | ✅ Full | Via MCP extension |
-| Cursor | ✅ Full | Via MCP extension |
-| Windsurf | ✅ Full | Via MCP extension |
-| Copilot CLI | ⚠️ Partial | MCP support in beta |
-| JetBrains | ⚠️ Partial | MCP plugin experimental |
+| CLI            | Support Level | Notes                   |
+| -------------- | ------------- | ----------------------- |
+| Claude Code    | ✅ Full       | Native MCP support      |
+| Claude Desktop | ✅ Full       | Native MCP support      |
+| VS Code        | ✅ Full       | Via MCP extension       |
+| Cursor         | ✅ Full       | Via MCP extension       |
+| Windsurf       | ✅ Full       | Via MCP extension       |
+| Copilot CLI    | ⚠️ Partial    | MCP support in beta     |
+| JetBrains      | ⚠️ Partial    | MCP plugin experimental |
 
 **Pros:**
+
 - Official implementation (well-maintained)
 - Simple setup (zero configuration)
 - Works across all MCP-compatible CLIs
 - JSON storage (easy to inspect/edit)
 
 **Cons:**
+
 - Basic features (no semantic search)
 - File-based storage (not scalable to large teams)
 - No built-in versioning or history
@@ -109,6 +131,7 @@ npx @modelcontextprotocol/server-memory
 **Description:** Claude Code-specific memory server with optimizations for Claude's workflow. Designed for fast, persistent context across sessions.
 
 **Features:**
+
 - Optimized for Claude Code CLI
 - SQLite backend (faster than file-based)
 - Conversation threading
@@ -116,11 +139,13 @@ npx @modelcontextprotocol/server-memory
 - Session management
 
 **Installation:**
+
 ```bash
 npm install -g ccmem
 ```
 
 **Configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -137,23 +162,25 @@ npm install -g ccmem
 
 **CLI Compatibility:**
 
-| CLI | Support Level | Notes |
-|-----|---------------|-------|
-| Claude Code | ✅ Excellent | Optimized for this |
-| Claude Desktop | ✅ Good | Works but not optimized |
-| VS Code | ⚠️ Limited | No auto-injection |
-| Cursor | ⚠️ Limited | Basic support |
-| Windsurf | ⚠️ Limited | Basic support |
-| Copilot CLI | ❌ Incompatible | Claude-specific features |
-| JetBrains | ❌ Incompatible | Claude-specific features |
+| CLI            | Support Level   | Notes                    |
+| -------------- | --------------- | ------------------------ |
+| Claude Code    | ✅ Excellent    | Optimized for this       |
+| Claude Desktop | ✅ Good         | Works but not optimized  |
+| VS Code        | ⚠️ Limited      | No auto-injection        |
+| Cursor         | ⚠️ Limited      | Basic support            |
+| Windsurf       | ⚠️ Limited      | Basic support            |
+| Copilot CLI    | ❌ Incompatible | Claude-specific features |
+| JetBrains      | ❌ Incompatible | Claude-specific features |
 
 **Pros:**
+
 - Fast (SQLite backend)
 - Auto-injection into Claude conversations
 - Conversation threading
 - Designed for developer workflow
 
 **Cons:**
+
 - Claude Code specific (not portable)
 - Smaller community (single maintainer)
 - Limited documentation
@@ -168,6 +195,7 @@ npm install -g ccmem
 **Description:** Enterprise-grade memory server with semantic search, vector embeddings, and PostgreSQL backend. Designed for team collaboration and large-scale knowledge management.
 
 **Features:**
+
 - Semantic search (vector embeddings)
 - PostgreSQL backend (scalable)
 - Multi-user support
@@ -176,6 +204,7 @@ npm install -g ccmem
 - Version history
 
 **Installation:**
+
 ```bash
 npm install -g mcp-memory-service
 
@@ -184,6 +213,7 @@ npm install -g mcp-memory-service
 ```
 
 **Configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -203,17 +233,18 @@ npm install -g mcp-memory-service
 
 **CLI Compatibility:**
 
-| CLI | Support Level | Notes |
-|-----|---------------|-------|
-| Claude Code | ✅ Full | HTTP transport supported |
-| Claude Desktop | ⚠️ Paid only | Free tier no HTTP |
-| VS Code | ✅ Full | HTTP supported |
-| Cursor | ✅ Full | HTTP supported |
-| Windsurf | ✅ Full | HTTP supported |
-| Copilot CLI | ✅ Good | HTTP supported |
-| JetBrains | ⚠️ Experimental | HTTP experimental |
+| CLI            | Support Level   | Notes                    |
+| -------------- | --------------- | ------------------------ |
+| Claude Code    | ✅ Full         | HTTP transport supported |
+| Claude Desktop | ⚠️ Paid only    | Free tier no HTTP        |
+| VS Code        | ✅ Full         | HTTP supported           |
+| Cursor         | ✅ Full         | HTTP supported           |
+| Windsurf       | ✅ Full         | HTTP supported           |
+| Copilot CLI    | ✅ Good         | HTTP supported           |
+| JetBrains      | ⚠️ Experimental | HTTP experimental        |
 
 **Pros:**
+
 - Semantic search (find similar contexts)
 - Scalable (PostgreSQL)
 - Team collaboration (multi-user)
@@ -221,6 +252,7 @@ npm install -g mcp-memory-service
 - Production-ready
 
 **Cons:**
+
 - Complex setup (requires PostgreSQL, OpenAI API)
 - Higher resource usage
 - Requires API key for embeddings
@@ -231,12 +263,14 @@ npm install -g mcp-memory-service
 **Description:** Domain-specific memory implementations tailored to specific use cases or industries.
 
 **Examples:**
+
 - **Legal Memory Server** — Store case law, precedents, arguments
 - **Medical Memory Server** — Patient context, treatment history (HIPAA-compliant)
 - **Code Review Memory** — Past review comments, common issues
 - **Design System Memory** — Component usage, design decisions
 
 **Custom Implementation Example:**
+
 ```typescript
 // custom-memory-server.ts
 import { Server } from '@modelcontextprotocol/sdk/server';
@@ -244,7 +278,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
 
 const server = new Server({
   name: 'custom-memory-server',
-  version: '1.0.0'
+  version: '1.0.0',
 });
 
 // Custom tools
@@ -259,9 +293,9 @@ server.setRequestHandler('tools/list', async () => ({
           title: { type: 'string' },
           decision: { type: 'string' },
           rationale: { type: 'string' },
-          alternatives: { type: 'array' }
-        }
-      }
+          alternatives: { type: 'array' },
+        },
+      },
     },
     {
       name: 'recall_decisions',
@@ -269,11 +303,11 @@ server.setRequestHandler('tools/list', async () => ({
       inputSchema: {
         type: 'object',
         properties: {
-          topic: { type: 'string' }
-        }
-      }
-    }
-  ]
+          topic: { type: 'string' },
+        },
+      },
+    },
+  ],
 }));
 
 // Custom storage logic
@@ -288,8 +322,9 @@ server.setRequestHandler('tools/call', async (request) => {
 
   if (request.params.name === 'recall_decisions') {
     const topic = request.params.arguments.topic;
-    const matches = Array.from(decisions.values())
-      .filter(d => d.title.includes(topic) || d.decision.includes(topic));
+    const matches = Array.from(decisions.values()).filter(
+      (d) => d.title.includes(topic) || d.decision.includes(topic),
+    );
     return { decisions: matches };
   }
 });
@@ -300,16 +335,19 @@ await server.connect(transport);
 ```
 
 **CLI Compatibility:**
+
 - Depends on implementation (stdio, http, sse)
 - Generally: ✅ All CLIs if implemented as standard MCP server
 
 **Pros:**
+
 - Tailored to specific domain
 - Custom data model (optimized for use case)
 - Can enforce business rules
 - Integration with domain-specific tools
 
 **Cons:**
+
 - Requires development/maintenance
 - Not portable across projects
 - May lack general-purpose features
@@ -321,18 +359,19 @@ await server.connect(transport);
 
 ### 2.1 Native Memory Features
 
-| CLI | Native Memory | Implementation | Scope Options |
-|-----|---------------|----------------|---------------|
-| **Claude Code** | ✅ Yes | MCP memory servers | Project, User |
-| **Claude Desktop** | ✅ Yes | MCP memory servers | User only |
-| **VS Code** | ⚠️ Via Extension | MCP extension + memory server | Project, Workspace |
-| **Cursor** | ⚠️ Via Extension | MCP extension + memory server | Project |
-| **Windsurf** | ⚠️ Via Extension | MCP extension + memory server | Project |
-| **Copilot CLI** | ❌ No | MCP beta (limited) | None |
-| **JetBrains** | ❌ No | MCP plugin (experimental) | None |
-| **Gemini CLI** | ✅ Yes | Built-in `/memory` commands | Project, User, Session |
+| CLI                | Native Memory    | Implementation                | Scope Options          |
+| ------------------ | ---------------- | ----------------------------- | ---------------------- |
+| **Claude Code**    | ✅ Yes           | MCP memory servers            | Project, User          |
+| **Claude Desktop** | ✅ Yes           | MCP memory servers            | User only              |
+| **VS Code**        | ⚠️ Via Extension | MCP extension + memory server | Project, Workspace     |
+| **Cursor**         | ⚠️ Via Extension | MCP extension + memory server | Project                |
+| **Windsurf**       | ⚠️ Via Extension | MCP extension + memory server | Project                |
+| **Copilot CLI**    | ❌ No            | MCP beta (limited)            | None                   |
+| **JetBrains**      | ❌ No            | MCP plugin (experimental)     | None                   |
+| **Gemini CLI**     | ✅ Yes           | Built-in `/memory` commands   | Project, User, Session |
 
 **Notes:**
+
 - **Gemini CLI** has built-in memory commands (`/memory show`, `/memory save`, etc.) independent of MCP
 - **Claude CLIs** rely entirely on MCP memory servers
 - **VS Code-based editors** require MCP extension installation
@@ -340,20 +379,21 @@ await server.connect(transport);
 
 ### 2.2 Memory Persistence Mechanisms
 
-| CLI | Persistence Method | Storage Location | Format |
-|-----|-------------------|------------------|--------|
-| Claude Code | MCP server storage | Project: `.mcp-memory/` or server-defined | Server-specific |
-| Claude Desktop | MCP server storage | User: `~/Library/Claude/memory/` | Server-specific |
-| VS Code | MCP server storage | Workspace: `.vscode/.mcp-memory/` | Server-specific |
-| Cursor | MCP server storage | Project: `.cursor/.mcp-memory/` | Server-specific |
-| Windsurf | MCP server storage | Project: `.windsurf/.mcp-memory/` | Server-specific |
-| Gemini CLI | Native CLI storage | `.gemini/memory/` | Knowledge graph JSON |
-| Copilot CLI | ❌ None | N/A | N/A |
-| JetBrains | ❌ None | N/A | N/A |
+| CLI            | Persistence Method | Storage Location                          | Format               |
+| -------------- | ------------------ | ----------------------------------------- | -------------------- |
+| Claude Code    | MCP server storage | Project: `.mcp-memory/` or server-defined | Server-specific      |
+| Claude Desktop | MCP server storage | User: `~/Library/Claude/memory/`          | Server-specific      |
+| VS Code        | MCP server storage | Workspace: `.vscode/.mcp-memory/`         | Server-specific      |
+| Cursor         | MCP server storage | Project: `.cursor/.mcp-memory/`           | Server-specific      |
+| Windsurf       | MCP server storage | Project: `.windsurf/.mcp-memory/`         | Server-specific      |
+| Gemini CLI     | Native CLI storage | `.gemini/memory/`                         | Knowledge graph JSON |
+| Copilot CLI    | ❌ None            | N/A                                       | N/A                  |
+| JetBrains      | ❌ None            | N/A                                       | N/A                  |
 
 ### 2.3 Memory Scope Strategies
 
 **Project Scope:**
+
 ```json
 {
   "mcpServers": {
@@ -372,6 +412,7 @@ await server.connect(transport);
 **Use Case:** Architectural decisions, project-specific patterns
 
 **User Scope:**
+
 ```json
 {
   "mcpServers": {
@@ -390,6 +431,7 @@ await server.connect(transport);
 **Use Case:** Personal coding preferences, frequently-used patterns
 
 **Session Scope** (Gemini CLI only):
+
 ```yaml
 # In GEMINI.md
 memory:
@@ -407,6 +449,7 @@ memory:
 ### 3.1 Test Dimensions
 
 **Dimension 1: CLI (4 primary + 4 secondary)**
+
 - Claude Code (primary)
 - Gemini CLI (primary with native memory)
 - VS Code (primary via extension)
@@ -417,12 +460,14 @@ memory:
 - JetBrains (secondary - experimental)
 
 **Dimension 2: Memory Server (4 types)**
+
 - @modelcontextprotocol/server-memory (official)
 - ccmem (Claude-optimized)
 - mcp-memory-service (enterprise)
 - custom-memory-server (example)
 
 **Dimension 3: Scope (3 options)**
+
 - Project scope (`.mcp-memory/`)
 - User scope (`~/.mcp-memory/`)
 - Session scope (Gemini only)
@@ -431,45 +476,46 @@ memory:
 
 ### 3.2 Test Scenario Matrix
 
-| # | CLI | Memory Server | Scope | Expected Result | Priority |
-|---|-----|---------------|-------|-----------------|----------|
-| 1 | Claude Code | official | project | ✅ Full support | HIGH |
-| 2 | Claude Code | official | user | ✅ Full support | HIGH |
-| 3 | Claude Code | ccmem | project | ✅ Full support | HIGH |
-| 4 | Claude Code | ccmem | user | ✅ Full support | MEDIUM |
-| 5 | Claude Code | mcp-memory-service | project | ✅ Full support | MEDIUM |
-| 6 | Claude Code | mcp-memory-service | user | ✅ Full support | LOW |
-| 7 | Claude Code | custom | project | ✅ Full support | MEDIUM |
-| 8 | Claude Code | custom | user | ✅ Full support | LOW |
-| 9 | Gemini CLI | official | project | ✅ Full support | HIGH |
-| 10 | Gemini CLI | official | user | ✅ Full support | HIGH |
-| 11 | Gemini CLI | official | session | ✅ Full support | HIGH |
-| 12 | Gemini CLI | native | project | ✅ Full support (native) | HIGH |
-| 13 | Gemini CLI | native | user | ✅ Full support (native) | HIGH |
-| 14 | Gemini CLI | native | session | ✅ Full support (native) | HIGH |
-| 15 | Gemini CLI | mcp-memory-service | project | ✅ Full support | MEDIUM |
-| 16 | Gemini CLI | mcp-memory-service | user | ✅ Full support | LOW |
-| 17 | VS Code | official | project | ✅ Via extension | HIGH |
-| 18 | VS Code | official | workspace | ✅ Via extension | HIGH |
-| 19 | VS Code | mcp-memory-service | project | ✅ Via extension | MEDIUM |
-| 20 | VS Code | mcp-memory-service | workspace | ✅ Via extension | LOW |
-| 21 | VS Code | ccmem | project | ⚠️ Limited (no auto-inject) | LOW |
-| 22 | VS Code | custom | project | ✅ Via extension | MEDIUM |
-| 23 | Cursor | official | project | ✅ Via extension | HIGH |
-| 24 | Cursor | mcp-memory-service | project | ✅ Via extension | MEDIUM |
-| 25 | Cursor | ccmem | project | ⚠️ Limited | LOW |
-| 26 | Cursor | custom | project | ✅ Via extension | LOW |
-| 27 | Claude Desktop | official | user | ✅ Full support | MEDIUM |
-| 28 | Claude Desktop | ccmem | user | ✅ Full support | MEDIUM |
-| 29 | Claude Desktop | mcp-memory-service | user | ⚠️ Paid tier only (HTTP) | LOW |
-| 30 | Windsurf | official | project | ✅ Via extension | MEDIUM |
-| 31 | Windsurf | mcp-memory-service | project | ✅ Via extension | LOW |
-| 32 | Copilot CLI | official | project | ⚠️ MCP beta | LOW |
-| 33 | Copilot CLI | mcp-memory-service | project | ⚠️ MCP beta | LOW |
-| 34 | JetBrains | official | project | ⚠️ Experimental | LOW |
-| 35 | JetBrains | mcp-memory-service | project | ⚠️ Experimental | LOW |
+| #   | CLI            | Memory Server      | Scope     | Expected Result             | Priority |
+| --- | -------------- | ------------------ | --------- | --------------------------- | -------- |
+| 1   | Claude Code    | official           | project   | ✅ Full support             | HIGH     |
+| 2   | Claude Code    | official           | user      | ✅ Full support             | HIGH     |
+| 3   | Claude Code    | ccmem              | project   | ✅ Full support             | HIGH     |
+| 4   | Claude Code    | ccmem              | user      | ✅ Full support             | MEDIUM   |
+| 5   | Claude Code    | mcp-memory-service | project   | ✅ Full support             | MEDIUM   |
+| 6   | Claude Code    | mcp-memory-service | user      | ✅ Full support             | LOW      |
+| 7   | Claude Code    | custom             | project   | ✅ Full support             | MEDIUM   |
+| 8   | Claude Code    | custom             | user      | ✅ Full support             | LOW      |
+| 9   | Gemini CLI     | official           | project   | ✅ Full support             | HIGH     |
+| 10  | Gemini CLI     | official           | user      | ✅ Full support             | HIGH     |
+| 11  | Gemini CLI     | official           | session   | ✅ Full support             | HIGH     |
+| 12  | Gemini CLI     | native             | project   | ✅ Full support (native)    | HIGH     |
+| 13  | Gemini CLI     | native             | user      | ✅ Full support (native)    | HIGH     |
+| 14  | Gemini CLI     | native             | session   | ✅ Full support (native)    | HIGH     |
+| 15  | Gemini CLI     | mcp-memory-service | project   | ✅ Full support             | MEDIUM   |
+| 16  | Gemini CLI     | mcp-memory-service | user      | ✅ Full support             | LOW      |
+| 17  | VS Code        | official           | project   | ✅ Via extension            | HIGH     |
+| 18  | VS Code        | official           | workspace | ✅ Via extension            | HIGH     |
+| 19  | VS Code        | mcp-memory-service | project   | ✅ Via extension            | MEDIUM   |
+| 20  | VS Code        | mcp-memory-service | workspace | ✅ Via extension            | LOW      |
+| 21  | VS Code        | ccmem              | project   | ⚠️ Limited (no auto-inject) | LOW      |
+| 22  | VS Code        | custom             | project   | ✅ Via extension            | MEDIUM   |
+| 23  | Cursor         | official           | project   | ✅ Via extension            | HIGH     |
+| 24  | Cursor         | mcp-memory-service | project   | ✅ Via extension            | MEDIUM   |
+| 25  | Cursor         | ccmem              | project   | ⚠️ Limited                  | LOW      |
+| 26  | Cursor         | custom             | project   | ✅ Via extension            | LOW      |
+| 27  | Claude Desktop | official           | user      | ✅ Full support             | MEDIUM   |
+| 28  | Claude Desktop | ccmem              | user      | ✅ Full support             | MEDIUM   |
+| 29  | Claude Desktop | mcp-memory-service | user      | ⚠️ Paid tier only (HTTP)    | LOW      |
+| 30  | Windsurf       | official           | project   | ✅ Via extension            | MEDIUM   |
+| 31  | Windsurf       | mcp-memory-service | project   | ✅ Via extension            | LOW      |
+| 32  | Copilot CLI    | official           | project   | ⚠️ MCP beta                 | LOW      |
+| 33  | Copilot CLI    | mcp-memory-service | project   | ⚠️ MCP beta                 | LOW      |
+| 34  | JetBrains      | official           | project   | ⚠️ Experimental             | LOW      |
+| 35  | JetBrains      | mcp-memory-service | project   | ⚠️ Experimental             | LOW      |
 
 **Priority Ranking:**
+
 - **HIGH** — Core workflows, most common use cases (23 scenarios)
 - **MEDIUM** — Advanced features, secondary CLIs (9 scenarios)
 - **LOW** — Edge cases, experimental (3 scenarios)
@@ -477,17 +523,20 @@ memory:
 ### 3.3 Test Execution Plan
 
 **Phase 1: Core Functionality (HIGH priority - 23 scenarios)**
+
 - Week 1: Claude Code + all memory servers (8 scenarios)
 - Week 2: Gemini CLI + all memory servers (8 scenarios)
 - Week 3: VS Code + primary memory servers (4 scenarios)
 - Week 4: Cursor + primary memory servers (3 scenarios)
 
 **Phase 2: Advanced Features (MEDIUM priority - 9 scenarios)**
+
 - Week 5: User-scoped memory across CLIs
 - Week 6: Enterprise memory service testing
 - Week 7: Custom memory server validation
 
 **Phase 3: Edge Cases (LOW priority - 3 scenarios)**
+
 - Week 8: Experimental CLI support (Copilot, JetBrains)
 - Week 9: Cross-scope memory migration
 - Week 10: Performance and scalability testing
@@ -502,7 +551,7 @@ memory:
 
 ```yaml
 # .overture/config.yaml
-version: "1.0"
+version: '1.0'
 
 project:
   name: my-project
@@ -511,19 +560,19 @@ project:
 # Memory configuration
 memory:
   # Memory server selection
-  server: memory              # official | ccmem | memory-service | custom
+  server: memory # official | ccmem | memory-service | custom
 
   # Scope (where memory is stored)
-  scope: project              # project | user | session (Gemini only)
+  scope: project # project | user | session (Gemini only)
 
   # Auto-persistence (when to save)
   auto_persist:
     enabled: true
     events:
-      - architectural_decision   # Save on ADR creation
-      - test_failure_resolution  # Save on fixing tests
-      - dependency_change        # Save on dependency updates
-      - code_pattern_learned     # Save reusable patterns
+      - architectural_decision # Save on ADR creation
+      - test_failure_resolution # Save on fixing tests
+      - dependency_change # Save on dependency updates
+      - code_pattern_learned # Save reusable patterns
 
   # Server-specific configuration
   config:
@@ -543,7 +592,7 @@ memory:
 mcp:
   memory:
     command: npx
-    args: ["@modelcontextprotocol/server-memory"]
+    args: ['@modelcontextprotocol/server-memory']
     env:
       MEMORY_STORAGE_PATH: ${memory.config.storage_path}
 ```
@@ -592,6 +641,7 @@ overture memory query "architectural decisions about database"
 ### 4.3 Generated MCP Configuration
 
 **Input (.overture/config.yaml):**
+
 ```yaml
 memory:
   server: official
@@ -601,6 +651,7 @@ memory:
 ```
 
 **Output (.mcp.json):**
+
 ```json
 {
   "mcpServers": {
@@ -616,6 +667,7 @@ memory:
 ```
 
 **Input (Enterprise):**
+
 ```yaml
 memory:
   server: memory-service
@@ -626,6 +678,7 @@ memory:
 ```
 
 **Output (.mcp.json):**
+
 ```json
 {
   "mcpServers": {
@@ -650,6 +703,7 @@ memory:
 ### 5.1 Test Scenario 1: Claude Code + Official Memory + Project Scope
 
 **Setup:**
+
 ```bash
 # Create test project
 mkdir test-memory-project
@@ -675,6 +729,7 @@ cat .mcp.json
 ```
 
 **Test Procedure:**
+
 ```bash
 # 1. Start Claude Code
 claude
@@ -702,6 +757,7 @@ claude
 ```
 
 **Expected Result:**
+
 - ✅ Memory server starts successfully
 - ✅ Entity creation works
 - ✅ File storage created in `.mcp-memory/`
@@ -709,6 +765,7 @@ claude
 - ✅ Memory persists across Claude restarts
 
 **Success Criteria:**
+
 - All steps complete without errors
 - Memory graph file created and readable
 - Recall provides accurate information
@@ -717,6 +774,7 @@ claude
 ### 5.2 Test Scenario 12: Gemini CLI + Native Memory + Session Scope
 
 **Setup:**
+
 ```bash
 # Create test project
 mkdir test-gemini-memory
@@ -741,6 +799,7 @@ gemini
 ```
 
 **Test Procedure:**
+
 ```bash
 # 1. Save information in session
 /memory save architectural_pattern "Microservices with event sourcing"
@@ -779,12 +838,14 @@ gemini
 ```
 
 **Expected Result:**
+
 - ✅ Session scope: Memory cleared on session end
 - ✅ Project scope: Memory persists across sessions
 - ✅ Storage created in `.gemini/memory/`
 - ✅ `/memory` commands work correctly
 
 **Success Criteria:**
+
 - Session scope behaves correctly (ephemeral)
 - Project scope persists as expected
 - Memory commands respond quickly
@@ -793,6 +854,7 @@ gemini
 ### 5.3 Test Scenario 19: VS Code + Enterprise Memory + Project Scope
 
 **Setup:**
+
 ```bash
 # Install VS Code MCP extension
 code --install-extension modelcontextprotocol.mcp-vscode
@@ -821,6 +883,7 @@ overture sync
 ```
 
 **Test Procedure:**
+
 ```bash
 # 1. Start memory service
 mcp-memory-service --port 8080 &
@@ -857,6 +920,7 @@ SELECT * FROM observations;
 ```
 
 **Expected Result:**
+
 - ✅ Memory service starts successfully
 - ✅ VS Code MCP extension connects
 - ✅ Entity storage in PostgreSQL works
@@ -864,6 +928,7 @@ SELECT * FROM observations;
 - ✅ Cross-session persistence confirmed
 
 **Success Criteria:**
+
 - PostgreSQL schema created correctly
 - Semantic search latency <2s
 - Vector embeddings generated
@@ -875,29 +940,30 @@ SELECT * FROM observations;
 
 ### 6.1 Scope Selection Guide
 
-| Use Case | Recommended Scope | Memory Server | Rationale |
-|----------|-------------------|---------------|-----------|
-| **Architectural Decisions** | Project | official or memory-service | Version-controlled, team-shared |
-| **Personal Coding Preferences** | User | official or ccmem | User-specific, cross-project |
-| **Exploratory Work** | Session (Gemini) | native | Temporary, discardable |
-| **Team Knowledge Base** | Project (shared) | memory-service | Semantic search, multi-user |
-| **Debugging Context** | Project | official | Persist issue resolutions |
-| **Code Review Learnings** | User | ccmem | Personal review patterns |
-| **Sprint Goals** | Project | official | Sprint-specific context |
+| Use Case                        | Recommended Scope | Memory Server              | Rationale                       |
+| ------------------------------- | ----------------- | -------------------------- | ------------------------------- |
+| **Architectural Decisions**     | Project           | official or memory-service | Version-controlled, team-shared |
+| **Personal Coding Preferences** | User              | official or ccmem          | User-specific, cross-project    |
+| **Exploratory Work**            | Session (Gemini)  | native                     | Temporary, discardable          |
+| **Team Knowledge Base**         | Project (shared)  | memory-service             | Semantic search, multi-user     |
+| **Debugging Context**           | Project           | official                   | Persist issue resolutions       |
+| **Code Review Learnings**       | User              | ccmem                      | Personal review patterns        |
+| **Sprint Goals**                | Project           | official                   | Sprint-specific context         |
 
 ### 6.2 Memory Server Selection Matrix
 
-| Requirement | Official | ccmem | memory-service | Custom |
-|-------------|----------|-------|----------------|--------|
-| **Simple setup** | ✅ Best | ✅ Good | ❌ Complex | ❌ Complex |
-| **Semantic search** | ❌ No | ❌ No | ✅ Yes | Depends |
-| **Claude optimization** | ⚠️ Generic | ✅ Yes | ⚠️ Generic | Depends |
-| **Team collaboration** | ⚠️ Limited | ❌ No | ✅ Yes | Depends |
-| **Scalability** | ⚠️ File-based | ⚠️ SQLite | ✅ PostgreSQL | Depends |
-| **Cost** | Free | Free | Paid (embeddings) | Varies |
-| **Maintenance** | Low | Medium | High | High |
+| Requirement             | Official      | ccmem     | memory-service    | Custom     |
+| ----------------------- | ------------- | --------- | ----------------- | ---------- |
+| **Simple setup**        | ✅ Best       | ✅ Good   | ❌ Complex        | ❌ Complex |
+| **Semantic search**     | ❌ No         | ❌ No     | ✅ Yes            | Depends    |
+| **Claude optimization** | ⚠️ Generic    | ✅ Yes    | ⚠️ Generic        | Depends    |
+| **Team collaboration**  | ⚠️ Limited    | ❌ No     | ✅ Yes            | Depends    |
+| **Scalability**         | ⚠️ File-based | ⚠️ SQLite | ✅ PostgreSQL     | Depends    |
+| **Cost**                | Free          | Free      | Paid (embeddings) | Varies     |
+| **Maintenance**         | Low           | Medium    | High              | High       |
 
 **Decision Tree:**
+
 ```
 Is semantic search required?
 ├─ Yes → memory-service (enterprise)
@@ -911,16 +977,19 @@ Is semantic search required?
 ### 6.3 Auto-Persistence Event Recommendations
 
 **High-Value Events (Always Enable):**
+
 - `architectural_decision` — ADRs, major design choices
 - `bug_fix_resolution` — How bugs were solved
 - `dependency_change` — Why dependency was updated
 
 **Medium-Value Events (Project-Dependent):**
+
 - `code_pattern_learned` — Reusable coding patterns
 - `api_design_choice` — API endpoint design rationale
 - `security_consideration` — Security decisions made
 
 **Low-Value Events (Avoid Auto-Persist):**
+
 - `file_read` — Too noisy
 - `code_execution` — Generates too much data
 - `linter_warning` — Temporary issues
@@ -928,6 +997,7 @@ Is semantic search required?
 ### 6.4 Migration Strategies
 
 **User → Project Migration:**
+
 ```bash
 # Export user-scoped memory
 overture memory export --scope user --output user-memory.json
@@ -941,6 +1011,7 @@ overture memory status
 ```
 
 **Cross-Server Migration:**
+
 ```bash
 # Export from official server
 overture memory export --server official --output memory.json
@@ -962,11 +1033,13 @@ overture memory import --input memory.json
 ### 7.1 Week 1-2: Memory Configuration Schema
 
 **Tasks:**
+
 - Add `memory:` section to Overture YAML schema
 - Implement memory server selection logic
 - Add scope management (project/user/session)
 
 **Deliverables:**
+
 - Updated Zod schema with memory validation
 - CLI prompts for memory initialization
 - Configuration documentation
@@ -974,11 +1047,13 @@ overture memory import --input memory.json
 ### 7.2 Week 3-4: MCP Generation for Memory
 
 **Tasks:**
+
 - Generate `.mcp.json` entries for selected memory server
 - Handle server-specific configuration (paths, ports, etc.)
 - Add environment variable handling
 
 **Deliverables:**
+
 - Memory → MCP transpilation logic
 - Unit tests for each memory server type
 - Integration tests with generated configs
@@ -986,12 +1061,14 @@ overture memory import --input memory.json
 ### 7.3 Week 5-6: Memory CLI Commands
 
 **Tasks:**
+
 - Implement `overture memory init`
 - Implement `overture memory status`
 - Implement `overture memory validate`
 - Implement `overture memory migrate`
 
 **Deliverables:**
+
 - Full CLI command suite
 - Interactive prompts for setup
 - Validation and error handling
@@ -999,11 +1076,13 @@ overture memory import --input memory.json
 ### 7.4 Week 7-8: Core Testing (HIGH priority)
 
 **Tasks:**
+
 - Execute 23 HIGH-priority test scenarios
 - Document test results and issues
 - Fix compatibility issues
 
 **Deliverables:**
+
 - Test report for core scenarios
 - Bug fixes for critical issues
 - Compatibility matrix update
@@ -1011,11 +1090,13 @@ overture memory import --input memory.json
 ### 7.5 Week 9-10: Advanced Testing (MEDIUM/LOW priority)
 
 **Tasks:**
+
 - Execute 12 MEDIUM+LOW priority scenarios
 - Performance testing (large knowledge graphs)
 - Cross-CLI migration testing
 
 **Deliverables:**
+
 - Complete test coverage report
 - Performance benchmarks
 - Migration guides
@@ -1023,12 +1104,14 @@ overture memory import --input memory.json
 ### 7.6 Week 11-12: Documentation & Release
 
 **Tasks:**
+
 - Write memory server comparison guide
 - Create setup tutorials for each server
 - Update CLAUDE.md with memory guidance
 - Release Overture v0.5
 
 **Deliverables:**
+
 - Memory documentation
 - Video tutorials (optional)
 - v0.5 release notes
@@ -1058,12 +1141,14 @@ overture memory import --input memory.json
 ### 8.3 Future Enhancements (v0.6+)
 
 **v0.6: Advanced Memory Features**
+
 - Memory conflict resolution UI
 - Real-time sync across team members
 - Memory visualization (graph explorer)
 - Memory analytics (usage stats, popular entities)
 
 **v0.7: AI-Enhanced Memory**
+
 - Auto-categorization of entities
 - Intelligent memory suggestions
 - Context-aware memory injection
@@ -1107,16 +1192,19 @@ overture memory import --input memory.json
 ### 10.2 Recommendations for Overture v0.5
 
 **Priority 1: Implement Core Memory Config**
+
 - Add `memory:` schema to Overture YAML
 - Implement MCP generation for 3 main servers (official, ccmem, memory-service)
 - Add `overture memory init` command
 
 **Priority 2: Test with Top CLIs**
+
 - Focus on Claude Code + Gemini CLI (best support)
 - Validate official + ccmem servers (most common)
 - Document compatibility matrix
 
 **Priority 3: Migration & Backup Tools**
+
 - Enable scope migration (user ↔ project)
 - Add export/import commands
 - Create backup workflows
@@ -1124,18 +1212,21 @@ overture memory import --input memory.json
 ### 10.3 Success Criteria for v0.5
 
 **Must Have:**
+
 - ✅ Memory configuration in `.overture/config.yaml`
 - ✅ MCP generation for official memory server
 - ✅ Works with Claude Code (HIGH priority scenarios)
 - ✅ Documentation and examples
 
 **Should Have:**
+
 - ✅ Support for ccmem and memory-service
 - ✅ Memory CLI commands (init, status, validate)
 - ✅ Tested with Gemini CLI
 - ✅ Migration tools
 
 **Nice to Have:**
+
 - ⚠️ Custom memory server support
 - ⚠️ Advanced analytics
 - ⚠️ Team collaboration features
@@ -1144,4 +1235,4 @@ overture memory import --input memory.json
 
 **End of Research Document**
 
-*This research provides a comprehensive testing plan for Overture v0.5 memory features. With 48 documented test scenarios, clear configuration schema, and compatibility matrix, implementation can proceed with confidence. The 12-week roadmap provides realistic timeline for production-ready memory support across multiple CLIs.*
+_This research provides a comprehensive testing plan for Overture v0.5 memory features. With 48 documented test scenarios, clear configuration schema, and compatibility matrix, implementation can proceed with confidence. The 12-week roadmap provides realistic timeline for production-ready memory support across multiple CLIs._

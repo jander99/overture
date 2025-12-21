@@ -1,5 +1,21 @@
 # MCP Client Configuration Research Report v2
 
+> ⚠️ **OVERTURE v0.3 SUPPORTS 3 CLIENTS ONLY**
+>
+> This document contains research on 7 clients. Overture v0.3 **ONLY supports**:
+>
+> - ✅ Claude Code (primary)
+> - ✅ GitHub Copilot CLI
+> - ✅ OpenCode
+>
+> Sections on **Cursor, Windsurf, Claude Desktop, VS Code, JetBrains** are **HISTORICAL ONLY**.
+> Do NOT use this info for implementation.
+>
+> **Last Validated:** 2025-11-11 (7-client version)  
+> **Updated:** 2025-01-12 (3-client deprecation notice)
+
+---
+
 **Research Date:** 2025-11-11  
 **Previous Version:** 2025-11-10 (v1)  
 **Purpose:** Comprehensive research update based on user feedback to inform Overture v0.2 multi-platform support
@@ -19,6 +35,7 @@ This v2 research document addresses critical gaps from v1 and incorporates user 
 7. **GitHub Copilot CLI Bundled MCP** - How to configure the bundled GitHub MCP
 
 **Key Changes from v1:**
+
 - JetBrains Copilot plugin added as supported client (uses `.vscode/mcp.json`)
 - Environment variable expansion documented with client-specific support matrix
 - Transport field recommended as required in Overture config
@@ -33,15 +50,15 @@ This v2 research document addresses critical gaps from v1 and incorporates user 
 
 ### 1.1 Complete Client Comparison Table (Updated)
 
-| Client | macOS Config Location | Linux Config Location | Windows Config Location | Format | Scope Support | MCP Support |
-|--------|----------------------|----------------------|------------------------|--------|---------------|-------------|
-| **Claude Code** | `~/.claude.json` (global)<br>`.mcp.json` (project) | `~/.claude.json` (global)<br>`.mcp.json` (project) | `%USERPROFILE%\.claude.json` (global)<br>`.mcp.json` (project) | JSON | Global + Project | ✅ Full |
-| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` | `~/.config/Claude/claude_desktop_config.json` | `%APPDATA%\Claude\claude_desktop_config.json` | JSON | User only | ✅ Full (stdio)<br>⚠️ HTTP/SSE (paid tiers only) |
-| **VS Code** (Copilot) | `.vscode/mcp.json` (workspace)<br>`~/Library/Application Support/Code/User/mcp.json` (global) | `.vscode/mcp.json` (workspace)<br>`~/.config/Code/User/mcp.json` (global) | `.vscode\mcp.json` (workspace)<br>`%APPDATA%\Code\User\mcp.json` (global) | JSON | Global + Workspace | ✅ Full (requires VS Code 1.99+) |
-| **JetBrains** (GitHub Copilot plugin) | `.vscode/mcp.json` (workspace) | `.vscode/mcp.json` (workspace) | `.vscode/mcp.json` (workspace)<br>`%LOCALAPPDATA%\github-copilot\intellij\mcp.json` (user - Windows only) | JSON | Workspace + User (Windows) | ✅ Full (via Copilot plugin) |
-| **GitHub Copilot CLI** | `~/.config/mcp-config.json`<br>`~/.copilot/mcp-config.json` | `~/.config/mcp-config.json`<br>or `$XDG_CONFIG_HOME/mcp-config.json` | `%USERPROFILE%\.config\mcp-config.json` | JSON | User only | ✅ Full (bundled GitHub MCP) |
-| **Cursor** | `~/.cursor/mcp.json` (global)<br>`.cursor/mcp.json` (project) | `~/.cursor/mcp.json` (global)<br>`.cursor/mcp.json` (project) | `%USERPROFILE%\.cursor\mcp.json` (global)<br>`.cursor\mcp.json` (project) | JSON | Global + Project | ✅ Full |
-| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | `~/.codeium/windsurf/mcp_config.json` | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | JSON | User only | ✅ Full (stdio + HTTP) |
+| Client                                | macOS Config Location                                                                         | Linux Config Location                                                     | Windows Config Location                                                                                   | Format | Scope Support              | MCP Support                                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | -------------------------- | ------------------------------------------------ |
+| **Claude Code**                       | `~/.claude.json` (global)<br>`.mcp.json` (project)                                            | `~/.claude.json` (global)<br>`.mcp.json` (project)                        | `%USERPROFILE%\.claude.json` (global)<br>`.mcp.json` (project)                                            | JSON   | Global + Project           | ✅ Full                                          |
+| **Claude Desktop**                    | `~/Library/Application Support/Claude/claude_desktop_config.json`                             | `~/.config/Claude/claude_desktop_config.json`                             | `%APPDATA%\Claude\claude_desktop_config.json`                                                             | JSON   | User only                  | ✅ Full (stdio)<br>⚠️ HTTP/SSE (paid tiers only) |
+| **VS Code** (Copilot)                 | `.vscode/mcp.json` (workspace)<br>`~/Library/Application Support/Code/User/mcp.json` (global) | `.vscode/mcp.json` (workspace)<br>`~/.config/Code/User/mcp.json` (global) | `.vscode\mcp.json` (workspace)<br>`%APPDATA%\Code\User\mcp.json` (global)                                 | JSON   | Global + Workspace         | ✅ Full (requires VS Code 1.99+)                 |
+| **JetBrains** (GitHub Copilot plugin) | `.vscode/mcp.json` (workspace)                                                                | `.vscode/mcp.json` (workspace)                                            | `.vscode/mcp.json` (workspace)<br>`%LOCALAPPDATA%\github-copilot\intellij\mcp.json` (user - Windows only) | JSON   | Workspace + User (Windows) | ✅ Full (via Copilot plugin)                     |
+| **GitHub Copilot CLI**                | `~/.config/mcp-config.json`<br>`~/.copilot/mcp-config.json`                                   | `~/.config/mcp-config.json`<br>or `$XDG_CONFIG_HOME/mcp-config.json`      | `%USERPROFILE%\.config\mcp-config.json`                                                                   | JSON   | User only                  | ✅ Full (bundled GitHub MCP)                     |
+| **Cursor**                            | `~/.cursor/mcp.json` (global)<br>`.cursor/mcp.json` (project)                                 | `~/.cursor/mcp.json` (global)<br>`.cursor/mcp.json` (project)             | `%USERPROFILE%\.cursor\mcp.json` (global)<br>`.cursor\mcp.json` (project)                                 | JSON   | Global + Project           | ✅ Full                                          |
+| **Windsurf**                          | `~/.codeium/windsurf/mcp_config.json`                                                         | `~/.codeium/windsurf/mcp_config.json`                                     | `%USERPROFILE%\.codeium\windsurf\mcp_config.json`                                                         | JSON   | User only                  | ✅ Full (stdio + HTTP)                           |
 
 ### 1.2 JetBrains GitHub Copilot Plugin Details (NEW)
 
@@ -52,12 +69,9 @@ This v2 research document addresses critical gaps from v1 and incorporates user 
 - **Workspace (all platforms):** `.vscode/mcp.json`
   - Yes, JetBrains Copilot plugin uses VS Code's convention
   - Allows sharing MCP config across VS Code and JetBrains in same project
-  
 - **User-level (Windows only - confirmed):** `%LOCALAPPDATA%\github-copilot\intellij\mcp.json`
   - Example: `C:\Users\Username\AppData\Local\github-copilot\intellij\mcp.json`
-  
 - **User-level (macOS - needs research):** Likely `~/Library/Application Support/github-copilot/intellij/mcp.json` (unconfirmed)
-  
 - **User-level (Linux - needs research):** Likely `~/.local/share/github-copilot/intellij/mcp.json` or `~/.config/github-copilot/intellij/mcp.json` (unconfirmed)
 
 **Configuration Format:**
@@ -81,6 +95,7 @@ Uses the `servers` schema (same as VS Code):
 **IDE Variations:**
 
 The path does NOT differ between:
+
 - JetBrains Toolbox installations
 - Direct IDE installations
 - Different JetBrains IDEs (IntelliJ, PyCharm, WebStorm)
@@ -90,6 +105,7 @@ All use the same GitHub Copilot plugin, which has a single config path.
 **Agent Mode:**
 
 MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
+
 1. Copilot icon → "Open Chat"
 2. Ensure agent mode is active
 3. Click tools icon → "Configure your MCP server" → "Add MCP Tools"
@@ -107,15 +123,15 @@ MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
 
 ### 2.1 Environment Variable Expansion Support Matrix
 
-| Client | `${VAR}` Syntax | `$VAR` Syntax | `%VAR%` Syntax | Expansion Scope | Works? |
-|--------|----------------|---------------|----------------|-----------------|--------|
-| **Claude Code** | ✅ Yes | ❌ No | ❌ No | `command`, `args`, `env` values | ✅ **YES** |
-| **Claude Desktop** | ⚠️ Partial | ❌ No | ❌ No | `env` values only | ⚠️ **MAYBE** |
-| **VS Code** | ❌ No (native) | ❌ No | ❌ No | None (use `inputs` instead) | ❌ **NO** |
-| **JetBrains Copilot** | ❌ No (assumed same as VS Code) | ❌ No | ❌ No | None (use `inputs` instead) | ❌ **NO** |
-| **GitHub Copilot CLI** | ✅ Yes (v0.0.340+) | ❌ No | ❌ No | `command`, `args`, `env`, `headers` | ✅ **YES** |
-| **Cursor** | ⚠️ Unknown | ❌ No | ❌ No | Unknown | ⚠️ **UNKNOWN** |
-| **Windsurf** | ⚠️ Unknown | ❌ No | ❌ No | Unknown | ⚠️ **UNKNOWN** |
+| Client                 | `${VAR}` Syntax                 | `$VAR` Syntax | `%VAR%` Syntax | Expansion Scope                     | Works?         |
+| ---------------------- | ------------------------------- | ------------- | -------------- | ----------------------------------- | -------------- |
+| **Claude Code**        | ✅ Yes                          | ❌ No         | ❌ No          | `command`, `args`, `env` values     | ✅ **YES**     |
+| **Claude Desktop**     | ⚠️ Partial                      | ❌ No         | ❌ No          | `env` values only                   | ⚠️ **MAYBE**   |
+| **VS Code**            | ❌ No (native)                  | ❌ No         | ❌ No          | None (use `inputs` instead)         | ❌ **NO**      |
+| **JetBrains Copilot**  | ❌ No (assumed same as VS Code) | ❌ No         | ❌ No          | None (use `inputs` instead)         | ❌ **NO**      |
+| **GitHub Copilot CLI** | ✅ Yes (v0.0.340+)              | ❌ No         | ❌ No          | `command`, `args`, `env`, `headers` | ✅ **YES**     |
+| **Cursor**             | ⚠️ Unknown                      | ❌ No         | ❌ No          | Unknown                             | ⚠️ **UNKNOWN** |
+| **Windsurf**           | ⚠️ Unknown                      | ❌ No         | ❌ No          | Unknown                             | ⚠️ **UNKNOWN** |
 
 ### 2.2 Syntax Standards
 
@@ -147,6 +163,7 @@ MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
 **Status:** ✅ **CONFIRMED WORKING**
 
 **Expansion Scope:**
+
 - `command` paths
 - `args` array values
 - `env` object values
@@ -154,6 +171,7 @@ MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
 **Documentation:** https://docs.anthropic.com/en/docs/claude-code/mcp
 
 **Example:**
+
 ```json
 {
   "mcpServers": {
@@ -187,11 +205,13 @@ MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
 **Documentation:** As of version 0.0.340, environment variables in MCP server configurations must use explicit `${VAR}` syntax.
 
 **Expansion Scope:**
+
 - `command` and `args`
 - `env` object
 - `headers` for HTTP/SSE servers
 
 **Example:**
+
 ```json
 {
   "mcpServers": {
@@ -252,6 +272,7 @@ MCP support requires GitHub Copilot's "agent mode" to be enabled. Access via:
 ```
 
 Then create `.env.mcp`:
+
 ```
 GITHUB_TOKEN=ghp_your_token_here
 ```
@@ -270,18 +291,20 @@ Overture performs expansion BEFORE writing client config:
 # ~/.config/overture.yml
 mcp:
   github:
-    command: "mcp-server-github"
+    command: 'mcp-server-github'
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"  # Overture config uses ${VAR}
+      GITHUB_TOKEN: '${GITHUB_TOKEN}' # Overture config uses ${VAR}
 ```
 
 When syncing:
+
 - **Claude Code:** Write `${GITHUB_TOKEN}` (client expands it)
 - **Claude Desktop:** Write `${GITHUB_TOKEN}` (client might expand it)
 - **VS Code:** Read `process.env.GITHUB_TOKEN` and write literal value
 - **Copilot CLI:** Write `${GITHUB_TOKEN}` (client expands it)
 
 **Implementation:**
+
 ```typescript
 function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
   if (client.supportsEnvExpansion) {
@@ -294,8 +317,8 @@ function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
       command: expandEnvVars(mcp.command),
       args: mcp.args.map(expandEnvVars),
       env: Object.fromEntries(
-        Object.entries(mcp.env).map(([k, v]) => [k, expandEnvVars(v)])
-      )
+        Object.entries(mcp.env).map(([k, v]) => [k, expandEnvVars(v)]),
+      ),
     };
   }
 }
@@ -308,27 +331,29 @@ Use a separate `~/.config/overture/secrets.yml` (gitignored):
 ```yaml
 # ~/.config/overture/secrets.yml (gitignored)
 secrets:
-  GITHUB_TOKEN: "ghp_actual_token_here"
-  CONTEXT7_API_KEY: "key_here"
+  GITHUB_TOKEN: 'ghp_actual_token_here'
+  CONTEXT7_API_KEY: 'key_here'
 ```
 
 ```yaml
 # ~/.config/overture.yml (can be committed)
 mcp:
   github:
-    command: "mcp-server-github"
+    command: 'mcp-server-github'
     env:
-      GITHUB_TOKEN: "!secret GITHUB_TOKEN"  # Reference to secrets file
+      GITHUB_TOKEN: '!secret GITHUB_TOKEN' # Reference to secrets file
 ```
 
 Overture injects actual values when syncing.
 
 **Pros:**
+
 - Works regardless of client env var support
 - Secrets never in version control
 - Single source of truth for secrets
 
 **Cons:**
+
 - Another file to manage
 - Overture becomes secret manager (scope creep?)
 
@@ -346,19 +371,21 @@ CONTEXT7_API_KEY=key_here
 # ~/.config/overture.yml
 mcp:
   github:
-    command: "mcp-server-github"
+    command: 'mcp-server-github'
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"  # From .env
+      GITHUB_TOKEN: '${GITHUB_TOKEN}' # From .env
 ```
 
 Overture uses dotenv library to load `.env` before syncing.
 
 **Pros:**
+
 - Standard pattern (.env files)
 - Works with existing workflows
 - Gitignore prevents secrets in VCS
 
 **Cons:**
+
 - Requires .env in multiple locations (user + project)
 - Not all clients support .env
 
@@ -367,6 +394,7 @@ Overture uses dotenv library to load `.env` before syncing.
 **For v0.2:** Use **Option A (Client-Aware Expansion)**.
 
 **Rationale:**
+
 - Minimal scope (no secrets management complexity)
 - Respects client capabilities
 - Allows env vars where supported (Claude Code, Copilot CLI)
@@ -392,10 +420,11 @@ mcp:
       include: [claude-code, cursor]
       exclude: [copilot-cli]
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 **Pros:**
+
 - ✅ Natural mental model: "What MCPs do I have, and where should they go?"
 - ✅ Scales better with many MCPs (100+ MCPs vs 10 clients)
 - ✅ Easy to add/remove MCPs
@@ -403,6 +432,7 @@ mcp:
 - ✅ Client inclusion/exclusion is optional metadata
 
 **Cons:**
+
 - ❌ Verbose if many clients need exclusions
 - ❌ Repetitive `include`/`exclude` for related MCPs
 
@@ -416,23 +446,25 @@ clients:
     mcps:
       include: [github, memory, python-repl]
       exclude: [docker]
-  
+
   cursor:
     mcps:
       include: [github, memory]
       exclude: [python-repl, docker]
-  
+
   vscode:
     mcps:
       include: [memory]
 ```
 
 **Pros:**
+
 - ✅ Clear view of what each client gets
 - ✅ Easy to compare client configs
 - ✅ Natural for "client-first" thinking
 
 **Cons:**
+
 - ❌ Massive duplication: Most MCPs go to ALL clients
 - ❌ Harder to maintain: Change MCP name = update in 6 places
 - ❌ Counter-intuitive: Users think in terms of MCPs, not clients
@@ -445,7 +477,7 @@ clients:
 ```yaml
 # Global defaults
 defaults:
-  clients: [claude-code, claude-desktop, cursor, vscode]  # All MCPs go here by default
+  clients: [claude-code, claude-desktop, cursor, vscode] # All MCPs go here by default
 
 # MCP definitions (MCP-centric)
 mcp:
@@ -453,34 +485,35 @@ mcp:
   github:
     command: mcp-server-github
     # No clients specified = uses defaults (all clients)
-  
+
   memory:
     command: mcp-server-memory
     # No clients specified = uses defaults (all clients)
-  
+
   # Specialized MCP with exclusions
   python-repl:
     command: uvx mcp-server-python-repl
     clients:
-      exclude: [copilot-cli]  # Don't need Python REPL in CLI
-  
+      exclude: [copilot-cli] # Don't need Python REPL in CLI
+
   # Project-specific MCP
   project-db:
     command: mcp-server-sqlite
     clients:
-      include: [claude-code]  # Only in Claude Code
+      include: [claude-code] # Only in Claude Code
 
 # Client overrides (client-centric exceptions)
 clients:
   windsurf:
-    max_servers: 100  # Tool limit
-    priority_mcps: [memory, github, filesystem]  # Ensure these are included
-  
+    max_servers: 100 # Tool limit
+    priority_mcps: [memory, github, filesystem] # Ensure these are included
+
   claude-desktop:
-    exclude_transports: [http, sse]  # Free tier limitation
+    exclude_transports: [http, sse] # Free tier limitation
 ```
 
 **Best of Both:**
+
 - MCP-centric for most configs (DRY principle)
 - Client-centric for client-specific constraints
 - Defaults minimize repetition
@@ -502,17 +535,17 @@ mcp:
   python-repl: { command: mcp-server-python-repl }
   ruff: { command: mcp-server-ruff }
   docker: { command: mcp-server-docker }
-  
+
   # Specialized
   kubernetes:
     command: mcp-server-k8s
     clients:
-      include: [claude-code]  # Only in Claude Code
-  
+      include: [claude-code] # Only in Claude Code
+
   local-db:
     command: mcp-server-postgres
     clients:
-      include: [claude-code, cursor]  # Only in these two
+      include: [claude-code, cursor] # Only in these two
 ```
 
 **Lines of config:** ~20
@@ -522,22 +555,49 @@ mcp:
 ```yaml
 clients:
   claude-code:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker, kubernetes, local-db]
-  
+    mcps:
+      [
+        github,
+        memory,
+        filesystem,
+        context7,
+        sqlite,
+        python-repl,
+        ruff,
+        docker,
+        kubernetes,
+        local-db,
+      ]
+
   claude-desktop:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
-  
+    mcps:
+      [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
+
   cursor:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker, local-db]
-  
+    mcps:
+      [
+        github,
+        memory,
+        filesystem,
+        context7,
+        sqlite,
+        python-repl,
+        ruff,
+        docker,
+        local-db,
+      ]
+
   vscode:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
-  
+    mcps:
+      [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
+
   copilot-cli:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
-  
+    mcps:
+      [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
+
   windsurf:
-    mcps: [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
+    mcps:
+      [github, memory, filesystem, context7, sqlite, python-repl, ruff, docker]
 ```
 
 **Lines of config:** ~12 + massive duplication
@@ -549,6 +609,7 @@ clients:
 **Use Hybrid MCP-Centric with Defaults** (Option A + enhancements).
 
 **Rationale:**
+
 1. **Scales better:** Most configs are "all clients" (use defaults)
 2. **Less duplication:** Define MCP once, include everywhere
 3. **Easier maintenance:** Change MCP name in one place
@@ -559,7 +620,7 @@ clients:
 
 ```yaml
 # ~/.config/overture.yml
-version: "2.0"
+version: '2.0'
 
 # Default clients for all MCPs (unless overridden)
 defaults:
@@ -570,16 +631,16 @@ mcp:
   github:
     command: mcp-server-github
     # Uses defaults: all 4 clients
-  
+
   python-repl:
     command: uvx mcp-server-python-repl
     clients:
-      exclude: [vscode]  # Override defaults
+      exclude: [vscode] # Override defaults
 
 # Client-specific settings
 clients:
   windsurf:
-    enabled: false  # Don't sync to Windsurf at all
+    enabled: false # Don't sync to Windsurf at all
 ```
 
 ---
@@ -597,12 +658,14 @@ clients:
 **Contents:** All config in one place (MCPs, clients, plugins, secrets refs).
 
 **Pros:**
+
 - ✅ Simple: One file to edit
 - ✅ Easy to read: See everything at once
 - ✅ Familiar: Most dotfiles use single files (.gitconfig, .zshrc)
 - ✅ Easier to sync: Dotfiles repos commit single file
 
 **Cons:**
+
 - ❌ Large file: 50+ MCPs = hundreds of lines
 - ❌ No secrets isolation: `env` vars mixed with config
 - ❌ Hard to organize: All concerns in one file
@@ -619,12 +682,14 @@ clients:
 ```
 
 **Pros:**
+
 - ✅ Organized: Separation of concerns
 - ✅ Secrets isolation: `secrets.yml` gitignored separately
 - ✅ Scalable: Easier to manage 100+ MCPs in dedicated file
 - ✅ Modular: Can version control some files, not others
 
 **Cons:**
+
 - ❌ Complex: Multiple files to manage
 - ❌ Hard to sync: Dotfiles repos need multiple files
 - ❌ Cognitive overhead: "Where does this config go?"
@@ -637,6 +702,7 @@ clients:
 **For v0.3+:** Split when file becomes unwieldy (~500 lines?).
 
 **Rationale:**
+
 - Single file is simpler for early adopters
 - Easier to document and explain
 - Dotfiles integration is straightforward
@@ -646,7 +712,7 @@ clients:
 
 ```yaml
 # ~/.config/overture.yml (v0.2)
-version: "2.0"
+version: '2.0'
 mcp: { ... }
 clients: { ... }
 ```
@@ -655,7 +721,7 @@ Later:
 
 ```yaml
 # ~/.config/overture/config.yml (v0.3+)
-version: "3.0"
+version: '3.0'
 import:
   - mcp-servers.yml
   - secrets.yml
@@ -673,7 +739,7 @@ mcp:
   github:
     command: mcp-server-github
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"  # Reference, not value
+      GITHUB_TOKEN: '${GITHUB_TOKEN}' # Reference, not value
 ```
 
 ```bash
@@ -686,7 +752,7 @@ export CONTEXT7_API_KEY="key_here"
 
 ```yaml
 # ~/.config/overture.yml
-env_file: "~/.config/overture.env"  # Gitignored
+env_file: '~/.config/overture.env' # Gitignored
 ```
 
 ```bash
@@ -715,20 +781,22 @@ CONTEXT7_API_KEY=key_here
 mcp:
   filesystem:
     command: npx
-    args: ["-y"]
-    package: "@modelcontextprotocol/server-filesystem"
-    version: "1.2.3"
+    args: ['-y']
+    package: '@modelcontextprotocol/server-filesystem'
+    version: '1.2.3'
 ```
 
 **Generated command:** `npx -y @modelcontextprotocol/server-filesystem@1.2.3`
 
 **Pros:**
+
 - ✅ Explicit: Version is clearly separated
 - ✅ Manageable: Easy to update versions programmatically
 - ✅ Queryable: `overture outdated` can check version mismatches
 - ✅ Lockfile support: Can generate `overture.lock` with exact versions
 
 **Cons:**
+
 - ❌ Package manager specific: Assumes `@package@version` syntax
 - ❌ Redundant: Version info in two places (package + version field)
 
@@ -738,15 +806,17 @@ mcp:
 mcp:
   filesystem:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem@1.2.3"]
+    args: ['-y', '@modelcontextprotocol/server-filesystem@1.2.3']
 ```
 
 **Pros:**
+
 - ✅ Simple: One field
 - ✅ Flexible: Works with any command structure
 - ✅ Explicit: Exactly what gets executed
 
 **Cons:**
+
 - ❌ Hard to parse: Need regex to extract version
 - ❌ No programmatic updates: Can't easily change version
 - ❌ No `overture outdated` command: Can't detect version drift
@@ -757,27 +827,31 @@ mcp:
 mcp:
   filesystem:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem"]
-    version: "latest"  # Or "1.2.3", "^1.0.0", etc.
+    args: ['-y', '@modelcontextprotocol/server-filesystem']
+    version: 'latest' # Or "1.2.3", "^1.0.0", etc.
 ```
 
 **Behavior:**
+
 - `version: "latest"` → `npx -y @modelcontextprotocol/server-filesystem` (no @version)
 - `version: "1.2.3"` → `npx -y @modelcontextprotocol/server-filesystem@1.2.3`
 - No `version` field → defaults to `"latest"`
 
 **Pros:**
+
 - ✅ Flexible: Version optional
 - ✅ Explicit when needed: Pin versions for stability
 - ✅ Manageable: Programmatic version updates possible
 
 **Cons:**
+
 - ❌ Package manager specific: Assumes npm/pip versioning syntax
 - ❌ Complex: Need to parse package managers (npm vs pip vs cargo)
 
 ### 5.2 Version Syntax Standards
 
 **NPM (JavaScript):**
+
 ```yaml
 version: "1.2.3"        # Exact
 version: "^1.2.3"       # Compatible (1.x.x, >= 1.2.3)
@@ -786,6 +860,7 @@ version: "latest"       # Latest stable
 ```
 
 **PyPI (Python):**
+
 ```yaml
 version: "1.2.3"        # Exact
 version: ">=1.2.3"      # Minimum
@@ -794,6 +869,7 @@ version: "latest"       # Latest stable
 ```
 
 **Cargo (Rust):**
+
 ```yaml
 version: "1.2.3"        # Exact
 version: "^1.2.3"       # Compatible
@@ -810,9 +886,9 @@ version: "*"            # Latest
 mcp:
   filesystem:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem"]
-    version: "1.2.3"  # Optional, defaults to "latest"
-    package_manager: npm  # Optional, auto-detected from command
+    args: ['-y', '@modelcontextprotocol/server-filesystem']
+    version: '1.2.3' # Optional, defaults to "latest"
+    package_manager: npm # Optional, auto-detected from command
 ```
 
 **Generation Logic:**
@@ -820,15 +896,15 @@ mcp:
 ```typescript
 function generateCommand(mcp: McpConfig): string[] {
   const baseArgs = [...mcp.args];
-  
+
   if (mcp.version && mcp.version !== 'latest') {
     // Inject version into package name
-    const packageIndex = baseArgs.findIndex(arg => arg.startsWith('@'));
+    const packageIndex = baseArgs.findIndex((arg) => arg.startsWith('@'));
     if (packageIndex >= 0) {
       baseArgs[packageIndex] = `${baseArgs[packageIndex]}@${mcp.version}`;
     }
   }
-  
+
   return [mcp.command, ...baseArgs];
 }
 ```
@@ -844,10 +920,10 @@ generated: 2025-11-11T12:00:00Z
 
 mcp:
   filesystem:
-    package: "@modelcontextprotocol/server-filesystem"
-    version: "1.2.3"
-    resolved: "https://registry.npmjs.org/@modelcontextprotocol/server-filesystem/-/server-filesystem-1.2.3.tgz"
-    integrity: "sha512-..."
+    package: '@modelcontextprotocol/server-filesystem'
+    version: '1.2.3'
+    resolved: 'https://registry.npmjs.org/@modelcontextprotocol/server-filesystem/-/server-filesystem-1.2.3.tgz'
+    integrity: 'sha512-...'
 ```
 
 **Outdated Detection (v0.3+):**
@@ -882,15 +958,15 @@ mcp-server-memory                       2.0.0      2.1.1
 
 ### 6.2 Transport Support by Client
 
-| Client | stdio | http | sse | Default |
-|--------|-------|------|-----|---------|
-| Claude Code | ✅ | ✅ | ✅ | stdio |
-| Claude Desktop | ✅ | ⚠️ Paid only | ⚠️ Paid only | stdio |
-| VS Code | ✅ | ❌ | ✅ | stdio |
-| JetBrains Copilot | ✅ | ❌ | ✅ | stdio |
-| Copilot CLI | ✅ | ✅ | ✅ | stdio |
-| Cursor | ✅ | ✅ | ⚠️ Unknown | stdio |
-| Windsurf | ✅ | ✅ | ⚠️ Unknown | stdio |
+| Client            | stdio | http         | sse          | Default |
+| ----------------- | ----- | ------------ | ------------ | ------- |
+| Claude Code       | ✅    | ✅           | ✅           | stdio   |
+| Claude Desktop    | ✅    | ⚠️ Paid only | ⚠️ Paid only | stdio   |
+| VS Code           | ✅    | ❌           | ✅           | stdio   |
+| JetBrains Copilot | ✅    | ❌           | ✅           | stdio   |
+| Copilot CLI       | ✅    | ✅           | ✅           | stdio   |
+| Cursor            | ✅    | ✅           | ⚠️ Unknown   | stdio   |
+| Windsurf          | ✅    | ✅           | ⚠️ Unknown   | stdio   |
 
 ### 6.3 Current Problem: Implicit Transport
 
@@ -900,7 +976,7 @@ mcp-server-memory                       2.0.0      2.1.1
 {
   "servers": {
     "github": {
-      "type": "stdio",  // REQUIRED in VS Code
+      "type": "stdio", // REQUIRED in VS Code
       "command": "mcp-server-github",
       "args": []
     }
@@ -932,12 +1008,12 @@ mcp-server-memory                       2.0.0      2.1.1
 mcp:
   github:
     command: mcp-server-github
-    transport: stdio  # REQUIRED
+    transport: stdio # REQUIRED
     args: []
-  
+
   remote-server:
     url: https://mcp-server.example.com
-    transport: http  # REQUIRED
+    transport: http # REQUIRED
 ```
 
 **Validation:**
@@ -967,17 +1043,23 @@ function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
   // VS Code requires type field
   if (client === 'vscode' || client === 'jetbrains-copilot') {
     return {
-      type: mcp.transport,  // Add type field
-      ...mcp
+      type: mcp.transport, // Add type field
+      ...mcp,
     };
   }
-  
+
   // Claude Desktop free tier excludes http/sse
-  if (client === 'claude-desktop' && !user.isPaid && mcp.transport !== 'stdio') {
-    console.warn(`Skipping ${mcp.name}: Claude Desktop free tier only supports stdio`);
-    return null;  // Skip this MCP
+  if (
+    client === 'claude-desktop' &&
+    !user.isPaid &&
+    mcp.transport !== 'stdio'
+  ) {
+    console.warn(
+      `Skipping ${mcp.name}: Claude Desktop free tier only supports stdio`,
+    );
+    return null; // Skip this MCP
   }
-  
+
   // Other clients don't need type field
   return mcp;
 }
@@ -986,20 +1068,24 @@ function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
 ### 6.5 Transport Validation Rules
 
 **Rule 1: VS Code / JetBrains Copilot**
+
 - Require `type` field in generated config
 - Validate transport is supported (stdio, sse only)
 - Error if http transport specified (not supported)
 
 **Rule 2: Claude Desktop**
+
 - Warn if http/sse transport on free tier
 - Allow stdio always
 - Check user tier (if detectable)
 
 **Rule 3: Windsurf**
+
 - Support stdio and http
 - Validate against tool limit (100 tools)
 
 **Rule 4: All Clients**
+
 - Validate transport is in enum (stdio, http, sse)
 - Error if unsupported transport for client
 
@@ -1008,6 +1094,7 @@ function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
 **For v0.2:** Make `transport` a required field in Overture config.
 
 **Rationale:**
+
 1. Eliminates client schema differences
 2. Enables validation before sync
 3. Makes transport explicit (better UX)
@@ -1019,7 +1106,7 @@ function generateClientConfig(mcp: McpConfig, client: Client): ClientConfig {
 # ~/.config/overture.yml
 mcp:
   github:
-    transport: stdio  # REQUIRED
+    transport: stdio # REQUIRED
     command: mcp-server-github
     args: []
 ```
@@ -1041,6 +1128,7 @@ overture validate
 **Status:** GitHub Copilot CLI ships with the GitHub MCP server pre-configured.
 
 **Capabilities:**
+
 - Merge pull requests
 - Search issues
 - Read repository contents
@@ -1059,6 +1147,7 @@ overture validate
 **Hypothesis:** Likely a feature flag to enable/disable specific GitHub MCP tool categories.
 
 **Needs Further Research:**
+
 - What are valid GITHUB_TOOLSETS values?
 - How does it affect MCP behavior?
 - Is it required or optional?
@@ -1068,6 +1157,7 @@ overture validate
 **User Feedback:** "Even though GitHub Copilot CLI bundles GitHub MCP, we should configure it."
 
 **Rationale:**
+
 - Customize GitHub API base URL
 - Add authentication tokens
 - Configure GitHub Enterprise endpoints
@@ -1079,25 +1169,27 @@ overture validate
 # ~/.config/overture.yml
 mcp:
   github:
-    command: mcp-server-github  # Override bundled config
+    command: mcp-server-github # Override bundled config
     transport: http
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
-      GITHUB_API_URL: "https://github.example.com/api/v3"
-      GITHUB_TOOLSETS: "issues,pulls,repos"  # Hypothesis
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
+      GITHUB_API_URL: 'https://github.example.com/api/v3'
+      GITHUB_TOOLSETS: 'issues,pulls,repos' # Hypothesis
     clients:
-      include: [copilot-cli, claude-code]  # Add to both clients
+      include: [copilot-cli, claude-code] # Add to both clients
 ```
 
 ### 7.4 Overture Behavior with Bundled MCPs
 
 **Question:** Should Overture treat bundled GitHub MCP as:
+
 1. **Pre-configured** - Add to other clients, don't modify Copilot CLI config
 2. **User-configurable** - Allow overriding bundled config in Copilot CLI
 
 **Recommendation:** **User-configurable** (Option 2)
 
 **Rationale:**
+
 - Users may need custom GitHub Enterprise endpoints
 - Token management needs consistency across clients
 - Toolsets may need fine-tuning
@@ -1109,7 +1201,7 @@ mcp:
 builtin_exclusions:
   github:
     skip_default_in: [copilot-cli]
-    reason: "Bundled by default, but user can override"
+    reason: 'Bundled by default, but user can override'
 ```
 
 **Behavior:**
@@ -1128,11 +1220,11 @@ builtin_exclusions:
 # User explicitly wants bundled GitHub MCP in all clients
 mcp:
   github:
-    bundled_in: [copilot-cli]  # Reference bundled config
-    command: mcp-server-github  # Explicit for other clients
+    bundled_in: [copilot-cli] # Reference bundled config
+    command: mcp-server-github # Explicit for other clients
     transport: http
     env:
-      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
 ```
 
 ### 7.5 Detection Strategy
@@ -1143,7 +1235,7 @@ mcp:
 
 ```typescript
 const BUNDLED_MCPS: Record<string, string[]> = {
-  'github': ['copilot-cli'],
+  github: ['copilot-cli'],
   // Future: Other clients may bundle MCPs
 };
 
@@ -1165,11 +1257,13 @@ Bundled MCPs:
 ### 7.6 Recommendation
 
 **For v0.2:**
+
 - Hardcode GitHub MCP as bundled in Copilot CLI
 - Allow user override if explicitly defined in config
 - Warn in `overture audit` if overriding bundled MCP
 
 **For v0.3:**
+
 - Research GITHUB_TOOLSETS environment variable
 - Add documentation for GitHub Enterprise configuration
 - Consider auto-detection of bundled MCPs
@@ -1181,6 +1275,7 @@ Bundled MCPs:
 ### 8.1 Revised Client Priority
 
 **Changes from v1:**
+
 - JetBrains GitHub Copilot plugin moved to Tier 2 (now supported)
 - Priority order updated based on user needs
 
@@ -1195,6 +1290,7 @@ Bundled MCPs:
 7. **Windsurf** (Tier 3)
 
 **Rationale:**
+
 - JetBrains has large developer base, should be prioritized
 - GitHub Copilot CLI moved up due to bundled MCP research needs
 - Cursor/Windsurf deferred to later (smaller user bases)
@@ -1211,6 +1307,7 @@ Bundled MCPs:
 **Scope:** Global + Project
 
 **Implementation Notes:**
+
 - Already implemented in v0.1 (project-level)
 - v0.2 adds user-level config (`~/.claude.json`)
 - No schema conversion needed
@@ -1226,6 +1323,7 @@ Bundled MCPs:
 **Scope:** User only
 
 **Implementation Notes:**
+
 - Same schema as Claude Code (easy adapter reuse)
 - Need to handle transport limitations on free tier
 - Requires restart after config changes (notify user)
@@ -1243,6 +1341,7 @@ Bundled MCPs:
 **Scope:** Global + Workspace
 
 **Implementation Notes:**
+
 - Schema conversion required (`mcpServers` → `servers`)
 - Add `type` field (required by VS Code)
 - Env var expansion in Overture (client doesn't support `${VAR}`)
@@ -1258,6 +1357,7 @@ Bundled MCPs:
 **Scope:** Workspace + User (Windows only confirmed)
 
 **Implementation Notes:**
+
 - **Reuse VS Code adapter** for workspace config (`.vscode/mcp.json`)
 - Separate adapter for user-level config (Windows path confirmed)
 - Need research for macOS/Linux user config paths
@@ -1268,17 +1368,17 @@ Bundled MCPs:
 ```typescript
 function detectJetBrainsCopilotPaths(): ClientPaths {
   const workspace = path.join(projectRoot, '.vscode', 'mcp.json');
-  
+
   if (process.platform === 'win32') {
     const user = path.join(
       process.env.LOCALAPPDATA,
       'github-copilot',
       'intellij',
-      'mcp.json'
+      'mcp.json',
     );
     return { workspace, user };
   }
-  
+
   // macOS/Linux: Research needed
   return { workspace };
 }
@@ -1294,6 +1394,7 @@ function detectJetBrainsCopilotPaths(): ClientPaths {
 **Scope:** User only
 
 **Implementation Notes:**
+
 - XDG Base Directory compliance (check `$XDG_CONFIG_HOME`)
 - Bundled GitHub MCP needs special handling
 - Env var expansion works natively
@@ -1303,14 +1404,14 @@ function detectJetBrainsCopilotPaths(): ClientPaths {
 
 ```typescript
 function syncToCopilotCli(mcps: McpConfig[]): void {
-  const filtered = mcps.filter(mcp => {
+  const filtered = mcps.filter((mcp) => {
     if (mcp.name === 'github' && !mcp.userDefined) {
       console.log('Skipping github MCP (bundled in Copilot CLI)');
       return false;
     }
     return true;
   });
-  
+
   writeCopilotCliConfig(filtered);
 }
 ```
@@ -1327,6 +1428,7 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 **Scope:** Global + Project
 
 **Implementation Notes:**
+
 - Same schema as Claude Code (adapter reuse)
 - Test env var expansion support
 - Settings UI should reflect changes
@@ -1341,6 +1443,7 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 **Scope:** User only
 
 **Implementation Notes:**
+
 - 100 tool limit (need prioritization logic)
 - Plugin store UI (check for conflicts?)
 - HTTP transport supported (test implementation)
@@ -1348,6 +1451,7 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 ### 8.5 Implementation Roadmap
 
 **Overture v0.2.0 (MVP):**
+
 - [x] v0.1 features (already complete)
 - [ ] User global config (`~/.config/overture.yml`)
 - [ ] Claude Code user config sync
@@ -1358,6 +1462,7 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 - [ ] Env var expansion (client-aware)
 
 **Overture v0.2.1 (Extended):**
+
 - [ ] VS Code adapter (schema conversion)
 - [ ] JetBrains Copilot adapter (reuse VS Code adapter + user config)
 - [ ] GitHub Copilot CLI adapter (bundled MCP handling)
@@ -1365,6 +1470,7 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 - [ ] `overture audit` command
 
 **Overture v0.3.0 (Full Support):**
+
 - [ ] Cursor adapter
 - [ ] Windsurf adapter (with tool limit handling)
 - [ ] Version management (lockfile)
@@ -1384,25 +1490,25 @@ function syncToCopilotCli(mcps: McpConfig[]): void {
 ```typescript
 interface ClientAdapter {
   name: string;
-  
+
   // Path detection
   detectConfigPaths(): ClientPaths;
-  
+
   // Schema conversion
   convertToClientSchema(mcps: McpConfig[]): ClientConfig;
-  
+
   // Capabilities
   supportsEnvExpansion(): boolean;
   supportedTransports(): Transport[];
   requiresRestart(): boolean;
-  
+
   // Validation
   validate(config: ClientConfig): ValidationResult;
-  
+
   // Read/Write
   readConfig(path: string): ClientConfig | null;
   writeConfig(path: string, config: ClientConfig): void;
-  
+
   // Merge
   mergeConfigs(global: McpConfig[], project: McpConfig[]): McpConfig[];
 }
@@ -1415,36 +1521,39 @@ interface ClientAdapter {
 ```typescript
 class ClaudeCodeAdapter implements ClientAdapter {
   name = 'claude-code';
-  
+
   detectConfigPaths(): ClientPaths {
     return {
       global: path.join(os.homedir(), '.claude.json'),
       project: path.join(process.cwd(), '.mcp.json'),
     };
   }
-  
+
   convertToClientSchema(mcps: McpConfig[]): ClientConfig {
     return {
       mcpServers: Object.fromEntries(
-        mcps.map(mcp => [mcp.name, {
-          command: mcp.command,
-          args: mcp.args,
-          env: mcp.env,
-        }])
+        mcps.map((mcp) => [
+          mcp.name,
+          {
+            command: mcp.command,
+            args: mcp.args,
+            env: mcp.env,
+          },
+        ]),
       ),
     };
   }
-  
+
   supportsEnvExpansion(): boolean {
-    return true;  // ${VAR} works
+    return true; // ${VAR} works
   }
-  
+
   supportedTransports(): Transport[] {
     return ['stdio', 'http', 'sse'];
   }
-  
+
   requiresRestart(): boolean {
-    return false;  // Auto-reloads
+    return false; // Auto-reloads
   }
 }
 ```
@@ -1454,43 +1563,43 @@ class ClaudeCodeAdapter implements ClientAdapter {
 ```typescript
 class ClaudeDesktopAdapter extends ClaudeCodeAdapter {
   name = 'claude-desktop';
-  
+
   detectConfigPaths(): ClientPaths {
     const platform = process.platform;
     let configPath: string;
-    
+
     if (platform === 'darwin') {
       configPath = path.join(
         os.homedir(),
-        'Library/Application Support/Claude/claude_desktop_config.json'
+        'Library/Application Support/Claude/claude_desktop_config.json',
       );
     } else if (platform === 'win32') {
       configPath = path.join(
         process.env.APPDATA!,
-        'Claude/claude_desktop_config.json'
+        'Claude/claude_desktop_config.json',
       );
     } else {
       configPath = path.join(
         os.homedir(),
-        '.config/Claude/claude_desktop_config.json'
+        '.config/Claude/claude_desktop_config.json',
       );
     }
-    
+
     return { global: configPath };
   }
-  
+
   supportsEnvExpansion(): boolean {
-    return false;  // Questionable, needs testing
+    return false; // Questionable, needs testing
   }
-  
+
   supportedTransports(): Transport[] {
     // Check if user has paid plan (how?)
     const isPaid = detectClaudePlan();
     return isPaid ? ['stdio', 'http', 'sse'] : ['stdio'];
   }
-  
+
   requiresRestart(): boolean {
-    return true;  // Full quit required
+    return true; // Full quit required
   }
 }
 ```
@@ -1500,59 +1609,63 @@ class ClaudeDesktopAdapter extends ClaudeCodeAdapter {
 ```typescript
 class VSCodeAdapter implements ClientAdapter {
   name = 'vscode';
-  
+
   detectConfigPaths(): ClientPaths {
     const platform = process.platform;
     let userConfig: string;
-    
+
     if (platform === 'darwin') {
       userConfig = path.join(
         os.homedir(),
-        'Library/Application Support/Code/User/mcp.json'
+        'Library/Application Support/Code/User/mcp.json',
       );
     } else if (platform === 'win32') {
       userConfig = path.join(process.env.APPDATA!, 'Code/User/mcp.json');
     } else {
       userConfig = path.join(os.homedir(), '.config/Code/User/mcp.json');
     }
-    
+
     return {
       global: userConfig,
       workspace: path.join(process.cwd(), '.vscode/mcp.json'),
     };
   }
-  
+
   convertToClientSchema(mcps: McpConfig[]): ClientConfig {
     return {
-      servers: Object.fromEntries(  // Note: "servers" not "mcpServers"
-        mcps.map(mcp => [mcp.name, {
-          type: mcp.transport,  // Add type field (required)
-          command: mcp.command,
-          args: mcp.args,
-          env: this.expandEnvVars(mcp.env),  // Expand here, client doesn't support ${VAR}
-        }])
+      servers: Object.fromEntries(
+        // Note: "servers" not "mcpServers"
+        mcps.map((mcp) => [
+          mcp.name,
+          {
+            type: mcp.transport, // Add type field (required)
+            command: mcp.command,
+            args: mcp.args,
+            env: this.expandEnvVars(mcp.env), // Expand here, client doesn't support ${VAR}
+          },
+        ]),
       ),
     };
   }
-  
+
   supportsEnvExpansion(): boolean {
-    return false;  // Must expand in Overture
+    return false; // Must expand in Overture
   }
-  
+
   supportedTransports(): Transport[] {
-    return ['stdio', 'sse'];  // http not supported
+    return ['stdio', 'sse']; // http not supported
   }
-  
+
   requiresRestart(): boolean {
-    return false;  // Auto-reloads
+    return false; // Auto-reloads
   }
-  
+
   private expandEnvVars(env: Record<string, string>): Record<string, string> {
     return Object.fromEntries(
-      Object.entries(env).map(([k, v]) => [k, this.replaceEnvVars(v)])
+      Object.entries(env).map(([k, v]) => [k, this.replaceEnvVars(v)]),
     );
   }
-  
+
   private replaceEnvVars(value: string): string {
     return value.replace(/\${(\w+)}/g, (match, varName) => {
       return process.env[varName] || match;
@@ -1566,23 +1679,23 @@ class VSCodeAdapter implements ClientAdapter {
 ```typescript
 class JetBrainsCopilotAdapter extends VSCodeAdapter {
   name = 'jetbrains-copilot';
-  
+
   detectConfigPaths(): ClientPaths {
     const workspace = path.join(process.cwd(), '.vscode/mcp.json');
-    
+
     if (process.platform === 'win32') {
       const user = path.join(
         process.env.LOCALAPPDATA!,
-        'github-copilot/intellij/mcp.json'
+        'github-copilot/intellij/mcp.json',
       );
       return { workspace, user };
     }
-    
+
     // macOS/Linux: Research needed
     // TODO: Find macOS and Linux paths
     return { workspace };
   }
-  
+
   // Inherit schema conversion, env expansion, etc. from VSCodeAdapter
 }
 ```
@@ -1592,50 +1705,54 @@ class JetBrainsCopilotAdapter extends VSCodeAdapter {
 ```typescript
 class CopilotCLIAdapter implements ClientAdapter {
   name = 'copilot-cli';
-  
+
   detectConfigPaths(): ClientPaths {
-    const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-    
+    const xdgConfig =
+      process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+
     const paths = [
       path.join(xdgConfig, 'mcp-config.json'),
       path.join(os.homedir(), '.copilot/mcp-config.json'),
     ];
-    
+
     // Return first existing path, or default to XDG path
-    const existingPath = paths.find(p => fs.existsSync(p));
+    const existingPath = paths.find((p) => fs.existsSync(p));
     return { global: existingPath || paths[0] };
   }
-  
+
   convertToClientSchema(mcps: McpConfig[]): ClientConfig {
     // Filter out bundled GitHub MCP if user didn't explicitly define it
-    const filtered = mcps.filter(mcp => {
+    const filtered = mcps.filter((mcp) => {
       if (mcp.name === 'github' && !mcp.userDefined) {
-        return false;  // Skip bundled MCP
+        return false; // Skip bundled MCP
       }
       return true;
     });
-    
+
     return {
       mcpServers: Object.fromEntries(
-        filtered.map(mcp => [mcp.name, {
-          command: mcp.command,
-          args: mcp.args,
-          env: mcp.env,
-        }])
+        filtered.map((mcp) => [
+          mcp.name,
+          {
+            command: mcp.command,
+            args: mcp.args,
+            env: mcp.env,
+          },
+        ]),
       ),
     };
   }
-  
+
   supportsEnvExpansion(): boolean {
-    return true;  // ${VAR} works
+    return true; // ${VAR} works
   }
-  
+
   supportedTransports(): Transport[] {
     return ['stdio', 'http', 'sse'];
   }
-  
+
   requiresRestart(): boolean {
-    return false;  // Auto-reloads
+    return false; // Auto-reloads
   }
 }
 ```
@@ -1645,23 +1762,23 @@ class CopilotCLIAdapter implements ClientAdapter {
 ```typescript
 class AdapterRegistry {
   private adapters = new Map<string, ClientAdapter>();
-  
+
   register(adapter: ClientAdapter): void {
     this.adapters.set(adapter.name, adapter);
   }
-  
+
   get(name: string): ClientAdapter | undefined {
     return this.adapters.get(name);
   }
-  
+
   all(): ClientAdapter[] {
     return Array.from(this.adapters.values());
   }
-  
+
   detect(): ClientAdapter[] {
-    return this.all().filter(adapter => {
+    return this.all().filter((adapter) => {
       const paths = adapter.detectConfigPaths();
-      return Object.values(paths).some(p => p && fs.existsSync(p));
+      return Object.values(paths).some((p) => p && fs.existsSync(p));
     });
   }
 }
@@ -1676,7 +1793,10 @@ registry.register(new CopilotCLIAdapter());
 
 // Detect installed clients
 const installedClients = registry.detect();
-console.log('Detected clients:', installedClients.map(c => c.name));
+console.log(
+  'Detected clients:',
+  installedClients.map((c) => c.name),
+);
 ```
 
 ### 9.4 Sync Orchestration
@@ -1684,38 +1804,42 @@ console.log('Detected clients:', installedClients.map(c => c.name));
 ```typescript
 async function syncAllClients(
   overtureConfig: OvertureConfig,
-  registry: AdapterRegistry
+  registry: AdapterRegistry,
 ): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
-  
+
   for (const adapter of registry.all()) {
     // Check if client is enabled
     if (!overtureConfig.clients[adapter.name]?.enabled) {
       continue;
     }
-    
+
     // Get MCPs for this client
     const mcps = filterMcpsForClient(
       overtureConfig.mcp,
       adapter.name,
-      overtureConfig.defaults
+      overtureConfig.defaults,
     );
-    
+
     // Filter by transport support
-    const supportedMcps = mcps.filter(mcp =>
-      adapter.supportedTransports().includes(mcp.transport)
+    const supportedMcps = mcps.filter((mcp) =>
+      adapter.supportedTransports().includes(mcp.transport),
     );
-    
+
     // Convert to client schema
     const clientConfig = adapter.convertToClientSchema(supportedMcps);
-    
+
     // Validate
     const validation = adapter.validate(clientConfig);
     if (!validation.valid) {
-      results.push({ client: adapter.name, success: false, errors: validation.errors });
+      results.push({
+        client: adapter.name,
+        success: false,
+        errors: validation.errors,
+      });
       continue;
     }
-    
+
     // Write config
     const paths = adapter.detectConfigPaths();
     for (const [scope, path] of Object.entries(paths)) {
@@ -1723,10 +1847,10 @@ async function syncAllClients(
         adapter.writeConfig(path, clientConfig);
       }
     }
-    
+
     results.push({ client: adapter.name, success: true });
   }
-  
+
   return results;
 }
 ```
@@ -1748,6 +1872,7 @@ async function syncAllClients(
 **Naming Convention:** `{client}-{timestamp}.json`
 
 **Example:**
+
 ```
 ~/.config/overture/backups/
 ├── claude-code-2025-11-11T12-00-00.json
@@ -1782,42 +1907,42 @@ Changes to vscode:
 **Implementation:**
 
 ```typescript
-function diffConfigs(
-  before: ClientConfig,
-  after: ClientConfig
-): ConfigDiff {
+function diffConfigs(before: ClientConfig, after: ClientConfig): ConfigDiff {
   const diff: ConfigDiff = {
     added: [],
     modified: [],
     removed: [],
   };
-  
+
   const beforeServers = before.mcpServers || before.servers || {};
   const afterServers = after.mcpServers || after.servers || {};
-  
+
   // Find added
   for (const name of Object.keys(afterServers)) {
     if (!beforeServers[name]) {
       diff.added.push(name);
     }
   }
-  
+
   // Find modified
   for (const name of Object.keys(afterServers)) {
     if (beforeServers[name]) {
       if (!deepEqual(beforeServers[name], afterServers[name])) {
-        diff.modified.push({ name, changes: getChanges(beforeServers[name], afterServers[name]) });
+        diff.modified.push({
+          name,
+          changes: getChanges(beforeServers[name], afterServers[name]),
+        });
       }
     }
   }
-  
+
   // Find removed
   for (const name of Object.keys(beforeServers)) {
     if (!afterServers[name]) {
       diff.removed.push(name);
     }
   }
-  
+
   return diff;
 }
 ```
@@ -1833,7 +1958,7 @@ Backups:
     - 2025-11-11 12:00:00 (1.2KB)
     - 2025-11-10 15:30:00 (1.1KB)
     - 2025-11-09 09:15:00 (1.0KB)
-  
+
   claude-desktop:
     - 2025-11-11 12:00:05 (800B)
     - 2025-11-10 15:30:10 (750B)
@@ -1851,23 +1976,17 @@ overture backup restore --all --latest
 **Implementation:**
 
 ```typescript
-async function restoreBackup(
-  client: string,
-  timestamp: string
-): Promise<void> {
-  const backupPath = path.join(
-    BACKUP_DIR,
-    `${client}-${timestamp}.json`
-  );
-  
+async function restoreBackup(client: string, timestamp: string): Promise<void> {
+  const backupPath = path.join(BACKUP_DIR, `${client}-${timestamp}.json`);
+
   if (!fs.existsSync(backupPath)) {
     throw new Error(`Backup not found: ${backupPath}`);
   }
-  
+
   const adapter = registry.get(client);
   const paths = adapter.detectConfigPaths();
   const backup = fs.readFileSync(backupPath, 'utf-8');
-  
+
   // Restore to all paths
   for (const path of Object.values(paths)) {
     if (path) {
@@ -1893,20 +2012,20 @@ async function restoreBackup(
 function mergeClientConfig(
   existing: ClientConfig,
   overture: ClientConfig,
-  mode: 'merge' | 'replace'
+  mode: 'merge' | 'replace',
 ): ClientConfig {
   if (mode === 'replace') {
     return overture;
   }
-  
+
   // Merge mode: Combine existing + overture
   const existingServers = existing.mcpServers || existing.servers || {};
   const overtureServers = overture.mcpServers || overture.servers || {};
-  
+
   return {
     mcpServers: {
-      ...existingServers,  // Keep user's custom MCPs
-      ...overtureServers,  // Overture MCPs win if conflict
+      ...existingServers, // Keep user's custom MCPs
+      ...overtureServers, // Overture MCPs win if conflict
     },
   };
 }
@@ -1976,19 +2095,19 @@ interface AuditResult {
 
 async function auditClients(
   overtureConfig: OvertureConfig,
-  registry: AdapterRegistry
+  registry: AdapterRegistry,
 ): Promise<AuditResult[]> {
   const results: AuditResult[] = [];
   const overtureMcps = new Set(Object.keys(overtureConfig.mcp));
-  
+
   for (const adapter of registry.all()) {
     const paths = adapter.detectConfigPaths();
-    
+
     for (const [scope, configPath] of Object.entries(paths)) {
       if (!configPath || !fs.existsSync(configPath)) {
         continue;
       }
-      
+
       const clientConfig = adapter.readConfig(configPath);
       if (!clientConfig) {
         results.push({
@@ -2000,19 +2119,19 @@ async function auditClients(
         });
         continue;
       }
-      
+
       const clientMcps = new Set(
-        Object.keys(clientConfig.mcpServers || clientConfig.servers || {})
+        Object.keys(clientConfig.mcpServers || clientConfig.servers || {}),
       );
-      
-      const overtureManaged = Array.from(clientMcps).filter(name =>
-        overtureMcps.has(name)
+
+      const overtureManaged = Array.from(clientMcps).filter((name) =>
+        overtureMcps.has(name),
       );
-      
-      const userManaged = Array.from(clientMcps).filter(name =>
-        !overtureMcps.has(name)
+
+      const userManaged = Array.from(clientMcps).filter(
+        (name) => !overtureMcps.has(name),
       );
-      
+
       results.push({
         client: adapter.name,
         configPath,
@@ -2022,7 +2141,7 @@ async function auditClients(
       });
     }
   }
-  
+
   return results;
 }
 ```
@@ -2055,32 +2174,33 @@ Run 'overture sync' to sync these MCPs to all enabled clients.
 async function consolidate(
   overtureConfigPath: string,
   auditResults: AuditResult[],
-  registry: AdapterRegistry
+  registry: AdapterRegistry,
 ): Promise<void> {
   const overtureConfig = loadOvertureConfig(overtureConfigPath);
   let added = 0;
-  
+
   for (const result of auditResults) {
     const adapter = registry.get(result.client);
     const clientConfig = adapter.readConfig(result.configPath);
-    
+
     for (const mcpName of result.userManaged) {
-      const mcpDef = clientConfig.mcpServers[mcpName] || clientConfig.servers[mcpName];
-      
+      const mcpDef =
+        clientConfig.mcpServers[mcpName] || clientConfig.servers[mcpName];
+
       // Convert client schema back to Overture schema
       const overtureMcp: McpConfig = {
         command: mcpDef.command,
         args: mcpDef.args || [],
         env: mcpDef.env || {},
-        transport: mcpDef.type || 'stdio',  // Infer from type field
-        scope: 'global',  // Default to global
+        transport: mcpDef.type || 'stdio', // Infer from type field
+        scope: 'global', // Default to global
       };
-      
+
       overtureConfig.mcp[mcpName] = overtureMcp;
       added++;
     }
   }
-  
+
   saveOvertureConfig(overtureConfigPath, overtureConfig);
   console.log(`✓ Added ${added} MCPs to Overture config`);
 }
@@ -2095,6 +2215,7 @@ async function consolidate(
 **Scenario:** User runs `overture sync` in two terminals simultaneously.
 
 **Risk:**
+
 - Race condition writing to same config files
 - Corrupted JSON files
 - Lost changes
@@ -2104,6 +2225,7 @@ async function consolidate(
 **Lockfile Location:** `~/.config/overture/.lock`
 
 **Behavior:**
+
 - `overture sync` creates lockfile before writing
 - Other `overture sync` processes wait or fail
 - Lockfile removed after sync completes
@@ -2117,26 +2239,27 @@ const LOCK_PATH = path.join(os.homedir(), '.config/overture/.lock');
 
 async function sync(config: OvertureConfig): Promise<void> {
   let release: () => void;
-  
+
   try {
     // Acquire lock (wait up to 10 seconds)
     release = await lockfile.lock(LOCK_PATH, {
-      stale: 10000,  // Lockfile expires after 10s
+      stale: 10000, // Lockfile expires after 10s
       retries: {
         retries: 5,
         minTimeout: 1000,
         maxTimeout: 3000,
       },
     });
-    
+
     console.log('Acquired lock, syncing...');
-    
+
     // Perform sync
     await syncAllClients(config, registry);
-    
   } catch (err) {
     if (err.code === 'ELOCKED') {
-      console.error('Another Overture process is already running. Please wait.');
+      console.error(
+        'Another Overture process is already running. Please wait.',
+      );
       process.exit(1);
     }
     throw err;
@@ -2152,6 +2275,7 @@ async function sync(config: OvertureConfig): Promise<void> {
 ### 12.4 User Experience
 
 **Normal case:**
+
 ```bash
 overture sync
 Syncing MCP configurations...
@@ -2161,6 +2285,7 @@ Done.
 ```
 
 **Conflict case:**
+
 ```bash
 # Terminal 1
 overture sync
