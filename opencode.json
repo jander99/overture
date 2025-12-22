@@ -3,7 +3,11 @@
     "nx-mcp": {
       "type": "local",
       "enabled": true,
-      "command": ["npx", "nx", "mcp"]
+      "command": [
+        "npx",
+        "nx",
+        "mcp"
+      ]
     },
     "sequentialthinking": {
       "type": "local",
