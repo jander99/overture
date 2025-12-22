@@ -14,6 +14,13 @@ import type {
   ImportDiscoveryResult,
   ImportResult,
   McpSource,
+  DetectionResult,
+  ClientDetectionResult,
+  ConfigPathStatus,
+  ParseErrorDetail,
+  ParseErrorInfo,
+  ManagedMcpDetection,
+  DetectionSummary,
 } from '@overture/config-types';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
@@ -366,6 +373,283 @@ export class ImportService {
       conflicts,
       alreadyManaged,
     };
+  }
+
+  /**
+   * Perform detection scan (read-only)
+   * Scans all client configs and reports status without importing
+   */
+  async performDetection(
+    claudeCodeAdapter: ClaudeCodeAdapter | null,
+    openCodeAdapter: OpenCodeAdapter | null,
+    copilotCliAdapter: CopilotCliAdapter | null,
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+    projectRoot?: string,
+  ): Promise<DetectionResult> {
+    const clients: ClientDetectionResult[] = [];
+    const parseErrors: ParseErrorInfo[] = [];
+    const allDiscovered: DiscoveredMcp[] = [];
+
+    // Detect from each client
+    const adapters = [
+      { adapter: claudeCodeAdapter, name: 'claude-code' as const },
+      { adapter: openCodeAdapter, name: 'opencode' as const },
+      { adapter: copilotCliAdapter, name: 'copilot-cli' as const },
+    ];
+
+    for (const { adapter, name } of adapters) {
+      if (!adapter) continue;
+
+      // Detect binary
+      const binaryDetection = await this.detectClientBinary(adapter, platform);
+
+      // Get config paths
+      const configPathResult = adapter.detectConfigPath(platform, projectRoot);
+      const userPath =
+        typeof configPathResult === 'string'
+          ? configPathResult
+          : configPathResult?.user;
+      const projectPath =
+        typeof configPathResult === 'string'
+          ? undefined
+          : configPathResult?.project;
+
+      const configPaths: ConfigPathStatus[] =
+        [];
+
+      // Check user config
+      if (userPath) {
+        const status = await this.checkConfigPath(userPath, 'user', adapter);
+        configPaths.push(status);
+
+        // If valid, discover MCPs
+        if (status.parseStatus === 'valid') {
+          try {
+            const mcps = await this.discoverFromAdapter(
+              adapter,
+              name,
+              overtureConfig,
+              platform,
+              projectRoot,
+            );
+            allDiscovered.push(...mcps);
+          } catch (error) {
+            // Already captured in checkConfigPath
+          }
+        } else if (status.parseError) {
+          parseErrors.push({
+            client: name,
+            configPath: userPath,
+            error: status.parseError,
+          });
+        }
+      }
+
+      // Check project config
+      if (projectPath) {
+        const status = await this.checkConfigPath(
+          projectPath,
+          'project',
+          adapter,
+        );
+        configPaths.push(status);
+      }
+
+      clients.push({
+        name,
+        version: binaryDetection.version,
+        binaryPath: binaryDetection.binaryPath,
+        detected: binaryDetection.status === 'found',
+        configPaths,
+      });
+    }
+
+    // Categorize MCPs
+    const managed: ManagedMcpDetection[] = [];
+    const unmanaged: DiscoveredMcp[] = [];
+    const managedNames = Object.keys(overtureConfig.mcp);
+
+    // Group discovered MCPs by name
+    const mcpsByName = new Map<string, DiscoveredMcp[]>();
+    for (const mcp of allDiscovered) {
+      if (!mcpsByName.has(mcp.name)) {
+        mcpsByName.set(mcp.name, []);
+      }
+      mcpsByName.get(mcp.name)!.push(mcp);
+    }
+
+    // Categorize each unique MCP
+    for (const [mcpName, mcps] of mcpsByName.entries()) {
+      if (managedNames.includes(mcpName)) {
+        // Already managed
+        managed.push({
+          name: mcpName,
+          sources: mcps.map((m) => m.source),
+          inOvertureConfig: true,
+        });
+      } else {
+        // Unmanaged - take first occurrence
+        unmanaged.push(mcps[0]);
+      }
+    }
+
+    // Detect conflicts
+    const conflicts = detectConflicts(allDiscovered);
+
+    // Remove conflicting MCPs from unmanaged list
+    const conflictNames = new Set(conflicts.map((c) => c.name));
+    const unmanagedNonConflicting = unmanaged.filter(
+      (m) => !conflictNames.has(m.name),
+    );
+
+    // Calculate summary
+    const summary: DetectionSummary = {
+      clientsScanned: clients.length,
+      totalMcps: mcpsByName.size,
+      managed: managed.length,
+      unmanaged: unmanagedNonConflicting.length,
+      conflicts: conflicts.length,
+      parseErrors: parseErrors.length,
+    };
+
+    return {
+      summary,
+      clients,
+      mcps: {
+        managed,
+        unmanaged: unmanagedNonConflicting,
+        conflicts,
+        parseErrors,
+      },
+    };
+  }
+
+  /**
+   * Check config file path status
+   */
+  private async checkConfigPath(
+    path: string,
+    type: 'user' | 'project',
+    adapter: any,
+  ): Promise<ConfigPathStatus> {
+    const exists = await this.filesystem.exists(path);
+
+    if (!exists) {
+      return {
+        path,
+        type,
+        exists: false,
+        readable: false,
+        parseStatus: 'not-found',
+      };
+    }
+
+    try {
+      // Try reading and parsing
+      await adapter.readConfig(path);
+
+      return {
+        path,
+        type,
+        exists: true,
+        readable: true,
+        parseStatus: 'valid',
+      };
+    } catch (error) {
+      // Parse error - extract details
+      const parseError = this.extractParseError(error as Error);
+
+      return {
+        path,
+        type,
+        exists: true,
+        readable: true,
+        parseStatus: 'invalid',
+        parseError,
+      };
+    }
+  }
+
+  /**
+   * Extract parse error details from error object
+   */
+  private extractParseError(
+    error: Error,
+  ): ParseErrorDetail {
+    // Check for js-yaml error format
+    if ('mark' in error && typeof error.mark === 'object') {
+      const mark = error.mark as any;
+      return {
+        message: error.message,
+        line: mark.line !== undefined ? mark.line + 1 : undefined,
+        column: mark.column !== undefined ? mark.column + 1 : undefined,
+      };
+    }
+
+    // Check for JSON parse error
+    const jsonMatch = error.message.match(/at position (\d+)/);
+    if (jsonMatch) {
+      return {
+        message: error.message,
+      };
+    }
+
+    return {
+      message: error.message,
+    };
+  }
+
+  /**
+   * Detect client binary
+   */
+  private async detectClientBinary(
+    adapter: any,
+    platform: Platform,
+  ): Promise<{
+    status: 'found' | 'not-found';
+    version?: string;
+    binaryPath?: string;
+  }> {
+    // This is a simplified version - real implementation would use binary detector
+    // For now, just return not-found
+    return { status: 'not-found' };
+  }
+
+  /**
+   * Discover MCPs from a specific adapter
+   */
+  private async discoverFromAdapter(
+    adapter: any,
+    clientName: string,
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+    projectRoot?: string,
+  ): Promise<DiscoveredMcp[]> {
+    // Route to appropriate discover method based on client type
+    if (clientName === 'claude-code') {
+      return this.discoverFromClaudeCode(
+        adapter,
+        overtureConfig,
+        platform,
+        projectRoot,
+      );
+    } else if (clientName === 'opencode') {
+      return this.discoverFromOpenCode(
+        adapter,
+        overtureConfig,
+        platform,
+        projectRoot,
+      );
+    } else if (clientName === 'copilot-cli') {
+      return this.discoverFromCopilotCLI(
+        adapter,
+        overtureConfig,
+        platform,
+        projectRoot,
+      );
+    }
+    return [];
   }
 
   /**

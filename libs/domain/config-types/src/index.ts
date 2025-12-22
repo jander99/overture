@@ -82,4 +82,12 @@ export type {
   CleanupTarget,
   CleanupResult,
   ClaudeCodeFullConfig,
+  ParseErrorDetail,
+  ConfigPathStatus,
+  ClientDetectionResult,
+  ManagedMcpDetection,
+  ParseErrorInfo,
+  McpDetectionCategories,
+  DetectionSummary,
+  DetectionResult,
 } from './lib/import.types.js';

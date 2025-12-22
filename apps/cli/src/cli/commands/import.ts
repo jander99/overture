@@ -10,7 +10,7 @@ import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
 import type { ClientName, DiscoveredMcp } from '@overture/config-types';
-import { formatConflict } from '@overture/import-core';
+import { formatConflict, DetectionFormatter } from '@overture/import-core';
 
 /**
  * Create the import command
@@ -20,7 +20,12 @@ export function createImportCommand(deps: AppDependencies): Command {
 
   cmd
     .description(
-      'Import unmanaged MCP servers from client configs into Overture',
+      'Import unmanaged MCP servers from client configs into Overture\n\n' +
+        'Examples:\n' +
+        '  $ overture import                    # Interactive import\n' +
+        '  $ overture import --detect           # Scan without importing\n' +
+        '  $ overture import --detect --verbose # Detailed scan results\n' +
+        '  $ overture import --detect --format json > mcps.json',
     )
     .option(
       '--client <name>',
@@ -28,6 +33,13 @@ export function createImportCommand(deps: AppDependencies): Command {
       'all',
     )
     .option('--yes', 'Skip confirmation prompts')
+    .option('--detect', 'Scan and report MCP configurations without importing')
+    .option(
+      '--format <type>',
+      'Output format for --detect: text, json, table',
+      'text',
+    )
+    .option('--verbose', 'Show detailed information (use with --detect)')
     .action(async (options) => {
       const {
         importService,
@@ -37,8 +49,6 @@ export function createImportCommand(deps: AppDependencies): Command {
         environment,
         adapterRegistry,
       } = deps;
-
-      p.intro('🔍 Import MCPs from Client Configs');
 
       try {
         // Load current Overture config
@@ -61,6 +71,49 @@ export function createImportCommand(deps: AppDependencies): Command {
         const copilotCliAdapter = clientFilter.includes('copilot-cli')
           ? (adapterRegistry.get('copilot-cli') as any)
           : null;
+
+        // DETECT MODE: Read-only scan without importing
+        if (options.detect) {
+          const result = await importService.performDetection(
+            claudeCodeAdapter,
+            openCodeAdapter,
+            copilotCliAdapter,
+            overtureConfig,
+            platform,
+          );
+
+          const formatter = new DetectionFormatter();
+          let formattedOutput: string;
+
+          switch (options.format) {
+            case 'json':
+              formattedOutput = formatter.formatJson(result);
+              break;
+            case 'table':
+              formattedOutput = formatter.formatTable(result);
+              break;
+            case 'text':
+            default:
+              formattedOutput = formatter.formatText(
+                result,
+                options.verbose || false,
+              );
+          }
+
+          console.log(formattedOutput);
+
+          // Exit with appropriate code
+          if (result.summary.parseErrors > 0) {
+            process.exit(1);
+          } else if (result.summary.conflicts > 0) {
+            process.exit(2);
+          } else {
+            process.exit(0);
+          }
+        }
+
+        // NORMAL IMPORT MODE
+        p.intro('🔍 Import MCPs from Client Configs');
 
         // Discover unmanaged MCPs
         const spinner = p.spinner();

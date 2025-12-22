@@ -143,3 +143,117 @@ export interface ClaudeCodeFullConfig {
   /** Other user settings */
   [key: string]: unknown;
 }
+
+/**
+ * Parse error detail with line/column information
+ */
+export interface ParseErrorDetail {
+  /** Error message */
+  message: string;
+  /** Line number where error occurred (1-based) */
+  line?: number;
+  /** Column number where error occurred (1-based) */
+  column?: number;
+}
+
+/**
+ * Status of a configuration file path
+ */
+export interface ConfigPathStatus {
+  /** Full file path */
+  path: string;
+  /** Config type (user or project) */
+  type: 'user' | 'project';
+  /** Whether the file exists */
+  exists: boolean;
+  /** Whether the file is readable */
+  readable: boolean;
+  /** Parse status */
+  parseStatus: 'valid' | 'invalid' | 'not-found';
+  /** Parse error if status is 'invalid' */
+  parseError?: ParseErrorDetail;
+}
+
+/**
+ * Client detection result
+ */
+export interface ClientDetectionResult {
+  /** Client name */
+  name: ClientName;
+  /** Client version (if detected) */
+  version?: string;
+  /** Binary path (if detected) */
+  binaryPath?: string;
+  /** Whether client binary was detected on system */
+  detected: boolean;
+  /** Status of config file paths */
+  configPaths: ConfigPathStatus[];
+}
+
+/**
+ * Managed MCP detection info
+ */
+export interface ManagedMcpDetection {
+  /** MCP server name */
+  name: string;
+  /** All sources where this managed MCP was found */
+  sources: McpSource[];
+  /** Always true for managed MCPs */
+  inOvertureConfig: true;
+}
+
+/**
+ * Parse error information
+ */
+export interface ParseErrorInfo {
+  /** Client where parse error occurred */
+  client: ClientName;
+  /** Config file path where error occurred */
+  configPath: string;
+  /** Parse error details */
+  error: ParseErrorDetail;
+}
+
+/**
+ * MCP detection categories
+ */
+export interface McpDetectionCategories {
+  /** MCPs already managed by Overture */
+  managed: ManagedMcpDetection[];
+  /** MCPs not managed by Overture (can be imported) */
+  unmanaged: DiscoveredMcp[];
+  /** MCPs with conflicting configurations across clients */
+  conflicts: McpConflict[];
+  /** Config files with parse errors */
+  parseErrors: ParseErrorInfo[];
+}
+
+/**
+ * Detection summary statistics
+ */
+export interface DetectionSummary {
+  /** Number of clients scanned */
+  clientsScanned: number;
+  /** Total number of unique MCPs found */
+  totalMcps: number;
+  /** Number of MCPs already managed by Overture */
+  managed: number;
+  /** Number of unmanaged MCPs available for import */
+  unmanaged: number;
+  /** Number of MCPs with conflicts */
+  conflicts: number;
+  /** Number of config files with parse errors */
+  parseErrors: number;
+}
+
+/**
+ * Complete detection result (read-only scan)
+ */
+export interface DetectionResult {
+  /** Summary statistics */
+  summary: DetectionSummary;
+  /** Per-client detection results */
+  clients: ClientDetectionResult[];
+  /** Categorized MCP detection results */
+  mcps: McpDetectionCategories;
+}
