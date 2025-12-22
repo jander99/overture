@@ -36,7 +36,96 @@ overture import --client opencode
 
 ## Step-by-Step Guide
 
-### Step 1: Discover Your Existing MCPs
+### Step 0: Scan for Existing MCPs (Recommended)
+
+Before importing, use `--detect` mode to scan your system for existing MCP configurations without making any changes:
+
+```bash
+# Basic scan of all clients
+overture import --detect
+
+# Scan with detailed output
+overture import --detect --verbose
+
+# Scan specific client
+overture import --detect --client claude-code
+
+# Machine-readable output for CI/CD
+overture import --detect --format json
+
+# Compact table view
+overture import --detect --format table
+```
+
+**What you'll see:**
+
+```
+📋 MCP Detection Report
+
+✓ Scanned 3 clients
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Managed MCPs (already in Overture)
+
+  filesystem (2 instances)
+    ├─ claude-code: ~/.claude.json
+    └─ opencode: ~/.config/opencode/opencode.json
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆕 Unmanaged MCPs (can be imported)
+
+  github (claude-code)
+    Config: ~/.claude.json
+    Suggested scope: global
+
+  python-repl (opencode)
+    Config: opencode.json
+    Suggested scope: project
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ No conflicts detected
+```
+
+**Verbose mode** shows additional details:
+
+```bash
+overture import --detect --verbose
+```
+
+```
+🆕 Unmanaged MCPs
+
+  github (claude-code)
+    Config: ~/.claude.json
+    Command: gh mcp
+    Env: GITHUB_TOKEN
+    Suggested scope: global
+```
+
+**Exit codes** for automation:
+
+- `0` - Success, no issues
+- `1` - Parse errors detected
+- `2` - Conflicts detected (warning level)
+
+**When to use:**
+
+- **Before importing** - See what MCPs exist across all clients
+- **Check for conflicts** - Identify same MCP with different configs
+- **CI/CD validation** - Verify MCP configurations in automation
+- **Team onboarding** - Show new members what MCPs are configured
+
+**Why this is useful:**
+
+1. **Non-destructive** - Read-only scan, no changes made
+2. **Conflict detection** - See problems before importing
+3. **Scope preview** - Understand where MCPs will be imported
+4. **Parse error detection** - Find malformed configs early
+
+### Step 1: Discover Your Existing MCPs (Interactive)
 
 Run `overture import` to scan your system for unmanaged MCP configurations:
 

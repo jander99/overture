@@ -162,6 +162,36 @@ cat .mcp.json
 
 ---
 
+## Importing Existing Configurations
+
+If you already have MCP servers configured in your AI clients, you can import them:
+
+```bash
+# Scan for existing MCPs (read-only)
+overture import --detect
+
+# Scan with detailed output
+overture import --detect --verbose
+
+# Import interactively (after reviewing with --detect)
+overture import
+```
+
+**What you'll see:**
+
+```
+📋 MCP Detection Report
+
+✓ Scanned 3 clients
+
+🆕 Unmanaged MCPs (5)
+  github, python-repl, ruff, memory, filesystem
+```
+
+**See also:** [Importing Guide](../docs/howtos/importing-existing-configs.md) for detailed instructions
+
+---
+
 ## Common Workflows
 
 ### Adding a New MCP Server

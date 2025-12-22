@@ -35,10 +35,17 @@
 - Auto-converts hardcoded secrets to `${ENV_VAR}` syntax with user guidance
 - Infers scope (global vs project) based on source location
 - Warns on conflicts (same MCP name, different configs across clients)
+- **NEW:** `--detect` mode for read-only scanning with multiple output formats (text, json, table)
+- **NEW:** Exit codes for CI/CD automation (0=ok, 1=parse errors, 2=conflicts)
 
 ```bash
+# Interactive import
 overture import --client all
 overture import --client claude-code --scope project
+
+# Read-only detection
+overture import --detect
+overture import --detect --verbose --format json
 ```
 
 **`overture cleanup`** - Remove redundant Claude Code directory configs:

@@ -498,6 +498,29 @@ overture mcp enable <name>
 overture audit [--client <name>]
 ```
 
+### Import Management
+
+```bash
+# Scan for unmanaged MCPs in client configs (read-only)
+overture import --detect
+# Shows:
+# - MCPs found in Claude Code, Copilot CLI, OpenCode configs
+# - Which MCPs are already managed by Overture
+# - Which MCPs can be imported
+# - Parse errors and conflicts
+
+# Options:
+overture import --detect --verbose          # Show detailed MCP information
+overture import --detect --format json      # Output as JSON for CI/CD
+overture import --detect --format table     # Compact table view
+overture import --detect --client <name>    # Scan specific client only
+
+# Interactive import (import unmanaged MCPs into Overture)
+overture import
+overture import --client claude-code        # Import from specific client
+overture import --yes                       # Skip confirmation prompts
+```
+
 ### Plugin Management
 
 ```bash

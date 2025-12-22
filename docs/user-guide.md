@@ -300,6 +300,16 @@ This is useful for:
 
 ## Core Commands
 
+Commands are listed in typical workflow order:
+
+1. **`overture doctor`** - Check system for installed clients
+2. **`overture init`** - Initialize Overture configuration
+3. **`overture import`** - Import existing MCP configs (optional)
+4. **`overture sync`** - Sync configuration to all clients
+5. **`overture validate`** - Validate configuration
+6. **`overture mcp list`** - List configured MCPs
+7. **`overture enable mcp`** - Enable disabled MCPs
+
 ### `overture init`
 
 Initialize Overture configuration in your project.
@@ -525,6 +535,99 @@ Legend:
 - Enabled/disabled status
 - Which plugins use each MCP server
 - Warnings for disabled or misconfigured servers
+
+### `overture import`
+
+Import existing MCP configurations from your AI clients into Overture.
+
+```bash
+overture import [--client <name>] [--detect] [--format <type>] [--verbose]
+```
+
+**Options:**
+
+- `--client <name>`: Import from specific client only (claude-code, copilot-cli, opencode)
+- `--detect`: Read-only scan mode - show what MCPs exist without importing
+- `--format <type>`: Output format for --detect mode (text, json, table)
+- `--verbose`: Show detailed information in --detect mode
+
+**Examples:**
+
+```bash
+# Interactive import from all clients
+overture import
+
+# Import from specific client
+overture import --client claude-code
+
+# Scan for existing MCPs (read-only)
+overture import --detect
+
+# Detailed scan with full MCP info
+overture import --detect --verbose
+
+# JSON output for CI/CD
+overture import --detect --format json
+
+# Compact table view
+overture import --detect --format table
+```
+
+**What it does:**
+
+**Normal mode** (interactive import):
+
+1. Scans all installed AI clients for MCP configurations
+2. Identifies unmanaged MCPs (not yet in Overture)
+3. Detects conflicts (same MCP, different configs)
+4. Shows interactive selection UI
+5. Imports selected MCPs to Overture config
+6. Converts hardcoded secrets to environment variables
+
+**Detect mode** (`--detect` flag):
+
+1. Scans all clients for MCP configurations
+2. Categorizes MCPs:
+   - **Managed** - Already in your Overture config
+   - **Unmanaged** - Can be imported
+   - **Conflicts** - Same name, different configs across clients
+   - **Parse errors** - Malformed configuration files
+3. Shows suggested scope (global vs project)
+4. No changes made to any files (read-only)
+5. Exit codes for automation (0=ok, 1=parse errors, 2=conflicts)
+
+**Example output (detect mode):**
+
+```
+📋 MCP Detection Report
+
+✓ Scanned 3 clients
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Managed MCPs (2)
+
+  filesystem, memory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆕 Unmanaged MCPs (3)
+
+  github, python-repl, ruff
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ No conflicts detected
+```
+
+**When to use:**
+
+- **Migrating to Overture** - Import existing MCP setups
+- **Before importing** - Use `--detect` to see what exists
+- **CI/CD validation** - Check for config issues (`--format json`)
+- **Team sync** - Ensure everyone has same MCPs configured
+
+**See also:** [Importing Guide](../docs/howtos/importing-existing-configs.md) for detailed workflows
 
 ### `overture validate`
 
