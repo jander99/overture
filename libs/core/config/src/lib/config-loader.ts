@@ -49,6 +49,9 @@ import type { PathResolver } from './path-resolver.js';
  * ```
  */
 export class ConfigLoader {
+  // Track which warnings we've already shown to avoid duplicates
+  private static shownWarnings = new Set<string>();
+
   constructor(
     private filesystem: FilesystemPort,
     private pathResolver: PathResolver,
@@ -177,8 +180,14 @@ export class ConfigLoader {
         );
       }
 
-      // Show warning if using .yml extension instead of .yaml
-      if (isYmlExtension && typeof process !== 'undefined' && process.stderr) {
+      // Show warning if using .yml extension instead of .yaml (only once per process)
+      const ymlWarningKey = `yml-user-${ymlPath}`;
+      if (
+        isYmlExtension &&
+        typeof process !== 'undefined' &&
+        process.stderr &&
+        !ConfigLoader.shownWarnings.has(ymlWarningKey)
+      ) {
         const preferredPath = yamlPath.replace(
           this.pathResolver.getHomeDir(),
           '~',
@@ -194,10 +203,17 @@ export class ConfigLoader {
             `   Consider renaming to use .yaml extension.\n` +
             `   Run: mv ${currentPath} ${preferredPath}\n\n`,
         );
+        ConfigLoader.shownWarnings.add(ymlWarningKey);
       }
 
-      // Show deprecation warning if using legacy path
-      if (isLegacyPath && typeof process !== 'undefined' && process.stderr) {
+      // Show deprecation warning if using legacy path (only once per process)
+      const legacyWarningKey = `legacy-user-${legacyConfigPath}`;
+      if (
+        isLegacyPath &&
+        typeof process !== 'undefined' &&
+        process.stderr &&
+        !ConfigLoader.shownWarnings.has(legacyWarningKey)
+      ) {
         const newPath = yamlPath.replace(this.pathResolver.getHomeDir(), '~');
         const oldPath = legacyConfigPath.replace(
           this.pathResolver.getHomeDir(),
@@ -210,6 +226,7 @@ export class ConfigLoader {
             `   Please move your config file to the new location.\n` +
             `   Run: mkdir -p ~/.config/overture && mv ${oldPath} ${newPath}\n\n`,
         );
+        ConfigLoader.shownWarnings.add(legacyWarningKey);
       }
 
       return result.data;
@@ -290,8 +307,14 @@ export class ConfigLoader {
         );
       }
 
-      // Show warning if using .yml extension instead of .yaml
-      if (isYmlExtension && typeof process !== 'undefined' && process.stderr) {
+      // Show warning if using .yml extension instead of .yaml (only once per process)
+      const ymlWarningKey = `yml-project-${projectRoot}`;
+      if (
+        isYmlExtension &&
+        typeof process !== 'undefined' &&
+        process.stderr &&
+        !ConfigLoader.shownWarnings.has(ymlWarningKey)
+      ) {
         process.stderr.write(
           `\n⚠️  WARNING: Using .yml extension (fallback)\n` +
             `   Current: .overture/config.yml\n` +
@@ -299,6 +322,7 @@ export class ConfigLoader {
             `   Consider renaming to use .yaml extension.\n` +
             `   Run: mv .overture/config.yml .overture/config.yaml\n\n`,
         );
+        ConfigLoader.shownWarnings.add(ymlWarningKey);
       }
 
       return result.data;

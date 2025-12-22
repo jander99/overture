@@ -266,7 +266,14 @@ export class SyncEngine {
         results.push(result);
 
         // Collect warnings and errors
-        warnings.push(...result.warnings);
+        // Filter out informational detection messages from global warnings (they're already in result.warnings)
+        const criticalWarnings = result.warnings.filter(
+          (w) =>
+            !w.includes('detected:') ||
+            w.includes('not detected') ||
+            w.includes('Generating config anyway'),
+        );
+        warnings.push(...criticalWarnings);
         if (!result.success && result.error) {
           errors.push(`${client.name}: ${result.error}`);
         }

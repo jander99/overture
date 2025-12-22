@@ -238,10 +238,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
                   }
                 }
 
-                const diffOutput = formatDiff(
-                  clientResult.diff,
-                  clientResult.client,
-                );
+                const diffOutput = formatDiff(clientResult.diff);
                 console.log(diffOutput); // Use console.log to preserve formatting
                 output.nl();
               }
