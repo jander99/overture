@@ -88,8 +88,36 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
         await this.filesystem.mkdir(dir, { recursive: true });
       }
 
-      const content = JSON.stringify(config, null, 2);
-      await this.filesystem.writeFile(path, content);
+      // Check if this is the user config file (contains all Claude Code settings)
+      // User config: ~/.claude.json (preserve all existing settings)
+      // Project config: .mcp.json (can be overwritten)
+      const isUserConfig = path.endsWith('.claude.json');
+
+      if (isUserConfig) {
+        // Read existing config and merge to preserve all settings
+        const existingConfig: Record<string, unknown> = await this.filesystem
+          .exists(path)
+          .then(async (exists) => {
+            if (!exists) {
+              return {};
+            }
+            const content = await this.filesystem.readFile(path);
+            return JSON.parse(content) as Record<string, unknown>;
+          });
+
+        // Merge new mcpServers with existing config, preserving all other fields
+        const fullConfig = {
+          ...existingConfig,
+          mcpServers: config.mcpServers,
+        };
+
+        const content = JSON.stringify(fullConfig, null, 2);
+        await this.filesystem.writeFile(path, content);
+      } else {
+        // Project config - write directly
+        const content = JSON.stringify(config, null, 2);
+        await this.filesystem.writeFile(path, content);
+      }
     } catch (error) {
       throw new McpError(
         `Failed to write Claude Code config to ${path}: ${(error as Error).message}`,
