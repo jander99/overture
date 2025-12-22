@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Import Detection Mode** - Read-only scanning of MCP configurations
+  - `overture import --detect` - Non-destructive scan of client configs
+  - Multiple output formats: `text` (default), `json` (CI/CD), `table` (compact)
+  - Verbose mode with `--verbose` flag shows full MCP details (command, args, env vars)
+  - Exit codes for automation: 0 (success), 1 (parse errors), 2 (conflicts)
+  - Categorizes MCPs: managed (in Overture), unmanaged (can import), conflicts, parse errors
+  - Shows suggested scope (global vs project) per MCP
+  - Detects malformed configs with line numbers from YAML parser
+  - Filters client-specific options (e.g., excludes `github` MCP for Copilot CLI)
+
+### Changed
+
+- **Sync Command Output** - Cleaned up duplicate messages and warnings
+  - Removed duplicate "Configuration changes for {client}" headers in diff output
+  - Filtered informational warnings from global section to prevent duplication
+  - Added static warning tracking to prevent duplicate .yml extension warnings
+  - Improved diff formatting by removing redundant client name prefixes
+
+### Fixed
+
+- **Claude Code Settings Preservation** - User settings no longer overwritten during sync
+  - Detects when writing to `~/.claude.json` (user config vs project config)
+  - Reads existing config and merges new mcpServers while preserving:
+    - `numStartups` (usage tracking)
+    - `tipsHistory` (onboarding state)
+    - `cachedStatsigGates` (feature flags)
+    - `projects` object (directory-based MCP overrides)
+    - All other Claude Code metadata
+  - Project configs (`.mcp.json`) still written directly as before
+
+### Documentation
+
+- Added comprehensive `--detect` documentation to all guides:
+  - `docs/howtos/importing-existing-configs.md` - New "Step 0" section explaining detection
+  - `docs/user-guide.md` - Full `overture import` command reference with examples
+  - `docs/QUICKSTART.md` - Added "Importing Existing Configurations" section
+  - `docs/roadmap.md` - Updated v0.4 features with --detect capabilities
+- Documented all output formats, exit codes, and use cases
+- Added example outputs for both normal and verbose --detect modes
+
 ## [0.4.0] - 2025-12-21
 
 ### Added
