@@ -12,7 +12,7 @@
  */
 
 import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -67,7 +67,10 @@ describe('Audit Command E2E Tests', () => {
    * Helper: Create Overture config file
    */
   function createOvertureConfig(mcpNames: string[]): void {
-    const config: any = {
+    const config: {
+      version: string;
+      mcp: Record<string, unknown>;
+    } = {
       version: '2.0',
       mcp: {},
     };
@@ -95,7 +98,9 @@ describe('Audit Command E2E Tests', () => {
    * Helper: Create Claude Code config file
    */
   function createClaudeCodeConfig(mcpNames: string[]): void {
-    const config: any = {
+    const config: {
+      mcpServers: Record<string, { command: string; args: string[] }>;
+    } = {
       mcpServers: {},
     };
 
@@ -113,7 +118,9 @@ describe('Audit Command E2E Tests', () => {
    * Helper: Create VSCode config file
    */
   function createVSCodeConfig(mcpNames: string[]): void {
-    const config: any = {
+    const config: {
+      servers: Record<string, { command: string; args: string[] }>;
+    } = {
       servers: {}, // VS Code uses "servers" not "mcpServers"
     };
 
@@ -147,11 +154,16 @@ describe('Audit Command E2E Tests', () => {
       });
 
       return { stdout, stderr: '', exitCode: 0 };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const execError = error as {
+        stdout?: Buffer | string;
+        stderr?: Buffer | string;
+        status?: number;
+      };
       return {
-        stdout: error.stdout?.toString() || '',
-        stderr: error.stderr?.toString() || '',
-        exitCode: error.status || 1,
+        stdout: execError.stdout?.toString() || '',
+        stderr: execError.stderr?.toString() || '',
+        exitCode: execError.status || 1,
       };
     }
   }
@@ -550,7 +562,10 @@ describe('Audit Command E2E Tests', () => {
       const suggestionsMatch = result.stdout.match(/Suggestions:[\s\S]*$/);
       expect(suggestionsMatch).toBeTruthy();
 
-      const suggestionsText = suggestionsMatch![0];
+      if (!suggestionsMatch) {
+        throw new Error('Expected suggestions match to exist');
+      }
+      const suggestionsText = suggestionsMatch[0];
 
       // Verify order (apple before memory before zebra)
       const appleIdx = suggestionsText.indexOf('overture user add mcp apple');

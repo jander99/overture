@@ -214,7 +214,7 @@ describe('expandEnvVarsInObject', () => {
       {
         value: null,
         path: '${HOME}',
-      } as any,
+      } as Record<string, string | null>,
       { HOME: '/home' },
     );
     expect(result).toEqual({

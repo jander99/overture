@@ -66,9 +66,12 @@ export class ConfigLoader {
    * @param configPath - Path to configuration file
    * @returns Formatted error message with line numbers
    */
-  private formatYamlParseError(error: Error, configPath: string): string {
+  private formatYamlParseError(error: Error, _configPath: string): string {
     // Check if error is from js-yaml (has mark property with line/column)
-    const yamlError = error as any;
+    const yamlError = error as {
+      mark?: { line: number; column: number };
+      message: string;
+    };
     if (yamlError.mark && typeof yamlError.mark.line === 'number') {
       const line = yamlError.mark.line + 1; // js-yaml uses 0-indexed lines
       const column = yamlError.mark.column + 1; // js-yaml uses 0-indexed columns
@@ -88,7 +91,7 @@ export class ConfigLoader {
    * @param configPath - Path to configuration file
    * @throws {ValidationError} If deprecated fields are found
    */
-  private checkForDeprecatedFields(parsed: unknown, configPath: string): void {
+  private checkForDeprecatedFields(parsed: unknown, _configPath: string): void {
     if (!parsed || typeof parsed !== 'object') {
       return;
     }
@@ -500,7 +503,13 @@ export class ConfigLoader {
 
     // If only one config exists, return it
     if (!projectConfig) {
-      return userConfig!;
+      if (!userConfig) {
+        throw new ConfigError(
+          'No configuration found after validation',
+          detectedProjectRoot || '/',
+        );
+      }
+      return userConfig;
     }
     if (!userConfig) {
       return projectConfig;

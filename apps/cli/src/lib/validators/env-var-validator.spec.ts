@@ -451,7 +451,8 @@ describe('validateEnvVarReferences', () => {
           custom: {
             command: 'npx',
             args: [],
-            env: { NULL_VALUE: null as any },
+            // Intentionally testing invalid type - null instead of string
+            env: { NULL_VALUE: null as unknown as string },
             transport: 'stdio',
           },
         },
@@ -470,7 +471,8 @@ describe('validateEnvVarReferences', () => {
           custom: {
             command: 'npx',
             args: [],
-            env: { UNDEFINED_VALUE: undefined as any },
+            // Intentionally testing invalid type - undefined instead of string
+            env: { UNDEFINED_VALUE: undefined as unknown as string },
             transport: 'stdio',
           },
         },
@@ -489,7 +491,8 @@ describe('validateEnvVarReferences', () => {
           custom: {
             command: 'npx',
             args: [],
-            env: { NUMBER_VALUE: 123 as any },
+            // Intentionally testing invalid type - number instead of string
+            env: { NUMBER_VALUE: 123 as unknown as string },
             transport: 'stdio',
           },
         },

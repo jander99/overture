@@ -1,10 +1,4 @@
-import type {
-  Mock,
-  Mocked,
-  MockedObject,
-  MockedFunction,
-  MockInstance,
-} from 'vitest';
+import type { Mock } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { FsUtils } from './fs-utils';

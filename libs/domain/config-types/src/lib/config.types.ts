@@ -24,6 +24,12 @@ export type Platform = 'darwin' | 'linux' | 'win32';
 export type TransportType = 'stdio' | 'http' | 'sse';
 
 /**
+ * Type alias for MCP transport types
+ * Alias of TransportType for clearer semantic meaning in MCP contexts
+ */
+export type McpTransport = TransportType;
+
+/**
  * Scope of MCP server configuration
  * - global: Available in user global config, synced to all clients
  * - project: Available in project config, synced to project clients only
@@ -553,32 +559,59 @@ export interface ClientMcpConfig {
  * Client-specific MCP server definition
  *
  * Minimal fields required by clients (after conversion from OvertureConfig).
+ * This represents the simplified format that AI clients consume in their
+ * JSON config files (.mcp.json, opencode.json, etc.)
  */
 export interface ClientMcpServerDef {
   /**
-   * Command to execute
+   * Command to execute (for stdio transport)
+   * @example 'npx'
+   * @example 'uvx'
+   * @example 'node'
    */
   command: string;
 
   /**
-   * Command arguments
+   * Command-line arguments
+   * @example ['-y', '@modelcontextprotocol/server-filesystem', '/path/to/dir']
    */
   args: string[];
 
   /**
-   * Environment variables
+   * Environment variables to pass to the server process
+   * @example { GITHUB_TOKEN: 'ghp_xxx', DEBUG: 'true' }
    */
   env?: Record<string, string>;
 
   /**
-   * Transport type (VS Code requires "type" field)
+   * Transport type (VS Code and some clients use "type" field)
+   * @default 'stdio'
    */
   type?: TransportType;
 
   /**
-   * HTTP URL (for HTTP transport)
+   * Whether this server is disabled
+   * @default false
+   */
+  disabled?: boolean;
+
+  /**
+   * List of tools/resources to always allow without prompting
+   * Claude Code specific feature
+   * @example ['read_file', 'list_directory']
+   */
+  alwaysAllow?: string[];
+
+  /**
+   * Server URL (for HTTP/SSE transports)
+   * @example 'http://localhost:3000/mcp'
    */
   url?: string;
+
+  /**
+   * Allow additional properties for client-specific extensions
+   */
+  [key: string]: unknown;
 }
 
 /**
@@ -801,4 +834,64 @@ export interface ProcessLock {
    * Lock file path
    */
   lockPath: string;
+}
+
+// ============================================================================
+// JSON Utility Types for MCP Configurations
+// ============================================================================
+
+/**
+ * Type for JSON values that can appear in MCP configs
+ *
+ * Represents any valid JSON value type for MCP configuration serialization.
+ */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonObject
+  | JsonArray;
+
+/**
+ * JSON object type for MCP configurations
+ */
+export interface JsonObject {
+  [key: string]: JsonValue;
+}
+
+/**
+ * JSON array type for MCP configurations
+ */
+export type JsonArray = JsonValue[];
+
+// ============================================================================
+// Type Guards
+// ============================================================================
+
+/**
+ * Type guard to check if value is ClientMcpConfig
+ *
+ * @param value - Value to check
+ * @returns True if value is a valid ClientMcpConfig object
+ *
+ * @example
+ * if (isClientMcpConfig(data)) {
+ *   // TypeScript knows data is ClientMcpConfig
+ *   console.log(data.mcpServers);
+ * }
+ */
+export function isClientMcpConfig(value: unknown): value is ClientMcpConfig {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+
+  // Check if it has at least one object-valued property
+  // (could be mcpServers, servers, or other client-specific keys)
+  for (const key in obj) {
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      return true;
+    }
+  }
+
+  return true; // Empty config is valid
 }

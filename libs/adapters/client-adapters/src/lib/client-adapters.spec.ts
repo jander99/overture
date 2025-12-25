@@ -11,7 +11,6 @@ import {
   createAdapterRegistry,
   createAdapter,
   ClaudeCodeAdapter,
-  OpenCodeAdapter,
   AdapterRegistry,
   getAdapterForClient,
 } from '../index.js';
@@ -85,7 +84,7 @@ describe('@overture/client-adapters', () => {
 
     it('should throw for unknown adapter', () => {
       expect(() =>
-        createAdapter('unknown-adapter' as any, filesystem, environment),
+        createAdapter('unknown-adapter' as never, filesystem, environment),
       ).toThrow('Unknown adapter');
     });
   });
@@ -157,7 +156,7 @@ describe('@overture/client-adapters', () => {
 
     it('should throw for unregistered client', () => {
       expect(() =>
-        getAdapterForClient(registry, 'unknown-client' as any),
+        getAdapterForClient(registry, 'unknown-client' as never),
       ).toThrow('No adapter registered for client: unknown-client');
     });
   });

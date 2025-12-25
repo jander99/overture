@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handleError, main } from './main';
 import { OvertureError } from '@overture/errors';
 import { Logger } from '@overture/utils';
+import type { Command } from 'commander';
+import type { AppDependencies } from './composition-root';
 
 // Mock the Logger
 vi.mock('@overture/utils', () => ({
@@ -206,13 +208,15 @@ describe('main.ts', () => {
 
       vi.mocked(createAppDependencies).mockImplementation(() => {
         initOrder.push('createAppDependencies');
-        return {} as any;
+        // Return empty object, actual implementation not needed for this test
+        return {} as unknown as AppDependencies;
       });
       vi.mocked(createProgram).mockImplementation(() => {
         initOrder.push('createProgram');
         return {
           parseAsync: vi.fn().mockResolvedValue(undefined),
-        } as any;
+          // Partial Command object for testing
+        } as unknown as Command;
       });
 
       // Act
@@ -228,7 +232,8 @@ describe('main.ts', () => {
       const mockParseAsync = vi.fn().mockResolvedValue(undefined);
       vi.mocked(createProgram).mockReturnValue({
         parseAsync: mockParseAsync,
-      } as any);
+        // Partial Command object for testing
+      } as unknown as Command);
 
       // Act
       await main();
@@ -247,7 +252,8 @@ describe('main.ts', () => {
 
       vi.mocked(createProgram).mockReturnValue({
         parseAsync: vi.fn().mockRejectedValue(testError),
-      } as any);
+        // Partial Command object for testing
+      } as unknown as Command);
 
       // Act
       await main();
@@ -266,7 +272,8 @@ describe('main.ts', () => {
 
       vi.mocked(createProgram).mockReturnValue({
         parseAsync: vi.fn().mockRejectedValue(new Error('Unexpected')),
-      } as any);
+        // Partial Command object for testing
+      } as unknown as Command);
 
       // Act
       await main();

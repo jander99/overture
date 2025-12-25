@@ -7,6 +7,8 @@
  * @module lib/mocks/filesystem.mock
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { Mocked } from 'vitest';
 import type * as fs from 'fs';
 
@@ -59,7 +61,7 @@ export function createMockFs(
  * @example
  * ```typescript
  * const mockFs = createMockFs({ '/test/file.txt': 'content' });
- * configureMockFsExists(mockFs, fs.existsSync as Mock);
+ * configureMockFsExists(mockFs, fs.existsSync as any);
  * ```
  */
 export function configureMockFsExists(
@@ -80,7 +82,7 @@ export function configureMockFsExists(
  * @example
  * ```typescript
  * const mockFs = createMockFs({ '/test/file.txt': 'content' });
- * configureMockFsReadFile(mockFs, fs.readFileSync as Mock);
+ * configureMockFsReadFile(mockFs, fs.readFileSync as any);
  * ```
  */
 export function configureMockFsReadFile(
@@ -105,7 +107,7 @@ export function configureMockFsReadFile(
  * @example
  * ```typescript
  * const mockFs = createMockFs();
- * configureMockFsWriteFile(mockFs, fs.writeFileSync as Mock);
+ * configureMockFsWriteFile(mockFs, fs.writeFileSync as any);
  * ```
  */
 export function configureMockFsWriteFile(
@@ -126,7 +128,7 @@ export function configureMockFsWriteFile(
  * @example
  * ```typescript
  * const mockFs = createMockFs();
- * configureMockFsMkdir(mockFs, fs.mkdirSync as Mock);
+ * configureMockFsMkdir(mockFs, fs.mkdirSync as any);
  * ```
  */
 export function configureMockFsMkdir(

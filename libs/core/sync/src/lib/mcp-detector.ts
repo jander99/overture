@@ -51,7 +51,7 @@ export interface McpDetectionResult {
  */
 export function compareMcpConfigs(
   overtureMcps: Record<string, McpServerConfig>,
-  clientMcps: Record<string, any>,
+  clientMcps: Record<string, unknown>,
 ): McpDetectionResult {
   const overtureNames = new Set(Object.keys(overtureMcps));
 
@@ -83,12 +83,17 @@ export function compareMcpConfigs(
       continue;
     }
 
+    // Type narrow the config
+    const configRecord = config as Record<string, unknown>;
+
     const mcp: DetectedMcp = {
       name,
-      command: config.command,
-      args: config.args || [],
-      env: config.env,
-      transport: config.type || 'stdio', // Claude configs use 'type', not 'transport'
+      command: (configRecord.command as string) || '',
+      args: Array.isArray(configRecord.args)
+        ? (configRecord.args as string[])
+        : [],
+      env: configRecord.env as Record<string, string> | undefined,
+      transport: (configRecord.type as string) || 'stdio', // Claude configs use 'type', not 'transport'
       source: 'manual',
       scope: 'global', // Will be refined by caller
       detectedFrom: 'client-config',
@@ -116,11 +121,11 @@ export function compareMcpConfigs(
  * @returns Map of MCP name to config for MCPs to preserve
  */
 export function getUnmanagedMcps(
-  existingClientConfig: Record<string, any>,
+  existingClientConfig: Record<string, unknown>,
   overtureMcps: Record<string, McpServerConfig>,
-): Record<string, any> {
+): Record<string, unknown> {
   const overtureNames = new Set(Object.keys(overtureMcps));
-  const preserved: Record<string, any> = {};
+  const preserved: Record<string, unknown> = {};
 
   for (const [name, config] of Object.entries(existingClientConfig)) {
     if (!overtureNames.has(name)) {

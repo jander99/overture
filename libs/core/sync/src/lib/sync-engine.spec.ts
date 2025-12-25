@@ -7,14 +7,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  SyncEngine,
-  type SyncEngineDeps,
-  type SyncOptions,
-} from './sync-engine.js';
+import { SyncEngine, type SyncEngineDeps } from './sync-engine.js';
 import { createMockSyncEngineDeps } from '@overture/testing';
 import type { OvertureConfig, ClientName } from '@overture/config-types';
-import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
+import type { ClientAdapter } from '@overture/client-adapters';
 
 // Mock the helper functions
 vi.mock('./exclusion-filter.js', () => ({
@@ -57,7 +53,7 @@ describe('SyncEngine', () => {
       writeConfig: vi.fn().mockResolvedValue(undefined),
       convertFromOverture: vi.fn((config) => ({ mcpServers: config.mcp })),
       validateTransport: vi.fn(() => true),
-    } as any;
+    } as unknown as ClientAdapter;
 
     vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
   });
@@ -113,7 +109,7 @@ describe('SyncEngine', () => {
         writeConfig: vi.fn().mockResolvedValue(undefined),
         convertFromOverture: vi.fn((config) => ({ mcpServers: config.mcp })),
         validateTransport: vi.fn(() => true),
-      } as any;
+      } as unknown as ClientAdapter;
 
       vi.mocked(deps.adapterRegistry.get).mockImplementation((name: string) => {
         if (name === 'claude-desktop') return desktopAdapter;
@@ -240,8 +236,6 @@ describe('SyncEngine', () => {
 
   describe('syncToClient() - binary detection', () => {
     it('should detect client binary when not skipped', async () => {
-      const config: OvertureConfig = { version: '1.0', mcp: {} };
-
       vi.mocked(deps.binaryDetector.detectClient).mockResolvedValue({
         status: 'found',
         version: '1.0.0',

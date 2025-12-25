@@ -11,6 +11,11 @@ import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
 import type { ClientName, DiscoveredMcp } from '@overture/config-types';
 import { formatConflict, DetectionFormatter } from '@overture/import-core';
+import type {
+  ClaudeCodeAdapter,
+  OpenCodeAdapter,
+  CopilotCliAdapter,
+} from '@overture/client-adapters';
 
 /**
  * Create the import command
@@ -63,13 +68,13 @@ export function createImportCommand(deps: AppDependencies): Command {
 
         // Get adapters
         const claudeCodeAdapter = clientFilter.includes('claude-code')
-          ? (adapterRegistry.get('claude-code') as any)
+          ? (adapterRegistry.get('claude-code') as ClaudeCodeAdapter | null)
           : null;
         const openCodeAdapter = clientFilter.includes('opencode')
-          ? (adapterRegistry.get('opencode') as any)
+          ? (adapterRegistry.get('opencode') as OpenCodeAdapter | null)
           : null;
         const copilotCliAdapter = clientFilter.includes('copilot-cli')
-          ? (adapterRegistry.get('copilot-cli') as any)
+          ? (adapterRegistry.get('copilot-cli') as CopilotCliAdapter | null)
           : null;
 
         // DETECT MODE: Read-only scan without importing

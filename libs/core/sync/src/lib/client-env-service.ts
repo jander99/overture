@@ -9,7 +9,11 @@
  * @version 3.0
  */
 
-import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
+import type {
+  ClientAdapter,
+  ClientMcpConfig,
+  ClientMcpServerDef,
+} from '@overture/client-adapters';
 import {
   expandEnvVars,
   expandEnvVarsInObject,
@@ -40,15 +44,19 @@ export function shouldExpandEnvVars(client: ClientAdapter): boolean {
  * @returns MCP config with expanded env vars (if needed)
  */
 export function expandEnvVarsInMcpConfig(
-  mcpConfig: any,
+  mcpConfig: unknown,
   client: ClientAdapter,
   env: Record<string, string | undefined> = process.env,
-): any {
+): unknown {
   if (!shouldExpandEnvVars(client)) {
     return mcpConfig; // Client handles expansion natively
   }
 
-  const result: any = { ...mcpConfig };
+  if (typeof mcpConfig !== 'object' || mcpConfig === null) {
+    return mcpConfig;
+  }
+
+  const result = { ...mcpConfig } as Record<string, unknown>;
 
   // Expand command if it contains env vars
   if (typeof result.command === 'string') {
@@ -62,7 +70,10 @@ export function expandEnvVarsInMcpConfig(
 
   // Expand env object
   if (result.env && typeof result.env === 'object') {
-    result.env = expandEnvVarsInObject(result.env, env);
+    result.env = expandEnvVarsInObject(
+      result.env as Record<string, unknown>,
+      env,
+    );
   }
 
   return result;
@@ -90,10 +101,14 @@ export function expandEnvVarsInClientConfig(
 
   const rootKey = client.schemaRootKey;
   const servers = config[rootKey] || {};
-  const expandedServers: Record<string, any> = {};
+  const expandedServers: Record<string, ClientMcpServerDef> = {};
 
   for (const [name, mcpConfig] of Object.entries(servers)) {
-    expandedServers[name] = expandEnvVarsInMcpConfig(mcpConfig, client, env);
+    expandedServers[name] = expandEnvVarsInMcpConfig(
+      mcpConfig,
+      client,
+      env,
+    ) as ClientMcpServerDef;
   }
 
   return {

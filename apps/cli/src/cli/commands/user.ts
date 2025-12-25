@@ -181,12 +181,17 @@ export function createUserCommand(deps: AppDependencies): Command {
         const mcpConfig: OvertureConfig['mcp'] = {};
         for (const mcpName of selectedMcps) {
           const defaults = MCP_SERVER_DEFAULTS[mcpName];
-          if (defaults) {
+          if (
+            defaults?.command &&
+            defaults?.args &&
+            defaults?.env &&
+            defaults?.transport
+          ) {
             mcpConfig[mcpName] = {
-              command: defaults.command!,
-              args: defaults.args!,
-              env: defaults.env!,
-              transport: defaults.transport!,
+              command: defaults.command,
+              args: defaults.args,
+              env: defaults.env,
+              transport: defaults.transport,
             };
           }
         }

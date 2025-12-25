@@ -123,7 +123,7 @@ export function createMockAdapter(
   overrides: Partial<ClientAdapter> = {},
 ): ClientAdapter {
   return {
-    name: name as any,
+    name: name as ClientAdapter['name'],
     schemaRootKey: 'mcpServers',
     detectConfigPath: () => null,
     supportsTransport: () => true,

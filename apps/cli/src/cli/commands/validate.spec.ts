@@ -11,7 +11,11 @@ import { createValidateCommand } from './validate';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
 import type { AppDependencies } from '../../composition-root';
 import { ConfigError, ValidationError } from '@overture/errors';
-import type { OvertureConfig } from '@overture/config-types';
+import type {
+  OvertureConfig,
+  Platform,
+  ClientName,
+} from '@overture/config-types';
 
 // Mock chalk to avoid ANSI codes in test assertions
 vi.mock('chalk', () => ({
@@ -32,7 +36,7 @@ vi.mock('@overture/utils', async () => {
   return {
     ...actual,
     ErrorHandler: {
-      handleCommandError: vi.fn((error, context, verbose) => {
+      handleCommandError: vi.fn((error, _context, _verbose) => {
         // Re-throw errors during tests so we can see what's failing
         if (error && typeof error === 'object' && 'exitCode' in error) {
           // Don't throw for expected errors with exitCode
@@ -233,7 +237,8 @@ describe('validate command', () => {
         mcp: {
           'test-mcp': {
             command: 'test-command',
-            transport: undefined as any,
+            // Intentionally invalid to test validation
+            transport: undefined as unknown as 'stdio' | 'http' | 'sse',
           },
         },
       };
@@ -262,7 +267,8 @@ describe('validate command', () => {
             command: 'test-command',
             transport: 'stdio',
             platforms: {
-              exclude: ['invalid-platform'] as any,
+              // Intentionally invalid platform to test validation
+              exclude: ['invalid-platform'] as unknown as Platform[],
             },
           },
         },
@@ -292,8 +298,9 @@ describe('validate command', () => {
             transport: 'stdio',
             platforms: {
               commandOverrides: {
+                // Intentionally invalid platform to test validation
                 'invalid-os': 'some-command',
-              } as any,
+              } as unknown as Record<Platform, string>,
             },
           },
         },
@@ -323,8 +330,9 @@ describe('validate command', () => {
             transport: 'stdio',
             platforms: {
               argsOverrides: {
+                // Intentionally invalid platform to test validation
                 freebsd: ['--arg'],
-              } as any,
+              } as unknown as Record<Platform, string[]>,
             },
           },
         },
@@ -353,7 +361,7 @@ describe('validate command', () => {
             command: 'test-command',
             transport: 'stdio',
             clients: {
-              exclude: ['invalid-client'] as any,
+              exclude: ['invalid-client'] as unknown as ClientName[],
             },
           },
         },
@@ -382,7 +390,7 @@ describe('validate command', () => {
             command: 'test-command',
             transport: 'stdio',
             clients: {
-              include: ['unknown-client'] as any,
+              include: ['unknown-client'] as unknown as ClientName[],
             },
           },
         },
@@ -412,10 +420,14 @@ describe('validate command', () => {
             transport: 'stdio',
             clients: {
               overrides: {
+                // Intentionally invalid client name to test validation
                 'bad-client': {
                   command: 'override-command',
                 },
-              } as any,
+              } as unknown as Record<
+                ClientName,
+                Partial<{ command: string; args: string[] }>
+              >,
             },
           },
         },
@@ -458,7 +470,7 @@ describe('validate command', () => {
         name: 'claude-code',
         needsEnvVarExpansion: () => false,
         supportsTransport: () => true,
-      } as any);
+      } as unknown as OvertureConfig);
 
       const command = createValidateCommand(deps);
 
@@ -496,7 +508,7 @@ describe('validate command', () => {
         name: 'claude-code',
         needsEnvVarExpansion: () => false,
         supportsTransport: () => true,
-      } as any);
+      } as unknown as OvertureConfig);
 
       const command = createValidateCommand(deps);
 
@@ -540,7 +552,7 @@ describe('validate command', () => {
         name: 'claude-code',
         needsEnvVarExpansion: () => false,
         supportsTransport: () => true,
-      } as any);
+      } as unknown as OvertureConfig);
 
       const command = createValidateCommand(deps);
 
@@ -592,7 +604,7 @@ describe('validate command', () => {
       const config: OvertureConfig = {
         version: '1.0',
         sync: {
-          enabledClients: ['invalid-client'] as any,
+          enabledClients: ['invalid-client'] as unknown as ClientName[],
         },
         mcp: {
           'test-mcp': {
@@ -637,7 +649,7 @@ describe('validate command', () => {
         readConfig: vi.fn(),
         writeConfig: vi.fn(),
         validateTransport: vi.fn().mockReturnValue(true),
-      } as any);
+      } as unknown as OvertureConfig);
 
       const command = createValidateCommand(deps);
       await command.parseAsync(['node', 'validate', '--client', 'claude-code']);
@@ -719,7 +731,7 @@ describe('validate command', () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
         validateTransport: vi.fn().mockReturnValue(false),
-      } as any);
+      } as unknown as OvertureConfig);
 
       const { getTransportWarnings } = await import('@overture/sync-core');
       vi.mocked(getTransportWarnings).mockReturnValue([
@@ -757,7 +769,7 @@ describe('validate command', () => {
       vi.mocked(deps.adapterRegistry.get).mockReturnValue({
         name: 'claude-code',
         validateTransport: vi.fn().mockReturnValue(true),
-      } as any);
+      } as unknown as OvertureConfig);
 
       const { getTransportValidationSummary } =
         await import('@overture/sync-core');
@@ -787,7 +799,9 @@ describe('validate command', () => {
 
   describe('error handling', () => {
     it('should error when no configuration found', async () => {
-      vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(null as any);
+      vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(
+        null as unknown as OvertureConfig,
+      );
 
       const command = createValidateCommand(deps);
 

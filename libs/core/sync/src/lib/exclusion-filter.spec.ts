@@ -26,7 +26,7 @@ function createMockAdapter(
   supportedTransports: TransportType[] = ['stdio'],
 ): ClientAdapter {
   return {
-    name: name as any,
+    name: name as ClientName,
     schemaRootKey: 'mcpServers',
     supportsTransport: vi.fn((transport: TransportType) =>
       supportedTransports.includes(transport),

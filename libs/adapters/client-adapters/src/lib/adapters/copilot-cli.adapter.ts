@@ -114,7 +114,7 @@ export class CopilotCliAdapter extends BaseClientAdapter {
     return { mcpServers };
   }
 
-  supportsTransport(transport: 'stdio' | 'http' | 'sse'): boolean {
+  supportsTransport(_transport: 'stdio' | 'http' | 'sse'): boolean {
     return true; // Copilot CLI supports all transport types
   }
 

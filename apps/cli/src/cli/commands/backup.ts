@@ -56,7 +56,10 @@ export function createBackupCommand(deps: AppDependencies): Command {
           if (!backupsByClient.has(backup.client)) {
             backupsByClient.set(backup.client, []);
           }
-          backupsByClient.get(backup.client)!.push(backup);
+          const clientBackups = backupsByClient.get(backup.client);
+          if (clientBackups) {
+            clientBackups.push(backup);
+          }
         }
 
         // Display backups grouped by client

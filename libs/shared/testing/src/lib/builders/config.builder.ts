@@ -7,6 +7,20 @@
  * @module lib/builders/config.builder
  */
 
+import type {
+  McpServerConfig,
+  ClientConfig,
+  PluginConfig,
+  SyncOptions,
+  OvertureConfig,
+  ClaudeSettings,
+  InstalledPlugin,
+  InstallationResult,
+  BinaryDetectionResult,
+  SyncResult,
+  ClientSyncResult,
+} from '@overture/config-types';
+
 /**
  * Build an MCP server configuration
  *
@@ -29,8 +43,8 @@ export function buildMcpServer(
   args: string[] = [],
   env: Record<string, string> = {},
   transport: 'stdio' | 'http' | 'sse' = 'stdio',
-  overrides: Record<string, any> = {},
-) {
+  overrides: Partial<McpServerConfig> = {},
+): McpServerConfig {
   return {
     command,
     args,
@@ -56,8 +70,8 @@ export function buildMcpServer(
  */
 export function buildClientConfig(
   enabled = true,
-  overrides: Record<string, any> = {},
-) {
+  overrides: Partial<ClientConfig> = {},
+): ClientConfig {
   return {
     enabled,
     ...overrides,
@@ -81,7 +95,7 @@ export function buildPluginConfig(
   marketplace = 'claude-code-workflows',
   enabled = true,
   mcps: string[] = [],
-) {
+): PluginConfig {
   return {
     marketplace,
     enabled,
@@ -103,7 +117,9 @@ export function buildPluginConfig(
  * });
  * ```
  */
-export function buildSyncOptions(overrides: Record<string, any> = {}) {
+export function buildSyncOptions(
+  overrides: Partial<SyncOptions> = {},
+): SyncOptions {
   return {
     backup: true,
     backupDir: '~/.config/overture/backups',
@@ -134,15 +150,8 @@ export function buildSyncOptions(overrides: Record<string, any> = {}) {
  * ```
  */
 export function buildConfig(
-  options: {
-    version?: string;
-    clients?: Record<string, any>;
-    plugins?: Record<string, any>;
-    mcp?: Record<string, any>;
-    sync?: any;
-    discovery?: any;
-  } = {},
-) {
+  options: Partial<OvertureConfig> = {},
+): OvertureConfig {
   return {
     version: options.version ?? '2.0',
     clients: options.clients,
@@ -169,9 +178,9 @@ export function buildConfig(
  * ```
  */
 export function buildUserConfig(
-  plugins: Record<string, any> = {},
-  mcp: Record<string, any> = {},
-) {
+  plugins: Record<string, PluginConfig> = {},
+  mcp: Record<string, McpServerConfig> = {},
+): OvertureConfig {
   return buildConfig({
     version: '2.0',
     plugins,
@@ -193,7 +202,9 @@ export function buildUserConfig(
  * });
  * ```
  */
-export function buildProjectConfig(mcp: Record<string, any> = {}) {
+export function buildProjectConfig(
+  mcp: Record<string, McpServerConfig> = {},
+): OvertureConfig {
   return buildConfig({
     version: '2.0',
     mcp,
@@ -219,9 +230,9 @@ export function buildProjectConfig(mcp: Record<string, any> = {}) {
  * ```
  */
 export function buildConfigWithPlugins(
-  plugins: Record<string, any> = {},
-  mcp: Record<string, any> = {},
-) {
+  plugins: Record<string, PluginConfig> = {},
+  mcp: Record<string, McpServerConfig> = {},
+): OvertureConfig {
   return buildConfig({
     version: '2.0',
     plugins,
@@ -247,9 +258,9 @@ export function buildConfigWithPlugins(
  * ```
  */
 export function buildClaudeSettings(
-  plugins: Record<string, any> = {},
+  plugins: ClaudeSettings['plugins'] = {},
   marketplaces: string[] = [],
-) {
+): ClaudeSettings {
   return {
     plugins,
     marketplaces,
@@ -270,7 +281,9 @@ export function buildClaudeSettings(
  * });
  * ```
  */
-export function buildInstalledPlugin(overrides?: Record<string, any>) {
+export function buildInstalledPlugin(
+  overrides?: Partial<InstalledPlugin>,
+): InstalledPlugin {
   return {
     name: 'test-plugin',
     marketplace: 'test-marketplace',
@@ -295,8 +308,8 @@ export function buildInstalledPlugin(overrides?: Record<string, any>) {
  */
 export function buildInstalledPlugins(
   count: number,
-  baseOverrides?: Record<string, any>,
-): any[] {
+  baseOverrides?: Partial<InstalledPlugin>,
+): InstalledPlugin[] {
   return Array.from({ length: count }, (_, i) =>
     buildInstalledPlugin({
       name: `plugin-${i + 1}`,
@@ -317,7 +330,9 @@ export function buildInstalledPlugins(
  * const failure = buildInstallationResult({ success: false, error: 'Plugin not found' });
  * ```
  */
-export function buildInstallationResult(overrides?: Record<string, any>) {
+export function buildInstallationResult(
+  overrides?: Partial<InstallationResult>,
+): InstallationResult {
   return {
     success: true,
     plugin: 'test-plugin',
@@ -344,8 +359,8 @@ export function buildInstallationResult(overrides?: Record<string, any>) {
  */
 export function buildBinaryDetectionResult(
   status: 'found' | 'not-found' | 'skipped' = 'found',
-  overrides: Record<string, any> = {},
-) {
+  overrides: Partial<BinaryDetectionResult> = {},
+): BinaryDetectionResult {
   return {
     status,
     warnings: [],
@@ -373,14 +388,14 @@ export function buildBinaryDetectionResult(
  */
 export function buildSyncResult(
   success = true,
-  clientResults: Record<string, any> = {},
-) {
+  clientResults: Record<string, ClientSyncResult> = {},
+): SyncResult {
   const clients = Object.values(clientResults);
-  const successfulClients = clients.filter((c: any) => c.success).length;
+  const successfulClients = clients.filter((c) => c.success).length;
   const failedClients = clients.length - successfulClients;
 
-  const allSynced = clients.flatMap((c: any) => c.synced || []);
-  const allSkipped = clients.flatMap((c: any) => c.skipped || []);
+  const allSynced = clients.flatMap((c) => c.synced || []);
+  const allSkipped = clients.flatMap((c) => c.skipped || []);
 
   return {
     success,
@@ -415,8 +430,8 @@ export function buildClientSyncResult(
   success = true,
   synced: string[] = [],
   skipped: string[] = [],
-  overrides: Record<string, any> = {},
-) {
+  overrides: Partial<ClientSyncResult> = {},
+): ClientSyncResult {
   return {
     success,
     synced,

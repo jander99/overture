@@ -103,7 +103,11 @@ export function createFoundClient(
       binaryPath: `/usr/local/bin/${clientName}`,
       version: '1.0.0',
       warnings: [],
-      ...(overrides?.detection as any),
+      ...(overrides?.detection &&
+      'status' in overrides.detection &&
+      overrides.detection.status === 'found'
+        ? overrides.detection
+        : {}),
     },
     source: 'linux-native' as const,
     environment: 'linux' as const,
@@ -132,7 +136,11 @@ export function createNotFoundClient(
     detection: {
       status: 'not-found' as const,
       warnings: [],
-      ...(overrides?.detection as any),
+      ...(overrides?.detection &&
+      'status' in overrides.detection &&
+      overrides.detection.status === 'not-found'
+        ? overrides.detection
+        : {}),
     },
     source: 'linux-native' as const,
     environment: 'linux' as const,
@@ -161,7 +169,11 @@ export function createSkippedClient(
     detection: {
       status: 'skipped' as const,
       warnings: [],
-      ...(overrides?.detection as any),
+      ...(overrides?.detection &&
+      'status' in overrides.detection &&
+      overrides.detection.status === 'skipped'
+        ? overrides.detection
+        : {}),
     },
     source: 'linux-native' as const,
     environment: 'linux' as const,
@@ -230,7 +242,7 @@ export function createMockAdapter(
     writeConfig: vi.fn().mockResolvedValue(undefined),
     validateTransport: vi.fn().mockReturnValue(true),
     ...overrides,
-  } as any;
+  } as unknown as ClientAdapter;
 }
 
 /**

@@ -39,7 +39,7 @@ export async function loadFixture(relativePath: string): Promise<string> {
  * );
  * ```
  */
-export async function loadJsonFixture<T = any>(
+export async function loadJsonFixture<T = unknown>(
   relativePath: string,
 ): Promise<T> {
   const content = await loadFixture(relativePath);
@@ -59,7 +59,7 @@ export async function loadJsonFixture<T = any>(
  * );
  * ```
  */
-export async function loadYamlFixture<T = any>(
+export async function loadYamlFixture<T = unknown>(
   relativePath: string,
 ): Promise<T> {
   const content = await loadFixture(relativePath);

@@ -9,11 +9,11 @@
  */
 
 import type {
+  Platform,
   OvertureConfig,
   ClientName,
-  Platform,
   BinaryDetectionResult,
-  InstallationResult,
+  PluginSyncResult,
   SkillSyncSummary,
 } from '@overture/config-types';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
@@ -26,7 +26,6 @@ import type { AdapterRegistry } from '@overture/client-adapters';
 import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
 import type { SkillSyncService } from '@overture/skill';
-
 import { filterMcpsForClient } from './exclusion-filter.js';
 import {
   getTransportWarnings,
@@ -73,12 +72,23 @@ export interface ClientSyncResult {
   client: ClientName;
   success: boolean;
   configPath: string;
-  diff?: any;
+  diff?: {
+    added: string[];
+    modified: Array<{
+      name: string;
+      type: string;
+      oldValue?: unknown;
+      newValue?: unknown;
+    }>;
+    removed: string[];
+    unchanged: string[];
+    hasChanges: boolean;
+  } | null;
   backupPath?: string;
   binaryDetection?: BinaryDetectionResult;
   warnings: string[];
   error?: string;
-  /** Maps MCP server names to their source ('global' or 'project') */
+  /** Maps MCP server names to their source ('global' | 'project') */
   mcpSources?: Record<string, 'global' | 'project'>;
 }
 

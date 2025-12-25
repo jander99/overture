@@ -415,8 +415,7 @@ export class ImportService {
           ? undefined
           : configPathResult?.project;
 
-      const configPaths: ConfigPathStatus[] =
-        [];
+      const configPaths: ConfigPathStatus[] = [];
 
       // Check user config
       if (userPath) {
@@ -434,7 +433,7 @@ export class ImportService {
               projectRoot,
             );
             allDiscovered.push(...mcps);
-          } catch (error) {
+          } catch (_error) {
             // Already captured in checkConfigPath
           }
         } else if (status.parseError) {
@@ -476,7 +475,10 @@ export class ImportService {
       if (!mcpsByName.has(mcp.name)) {
         mcpsByName.set(mcp.name, []);
       }
-      mcpsByName.get(mcp.name)!.push(mcp);
+      const mcpList = mcpsByName.get(mcp.name);
+      if (mcpList) {
+        mcpList.push(mcp);
+      }
     }
 
     // Categorize each unique MCP
@@ -531,7 +533,7 @@ export class ImportService {
   private async checkConfigPath(
     path: string,
     type: 'user' | 'project',
-    adapter: any,
+    adapter: ClaudeCodeAdapter | OpenCodeAdapter | CopilotCliAdapter,
   ): Promise<ConfigPathStatus> {
     const exists = await this.filesystem.exists(path);
 
@@ -574,12 +576,10 @@ export class ImportService {
   /**
    * Extract parse error details from error object
    */
-  private extractParseError(
-    error: Error,
-  ): ParseErrorDetail {
+  private extractParseError(error: Error): ParseErrorDetail {
     // Check for js-yaml error format
     if ('mark' in error && typeof error.mark === 'object') {
-      const mark = error.mark as any;
+      const mark = error.mark as { line?: number; column?: number };
       return {
         message: error.message,
         line: mark.line !== undefined ? mark.line + 1 : undefined,
@@ -604,8 +604,8 @@ export class ImportService {
    * Detect client binary
    */
   private async detectClientBinary(
-    adapter: any,
-    platform: Platform,
+    _adapter: ClaudeCodeAdapter | OpenCodeAdapter | CopilotCliAdapter,
+    _platform: Platform,
   ): Promise<{
     status: 'found' | 'not-found';
     version?: string;
@@ -620,7 +620,7 @@ export class ImportService {
    * Discover MCPs from a specific adapter
    */
   private async discoverFromAdapter(
-    adapter: any,
+    adapter: ClaudeCodeAdapter | OpenCodeAdapter | CopilotCliAdapter,
     clientName: string,
     overtureConfig: OvertureConfig,
     platform: Platform,
@@ -629,21 +629,21 @@ export class ImportService {
     // Route to appropriate discover method based on client type
     if (clientName === 'claude-code') {
       return this.discoverFromClaudeCode(
-        adapter,
+        adapter as ClaudeCodeAdapter,
         overtureConfig,
         platform,
         projectRoot,
       );
     } else if (clientName === 'opencode') {
       return this.discoverFromOpenCode(
-        adapter,
+        adapter as OpenCodeAdapter,
         overtureConfig,
         platform,
         projectRoot,
       );
     } else if (clientName === 'copilot-cli') {
       return this.discoverFromCopilotCLI(
-        adapter,
+        adapter as CopilotCliAdapter,
         overtureConfig,
         platform,
         projectRoot,
@@ -657,22 +657,38 @@ export class ImportService {
    */
   private createDiscoveredMcp(
     name: string,
-    config: any,
+    config: unknown,
     source: McpSource,
     suggestedScope: 'global' | 'project',
   ): DiscoveredMcp {
+    const configRecord = config as Record<string, unknown>;
+
     // Convert hardcoded env vars to references
-    const envConversion = convertToEnvVarReferences(config.env, name);
+    const envConversion = convertToEnvVarReferences(
+      configRecord.env as Record<string, string> | undefined,
+      name,
+    );
+
+    const transportValue =
+      (configRecord.type as string) ||
+      (configRecord.transport as string) ||
+      'stdio';
+    const validTransport: 'stdio' | 'http' | 'sse' =
+      transportValue === 'http' || transportValue === 'sse'
+        ? transportValue
+        : 'stdio';
 
     return {
       name,
-      command: config.command,
-      args: config.args || [],
+      command: (configRecord.command as string) || '',
+      args: Array.isArray(configRecord.args)
+        ? (configRecord.args as string[])
+        : [],
       env: envConversion.converted,
-      transport: config.type || config.transport || 'stdio',
+      transport: validTransport,
       source,
       suggestedScope,
-      originalEnv: config.env,
+      originalEnv: configRecord.env as Record<string, string> | undefined,
       envVarsToSet: envConversion.varsToSet,
     };
   }
@@ -745,12 +761,25 @@ export class ImportService {
     mcps: DiscoveredMcp[],
     dryRun: boolean,
   ): Promise<void> {
-    let config: any = { version: '1.0', mcp: {} };
+    let config: {
+      version: string;
+      mcp: Record<
+        string,
+        { command: string; args: string[]; env?: Record<string, string> }
+      >;
+      [key: string]: unknown;
+    } = { version: '1.0', mcp: {} };
 
     // Read existing config if it exists
     if (await this.filesystem.exists(configPath)) {
       const content = await this.filesystem.readFile(configPath);
-      config = yaml.load(content) as any;
+      const loaded = yaml.load(content) as Record<string, unknown>;
+
+      config = {
+        ...loaded,
+        version: (loaded.version as string) || '1.0',
+        mcp: (loaded.mcp as Record<string, unknown>) || {},
+      } as typeof config;
 
       // Ensure mcp section exists
       if (!config.mcp) {

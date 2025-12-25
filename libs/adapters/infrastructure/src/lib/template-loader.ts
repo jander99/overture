@@ -49,6 +49,4 @@ export class TemplateLoader {
 }
 
 // Register helpers on module load
-// NOTE: Disabled to avoid ESM/CJS compatibility issues
-// Call manually if needed: TemplateLoader.registerHelpers();
-// TemplateLoader.registerHelpers();
+TemplateLoader.registerHelpers();
