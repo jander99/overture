@@ -238,7 +238,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
             if (
               clientConfig &&
               typeof clientConfig === 'object' &&
-              !('enabled' in clientConfig && clientConfig.enabled === false)
+              (!('enabled' in clientConfig) || clientConfig.enabled === true)
             ) {
               clientsToValidate.push(clientName as ClientName);
             }
