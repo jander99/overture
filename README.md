@@ -35,7 +35,7 @@ Developers using AI-assisted tools face **configuration chaos**:
 
 ---
 
-## The Solution: Three Pillars
+## The Solution: Four Pillars
 
 ### 1. 🔧 Multi-Platform MCP Configuration Manager
 
@@ -109,7 +109,51 @@ overture sync
 
 ---
 
-### 3. 📝 AI Context Documentation Generator
+### 3. 📚 Agent Skills Synchronization
+
+**Reusable instruction sets distributed across all AI clients.**
+
+Create skills once. Use everywhere.
+
+```bash
+# Create a skill in your config repo
+mkdir -p ~/.config/overture/skills/debugging
+cat > ~/.config/overture/skills/debugging/SKILL.md << 'EOF'
+---
+name: debugging
+description: Advanced debugging techniques for complex issues
+---
+
+# Debugging Skill
+
+When debugging:
+1. Reproduce the issue consistently
+2. Use binary search to isolate the problem
+3. Check logs and stack traces
+4. Test hypotheses systematically
+5. Verify the fix
+EOF
+
+# Sync skills to all clients
+overture sync
+→ ~/.claude/skills/debugging/SKILL.md (Claude Code)
+→ ~/.github/skills/debugging/SKILL.md (Copilot CLI)
+→ ~/.opencode/skill/debugging/SKILL.md (OpenCode)
+
+# Share with your team via git
+overture skill cp debugging
+git add .claude/skills/ .github/skills/ .opencode/skill/
+git commit -m "Add debugging skill"
+```
+
+**Skills provide:**
+
+- Consistent workflows across your team
+- Domain-specific best practices
+- Tool usage guidance
+- Project-specific conventions
+
+### 4. 📝 AI Context Documentation Generator
 
 **Generate rich CLAUDE.md/AGENTS.md files with workflow orchestration.**
 
@@ -181,9 +225,10 @@ overture init --type python-backend
 # Edit .overture/config.yaml to add plugins and MCPs
 vim .overture/config.yaml
 
-# Sync configuration across all AI tools
+# Sync configuration and skills across all AI tools
 overture sync
 # → Detects installed clients automatically
+# → Syncs Agent Skills from ~/.config/overture/skills/
 # → Installs plugins via Claude CLI
 # → Generates/updates configs for all detected clients
 # → Creates backups before changes
@@ -191,10 +236,11 @@ overture sync
 # → Warns but continues if client not detected (you can install later)
 ```
 
-**What v0.2.5 includes:**
+**What v0.3.0 includes:**
 
 - ✅ User global configuration (`~/.config/overture/config.yml`)
 - ✅ Project-level configuration (`.overture/config.yaml`)
+- ✅ **Agent Skills synchronization** - Distribute reusable instruction sets across all clients
 - ✅ Multi-platform sync (3 production-ready clients: Claude Code, Copilot CLI, OpenCode)
 - ✅ **Intelligent binary detection** - Automatically detects installed clients, versions, and validates configs
 - ✅ **Diagnostics command** (`overture doctor`) - Comprehensive system diagnostics
@@ -203,7 +249,7 @@ overture sync
 - ✅ Backup/restore system
 - ✅ Plugin installation and management
 - ✅ Validation (`overture validate`)
-- ✅ **911 tests passing (100%), 83%+ code coverage**
+- ✅ **994 tests passing (100%), 85%+ code coverage**
 
 ---
 
