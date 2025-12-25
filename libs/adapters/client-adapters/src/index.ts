@@ -53,3 +53,11 @@ export { createAdapterRegistry, createAdapter } from './lib/adapter-factory.js';
 export { ClaudeCodeAdapter } from './lib/adapters/claude-code.adapter.js';
 export { CopilotCliAdapter } from './lib/adapters/copilot-cli.adapter.js';
 export { OpenCodeAdapter } from './lib/adapters/opencode.adapter.js';
+
+// Skill paths
+export {
+  getSkillPaths,
+  getSkillPath,
+  getSkillDirectoryPath,
+  type SkillPaths,
+} from './lib/skill-paths.js';

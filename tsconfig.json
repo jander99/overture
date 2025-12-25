@@ -53,6 +53,9 @@
     },
     {
       "path": "./libs/core/import"
+    },
+    {
+      "path": "./libs/core/skill"
     }
   ]
 }
