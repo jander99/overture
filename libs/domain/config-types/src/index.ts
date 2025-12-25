@@ -91,3 +91,13 @@ export type {
   DetectionSummary,
   DetectionResult,
 } from './lib/import.types.js';
+
+// Skill types
+export type {
+  DiscoveredSkill,
+  SkillSyncResult,
+  SkillSyncSummary,
+  SkillDiscoveryOptions,
+  SkillSyncOptions,
+  SkillCopyOptions,
+} from './lib/skill.types.js';

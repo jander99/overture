@@ -29,6 +29,11 @@ import {
   AuditService,
 } from '@overture/sync-core';
 import { ImportService, CleanupService } from '@overture/import-core';
+import {
+  SkillDiscovery,
+  SkillSyncService,
+  SkillCopyService,
+} from '@overture/skill';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
@@ -71,6 +76,11 @@ export interface AppDependencies {
   // Import/Cleanup services
   importService: ImportService;
   cleanupService: CleanupService;
+
+  // Skill services
+  skillDiscovery: SkillDiscovery;
+  skillSyncService: SkillSyncService;
+  skillCopyService: SkillCopyService;
 }
 
 /**
@@ -189,6 +199,20 @@ export function createAppDependencies(): AppDependencies {
     },
   };
 
+  // Skill services (created before sync engine)
+  const skillDiscovery = new SkillDiscovery(filesystem, environment);
+  const skillSyncService = new SkillSyncService(
+    filesystem,
+    environment,
+    skillDiscovery,
+    output,
+  );
+  const skillCopyService = new SkillCopyService(
+    filesystem,
+    environment,
+    skillDiscovery,
+  );
+
   const syncEngine = createSyncEngine({
     filesystem,
     process,
@@ -201,6 +225,7 @@ export function createAppDependencies(): AppDependencies {
     binaryDetector: discoveryService.getBinaryDetector(),
     backupService,
     pathResolver: pathResolverAdapter,
+    skillSyncService,
   });
 
   // Import and Cleanup services
@@ -225,5 +250,8 @@ export function createAppDependencies(): AppDependencies {
     auditService,
     importService,
     cleanupService,
+    skillDiscovery,
+    skillSyncService,
+    skillCopyService,
   };
 }

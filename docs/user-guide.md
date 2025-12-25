@@ -33,9 +33,10 @@ Overture acts as a multi-platform configuration orchestrator that:
 
 1. **Detects installed AI clients** - Automatically finds Claude Code, GitHub Copilot CLI, and OpenCode
 2. **Connects plugins to their tools** - Declares which MCP servers each plugin should use
-3. **Generates configs for all platforms** - Syncs to all detected clients (Claude Desktop, Claude Code, VSCode, etc.)
-4. **Validates your setup** - Checks that required tools and clients are available
-5. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer
+3. **Syncs Agent Skills** - Distributes reusable instruction sets across all AI clients
+4. **Generates configs for all platforms** - Syncs to all detected clients (Claude Desktop, Claude Code, VSCode, etc.)
+5. **Validates your setup** - Checks that required tools and clients are available
+6. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer
 
 **New in v0.2.5:**
 
@@ -274,6 +275,88 @@ mcp:
 
 Overture will substitute `${GITHUB_TOKEN}` with the actual value from your environment.
 
+### Agent Skills
+
+Agent Skills are reusable instruction sets that guide AI assistants on how to perform specific tasks. Skills are stored as `SKILL.md` files and automatically synced during `overture sync`.
+
+#### Creating Skills
+
+Skills live in your global config directory at `~/.config/overture/skills/<name>/SKILL.md`:
+
+```bash
+# Create a new skill directory
+mkdir -p ~/.config/overture/skills/debugging
+
+# Create the skill file
+cat > ~/.config/overture/skills/debugging/SKILL.md << 'EOF'
+---
+name: debugging
+description: Advanced debugging techniques for complex issues
+---
+
+# Debugging Skill
+
+When asked to debug issues, follow these steps:
+
+1. **Reproduce the issue** - Ensure you can consistently trigger the bug
+2. **Isolate the problem** - Use binary search to narrow down the cause
+3. **Check logs** - Look for error messages and stack traces
+4. **Verify assumptions** - Test your hypotheses systematically
+5. **Fix and verify** - Make the fix and confirm it resolves the issue
+
+## Tools to Use
+
+- Use the `read` tool to examine relevant source files
+- Use the `grep` tool to search for related code
+- Use the `bash` tool to run tests and verify fixes
+EOF
+```
+
+#### Automatic Sync
+
+Skills are automatically synced to all detected AI clients:
+
+```bash
+overture sync
+```
+
+This syncs skills from `~/.config/overture/skills/` to:
+
+- `~/.claude/skills/` (Claude Code)
+- `~/.github/skills/` (GitHub Copilot CLI)
+- `~/.opencode/skill/` (OpenCode)
+
+You can skip skill sync with `--skip-skills`:
+
+```bash
+overture sync --skip-skills
+```
+
+#### Sharing Skills with Your Team
+
+Copy skills to your project for version control:
+
+```bash
+# Copy to project directories
+overture skill cp debugging
+
+# Commit to git
+git add .claude/skills/ .github/skills/ .opencode/skill/
+git commit -m "Add debugging skill"
+```
+
+Now your team will have access to the same skills when they clone the project.
+
+#### Listing Available Skills
+
+```bash
+# List all skills
+overture skill list
+
+# Show source paths
+overture skill list --source
+```
+
 ### Disabling Components
 
 You can disable plugins or MCP servers without removing them:
@@ -305,10 +388,12 @@ Commands are listed in typical workflow order:
 1. **`overture doctor`** - Check system for installed clients
 2. **`overture init`** - Initialize Overture configuration
 3. **`overture import`** - Import existing MCP configs (optional)
-4. **`overture sync`** - Sync configuration to all clients
+4. **`overture sync`** - Sync configuration and skills to all clients
 5. **`overture validate`** - Validate configuration
 6. **`overture mcp list`** - List configured MCPs
-7. **`overture enable mcp`** - Enable disabled MCPs
+7. **`overture skill list`** - List available Agent Skills
+8. **`overture skill cp`** - Copy skill to project for team sharing
+9. **`overture enable mcp`** - Enable disabled MCPs
 
 ### `overture init`
 
@@ -434,13 +519,14 @@ overture sync --force
 
 **What it does:**
 
-1. Detects installed AI clients (Claude Code, Claude Desktop, VSCode, etc.)
-2. Reads `.overture/config.yaml`
+1. Detects installed AI clients (Claude Code, Copilot CLI, OpenCode, etc.)
+2. Reads `.overture/config.yaml` and discovers skills
 3. Installs enabled plugins via `claude plugin install`
-4. Generates configs for all detected clients
-5. Creates backups before writing
-6. Generates or updates `CLAUDE.md` with plugin-to-MCP mappings
-7. Preserves custom sections in existing `CLAUDE.md`
+4. Syncs Agent Skills from `~/.config/overture/skills/` to client directories
+5. Generates MCP configs for all detected clients
+6. Creates backups before writing
+7. Generates or updates `CLAUDE.md` with plugin-to-MCP mappings
+8. Preserves custom sections in existing `CLAUDE.md`
 
 **When to run:**
 
@@ -628,6 +714,77 @@ overture import --detect --format table
 - **Team sync** - Ensure everyone has same MCPs configured
 
 **See also:** [Importing Guide](../docs/howtos/importing-existing-configs.md) for detailed workflows
+
+### `overture skill list`
+
+List available Agent Skills from your config repository.
+
+```bash
+# List all skills
+overture skill list
+
+# List with source paths
+overture skill list --source
+
+# Output as JSON
+overture skill list --json
+```
+
+Agent Skills are specialized instructions that guide AI assistants on how to perform specific tasks. Skills are stored as `SKILL.md` files in `~/.config/overture/skills/<name>/SKILL.md`.
+
+**Example output:**
+
+```
+Available Skills:
+
+NAME              DESCRIPTION
+────────────────────────────────────────────────────────────────────────────────
+debugging         Advanced debugging techniques for complex issues
+code-review       Code review best practices and checklists
+testing           Testing strategies and TDD workflows
+
+Total: 3 skills
+```
+
+### `overture skill cp`
+
+Copy a skill from your config repository to the current project.
+
+```bash
+# Copy skill to project (for team sharing)
+overture skill cp debugging
+
+# Copy with force overwrite
+overture skill cp debugging --force
+
+# Copy for specific client only
+overture skill cp debugging --client claude-code
+```
+
+**What it does:**
+
+1. Reads the skill from `~/.config/overture/skills/<name>/SKILL.md`
+2. Copies it to project directories:
+   - `.claude/skills/<name>/SKILL.md` (Claude Code)
+   - `.github/skills/<name>/SKILL.md` (Copilot CLI)
+   - `.opencode/skill/<name>/SKILL.md` (OpenCode)
+3. Can be committed to version control for team sharing
+
+**When to use:**
+
+- Sharing skills with your team via git
+- Creating project-specific skills that differ from global ones
+- Documenting project-specific workflows
+
+**Example output:**
+
+```
+Copied 'debugging' skill to project:
+
+  ✓ .claude/skills/debugging/SKILL.md
+  ✓ .github/skills/debugging/SKILL.md
+  ✓ .opencode/skill/debugging/SKILL.md
+```
 
 ### `overture validate`
 

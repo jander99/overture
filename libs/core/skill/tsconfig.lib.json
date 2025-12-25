@@ -12,43 +12,22 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../skill/tsconfig.lib.json"
-    },
-    {
-      "path": "../../shared/testing/tsconfig.lib.json"
-    },
-    {
-      "path": "../../shared/utils/tsconfig.lib.json"
+      "path": "../../adapters/client-adapters/tsconfig.lib.json"
     },
     {
       "path": "../../ports/output/tsconfig.lib.json"
+    },
+    {
+      "path": "../../domain/errors/tsconfig.lib.json"
+    },
+    {
+      "path": "../../domain/config-types/tsconfig.lib.json"
     },
     {
       "path": "../../ports/process/tsconfig.lib.json"
     },
     {
       "path": "../../ports/filesystem/tsconfig.lib.json"
-    },
-    {
-      "path": "../discovery/tsconfig.lib.json"
-    },
-    {
-      "path": "../plugin/tsconfig.lib.json"
-    },
-    {
-      "path": "../../adapters/client-adapters/tsconfig.lib.json"
-    },
-    {
-      "path": "../../domain/errors/tsconfig.lib.json"
-    },
-    {
-      "path": "../../domain/config-schema/tsconfig.lib.json"
-    },
-    {
-      "path": "../config/tsconfig.lib.json"
-    },
-    {
-      "path": "../../domain/config-types/tsconfig.lib.json"
     }
   ],
   "exclude": [

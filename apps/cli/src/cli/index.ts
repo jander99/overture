@@ -11,6 +11,7 @@ import { createBackupCommand } from './commands/backup';
 import { createDoctorCommand } from './commands/doctor';
 import { createImportCommand } from './commands/import';
 import { createCleanupCommand } from './commands/cleanup';
+import { createSkillCommand } from './commands/skill';
 
 /**
  * CLI version - synchronized with package.json
@@ -32,6 +33,7 @@ const CLI_VERSION = '0.3.0';
  * - backup: Backup and restore MCP configurations
  * - import: Import unmanaged MCPs from client configs
  * - cleanup: Remove Overture-managed MCPs from directory configs
+ * - skill: Manage Agent Skills (list, copy to project)
  *
  * @param deps - Application dependencies from composition root
  * @returns Configured Commander Program instance
@@ -56,6 +58,7 @@ export function createProgram(deps: AppDependencies): Command {
   program.addCommand(createBackupCommand(deps));
   program.addCommand(createImportCommand(deps));
   program.addCommand(createCleanupCommand(deps));
+  program.addCommand(createSkillCommand(deps));
 
   return program;
 }

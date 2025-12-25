@@ -19,6 +19,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/core/skill/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/core/import/tsconfig.lib.json"
     },
     {
