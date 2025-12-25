@@ -15,7 +15,6 @@ export type {
   SyncOptions,
   SyncResult,
   ClientSyncResult,
-  PluginSyncResult,
 } from './lib/sync-engine.js';
 
 // Exclusion Filter

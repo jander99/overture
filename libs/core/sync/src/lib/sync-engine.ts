@@ -14,6 +14,8 @@ import type {
   ClientName,
   BinaryDetectionResult,
   PluginSyncResult,
+  InstallationResult,
+  ClientMcpServerDef,
   SkillSyncSummary,
 } from '@overture/config-types';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
@@ -106,16 +108,6 @@ export interface SyncResult {
     toInstall: Array<{ name: string; marketplace: string }>;
   };
   skillSyncSummary?: SkillSyncSummary;
-}
-
-/**
- * Plugin sync result
- */
-export interface PluginSyncResult {
-  installed: number;
-  skipped: number;
-  failed: number;
-  results: InstallationResult[];
 }
 
 /**
@@ -586,8 +578,11 @@ export class SyncEngine {
         if (Object.keys(unmanagedMcps).length > 0) {
           // Merge: Overture-managed MCPs + preserved manually-added MCPs
           newConfig[client.schemaRootKey] = {
-            ...unmanagedMcps, // Manually-added MCPs first
-            ...newConfig[client.schemaRootKey], // Overture-managed MCPs (take precedence)
+            ...(unmanagedMcps as Record<string, ClientMcpServerDef>), // Manually-added MCPs first
+            ...(newConfig[client.schemaRootKey] as Record<
+              string,
+              ClientMcpServerDef
+            >), // Overture-managed MCPs (take precedence)
           };
 
           // Warn user about preserved MCPs
@@ -692,10 +687,12 @@ export class SyncEngine {
     // No plugins configured - skip
     if (pluginNames.length === 0) {
       return {
+        totalPlugins: 0,
         installed: 0,
         skipped: 0,
         failed: 0,
         results: [],
+        warnings: [],
       };
     }
 
@@ -740,10 +737,12 @@ export class SyncEngine {
     if (missingPlugins.length === 0) {
       this.deps.output.info('✅ All plugins already installed\n');
       return {
+        totalPlugins: pluginNames.length,
         installed: 0,
         skipped: skippedPlugins.length,
         failed: 0,
         results: [],
+        warnings: [],
       };
     }
 
@@ -789,10 +788,12 @@ export class SyncEngine {
     }
 
     return {
+      totalPlugins: pluginNames.length,
       installed,
       skipped: skippedPlugins.length,
       failed,
       results,
+      warnings: [],
     };
   }
 
