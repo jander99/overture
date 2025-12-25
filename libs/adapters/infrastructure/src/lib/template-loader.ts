@@ -1,4 +1,4 @@
-import * as Handlebars from 'handlebars';
+import Handlebars from 'handlebars';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';

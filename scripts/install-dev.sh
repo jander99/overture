@@ -32,7 +32,7 @@ cd "$WORKSPACE_ROOT"
 
 # Step 1: Build the CLI
 echo -e "${YELLOW}→${NC} Building @overture/cli..."
-npx nx build @overture/cli
+NX_INTERACTIVE=false npx nx build @overture/cli
 
 if [ $? -ne 0 ]; then
   echo -e "${RED}✗${NC} Build failed"
