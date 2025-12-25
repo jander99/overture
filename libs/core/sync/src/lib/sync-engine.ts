@@ -14,6 +14,7 @@ import type {
   Platform,
   BinaryDetectionResult,
   InstallationResult,
+  SkillSyncSummary,
 } from '@overture/config-types';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
 import type { FilesystemPort } from '@overture/ports-filesystem';
@@ -24,6 +25,7 @@ import type { ConfigLoader } from '@overture/config-core';
 import type { AdapterRegistry } from '@overture/client-adapters';
 import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
+import type { SkillSyncService } from '@overture/skill';
 
 import { filterMcpsForClient } from './exclusion-filter.js';
 import {
@@ -60,6 +62,8 @@ export interface SyncOptions {
   skipUndetected?: boolean;
   /** Show detailed output including diffs, plugin plans, and all warnings */
   detail?: boolean;
+  /** Skip skill synchronization (default: false) */
+  skipSkills?: boolean;
 }
 
 /**
@@ -91,6 +95,7 @@ export interface SyncResult {
     installed: number;
     toInstall: Array<{ name: string; marketplace: string }>;
   };
+  skillSyncSummary?: SkillSyncSummary;
 }
 
 /**
@@ -136,6 +141,8 @@ export interface SyncEngineDeps {
     findProjectRoot(): string | null;
     getDryRunOutputPath(clientName: ClientName, originalPath: string): string;
   };
+  /** Skill sync service (optional) */
+  skillSyncService?: SkillSyncService;
 }
 
 /**
@@ -210,6 +217,13 @@ export class SyncEngine {
         projectRoot: detectedProjectRoot || undefined,
       };
 
+      // Determine which clients to sync (needed for both plugin and skill sync)
+      const targetClients = options.clients || [
+        'claude-code',
+        'copilot-cli',
+        'opencode',
+      ];
+
       // 1. Sync plugins first (before MCP sync)
       let pluginSyncResult: PluginSyncResult | undefined;
       if (!options.skipPlugins) {
@@ -227,12 +241,32 @@ export class SyncEngine {
         }
       }
 
-      // Determine which clients to sync
-      const targetClients = options.clients || [
-        'claude-code',
-        'copilot-cli',
-        'opencode',
-      ];
+      // 2. Sync skills (after plugins, before MCP)
+      let skillSyncSummary: SkillSyncSummary | undefined;
+      if (!options.skipSkills && this.deps.skillSyncService) {
+        try {
+          skillSyncSummary = await this.deps.skillSyncService.syncSkills({
+            force: false,
+            clients: targetClients as ClientName[],
+            dryRun: options.dryRun,
+          });
+
+          // Log warnings if any skills failed
+          if (skillSyncSummary.failed > 0) {
+            const failedSkills = skillSyncSummary.results
+              .filter((r) => !r.success)
+              .map((r) => r.skill);
+            warnings.push(
+              `Failed to sync ${skillSyncSummary.failed} skill(s): ${failedSkills.join(', ')}`,
+            );
+          }
+        } catch (error) {
+          // Log skill sync errors but don't fail the entire sync
+          const errorMsg = `Skill sync failed: ${(error as Error).message}`;
+          this.deps.output.warn(`⚠️  ${errorMsg}`);
+          warnings.push(errorMsg);
+        }
+      }
 
       // Get client adapters
       const clients: ClientAdapter[] = [];
@@ -317,6 +351,7 @@ export class SyncEngine {
         warnings,
         errors,
         pluginSyncDetails,
+        skillSyncSummary,
       };
     } catch (error) {
       errors.push((error as Error).message);

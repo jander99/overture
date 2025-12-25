@@ -199,25 +199,7 @@ export function createAppDependencies(): AppDependencies {
     },
   };
 
-  const syncEngine = createSyncEngine({
-    filesystem,
-    process,
-    output,
-    environment,
-    configLoader,
-    adapterRegistry,
-    pluginInstaller,
-    pluginDetector,
-    binaryDetector: discoveryService.getBinaryDetector(),
-    backupService,
-    pathResolver: pathResolverAdapter,
-  });
-
-  // Import and Cleanup services
-  const importService = new ImportService(filesystem, output);
-  const cleanupService = new CleanupService(filesystem, output);
-
-  // Skill services
+  // Skill services (created before sync engine)
   const skillDiscovery = new SkillDiscovery(filesystem, environment);
   const skillSyncService = new SkillSyncService(
     filesystem,
@@ -230,6 +212,25 @@ export function createAppDependencies(): AppDependencies {
     environment,
     skillDiscovery,
   );
+
+  const syncEngine = createSyncEngine({
+    filesystem,
+    process,
+    output,
+    environment,
+    configLoader,
+    adapterRegistry,
+    pluginInstaller,
+    pluginDetector,
+    binaryDetector: discoveryService.getBinaryDetector(),
+    backupService,
+    pathResolver: pathResolverAdapter,
+    skillSyncService,
+  });
+
+  // Import and Cleanup services
+  const importService = new ImportService(filesystem, output);
+  const cleanupService = new CleanupService(filesystem, output);
 
   return {
     filesystem,

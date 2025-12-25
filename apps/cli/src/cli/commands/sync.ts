@@ -62,7 +62,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
   const command = new Command('sync');
 
   command
-    .description('Sync MCP configuration to AI clients')
+    .description('Sync MCP configuration and Agent Skills to AI clients')
     .option('--dry-run', 'Preview changes without writing files')
     .option(
       '--client <name>',
@@ -70,6 +70,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
     )
     .option('--force', 'Force sync even if validation warnings exist')
     .option('--skip-plugins', 'Skip plugin installation, only sync MCPs')
+    .option('--skip-skills', 'Skip skill synchronization, only sync MCPs')
     .option(
       '--no-skip-undetected',
       'Generate configs even for clients not detected on system',
@@ -112,6 +113,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           dryRun: options.dryRun || false,
           force: options.force || false,
           skipPlugins: options.skipPlugins || false,
+          skipSkills: options.skipSkills || false,
           skipUndetected: options.skipUndetected !== false, // Default to true (becomes false only when --no-skip-undetected is used)
           clients: options.client ? [options.client as ClientName] : undefined,
           detail: detailMode,
@@ -175,6 +177,30 @@ export function createSyncCommand(deps: AppDependencies): Command {
             }
           } else {
             output.success(`  ✅ All plugins already installed`);
+          }
+          output.nl();
+        }
+
+        // ==================== Phase 1.6: Skill Sync Summary ====================
+        if (result.skillSyncSummary && result.skillSyncSummary.total > 0) {
+          const summary = result.skillSyncSummary;
+          output.info('📚 Skills:');
+          if (summary.synced > 0) {
+            output.success(`  ✓ Synced ${summary.synced} skill(s) to clients`);
+          }
+          if (summary.skipped > 0) {
+            output.info(`  ○ Skipped ${summary.skipped} (already synced)`);
+          }
+          if (summary.failed > 0) {
+            output.warn(`  ✗ Failed ${summary.failed} skill(s)`);
+            if (detailMode) {
+              const failedSkills = summary.results
+                .filter((r) => !r.success)
+                .map((r) => `${r.skill} (${r.client})`);
+              for (const skill of failedSkills) {
+                output.warn(`    - ${skill}`);
+              }
+            }
           }
           output.nl();
         }
