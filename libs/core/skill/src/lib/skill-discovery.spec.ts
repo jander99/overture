@@ -333,7 +333,11 @@ description: "This is a description"
 # Test`;
 
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription(content);
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription(content);
 
       expect(description).toBe('This is a description');
     });
@@ -346,7 +350,11 @@ description: 'This is a description'
 # Test`;
 
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription(content);
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription(content);
 
       expect(description).toBe('This is a description');
     });
@@ -359,7 +367,11 @@ description: This is a description
 # Test`;
 
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription(content);
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription(content);
 
       expect(description).toBe('This is a description');
     });
@@ -369,7 +381,11 @@ description: This is a description
       const content = `# Test\n\n${longText}`;
 
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription(content);
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription(content);
 
       expect(description).toHaveLength(200);
       expect(description?.endsWith('...')).toBe(true);
@@ -377,7 +393,11 @@ description: This is a description
 
     it('should return undefined for empty content', () => {
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription('');
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription('');
 
       expect(description).toBeUndefined();
     });
@@ -392,7 +412,11 @@ This is the first paragraph.
 This is the second paragraph.`;
 
       const skills = new SkillDiscovery(mockFilesystem, mockEnvironment);
-      const description = (skills as any).extractDescription(content);
+      const description = (
+        skills as unknown as {
+          extractDescription: (content: string) => string | undefined;
+        }
+      ).extractDescription(content);
 
       expect(description).toBe('This is the first paragraph.');
     });

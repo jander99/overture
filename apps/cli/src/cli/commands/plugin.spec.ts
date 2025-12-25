@@ -23,12 +23,12 @@ import { createMockAppDependencies } from '../../test-utils/app-dependencies.moc
 
 describe('plugin command', () => {
   let deps: AppDependencies;
-  let exitSpy: SpyInstance;
+  let _exitSpy: SpyInstance;
   let consoleLogSpy: SpyInstance;
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+    _exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`process.exit:${code}`);
     });
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

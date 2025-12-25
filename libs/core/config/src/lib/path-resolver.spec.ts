@@ -179,7 +179,7 @@ describe('PathResolver', () => {
 
     it('should return ~/.claude.json on Windows (same as other platforms)', () => {
       vi.mocked(mockEnvironment.platform).mockReturnValue('win32');
-      mockEnvironment.env.HOME = undefined as any;
+      delete mockEnvironment.env.HOME;
       mockEnvironment.env.USERPROFILE = 'C:/Users/user';
       vi.mocked(mockEnvironment.homedir).mockReturnValue('C:/Users/user');
 
@@ -295,21 +295,21 @@ describe('PathResolver', () => {
 
     it('should throw for removed clients', () => {
       expect(() => {
-        resolver.getClientConfigPath('claude-desktop' as any);
+        resolver.getClientConfigPath('claude-desktop' as never);
       }).toThrow('Unknown client: claude-desktop');
 
       expect(() => {
-        resolver.getClientConfigPath('vscode' as any);
+        resolver.getClientConfigPath('vscode' as never);
       }).toThrow('Unknown client: vscode');
 
       expect(() => {
-        resolver.getClientConfigPath('windsurf' as any);
+        resolver.getClientConfigPath('windsurf' as never);
       }).toThrow('Unknown client: windsurf');
     });
 
     it('should throw for unknown client', () => {
       expect(() => {
-        resolver.getClientConfigPath('unknown' as any);
+        resolver.getClientConfigPath('unknown' as never);
       }).toThrow('Unknown client: unknown');
     });
   });

@@ -40,7 +40,10 @@ const ALL_CLIENTS: readonly ClientName[] = SUPPORTED_CLIENTS;
  */
 async function validateConfigFile(
   filepath: string,
-  filesystem: any,
+  filesystem: {
+    exists(path: string): Promise<boolean>;
+    readFile(path: string): Promise<string>;
+  },
 ): Promise<boolean> {
   try {
     const fileExists = await filesystem.exists(filepath);
@@ -232,8 +235,25 @@ export function createDoctorCommand(deps: AppDependencies): Command {
               skillCount,
             },
           },
-          clients: [] as any[],
-          mcpServers: [] as any[],
+          clients: [] as Array<{
+            client: string;
+            status: string;
+            binaryPath?: string;
+            appBundlePath?: string;
+            version?: string;
+            configPath?: string;
+            configValid: boolean;
+            warnings?: string[];
+            source?: string;
+            environment?: string;
+            windowsPath?: string;
+          }>,
+          mcpServers: [] as Array<{
+            name: string;
+            command: string;
+            available: boolean;
+            source: string;
+          }>,
           summary: {
             clientsDetected: 0,
             clientsMissing: 0,

@@ -36,8 +36,9 @@ export function validateConfigEnvVars(
           if (!missingByVar.has(varName)) {
             missingByVar.set(varName, []);
           }
-          if (!missingByVar.get(varName)!.includes(mcpName)) {
-            missingByVar.get(varName)!.push(mcpName);
+          const mcpList = missingByVar.get(varName);
+          if (mcpList && !mcpList.includes(mcpName)) {
+            mcpList.push(mcpName);
           }
         }
       }

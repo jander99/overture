@@ -9,11 +9,13 @@
  */
 
 import type {
+  Platform,
   OvertureConfig,
   ClientName,
-  Platform,
   BinaryDetectionResult,
+  PluginSyncResult,
   InstallationResult,
+  ClientMcpServerDef,
   SkillSyncSummary,
 } from '@overture/config-types';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
@@ -26,7 +28,6 @@ import type { AdapterRegistry } from '@overture/client-adapters';
 import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
 import type { SkillSyncService } from '@overture/skill';
-
 import { filterMcpsForClient } from './exclusion-filter.js';
 import {
   getTransportWarnings,
@@ -73,12 +74,23 @@ export interface ClientSyncResult {
   client: ClientName;
   success: boolean;
   configPath: string;
-  diff?: any;
+  diff?: {
+    added: string[];
+    modified: Array<{
+      name: string;
+      type: string;
+      oldValue?: unknown;
+      newValue?: unknown;
+    }>;
+    removed: string[];
+    unchanged: string[];
+    hasChanges: boolean;
+  } | null;
   backupPath?: string;
   binaryDetection?: BinaryDetectionResult;
   warnings: string[];
   error?: string;
-  /** Maps MCP server names to their source ('global' or 'project') */
+  /** Maps MCP server names to their source ('global' | 'project') */
   mcpSources?: Record<string, 'global' | 'project'>;
 }
 
@@ -96,16 +108,6 @@ export interface SyncResult {
     toInstall: Array<{ name: string; marketplace: string }>;
   };
   skillSyncSummary?: SkillSyncSummary;
-}
-
-/**
- * Plugin sync result
- */
-export interface PluginSyncResult {
-  installed: number;
-  skipped: number;
-  failed: number;
-  results: InstallationResult[];
 }
 
 /**
@@ -576,8 +578,11 @@ export class SyncEngine {
         if (Object.keys(unmanagedMcps).length > 0) {
           // Merge: Overture-managed MCPs + preserved manually-added MCPs
           newConfig[client.schemaRootKey] = {
-            ...unmanagedMcps, // Manually-added MCPs first
-            ...newConfig[client.schemaRootKey], // Overture-managed MCPs (take precedence)
+            ...(unmanagedMcps as Record<string, ClientMcpServerDef>), // Manually-added MCPs first
+            ...(newConfig[client.schemaRootKey] as Record<
+              string,
+              ClientMcpServerDef
+            >), // Overture-managed MCPs (take precedence)
           };
 
           // Warn user about preserved MCPs
@@ -682,10 +687,12 @@ export class SyncEngine {
     // No plugins configured - skip
     if (pluginNames.length === 0) {
       return {
+        totalPlugins: 0,
         installed: 0,
         skipped: 0,
         failed: 0,
         results: [],
+        warnings: [],
       };
     }
 
@@ -730,10 +737,12 @@ export class SyncEngine {
     if (missingPlugins.length === 0) {
       this.deps.output.info('✅ All plugins already installed\n');
       return {
+        totalPlugins: pluginNames.length,
         installed: 0,
         skipped: skippedPlugins.length,
         failed: 0,
         results: [],
+        warnings: [],
       };
     }
 
@@ -779,10 +788,12 @@ export class SyncEngine {
     }
 
     return {
+      totalPlugins: pluginNames.length,
       installed,
       skipped: skippedPlugins.length,
       failed,
       results,
+      warnings: [],
     };
   }
 

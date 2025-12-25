@@ -132,7 +132,7 @@ export class PluginExporter {
       }
 
       selectedPlugins = installedPlugins.filter((plugin) =>
-        options.pluginNames!.includes(plugin.name),
+        options.pluginNames?.includes(plugin.name),
       );
 
       if (selectedPlugins.length === 0) {
@@ -170,7 +170,7 @@ export class PluginExporter {
    * ```
    */
   private async promptPluginSelection(
-    plugins: InstalledPlugin[],
+    _plugins: InstalledPlugin[],
   ): Promise<InstalledPlugin[]> {
     // TODO: Implement with inquirer in actual implementation
     // This is a placeholder for the interface design
@@ -249,20 +249,24 @@ export class PluginExporter {
       }
 
       // Ensure plugins section exists
-      const updatedConfig: any = {
+      const updatedConfig: {
+        plugins: Record<string, unknown>;
+        [key: string]: unknown;
+      } = {
         ...existingConfig,
         plugins: existingConfig.plugins || {},
       };
 
       // Add selected plugins to config
       for (const plugin of selectedPlugins) {
-        const existingPluginConfig = updatedConfig.plugins[plugin.name] || {};
+        const existingPluginConfig =
+          (updatedConfig.plugins[plugin.name] as Record<string, unknown>) || {};
 
         updatedConfig.plugins[plugin.name] = {
           marketplace: plugin.marketplace,
           enabled: plugin.enabled,
           // Preserve existing mcps array if present, otherwise empty
-          mcps: existingPluginConfig.mcps || [],
+          mcps: (existingPluginConfig.mcps as unknown[]) || [],
         };
       }
 

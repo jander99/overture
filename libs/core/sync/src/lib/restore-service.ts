@@ -173,7 +173,7 @@ export class RestoreService {
           return `Invalid backup: MCP ${name} configuration is not an object`;
         }
 
-        const mcpConfig = config as any;
+        const mcpConfig = config as Record<string, unknown>;
         if (!mcpConfig.command) {
           return `Invalid backup: MCP ${name} missing required 'command' field`;
         }
@@ -195,7 +195,10 @@ export class RestoreService {
    * @param timestamp - Backup timestamp
    * @returns Backup content or null if not found
    */
-  async preview(client: ClientName, timestamp: string): Promise<any | null> {
+  async preview(
+    client: ClientName,
+    timestamp: string,
+  ): Promise<Record<string, unknown> | null> {
     const backup = await this.deps.backupService.getBackup(client, timestamp);
 
     if (!backup) {

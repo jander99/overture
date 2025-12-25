@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import type { ClientName } from '@overture/config-types';
 import {
   getSkillPaths,
   getSkillPath,
@@ -90,7 +91,7 @@ describe('skill-paths', () => {
 
     it('should throw error for unknown client', () => {
       expect(() => {
-        getSkillPaths('unknown-client' as any, homeDir);
+        getSkillPaths('unknown-client' as ClientName, homeDir);
       }).toThrow('Unknown client: unknown-client');
     });
   });
@@ -153,7 +154,7 @@ describe('skill-paths', () => {
 
     it('should throw error for unknown client', () => {
       expect(() => {
-        getSkillPath('unknown' as any, skillName, 'global', homeDir);
+        getSkillPath('unknown' as ClientName, skillName, 'global', homeDir);
       }).toThrow('Unknown client');
     });
   });
@@ -234,7 +235,12 @@ describe('skill-paths', () => {
 
     it('should throw error for unknown client', () => {
       expect(() => {
-        getSkillDirectoryPath('unknown' as any, skillName, 'global', homeDir);
+        getSkillDirectoryPath(
+          'unknown' as ClientName,
+          skillName,
+          'global',
+          homeDir,
+        );
       }).toThrow('Unknown client');
     });
   });

@@ -583,12 +583,12 @@ describe('Port: OutputPort Interface', () => {
 
       it('should enforce all methods are implemented', () => {
         // @ts-expect-error - missing success, warn, error methods
-        const incomplete1: OutputPort = {
+        const _incomplete1: OutputPort = {
           info: vi.fn(),
         };
 
         // @ts-expect-error - missing info method
-        const incomplete2: OutputPort = {
+        const _incomplete2: OutputPort = {
           success: vi.fn(),
           warn: vi.fn(),
           error: vi.fn(),

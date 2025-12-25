@@ -7,6 +7,8 @@
  * @module testing/mocks/sync-engine-deps
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { vi } from 'vitest';
 import { createMockProcess } from './process.mock.js';
 import { createMockAdapter } from './adapter.mock.js';
@@ -38,7 +40,7 @@ export function createMockSyncEngineDeps(): any {
       stat: vi.fn().mockResolvedValue({
         isFile: () => true,
         isDirectory: () => false,
-      } as any),
+      }),
     },
     process: mockProcess,
     output: {
@@ -65,7 +67,7 @@ export function createMockSyncEngineDeps(): any {
       getMcpSources: vi.fn(() => ({})),
     } as any,
     adapterRegistry: {
-      get: vi.fn((name: string) => mockAdapter),
+      get: vi.fn((_name: string) => mockAdapter),
       getAllNames: vi.fn(() => ['claude-code', 'claude-desktop']),
       listAdapters: vi.fn(() => ['claude-code', 'claude-desktop']),
       getAdapter: vi.fn(() => mockAdapter),
@@ -92,13 +94,13 @@ export function createMockSyncEngineDeps(): any {
       detectAllClients: vi.fn().mockResolvedValue([]),
     } as any,
     backupService: {
-      backup: vi.fn((client: string, configPath: string) => {
+      backup: vi.fn((client: string, _configPath: string) => {
         return `/home/user/.config/backups/${client}-backup.json`;
       }),
     },
     pathResolver: {
       findProjectRoot: vi.fn(() => '/home/user/project'),
-      getDryRunOutputPath: vi.fn((client: string, originalPath: string) => {
+      getDryRunOutputPath: vi.fn((client: string, _originalPath: string) => {
         return `/home/user/project/dist/${client}-mcp.json`;
       }),
     },

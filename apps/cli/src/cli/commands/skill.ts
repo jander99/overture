@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import type { AppDependencies } from '../../composition-root.js';
-import type { SkillSyncResult } from '@overture/config-types';
+import type { SkillSyncResult, ClientName } from '@overture/config-types';
 
 /**
  * Creates the 'skill' command group for managing Agent Skills.
@@ -85,7 +85,9 @@ export function createSkillCommand(deps: AppDependencies): Command {
 
         try {
           // Parse client option
-          const clients = options.client ? [options.client as any] : undefined;
+          const clients = options.client
+            ? [options.client as ClientName]
+            : undefined;
 
           // Copy skill to project
           const results = await skillCopyService.copySkillToProject(name, {

@@ -7,7 +7,7 @@ import { NodeProcessAdapter } from './node-process.adapter.js';
 
 // Mock execa module
 vi.mock('execa', () => ({
-  default: vi.fn(async (command: string, args: string[]) => {
+  default: vi.fn(async (_command: string, _args: string[]) => {
     // Default mock implementation - will be overridden in tests
     return {
       stdout: '',
@@ -32,6 +32,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'v16.14.0',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('node', ['--version']);
@@ -47,6 +48,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'output',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('pwd');
@@ -61,6 +63,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'installed lodash',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('npm', ['install', 'lodash', '--save']);
@@ -74,6 +77,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '',
         stderr: 'error message',
         exitCode: 1,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('invalid-command');
@@ -89,6 +93,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '',
         stderr: 'command not found: nonexistent',
         exitCode: 127,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('nonexistent');
@@ -103,6 +108,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'output',
         stderr: 'warning message',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('some-command');
@@ -118,6 +124,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('silent-command');
@@ -166,6 +173,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '/usr/bin/npm',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.commandExists('npm');
@@ -181,6 +189,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '',
         stderr: 'not found',
         exitCode: 1,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.commandExists('nonexistent');
@@ -196,6 +205,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'C:\\Program Files\\nodejs\\npm.cmd',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.commandExists('npm');
@@ -211,6 +221,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '',
         stderr: '',
         exitCode: 1,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.commandExists('missing');
@@ -235,6 +246,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '/usr/local/bin/docker',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.commandExists('docker');
@@ -266,6 +278,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'hello; echo pwned', // Echo would output the literal string
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['hello; echo pwned']);
@@ -286,6 +299,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '`whoami`',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['`whoami`']);
@@ -304,6 +318,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '$(pwd)',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['$(pwd)']);
@@ -322,6 +337,7 @@ describe('NodeProcessAdapter', () => {
         stdout: '$HOME',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['$HOME']);
@@ -336,6 +352,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'hello | cat',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['hello | cat']);
@@ -356,6 +373,7 @@ describe('NodeProcessAdapter', () => {
         stdout: maliciousName,
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', [maliciousName]);
@@ -375,6 +393,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'hello &',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['hello &']);
@@ -393,6 +412,7 @@ describe('NodeProcessAdapter', () => {
         stdout: 'test > /tmp/pwned.txt',
         stderr: '',
         exitCode: 0,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await adapter.exec('echo', ['test > /tmp/pwned.txt']);

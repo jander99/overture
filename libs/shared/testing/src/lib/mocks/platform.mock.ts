@@ -147,7 +147,7 @@ export function configureMockOs(
   platformConfig: MockPlatformConfig,
   osMock: Mocked<typeof os>,
 ): void {
-  osMock.platform.mockReturnValue(platformConfig.platform as any);
+  osMock.platform.mockReturnValue(platformConfig.platform as NodeJS.Platform);
   osMock.homedir.mockReturnValue(platformConfig.homedir);
 
   if (platformConfig.tmpdir) {

@@ -4,7 +4,7 @@
  * @module lib/wsl2-detector.spec
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { WSL2Detector } from './wsl2-detector.js';
 import {
   createMockProcessPort,
@@ -324,7 +324,7 @@ describe('WSL2Detector', () => {
       );
 
       const paths = detector.getWindowsInstallPaths(
-        'unknown-client' as any,
+        'unknown-client' as never,
         '/mnt/c/Users/jeff',
       );
 
@@ -372,7 +372,7 @@ describe('WSL2Detector', () => {
       );
 
       const configPath = detector.getWindowsConfigPath(
-        'unknown-client' as any,
+        'unknown-client' as never,
         '/mnt/c/Users/jeff',
       );
 

@@ -7,7 +7,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuditService } from './audit-service.js';
 import type { ClientAdapter } from '@overture/client-adapters';
-import type { OvertureConfig, ClientName } from '@overture/config-types';
+import type {
+  OvertureConfig,
+  ClientName,
+  ClientMcpServerDef,
+} from '@overture/config-types';
 
 // Helper to create a mock adapter
 function createMockAdapter(
@@ -16,7 +20,7 @@ function createMockAdapter(
     | string
     | { user: string; project: string }
     | null = '/config.json',
-  mcpServers: Record<string, any> = {},
+  mcpServers: Record<string, Partial<ClientMcpServerDef>> = {},
 ): ClientAdapter {
   return {
     name,
@@ -85,14 +89,19 @@ describe('AuditService', () => {
       });
 
       // Mock different MCPs in user and project configs
-      // Use 'as any' because audit service only uses Object.keys()
       vi.mocked(adapter.readConfig)
         .mockResolvedValueOnce({
-          mcpServers: { github: {}, memory: {} },
-        } as any)
+          mcpServers: {
+            github: { command: 'gh', args: [] },
+            memory: { command: 'mem', args: [] },
+          },
+        })
         .mockResolvedValueOnce({
-          mcpServers: { filesystem: {}, slack: {} },
-        } as any);
+          mcpServers: {
+            filesystem: { command: 'fs', args: [] },
+            slack: { command: 'slack', args: [] },
+          },
+        });
 
       const config = createOvertureConfig(['github', 'filesystem']);
 

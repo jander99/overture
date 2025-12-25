@@ -10,11 +10,10 @@ import { createBackupCommand } from './backup';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
 import {
   createMockBackupMetadata,
-  createMockBackups,
+  createMockAdapter,
 } from '../../test-utils/test-fixtures';
 import type { AppDependencies } from '../../composition-root';
 import type { BackupMetadata } from '@overture/sync-core';
-import { UserCancelledError } from '@overture/utils';
 
 // Mock chalk to avoid ANSI codes in test assertions
 vi.mock('chalk', () => {
@@ -160,13 +159,11 @@ describe('backup command', () => {
 
     it('should restore latest backup with --latest flag', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
         mockBackup,
@@ -198,13 +195,11 @@ describe('backup command', () => {
 
     it('should restore specific backup by timestamp', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue([mockBackup]);
       vi.mocked(deps.restoreService.restore).mockResolvedValue({
@@ -238,13 +233,11 @@ describe('backup command', () => {
 
     it('should display backup details before restore', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
         mockBackup,
@@ -304,13 +297,11 @@ describe('backup command', () => {
 
     it('should error when no backups found for client', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(null);
 
@@ -333,13 +324,11 @@ describe('backup command', () => {
 
     it('should error when specific backup not found', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.listBackups).mockResolvedValue([]);
 
@@ -362,13 +351,11 @@ describe('backup command', () => {
 
     it('should exit with code 1 on restore failure', async () => {
       // Setup adapter registry mock for this test
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      } as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+        createMockAdapter('claude-code', {
+          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        }),
+      );
 
       vi.mocked(deps.backupService.getLatestBackup).mockResolvedValue(
         mockBackup,
@@ -396,13 +383,13 @@ describe('backup command', () => {
 
     describe('edge cases - timestamp formats', () => {
       beforeEach(() => {
-        vi.mocked(deps.adapterRegistry.get).mockReturnValue({
-          name: 'claude-code',
-          detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
-          readConfig: vi.fn(),
-          writeConfig: vi.fn(),
-          validateTransport: vi.fn(),
-        } as any);
+        vi.mocked(deps.adapterRegistry.get).mockReturnValue(
+          createMockAdapter('claude-code', {
+            detectConfigPath: vi
+              .fn()
+              .mockReturnValue('/home/user/.claude.json'),
+          }),
+        );
       });
 
       it('should handle invalid timestamp format', async () => {

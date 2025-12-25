@@ -15,7 +15,11 @@ import {
   formatTransportWarnings,
 } from './transport-validator.js';
 import type { ClientAdapter } from '@overture/client-adapters';
-import type { OvertureConfig, TransportType } from '@overture/config-types';
+import type {
+  OvertureConfig,
+  TransportType,
+  ClientName,
+} from '@overture/config-types';
 
 // Helper to create a mock adapter
 function createMockAdapter(
@@ -23,7 +27,7 @@ function createMockAdapter(
   supportedTransports: TransportType[],
 ): ClientAdapter {
   return {
-    name: name as any,
+    name: name as ClientName,
     schemaRootKey: 'mcpServers',
     supportsTransport: vi.fn((transport: TransportType) =>
       supportedTransports.includes(transport),

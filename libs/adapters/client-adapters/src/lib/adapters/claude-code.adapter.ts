@@ -152,7 +152,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
     return { mcpServers };
   }
 
-  supportsTransport(transport: 'stdio' | 'http' | 'sse'): boolean {
+  supportsTransport(_transport: 'stdio' | 'http' | 'sse'): boolean {
     // Claude Code supports all transport types
     return true;
   }
@@ -177,7 +177,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
   }
 
   // Helper methods for path construction (could be moved to path-resolver utility)
-  private getClaudeCodeGlobalPath(platform: Platform): string {
+  private getClaudeCodeGlobalPath(_platform: Platform): string {
     // According to official Claude Code docs (https://code.claude.com/docs/en/mcp.md),
     // Claude Code reads MCP configuration from ~/.claude.json on all platforms
     const env = this.environment.env;

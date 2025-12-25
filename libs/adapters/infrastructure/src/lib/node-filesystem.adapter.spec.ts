@@ -2,7 +2,7 @@
  * Tests for NodeFilesystemAdapter
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NodeFilesystemAdapter } from './node-filesystem.adapter.js';
 import fs from 'node:fs/promises';
 
@@ -136,7 +136,9 @@ describe('NodeFilesystemAdapter', () => {
   describe('readdir', () => {
     it('should return array of directory entries', async () => {
       const entries = ['file1.txt', 'file2.txt', 'subdir'];
-      vi.mocked(fs.readdir).mockResolvedValue(entries as any);
+      vi.mocked(fs.readdir).mockResolvedValue(
+        entries as unknown as Awaited<ReturnType<typeof fs.readdir>>,
+      );
 
       const result = await adapter.readdir('/path/to/dir');
 
@@ -145,7 +147,9 @@ describe('NodeFilesystemAdapter', () => {
     });
 
     it('should return empty array for empty directory', async () => {
-      vi.mocked(fs.readdir).mockResolvedValue([] as any);
+      vi.mocked(fs.readdir).mockResolvedValue(
+        [] as unknown as Awaited<ReturnType<typeof fs.readdir>>,
+      );
 
       const result = await adapter.readdir('/empty/dir');
 
@@ -168,7 +172,9 @@ describe('NodeFilesystemAdapter', () => {
         size: 1024,
         mtime: new Date('2025-01-01'),
       };
-      vi.mocked(fs.stat).mockResolvedValue(mockStats as any);
+      vi.mocked(fs.stat).mockResolvedValue(
+        mockStats as unknown as Awaited<ReturnType<typeof fs.stat>>,
+      );
 
       const result = await adapter.stat('/path/to/file.txt');
 
@@ -185,7 +191,9 @@ describe('NodeFilesystemAdapter', () => {
         size: 4096,
         mtime: new Date('2025-01-01'),
       };
-      vi.mocked(fs.stat).mockResolvedValue(mockStats as any);
+      vi.mocked(fs.stat).mockResolvedValue(
+        mockStats as unknown as Awaited<ReturnType<typeof fs.stat>>,
+      );
 
       const result = await adapter.stat('/path/to/dir');
 

@@ -13,19 +13,16 @@ import type {
   OpenCodeAdapter,
   CopilotCliAdapter,
 } from '@overture/client-adapters';
-import type {
-  Platform,
-  OvertureConfig,
-} from '@overture/config-types';
+import type { Platform, OvertureConfig } from '@overture/config-types';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 // Load test fixtures
 const fixturesPath = join(__dirname, '__fixtures__');
 
-const loadFixture = (relativePath: string): any => {
+const loadFixture = <T = Record<string, unknown>>(relativePath: string): T => {
   const content = readFileSync(join(fixturesPath, relativePath), 'utf-8');
-  return JSON.parse(content);
+  return JSON.parse(content) as T;
 };
 
 describe('ImportService', () => {
@@ -104,7 +101,9 @@ describe('ImportService', () => {
   describe('discoverFromClaudeCode', () => {
     it('should discover global MCPs from top-level mcpServers', async () => {
       const fixture = loadFixture('claude-code/global-only.json');
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fixture);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fixture,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       const result = await service.discoverFromClaudeCode(
@@ -128,7 +127,9 @@ describe('ImportService', () => {
 
     it('should convert hardcoded secrets to env var references', async () => {
       const fixture = loadFixture('claude-code/global-only.json');
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fixture);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fixture,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       const result = await service.discoverFromClaudeCode(
@@ -140,13 +141,17 @@ describe('ImportService', () => {
       const githubMcp = result.find((m) => m.name === 'github');
       expect(githubMcp).toBeDefined();
       expect(githubMcp?.env?.GITHUB_TOKEN).toBe('${GITHUB_TOKEN}');
-      expect(githubMcp?.originalEnv?.GITHUB_TOKEN).toBe('ghp_1234567890123456789012345678901234567890');
+      expect(githubMcp?.originalEnv?.GITHUB_TOKEN).toBe(
+        'ghp_1234567890123456789012345678901234567890',
+      );
       expect(githubMcp?.envVarsToSet).toContain('GITHUB_TOKEN');
     });
 
     it('should discover directory-based MCPs from projects object', async () => {
       const fixture = loadFixture('claude-code/with-projects.json');
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fixture);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fixture,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       const result = await service.discoverFromClaudeCode(
@@ -164,7 +169,9 @@ describe('ImportService', () => {
 
     it('should skip MCPs already managed by Overture', async () => {
       const fixture = loadFixture('claude-code/with-mcp-json.json');
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fixture);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fixture,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
 
       const overtureConfig: OvertureConfig = {
@@ -193,8 +200,10 @@ describe('ImportService', () => {
     it('should discover MCPs from OpenCode global config', async () => {
       const fixture = loadFixture('opencode/global.json');
       const userPath = '/home/user/.config/opencode/opencode.json';
-      
-      vi.mocked(mockFilesystem.exists).mockImplementation(async (path) => path === userPath);
+
+      vi.mocked(mockFilesystem.exists).mockImplementation(
+        async (path) => path === userPath,
+      );
       vi.mocked(mockOpenCodeAdapter.readConfig).mockResolvedValue(fixture);
 
       const result = await service.discoverFromOpenCode(
@@ -211,8 +220,10 @@ describe('ImportService', () => {
     it('should convert OpenCode {env:VAR} format to ${VAR}', async () => {
       const fixture = loadFixture('opencode/global.json');
       const userPath = '/home/user/.config/opencode/opencode.json';
-      
-      vi.mocked(mockFilesystem.exists).mockImplementation(async (path) => path === userPath);
+
+      vi.mocked(mockFilesystem.exists).mockImplementation(
+        async (path) => path === userPath,
+      );
       vi.mocked(mockOpenCodeAdapter.readConfig).mockResolvedValue(fixture);
 
       const result = await service.discoverFromOpenCode(
@@ -230,8 +241,10 @@ describe('ImportService', () => {
     it('should discover MCPs from Copilot CLI config', async () => {
       const fixture = loadFixture('copilot-cli/config.json');
       const userPath = '/home/user/.config/github-copilot/mcp.json';
-      
-      vi.mocked(mockFilesystem.exists).mockImplementation(async (path) => path === userPath);
+
+      vi.mocked(mockFilesystem.exists).mockImplementation(
+        async (path) => path === userPath,
+      );
       vi.mocked(mockCopilotCliAdapter.readConfig).mockResolvedValue(fixture);
 
       const result = await service.discoverFromCopilotCLI(
@@ -248,8 +261,10 @@ describe('ImportService', () => {
     it('should convert hardcoded API keys to env vars', async () => {
       const fixture = loadFixture('copilot-cli/config.json');
       const userPath = '/home/user/.config/github-copilot/mcp.json';
-      
-      vi.mocked(mockFilesystem.exists).mockImplementation(async (path) => path === userPath);
+
+      vi.mocked(mockFilesystem.exists).mockImplementation(
+        async (path) => path === userPath,
+      );
       vi.mocked(mockCopilotCliAdapter.readConfig).mockResolvedValue(fixture);
 
       const result = await service.discoverFromCopilotCLI(
@@ -260,7 +275,9 @@ describe('ImportService', () => {
 
       const braveSearch = result.find((m) => m.name === 'brave-search');
       expect(braveSearch?.env?.BRAVE_API_KEY).toBe('${API_KEY}');
-      expect(braveSearch?.originalEnv?.BRAVE_API_KEY).toBe('BSA1234567890123456789012345678901234567890');
+      expect(braveSearch?.originalEnv?.BRAVE_API_KEY).toBe(
+        'BSA1234567890123456789012345678901234567890',
+      );
       expect(braveSearch?.envVarsToSet).toContain('API_KEY');
     });
   });

@@ -112,8 +112,8 @@ export class AdapterRegistry {
   getInstalledAdapters(platform: Platform): ClientAdapter[] {
     const installedNames = this.detectInstalledClients(platform);
     return installedNames
-      .map((name) => this.adapters.get(name)!)
-      .filter(Boolean);
+      .map((name) => this.adapters.get(name))
+      .filter((adapter): adapter is ClientAdapter => adapter !== undefined);
   }
 
   /**

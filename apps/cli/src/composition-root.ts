@@ -40,6 +40,7 @@ import type { OutputPort } from '@overture/ports-output';
 import type { DiscoveryService } from '@overture/discovery-core';
 import type { AdapterRegistry } from '@overture/client-adapters';
 import type { SyncEngine } from '@overture/sync-core';
+import type { ClientName } from '@overture/config-types';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -195,7 +196,10 @@ export function createAppDependencies(): AppDependencies {
       }
     },
     getDryRunOutputPath: (clientName: string, originalPath: string): string => {
-      return pathResolver.getDryRunOutputPath(clientName as any, originalPath);
+      return pathResolver.getDryRunOutputPath(
+        clientName as ClientName,
+        originalPath,
+      );
     },
   };
 

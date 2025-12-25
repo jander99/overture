@@ -1,14 +1,7 @@
-import type {
-  Mock,
-  Mocked,
-  MockedObject,
-  MockedFunction,
-  MockInstance,
-} from 'vitest';
+import type { Mock } from 'vitest';
 import * as Handlebars from 'handlebars';
-import * as path from 'path';
-import { TemplateLoader } from './template-loader';
-import { FsUtils } from './fs-utils';
+import { TemplateLoader } from './template-loader.js';
+import { FsUtils } from './fs-utils.js';
 import { ConfigError } from '@overture/errors';
 
 // Mock FsUtils
@@ -25,14 +18,17 @@ describe('TemplateLoader', () => {
 
   describe('registerHelpers', () => {
     it('should register json helper on module load', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((Handlebars as any).helpers.json).toBeDefined();
     });
 
     it('should register yaml helper on module load', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((Handlebars as any).helpers.yaml).toBeDefined();
     });
 
     it('json helper should stringify object with 2-space indent', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const jsonHelper = (Handlebars as any).helpers.json;
       const testObj = { name: 'test', value: 42 };
       const result = jsonHelper(testObj).string;
@@ -43,6 +39,7 @@ describe('TemplateLoader', () => {
     });
 
     it('json helper should format nested objects with proper indentation', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const jsonHelper = (Handlebars as any).helpers.json;
       const testObj = {
         project: {
@@ -58,6 +55,7 @@ describe('TemplateLoader', () => {
     });
 
     it('yaml helper should stringify object with 2-space indent', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const yamlHelper = (Handlebars as any).helpers.yaml;
       const testObj = { name: 'test', value: 42 };
       const result = yamlHelper(testObj).string;
@@ -65,12 +63,14 @@ describe('TemplateLoader', () => {
     });
 
     it('should handle null values in json helper', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const jsonHelper = (Handlebars as any).helpers.json;
       const result = jsonHelper(null).string;
       expect(result).toBe('null');
     });
 
     it('should handle arrays in json helper', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const jsonHelper = (Handlebars as any).helpers.json;
       const testArray = ['item1', 'item2', 'item3'];
       const result = jsonHelper(testArray).string;

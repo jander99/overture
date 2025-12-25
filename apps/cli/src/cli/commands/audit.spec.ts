@@ -24,11 +24,11 @@ import { createMockAdapter } from '../../test-utils/test-fixtures';
 
 describe('audit command', () => {
   let deps: AppDependencies;
-  let exitSpy: SpyInstance;
+  let _exitSpy: SpyInstance;
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+    _exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`process.exit:${code}`);
     });
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -135,20 +135,15 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapter = {
-        name: 'vscode',
+      const mockAdapter = createMockAdapter('vscode', {
         isInstalled: vi.fn().mockReturnValue(false),
-        detectConfigPath: vi.fn(),
-        readConfig: vi.fn(),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      };
+      });
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
         'linux' as const,
       );
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
 
       const command = createAuditCommand(deps);
 
@@ -405,16 +400,13 @@ describe('audit command', () => {
         mcp: {},
       };
 
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
-      };
+      const mockAdapter = createMockAdapter('claude-code');
 
       vi.mocked(deps.configLoader.loadConfig).mockResolvedValue(mockConfig);
       vi.mocked(deps.pathResolver.getPlatform).mockReturnValue(
         'linux' as const,
       );
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockImplementation(() => {
         throw new Error('Audit failed');
       });
@@ -473,16 +465,12 @@ describe('audit command', () => {
 
     it('should handle empty MCP configuration', async () => {
       // Arrange - config with no MCPs
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
+      const mockAdapter = createMockAdapter('claude-code', {
         detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn().mockResolvedValue({}),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      };
+      });
 
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue([]);
 
       const command = createAuditCommand(deps);
@@ -499,18 +487,14 @@ describe('audit command', () => {
     it('should handle all clients having zero MCPs', async () => {
       // Arrange
       const mockAdapters = [
-        {
-          name: 'claude-code',
-          isInstalled: vi.fn().mockReturnValue(true),
+        createMockAdapter('claude-code', {
           detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
           readConfig: vi.fn().mockResolvedValue({}),
-          writeConfig: vi.fn(),
-          validateTransport: vi.fn(),
-        },
+        }),
       ];
 
       vi.mocked(deps.adapterRegistry.getInstalledAdapters).mockReturnValue(
-        mockAdapters as any,
+        mockAdapters,
       );
       vi.mocked(deps.auditService.auditAllClients).mockReturnValue({});
 
@@ -527,18 +511,14 @@ describe('audit command', () => {
 
     it('should handle audit with very large number of unmanaged MCPs', async () => {
       // Arrange - create a large list of unmanaged MCPs
-      const mockAdapter = {
-        name: 'claude-code',
-        isInstalled: vi.fn().mockReturnValue(true),
+      const mockAdapter = createMockAdapter('claude-code', {
         detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
         readConfig: vi.fn().mockResolvedValue({}),
-        writeConfig: vi.fn(),
-        validateTransport: vi.fn(),
-      };
+      });
 
       const largeMcpList = Array.from({ length: 50 }, (_, i) => `mcp-${i}`);
 
-      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter as any);
+      vi.mocked(deps.adapterRegistry.get).mockReturnValue(mockAdapter);
       vi.mocked(deps.auditService.auditClient).mockReturnValue(largeMcpList);
       vi.mocked(deps.auditService.generateSuggestions).mockReturnValue(
         largeMcpList.map((mcp) => `Add ${mcp} to .overture/config.yaml`),

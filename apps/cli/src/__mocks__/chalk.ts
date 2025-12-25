@@ -57,11 +57,13 @@ const methods = [
 ];
 
 // Create the main chalk function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const chalk: any = (str?: string | number) => String(str || '');
 
 // Add all methods to chalk, where each method is a function that can also be chained
 methods.forEach((method) => {
   // Create a function for this method
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const methodFn: any = (str?: string | number) => String(str || '');
 
   // Add all methods to this function too (for chaining like chalk.blue.bold())

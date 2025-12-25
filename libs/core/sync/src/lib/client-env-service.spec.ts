@@ -13,6 +13,7 @@ import {
   getClientsWithNativeSupport,
 } from './client-env-service.js';
 import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
+import type { ClientName } from '@overture/config-types';
 
 // Helper to create a mock adapter with configurable env expansion behavior
 function createMockAdapter(
@@ -21,7 +22,7 @@ function createMockAdapter(
   schemaRootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
 ): ClientAdapter {
   return {
-    name: name as any,
+    name: name as ClientName,
     schemaRootKey,
     needsEnvVarExpansion: vi.fn(() => needsExpansion),
     supportsTransport: vi.fn(() => true),

@@ -20,7 +20,7 @@ function createMockProcess(
   let execIndex = 0;
 
   return {
-    exec: vi.fn(async (command: string, args?: string[]) => {
+    exec: vi.fn(async (_command: string, _args?: string[]) => {
       if (execIndex >= execResults.length) {
         return { stdout: '', stderr: '', exitCode: 0 };
       }

@@ -101,7 +101,12 @@ describe('BackupService', () => {
       ];
 
       vi.mocked(deps.filesystem.readdir).mockResolvedValue(oldBackupFiles);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 100 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 100,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       await service.backup('claude-code', '/home/user/.claude.json');
 
@@ -118,7 +123,12 @@ describe('BackupService', () => {
         'claude-code-2025-01-14T10-00-00-000Z.json',
         'copilot-cli-2025-01-15T09-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.listBackups('claude-code');
 
@@ -133,7 +143,12 @@ describe('BackupService', () => {
         'claude-code-2025-01-15T10-00-00-000Z.json',
         'copilot-cli-2025-01-15T09-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.listBackups();
 
@@ -154,7 +169,12 @@ describe('BackupService', () => {
         'readme.txt',
         '.gitignore',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.listBackups();
 
@@ -167,7 +187,12 @@ describe('BackupService', () => {
         'claude-code-2025-01-15T10-00-00-000Z.json',
         'claude-code-2025-01-12T10-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.listBackups();
 
@@ -182,7 +207,12 @@ describe('BackupService', () => {
       vi.mocked(deps.filesystem.readdir).mockResolvedValue([
         'claude-code-2025-01-15T10-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.getBackup(
         'claude-code',
@@ -230,7 +260,12 @@ describe('BackupService', () => {
         'claude-code-2025-01-10T10-00-00-000Z.json',
         'claude-code-2025-01-15T10-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       const result = await service.getLatestBackup('claude-code');
 
@@ -253,7 +288,12 @@ describe('BackupService', () => {
         'claude-code-2025-01-14T10-00-00-000Z.json',
         'claude-code-2025-01-13T10-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       await service.cleanupOldBackups('claude-code', 2);
 
@@ -268,7 +308,12 @@ describe('BackupService', () => {
       vi.mocked(deps.filesystem.readdir).mockResolvedValue([
         'claude-code-2025-01-15T10-00-00-000Z.json',
       ]);
-      vi.mocked(deps.filesystem.stat).mockResolvedValue({ size: 256 } as any);
+      vi.mocked(deps.filesystem.stat).mockResolvedValue({
+        size: 256,
+        isFile: () => true,
+        isDirectory: () => false,
+        mtime: new Date(),
+      });
 
       await service.cleanupOldBackups('claude-code', 10);
 

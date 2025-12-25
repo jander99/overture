@@ -37,12 +37,12 @@ vi.mock('@overture/utils', async () => {
 
 describe('user command', () => {
   let deps: AppDependencies;
-  let exitSpy: SpyInstance;
+  let _exitSpy: SpyInstance;
   let consoleLogSpy: SpyInstance;
 
   beforeEach(() => {
     deps = createMockAppDependencies();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+    _exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Error(`process.exit:${code}`);
     });
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -511,7 +511,10 @@ describe('user command', () => {
     it('should handle Ctrl+C during MCP selection (returns undefined)', async () => {
       // Arrange - multiSelect returns undefined when user cancels with Ctrl+C
       // This causes an error when trying to access .length on undefined
-      vi.mocked(Prompts.multiSelect).mockResolvedValue(undefined as any);
+      // Testing edge case where promise resolves to undefined instead of array
+      vi.mocked(Prompts.multiSelect).mockResolvedValue(
+        undefined as unknown as string[],
+      );
 
       const command = createUserCommand(deps);
 

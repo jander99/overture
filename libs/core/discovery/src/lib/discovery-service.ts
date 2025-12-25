@@ -434,7 +434,7 @@ export class DiscoveryService {
    */
   private getWindowsAppBundlePaths(
     client: ClientName,
-    windowsProfile: string,
+    _windowsProfile: string,
   ): string[] {
     const paths: string[] = [];
 
@@ -442,8 +442,9 @@ export class DiscoveryService {
     // Note: All currently supported clients (claude-code, copilot-cli, opencode) are CLI-only
     const guiAppPaths: Partial<Record<ClientName, string[]>> = {};
 
-    if (guiAppPaths[client]) {
-      paths.push(...guiAppPaths[client]!);
+    const clientPaths = guiAppPaths[client];
+    if (clientPaths) {
+      paths.push(...clientPaths);
     }
 
     return paths;

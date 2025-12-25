@@ -20,7 +20,10 @@ function createConfig(
     { command: string; args?: string[]; env?: Record<string, string> }
   >,
 ): ClientMcpConfig {
-  const mcpServers: Record<string, any> = {};
+  const mcpServers: Record<
+    string,
+    { command: string; args: string[]; env?: Record<string, string> }
+  > = {};
   for (const [name, config] of Object.entries(servers)) {
     mcpServers[name] = {
       command: config.command,

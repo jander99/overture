@@ -19,6 +19,7 @@ export type {
 export type {
   Platform,
   TransportType,
+  McpTransport,
   Scope,
   ClientName,
   DetectionEnvironment,
@@ -43,7 +44,13 @@ export type {
   ValidationError,
   ValidationWarning,
   ProcessLock,
+  JsonValue,
+  JsonObject,
+  JsonArray,
 } from './lib/config.types.js';
+
+// Type guards
+export { isClientMcpConfig } from './lib/config.types.js';
 
 // Plugin types
 export type {

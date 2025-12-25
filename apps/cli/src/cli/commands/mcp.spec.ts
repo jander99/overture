@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createMcpCommand } from './mcp';
 import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
 import type { AppDependencies } from '../../composition-root';
+import type { OvertureConfig } from '@overture/config-types';
 
 describe('mcp command', () => {
   let deps: AppDependencies;
@@ -526,11 +527,12 @@ describe('mcp command', () => {
     it('should handle user config without mcp field', async () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
         version: '1.0' as const,
-        // No mcp field
-      } as any);
+        // No mcp field - intentionally testing invalid config
+      } as unknown as OvertureConfig);
       vi.mocked(deps.configLoader.loadProjectConfig).mockResolvedValue({
         version: '1.0' as const,
-      } as any);
+        // No mcp field - intentionally testing invalid config
+      } as unknown as OvertureConfig);
 
       const command = createMcpCommand(deps);
       await command.parseAsync(['node', 'mcp', 'list']);

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import type { McpServerConfig, ClientName } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
 
 /**
@@ -36,7 +37,7 @@ export function createMcpCommand(deps: AppDependencies): Command {
         // Load configs based on scope filter
         let mcpsToDisplay: Array<{
           name: string;
-          config: any;
+          config: McpServerConfig;
           scope: 'global' | 'project';
         }> = [];
 
@@ -97,14 +98,18 @@ export function createMcpCommand(deps: AppDependencies): Command {
         // Filter by client if specified
         if (options.client) {
           mcpsToDisplay = mcpsToDisplay.filter(({ config }) => {
-            // Check clients.only (whitelist)
-            if (config.clients?.only) {
-              return config.clients.only.includes(options.client as string);
+            // Check clients.include (whitelist)
+            if (config.clients?.include) {
+              return config.clients.include.includes(
+                options.client as ClientName,
+              );
             }
 
-            // Check clients.except (blacklist)
-            if (config.clients?.except) {
-              return !config.clients.except.includes(options.client as string);
+            // Check clients.exclude (blacklist)
+            if (config.clients?.exclude) {
+              return !config.clients.exclude.includes(
+                options.client as ClientName,
+              );
             }
 
             // No client restrictions - available to all

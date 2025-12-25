@@ -58,11 +58,13 @@ export class NodeProcessAdapter implements ProcessPort {
         stderr: result.stderr || '',
         exitCode: result.exitCode ?? 0,
       };
-    } catch (error: any) {
+    } catch (error) {
       // Handle unexpected errors (e.g., command not found, permission denied)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         stdout: '',
-        stderr: error.message || '',
+        stderr: errorMessage,
         exitCode: 1,
       };
     }

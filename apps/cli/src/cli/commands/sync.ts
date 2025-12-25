@@ -141,7 +141,13 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show detected clients
         for (const clientResult of detectedClients) {
-          const detection = clientResult.binaryDetection!;
+          const detection = clientResult.binaryDetection;
+          if (!detection) {
+            output.warn(
+              `${clientResult.client} was detected but has no detection details; skipping from detection summary.`,
+            );
+            continue;
+          }
           const versionStr = detection.version
             ? ` (v${detection.version})`
             : '';

@@ -7,6 +7,7 @@ export default [
   {
     ignores: [
       '**/dist',
+      '**/out-tsc',
       '**/vitest.config.*.timestamp*',
       '**/vite.config.*.timestamp*',
     ],
@@ -47,7 +48,18 @@ export default [
       '**/*.mjs',
     ],
     // Override or add rules here
-    rules: {},
+    rules: {
+      // Allow unused variables that start with underscore
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
+    },
   },
   // Relaxed rules for test files
   {

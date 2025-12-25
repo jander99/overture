@@ -17,6 +17,7 @@
  * @module cli-e2e/sync-multi-client
  */
 
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import {
@@ -126,14 +127,19 @@ describe('Sync Multi-Client E2E Tests', () => {
         stdio: 'pipe',
       });
       return output;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const execError = error as {
+        stdout?: string;
+        stderr?: string;
+        message?: string;
+      };
       if (options.expectError) {
-        return error.stdout || error.stderr || error.message;
+        return execError.stdout || execError.stderr || execError.message || '';
       }
       console.error('Command failed:', command);
-      console.error('Error:', error.message);
-      console.error('Stdout:', error.stdout);
-      console.error('Stderr:', error.stderr);
+      console.error('Error:', execError.message);
+      console.error('Stdout:', execError.stdout);
+      console.error('Stderr:', execError.stderr);
       throw error;
     }
   }
@@ -141,7 +147,7 @@ describe('Sync Multi-Client E2E Tests', () => {
   /**
    * Helper: Read and parse JSON file
    */
-  function readJsonFile(path: string): any {
+  function readJsonFile(path: string): unknown {
     const content = readFileSync(path, 'utf8');
     return JSON.parse(content);
   }
@@ -752,7 +758,7 @@ mcp:
       writeFileSync(userConfigPath, config);
 
       // Run sync with env vars set
-      const output = runOverture('sync', {
+      runOverture('sync', {
         env: {
           GITHUB_TOKEN: 'test-github-token-12345',
           MY_API_KEY: 'test-api-key-67890',

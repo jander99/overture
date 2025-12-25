@@ -216,7 +216,7 @@ export class PathResolver {
    * @param platform - Target platform (defaults to current platform)
    * @returns Claude Code global config path (~/.claude.json)
    */
-  getClaudeCodeGlobalPath(platform?: Platform): string {
+  getClaudeCodeGlobalPath(_platform?: Platform): string {
     // Claude Code uses ~/.claude.json on all platforms for user-scope MCP config
     return this.joinPaths(this.getHomeDir(), '.claude.json');
   }
@@ -735,7 +735,7 @@ export class PathResolver {
   /**
    * Parse root from path
    */
-  private parsePathRoot(p: string): string {
+  private parsePathRoot(_p: string): string {
     // Always return '/' as root for cross-platform compatibility
     return '/';
   }

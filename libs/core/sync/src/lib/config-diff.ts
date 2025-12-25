@@ -21,8 +21,8 @@ export type ChangeType = 'added' | 'modified' | 'removed' | 'unchanged';
 export interface McpChange {
   name: string;
   type: ChangeType;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   fieldChanges?: FieldChange[];
 }
 
@@ -31,8 +31,8 @@ export interface McpChange {
  */
 export interface FieldChange {
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
 }
 
 /**
@@ -122,17 +122,26 @@ export function generateDiff(
  * @param newObj - New object
  * @returns Array of field changes
  */
-function detectFieldChanges(oldObj: any, newObj: any): FieldChange[] {
+function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
   const changes: FieldChange[] = [];
 
+  const oldRecord =
+    oldObj && typeof oldObj === 'object'
+      ? (oldObj as Record<string, unknown>)
+      : {};
+  const newRecord =
+    newObj && typeof newObj === 'object'
+      ? (newObj as Record<string, unknown>)
+      : {};
+
   const allFields = new Set([
-    ...Object.keys(oldObj || {}),
-    ...Object.keys(newObj || {}),
+    ...Object.keys(oldRecord),
+    ...Object.keys(newRecord),
   ]);
 
   for (const field of allFields) {
-    const oldValue = oldObj?.[field];
-    const newValue = newObj?.[field];
+    const oldValue = oldRecord[field];
+    const newValue = newRecord[field];
 
     if (!isEqual(oldValue, newValue)) {
       changes.push({ field, oldValue, newValue });
@@ -149,7 +158,7 @@ function detectFieldChanges(oldObj: any, newObj: any): FieldChange[] {
  * @param b - Second value
  * @returns true if values are deeply equal
  */
-function isEqual(a: any, b: any): boolean {
+function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
@@ -160,10 +169,12 @@ function isEqual(a: any, b: any): boolean {
   }
 
   if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
     if (keysA.length !== keysB.length) return false;
-    return keysA.every((key) => isEqual(a[key], b[key]));
+    return keysA.every((key) => isEqual(objA[key], objB[key]));
   }
 
   return false;
@@ -239,7 +250,7 @@ export function formatDiff(diff: ConfigDiff, clientName?: string): string {
  * @param value - Value to format
  * @returns Formatted string
  */
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (value === undefined) return '<undefined>';
   if (value === null) return '<null>';
   if (Array.isArray(value)) return `[${value.join(', ')}]`;

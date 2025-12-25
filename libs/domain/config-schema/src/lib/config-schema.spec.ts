@@ -15,8 +15,6 @@ import {
   SyncOptionsSchema,
   OvertureConfigSchema,
   ClientMcpServerDefSchema,
-  ClientSyncResultSchema,
-  SyncResultSchema,
   ValidationResultSchema,
 } from './config-schema';
 
@@ -109,7 +107,7 @@ describe('Zod Schema Validators', () => {
 
     it('should require transport field', () => {
       const invalid = { ...validMcpConfig };
-      delete (invalid as any).transport;
+      delete (invalid as Record<string, unknown>).transport;
 
       expect(() => McpServerConfigSchema.parse(invalid)).toThrow();
     });
@@ -441,7 +439,7 @@ describe('Zod Schema Validators', () => {
 
     it('should require version field', () => {
       const invalid = { ...validConfig };
-      delete (invalid as any).version;
+      delete (invalid as Record<string, unknown>).version;
 
       expect(() => OvertureConfigSchema.parse(invalid)).toThrow();
     });

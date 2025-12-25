@@ -7,6 +7,8 @@
  * @module lib/mocks/adapter.mock
  */
 
+import type { ClientMcpConfig } from '@overture/config-types';
+
 /**
  * Mock client adapter for testing
  */
@@ -34,12 +36,12 @@ export interface MockClientAdapter {
   /**
    * Mock configuration object
    */
-  config?: Record<string, any>;
+  config?: ClientMcpConfig;
 
   /**
    * History of write operations
    */
-  writeHistory: Array<{ config: Record<string, any> }>;
+  writeHistory: Array<{ config: ClientMcpConfig }>;
 
   /**
    * Detect if client is available
@@ -49,12 +51,12 @@ export interface MockClientAdapter {
   /**
    * Read client configuration
    */
-  readConfig: () => Promise<Record<string, any>>;
+  readConfig: () => Promise<ClientMcpConfig>;
 
   /**
    * Write client configuration
    */
-  writeConfig: (config: Record<string, any>) => Promise<void>;
+  writeConfig: (config: ClientMcpConfig) => Promise<void>;
 
   /**
    * Backup client configuration
@@ -87,7 +89,7 @@ export function createMockAdapter(
     enabled?: boolean;
     isDetected?: boolean;
     configPath?: string;
-    config?: Record<string, any>;
+    config?: ClientMcpConfig;
   } = {},
 ): MockClientAdapter {
   const adapter: MockClientAdapter = {
@@ -95,7 +97,7 @@ export function createMockAdapter(
     enabled: options.enabled ?? true,
     isDetected: options.isDetected ?? true,
     configPath: options.configPath,
-    config: options.config ?? {},
+    config: options.config ?? { mcpServers: {} },
     writeHistory: [],
 
     detect: async () => adapter.isDetected,
@@ -107,7 +109,7 @@ export function createMockAdapter(
       return adapter.config;
     },
 
-    writeConfig: async (config: Record<string, any>) => {
+    writeConfig: async (config: ClientMcpConfig) => {
       adapter.config = config;
       adapter.writeHistory.push({ config });
     },
@@ -138,7 +140,7 @@ export function createMockAdapter(
  */
 export function createDetectedAdapter(
   name: string,
-  config: Record<string, any> = {},
+  config: ClientMcpConfig = { mcpServers: {} },
 ): MockClientAdapter {
   return createMockAdapter(name, {
     enabled: true,
@@ -220,7 +222,7 @@ export function resetAdapterHistory(adapter: MockClientAdapter): void {
  */
 export function getLastWrittenConfig(
   adapter: MockClientAdapter,
-): Record<string, any> | undefined {
+): ClientMcpConfig | undefined {
   if (adapter.writeHistory.length === 0) {
     return undefined;
   }

@@ -7,9 +7,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Mocked } from 'vitest';
-import * as fs from 'fs';
-import * as os from 'os';
 
 // Import all utilities
 import {
@@ -19,7 +16,6 @@ import {
   configureMockFsReadFile,
   configureMockFsWriteFile,
   configureMockFsMkdir,
-  configureAllFsMocks,
   // Process mocks
   buildExecResult,
   createMockProcess,
@@ -39,8 +35,6 @@ import {
   createMacOSPlatform,
   createWindowsPlatform,
   createWSL2Platform,
-  configureMockOs,
-  mockLinuxPlatform,
   // Fixtures
   validUserConfig,
   validProjectConfig,
@@ -295,9 +289,11 @@ describe('@overture/testing', () => {
 
     it('should provide config with plugins', () => {
       expect(configWithPlugins.plugins).toBeDefined();
-      expect(Object.keys(configWithPlugins.plugins!)).toContain(
-        'python-development',
-      );
+      if (configWithPlugins.plugins) {
+        expect(Object.keys(configWithPlugins.plugins)).toContain(
+          'python-development',
+        );
+      }
     });
 
     it('should provide minimal config', () => {

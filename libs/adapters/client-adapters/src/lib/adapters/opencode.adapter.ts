@@ -82,7 +82,15 @@ export class OpenCodeAdapter extends BaseClientAdapter {
       }
 
       // Transform MCP config to OpenCode format
-      const transformedMcp: Record<string, any> = {};
+      const transformedMcp: Record<
+        string,
+        {
+          type: string;
+          enabled: boolean;
+          command: string[];
+          environment?: Record<string, string>;
+        }
+      > = {};
       for (const [name, serverDef] of Object.entries(config.mcp)) {
         transformedMcp[name] = {
           type: serverDef.type || 'local',
@@ -154,7 +162,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
     return { mcp };
   }
 
-  supportsTransport(transport: 'stdio' | 'http' | 'sse'): boolean {
+  supportsTransport(_transport: 'stdio' | 'http' | 'sse'): boolean {
     // OpenCode supports all transport types
     return true;
   }

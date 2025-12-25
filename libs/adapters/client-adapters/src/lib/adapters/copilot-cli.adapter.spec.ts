@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
+import type { OvertureConfig, Platform } from '@overture/config-types';
 import { CopilotCliAdapter } from './copilot-cli.adapter.js';
 
 function createMockFilesystem(): FilesystemPort {
@@ -33,7 +34,7 @@ function createMockEnvironment(): EnvironmentPort {
       USERPROFILE: 'C:\\Users\\user',
       PWD: '/home/user/project',
     },
-  } as any;
+  } as EnvironmentPort;
 }
 
 describe('CopilotCliAdapter', () => {
@@ -92,7 +93,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should throw on unsupported platform', () => {
-      expect(() => adapter.detectConfigPath('freebsd' as any)).toThrow(
+      expect(() => adapter.detectConfigPath('freebsd' as Platform)).toThrow(
         'Unsupported platform',
       );
     });
@@ -213,7 +214,7 @@ describe('CopilotCliAdapter', () => {
 
   describe('convertFromOverture', () => {
     it('should convert basic config', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           filesystem: {
@@ -230,7 +231,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should EXCLUDE github MCP (bundled)', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           github: { command: 'test', args: [], env: {}, transport: 'stdio' },
@@ -244,7 +245,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should pass env variables', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           test: {
@@ -261,7 +262,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should map command and args', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           python: {
@@ -279,13 +280,13 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should handle empty config', () => {
-      const config: any = { version: '1.0', mcp: {} };
+      const config: OvertureConfig = { version: '1.0', mcp: {} };
       const result = adapter.convertFromOverture(config, 'linux');
       expect(result).toEqual({ mcpServers: {} });
     });
 
     it('should convert multiple MCPs', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           fs: { command: 'npx', args: [], env: {}, transport: 'stdio' },
@@ -299,7 +300,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should convert all valid MCPs', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           one: { command: 'test1', args: [], env: {}, transport: 'stdio' },
@@ -313,7 +314,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should filter by platform exclusions', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           test: {
@@ -331,7 +332,7 @@ describe('CopilotCliAdapter', () => {
     });
 
     it('should filter by client exclusions', () => {
-      const config: any = {
+      const config: OvertureConfig = {
         version: '1.0',
         mcp: {
           test: {
@@ -401,7 +402,7 @@ describe('CopilotCliAdapter', () => {
 
   describe('error handling', () => {
     it('should throw on unsupported platform', () => {
-      expect(() => adapter.detectConfigPath('aix' as any)).toThrow(
+      expect(() => adapter.detectConfigPath('aix' as Platform)).toThrow(
         /Unsupported platform/,
       );
     });
