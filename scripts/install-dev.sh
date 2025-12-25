@@ -32,7 +32,10 @@ cd "$WORKSPACE_ROOT"
 
 # Step 1: Build the CLI
 echo -e "${YELLOW}→${NC} Building @overture/cli..."
-NX_INTERACTIVE=false npx nx build @overture/cli
+export NX_INTERACTIVE=false
+export CI=true
+export NX_DAEMON=false
+npx nx build @overture/cli --verbose=false
 
 if [ $? -ne 0 ]; then
   echo -e "${RED}✗${NC} Build failed"
