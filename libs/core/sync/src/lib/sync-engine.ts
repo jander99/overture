@@ -65,6 +65,8 @@ export interface SyncOptions {
   detail?: boolean;
   /** Skip skill synchronization (default: false) */
   skipSkills?: boolean;
+  /** Force sync to specific config type (internal use for dual-sync) */
+  forceConfigType?: 'user' | 'project';
 }
 
 /**
@@ -92,6 +94,8 @@ export interface ClientSyncResult {
   error?: string;
   /** Maps MCP server names to their source ('global' | 'project') */
   mcpSources?: Record<string, 'global' | 'project'>;
+  /** Config type synced (for dual-sync display) */
+  configType?: 'user' | 'project';
 }
 
 /**
@@ -136,7 +140,7 @@ export interface SyncEngineDeps {
   binaryDetector: BinaryDetector;
   /** Backup service */
   backupService: {
-    backup(client: ClientName, configPath: string): string;
+    backup(client: ClientName, configPath: string): Promise<string>;
   };
   /** Path resolver */
   pathResolver: {
@@ -292,26 +296,76 @@ export class SyncEngine {
 
       // Sync to each client
       const results: ClientSyncResult[] = [];
-      for (const client of clients) {
-        const result = await this.syncToClient(
-          client,
-          overtureConfig,
-          syncOptionsWithProject,
-          mcpSources,
-        );
-        results.push(result);
+      const platform =
+        syncOptionsWithProject.platform || this.deps.environment.platform();
 
-        // Collect warnings and errors
-        // Filter out informational detection messages from global warnings (they're already in result.warnings)
-        const criticalWarnings = result.warnings.filter(
-          (w) =>
-            !w.includes('detected:') ||
-            w.includes('not detected') ||
-            w.includes('Generating config anyway'),
+      for (const client of clients) {
+        // When in a project, sync to BOTH user and project configs
+        const inProject = !!syncOptionsWithProject.projectRoot;
+        const configPathResult = client.detectConfigPath(
+          platform,
+          syncOptionsWithProject.projectRoot,
         );
-        warnings.push(...criticalWarnings);
-        if (!result.success && result.error) {
-          errors.push(`${client.name}: ${result.error}`);
+
+        const supportsDualConfigs =
+          configPathResult !== null &&
+          typeof configPathResult === 'object' &&
+          configPathResult.user &&
+          configPathResult.project;
+
+        if (inProject && supportsDualConfigs) {
+          // Sync global MCPs to user config
+          const userResult = await this.syncToClient(
+            client,
+            overtureConfig,
+            { ...syncOptionsWithProject, forceConfigType: 'user' },
+            mcpSources,
+          );
+          results.push(userResult);
+
+          // Sync project MCPs to project config
+          const projectResult = await this.syncToClient(
+            client,
+            overtureConfig,
+            { ...syncOptionsWithProject, forceConfigType: 'project' },
+            mcpSources,
+          );
+          results.push(projectResult);
+
+          // Collect warnings and errors from both
+          for (const result of [userResult, projectResult]) {
+            const criticalWarnings = result.warnings.filter(
+              (w) =>
+                !w.includes('detected:') ||
+                w.includes('not detected') ||
+                w.includes('Generating config anyway'),
+            );
+            warnings.push(...criticalWarnings);
+            if (!result.success && result.error) {
+              errors.push(`${client.name}: ${result.error}`);
+            }
+          }
+        } else {
+          // Single config sync (not in project or client doesn't support dual configs)
+          const result = await this.syncToClient(
+            client,
+            overtureConfig,
+            syncOptionsWithProject,
+            mcpSources,
+          );
+          results.push(result);
+
+          // Collect warnings and errors
+          const criticalWarnings = result.warnings.filter(
+            (w) =>
+              !w.includes('detected:') ||
+              w.includes('not detected') ||
+              w.includes('Generating config anyway'),
+          );
+          warnings.push(...criticalWarnings);
+          if (!result.success && result.error) {
+            errors.push(`${client.name}: ${result.error}`);
+          }
         }
       }
 
@@ -475,14 +529,25 @@ export class SyncEngine {
         };
       }
 
-      // Determine which config path to use based on project context
+      // Determine which config path to use based on project context and forceConfigType
       const inProject = !!options.projectRoot;
-      const configPath =
-        typeof configPathResult === 'string'
-          ? configPathResult
-          : inProject && configPathResult.project
-            ? configPathResult.project
-            : configPathResult.user;
+      let configPath: string;
+
+      if (typeof configPathResult === 'string') {
+        configPath = configPathResult;
+      } else if (options.forceConfigType === 'user') {
+        // Force user config (for dual-sync)
+        configPath = configPathResult.user;
+      } else if (options.forceConfigType === 'project') {
+        // Force project config (for dual-sync)
+        configPath = configPathResult.project;
+      } else if (inProject && configPathResult.project) {
+        // Default: prefer project when in project
+        configPath = configPathResult.project;
+      } else {
+        // Default: use user config
+        configPath = configPathResult.user;
+      }
 
       if (!configPath) {
         return {
@@ -625,7 +690,10 @@ export class SyncEngine {
       let backupPath: string | undefined;
       if (oldConfig && (await this.deps.filesystem.exists(configPath))) {
         try {
-          backupPath = this.deps.backupService.backup(client.name, configPath);
+          backupPath = await this.deps.backupService.backup(
+            client.name,
+            configPath,
+          );
         } catch (error) {
           warnings.push(`Backup failed: ${(error as Error).message}`);
         }
@@ -643,6 +711,7 @@ export class SyncEngine {
         binaryDetection,
         warnings,
         mcpSources,
+        configType: options.forceConfigType,
       };
     } catch (error) {
       return {

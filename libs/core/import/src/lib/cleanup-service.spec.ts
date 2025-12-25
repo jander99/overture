@@ -61,11 +61,11 @@ describe('CleanupService', () => {
         projects: {
           '/home/user/project1': {
             mcpServers: {
-              'filesystem': {
+              filesystem: {
                 command: 'npx',
                 args: ['-y', '@modelcontextprotocol/server-filesystem'],
               },
-              'memory': {
+              memory: {
                 command: 'npx',
                 args: ['-y', 'mcp-server-memory'],
               },
@@ -96,7 +96,9 @@ describe('CleanupService', () => {
         },
       };
 
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fullConfig);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fullConfig,
+      );
       vi.mocked(mockFilesystem.exists).mockImplementation(async (path) => {
         // Both projects have Overture configs
         return path.includes('.overture/config.yaml');
@@ -122,7 +124,7 @@ describe('CleanupService', () => {
         projects: {
           '/home/user/project-no-overture': {
             mcpServers: {
-              'filesystem': {
+              filesystem: {
                 command: 'npx',
                 args: ['-y', '@modelcontextprotocol/server-filesystem'],
               },
@@ -141,7 +143,9 @@ describe('CleanupService', () => {
         },
       };
 
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fullConfig);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fullConfig,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false); // No Overture config
 
       const targets = await service.findCleanupTargets(
@@ -181,7 +185,9 @@ describe('CleanupService', () => {
         },
       };
 
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fullConfig);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fullConfig,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
 
       const targets = await service.findCleanupTargets(
@@ -221,7 +227,9 @@ describe('CleanupService', () => {
         },
       };
 
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fullConfig);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fullConfig,
+      );
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
 
       const targets = await service.findCleanupTargets(
@@ -248,7 +256,9 @@ describe('CleanupService', () => {
         mcp: {},
       };
 
-      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(fullConfig);
+      vi.mocked(mockClaudeCodeAdapter.readFullConfig).mockResolvedValue(
+        fullConfig,
+      );
 
       const targets = await service.findCleanupTargets(
         mockClaudeCodeAdapter,

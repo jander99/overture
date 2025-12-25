@@ -58,7 +58,6 @@ describe('sync command', () => {
         force: false,
         skipPlugins: false,
         skipSkills: false,
-        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -707,7 +706,6 @@ describe('sync command', () => {
         success: true,
         results: [],
         warnings: [],
-        warnings: [],
         errors: [],
       });
 
@@ -768,7 +766,6 @@ describe('sync command', () => {
           },
         ],
         warnings: [],
-        warnings: [],
         errors: [],
       });
 
@@ -807,7 +804,6 @@ describe('sync command', () => {
           },
         ],
         warnings: [],
-        warnings: [],
         errors: [],
       });
 
@@ -827,7 +823,6 @@ describe('sync command', () => {
       vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
-        warnings: [],
         warnings: [],
         errors: [],
       });

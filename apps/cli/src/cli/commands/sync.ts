@@ -1,8 +1,105 @@
 import { Command } from 'commander';
+import chalk from 'chalk';
 import type { AppDependencies } from '../../composition-root';
 import type { ClientName } from '@overture/config-types';
 import { formatDiff } from '@overture/sync-core';
+import type { SyncResult, ClientSyncResult } from '@overture/sync-core';
 import { ErrorHandler } from '@overture/utils';
+
+/**
+ * Generates a table showing which MCP servers are configured for which clients.
+ * Shows the source level (global/project) for each MCP server and which clients
+ * have them configured.
+ *
+ * @param result - The sync result containing client sync information
+ * @returns Formatted table as a string
+ */
+function generateMcpTable(result: SyncResult): string {
+  // Collect all unique MCP server names across all clients
+  const allMcpNames = new Set<string>();
+  const mcpSourceMap = new Map<string, 'global' | 'project'>();
+
+  // Build a map of client -> MCP servers with their sources
+  const clientMcps = new Map<string, Map<string, 'global' | 'project'>>();
+
+  for (const clientResult of result.results) {
+    if (!clientResult.success || !clientResult.mcpSources) continue;
+
+    const mcpMap = new Map<string, 'global' | 'project'>();
+    for (const [mcpName, source] of Object.entries(clientResult.mcpSources)) {
+      allMcpNames.add(mcpName);
+      mcpMap.set(mcpName, source);
+      // Store the source for the first column
+      if (!mcpSourceMap.has(mcpName)) {
+        mcpSourceMap.set(mcpName, source);
+      }
+    }
+    clientMcps.set(clientResult.client, mcpMap);
+  }
+
+  if (allMcpNames.size === 0) {
+    return '';
+  }
+
+  // Sort MCP names: global first, then project, then alphabetically within each group
+  const sortedMcpNames = Array.from(allMcpNames).sort((a, b) => {
+    const sourceA = mcpSourceMap.get(a) || 'project';
+    const sourceB = mcpSourceMap.get(b) || 'project';
+
+    if (sourceA === sourceB) {
+      return a.localeCompare(b);
+    }
+    return sourceA === 'global' ? -1 : 1;
+  });
+
+  // Get client names from results
+  const clientNames = Array.from(clientMcps.keys());
+
+  // Calculate column widths
+  const mcpColumnWidth = Math.max(
+    15,
+    ...sortedMcpNames.map((name) => name.length),
+  );
+  const sourceColumnWidth = 10;
+  const clientColumnWidth = 15;
+
+  // Build table header
+  const header = [
+    'MCP Server'.padEnd(mcpColumnWidth),
+    'Source'.padEnd(sourceColumnWidth),
+    ...clientNames.map((name) => name.padEnd(clientColumnWidth)),
+  ].join(' | ');
+
+  const separator = [
+    '-'.repeat(mcpColumnWidth),
+    '-'.repeat(sourceColumnWidth),
+    ...clientNames.map(() => '-'.repeat(clientColumnWidth)),
+  ].join('-|-');
+
+  // Build table rows
+  const rows: string[] = [];
+  for (const mcpName of sortedMcpNames) {
+    const source = mcpSourceMap.get(mcpName) || 'project';
+    const sourceDisplay = source === 'global' ? 'Global' : 'Project';
+
+    const row = [
+      mcpName.padEnd(mcpColumnWidth),
+      sourceDisplay.padEnd(sourceColumnWidth),
+      ...clientNames.map((clientName) => {
+        const clientMcp = clientMcps.get(clientName);
+        if (clientMcp?.has(mcpName)) {
+          const mcpSource = clientMcp.get(mcpName);
+          return `✓ (${mcpSource})`.padEnd(clientColumnWidth);
+        }
+        return '-'.padEnd(clientColumnWidth);
+      }),
+    ].join(' | ');
+
+    rows.push(row);
+  }
+
+  return [header, separator, ...rows].join('\n');
+}
 
 /**
  * Determines if a warning is critical and should be displayed.
@@ -123,21 +220,44 @@ export function createSyncCommand(deps: AppDependencies): Command {
         const result = await syncEngine.syncClients(syncOptions);
 
         // ==================== Phase 1: Detection Summary ====================
-        output.section('🔍 Detecting clients...');
-        output.nl();
+        (output as any).section('🔍 Detecting clients...');
+        (output as any).nl();
 
         // Separate clients by detection status and whether they were actually skipped
-        const detectedClients = result.results.filter(
-          (r) => r.binaryDetection?.status === 'found',
-        );
-        const actuallySkippedClients = result.results.filter(
-          (r) => r.error === 'Skipped - client not detected on system',
-        );
-        const undetectedButSyncedClients = result.results.filter(
-          (r) =>
+        // Note: With dual-sync, we may have 2 results per client (user + project)
+        // Deduplicate by client name for detection display
+        const seenClients = new Set<string>();
+        const detectedClients = result.results.filter((r) => {
+          if (seenClients.has(r.client)) return false;
+          if (r.binaryDetection?.status === 'found') {
+            seenClients.add(r.client);
+            return true;
+          }
+          return false;
+        });
+
+        seenClients.clear();
+        const actuallySkippedClients = result.results.filter((r) => {
+          if (seenClients.has(r.client)) return false;
+          if (r.error === 'Skipped - client not detected on system') {
+            seenClients.add(r.client);
+            return true;
+          }
+          return false;
+        });
+
+        seenClients.clear();
+        const undetectedButSyncedClients = result.results.filter((r) => {
+          if (seenClients.has(r.client)) return false;
+          if (
             r.binaryDetection?.status === 'not-found' &&
-            r.error !== 'Skipped - client not detected on system',
-        );
+            r.error !== 'Skipped - client not detected on system'
+          ) {
+            seenClients.add(r.client);
+            return true;
+          }
+          return false;
+        });
 
         // Show detected clients
         for (const clientResult of detectedClients) {
@@ -165,14 +285,26 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show actually skipped clients
         for (const clientResult of actuallySkippedClients) {
-          output.skip(`${clientResult.client} - not detected, skipped`);
+          (output as any).skip(
+            `${clientResult.client} - not detected, skipped`,
+          );
+        }
+
+        // ==================== Phase 1.3: MCP Configuration Table ====================
+        const mcpTable = generateMcpTable(result);
+        if (mcpTable) {
+          console.log();
+          console.log(chalk.bold('📋 MCP Server Configuration:'));
+          console.log();
+          console.log(mcpTable);
+          console.log();
         }
 
         // ==================== Phase 1.5: Plugin Sync Plan (detail mode) ====================
         if (detailMode && result.pluginSyncDetails) {
           const details = result.pluginSyncDetails;
-          output.section('📦 Plugin Sync Plan:');
-          output.nl();
+          (output as any).section('📦 Plugin Sync Plan:');
+          (output as any).nl();
           output.info(`  Configured: ${details.configured} plugins`);
           output.info(`  Already installed: ${details.installed}`);
 
@@ -184,7 +316,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           } else {
             output.success(`  ✅ All plugins already installed`);
           }
-          output.nl();
+          (output as any).nl();
         }
 
         // ==================== Phase 1.6: Skill Sync Summary ====================
@@ -208,7 +340,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
               }
             }
           }
-          output.nl();
+          (output as any).nl();
         }
 
         // ==================== Phase 2: Sync Summary ====================
@@ -217,65 +349,93 @@ export function createSyncCommand(deps: AppDependencies): Command {
           ...undetectedButSyncedClients,
         ];
         if (syncedClients.length > 0) {
-          output.section('⚙️  Syncing configurations...');
-          output.nl();
+          (output as any).section('⚙️  Syncing configurations...');
+          (output as any).nl();
 
-          for (const clientResult of syncedClients) {
-            if (clientResult.success) {
-              output.success(`${clientResult.client} - synchronized`);
+          // Group results by client to show user + project syncs together
+          const resultsByClient = new Map<string, ClientSyncResult[]>();
+          for (const r of result.results) {
+            if (!resultsByClient.has(r.client)) {
+              resultsByClient.set(r.client, []);
+            }
+            resultsByClient.get(r.client)!.push(r);
+          }
 
-              // Show diff in detail mode
-              if (
-                detailMode &&
-                clientResult.diff &&
-                clientResult.diff.hasChanges
-              ) {
-                output.nl();
+          // Display results grouped by client
+          for (const clientName of resultsByClient.keys()) {
+            const clientResults = resultsByClient.get(clientName)!;
+            const allSuccess = clientResults.every((r) => r.success);
 
-                // Show MCP sources if available
-                if (clientResult.mcpSources) {
-                  const globalMcps: string[] = [];
-                  const projectMcps: string[] = [];
+            if (allSuccess) {
+              // Show which configs were synced
+              const configs = clientResults
+                .map((r) => {
+                  if (r.configType === 'user') return 'user';
+                  if (r.configType === 'project') return 'project';
+                  return null;
+                })
+                .filter(Boolean);
 
-                  // Categorize MCPs by source
-                  for (const [mcpName, source] of Object.entries(
-                    clientResult.mcpSources,
-                  )) {
-                    if (source === 'global') {
-                      globalMcps.push(mcpName);
-                    } else {
-                      projectMcps.push(mcpName);
+              const configStr =
+                configs.length > 1 ? ` (${configs.join(' + ')} configs)` : '';
+              output.success(`${clientName} - synchronized${configStr}`);
+
+              // Show diff in detail mode for each config
+              if (detailMode) {
+                for (const clientResult of clientResults) {
+                  if (clientResult.diff && clientResult.diff.hasChanges) {
+                    (output as any).nl();
+
+                    const configLabel = clientResult.configType
+                      ? ` (${clientResult.configType} config)`
+                      : '';
+
+                    // Show MCP sources if available
+                    if (clientResult.mcpSources) {
+                      const globalMcps: string[] = [];
+                      const projectMcps: string[] = [];
+
+                      // Categorize MCPs by source
+                      for (const [mcpName, source] of Object.entries(
+                        clientResult.mcpSources,
+                      )) {
+                        if (source === 'global') {
+                          globalMcps.push(mcpName);
+                        } else {
+                          projectMcps.push(mcpName);
+                        }
+                      }
+
+                      output.info(
+                        `Configuration changes for ${clientResult.client}${configLabel}:`,
+                      );
+                      (output as any).nl();
+
+                      if (globalMcps.length > 0) {
+                        output.info(`Global MCPs (${globalMcps.length}):`);
+                        for (const mcpName of globalMcps.sort()) {
+                          output.info(`  ~ ${mcpName}`);
+                        }
+                        (output as any).nl();
+                      }
+
+                      if (projectMcps.length > 0) {
+                        output.info(`Project MCPs (${projectMcps.length}):`);
+                        for (const mcpName of projectMcps.sort()) {
+                          output.info(`  ~ ${mcpName}`);
+                        }
+                        (output as any).nl();
+                      }
                     }
-                  }
 
-                  output.info(
-                    `Configuration changes for ${clientResult.client}:`,
-                  );
-                  output.nl();
-
-                  if (globalMcps.length > 0) {
-                    output.info(`Global MCPs (${globalMcps.length}):`);
-                    for (const mcpName of globalMcps.sort()) {
-                      output.info(`  ~ ${mcpName}`);
-                    }
-                    output.nl();
-                  }
-
-                  if (projectMcps.length > 0) {
-                    output.info(`Project MCPs (${projectMcps.length}):`);
-                    for (const mcpName of projectMcps.sort()) {
-                      output.info(`  ~ ${mcpName}`);
-                    }
-                    output.nl();
+                    const diffOutput = formatDiff(clientResult.diff);
+                    console.log(diffOutput); // Use console.log to preserve formatting
+                    (output as any).nl();
                   }
                 }
-
-                const diffOutput = formatDiff(clientResult.diff);
-                console.log(diffOutput); // Use console.log to preserve formatting
-                output.nl();
               }
             } else {
-              output.error(`${clientResult.client} - sync failed`);
+              output.error(`${clientName} - sync failed`);
             }
           }
         }
@@ -328,11 +488,11 @@ export function createSyncCommand(deps: AppDependencies): Command {
           criticalWarnings.length > 0 ||
           informationalWarnings.length > 0
         ) {
-          output.section('⚠️  Warnings:');
+          (output as any).section('⚠️  Warnings:');
 
           // Show global warnings first (config validation issues)
           if (globalWarnings.length > 0) {
-            output.nl();
+            (output as any).nl();
             output.warn('Configuration:');
             for (const warning of globalWarnings) {
               output.warn(`  - ${warning}`);
@@ -344,7 +504,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
               detailMode &&
               (informationalWarnings.length > 0 || globalWarnings.length > 0)
             ) {
-              output.nl();
+              (output as any).nl();
               output.warn('Critical:');
             }
             for (const item of criticalWarnings) {
@@ -353,7 +513,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           }
 
           if (detailMode && informationalWarnings.length > 0) {
-            output.nl();
+            (output as any).nl();
             output.info('Informational:');
             for (const item of informationalWarnings) {
               output.info(`  - ${item.client}: ${item.warning}`);
@@ -367,9 +527,9 @@ export function createSyncCommand(deps: AppDependencies): Command {
             criticalWarnings.length === 0 &&
             informationalWarnings.length === 0
           ) {
-            output.section('💡 Tips:');
+            (output as any).section('💡 Tips:');
           } else {
-            output.nl();
+            (output as any).nl();
           }
           for (const tip of tips) {
             output.info(`  ${tip}`);
@@ -378,7 +538,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show global errors
         if (result.errors.length > 0) {
-          output.section('❌ Errors:');
+          (output as any).section('❌ Errors:');
           for (const error of result.errors) {
             output.error(`  - ${error}`);
           }
@@ -388,7 +548,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         if (detailMode) {
           const backups = result.results.filter((r) => r.backupPath);
           if (backups.length > 0) {
-            output.section('💾 Backups:');
+            (output as any).section('💾 Backups:');
             for (const clientResult of backups) {
               output.info(
                 `  ${clientResult.client}: ${clientResult.backupPath}`,
@@ -398,7 +558,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         }
 
         // Final status
-        output.nl();
+        (output as any).nl();
         if (result.success) {
           output.success('Sync complete!');
         } else {

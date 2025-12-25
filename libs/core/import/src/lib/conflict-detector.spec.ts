@@ -133,7 +133,11 @@ describe('conflict-detector', () => {
         {
           name: 'filesystem',
           command: 'npx',
-          args: ['-y', '@modelcontextprotocol/server-filesystem', '/different/path'],
+          args: [
+            '-y',
+            '@modelcontextprotocol/server-filesystem',
+            '/different/path',
+          ],
           transport: 'stdio',
           source: {
             client: 'opencode',
@@ -386,7 +390,9 @@ describe('conflict-detector', () => {
 
       expect(formatted).toContain('filesystem');
       expect(formatted).toContain('Different arguments');
-      expect(formatted).toContain('["-y","@modelcontextprotocol/server-filesystem","/home"]');
+      expect(formatted).toContain(
+        '["-y","@modelcontextprotocol/server-filesystem","/home"]',
+      );
     });
   });
 });

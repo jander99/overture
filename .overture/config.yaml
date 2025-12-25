@@ -14,13 +14,6 @@ mcp:
     transport: stdio
     enabled: true
     description: 'Nx workspace management and build orchestration'
-  sequentialthinking:
-    command: npx
-    args: ['-y', '@modelcontextprotocol/server-sequential-thinking@latest']
-    transport: stdio
-    enabled: true
-    description: 'Complex problem-solving and reasoning'
-
   # Global MCPs (referenced but not configured here)
   # These remain in ~/.claude.json:
   # - sequentialthinking: Complex problem-solving

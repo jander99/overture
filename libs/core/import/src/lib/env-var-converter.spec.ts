@@ -15,11 +15,15 @@ import {
 describe('env-var-converter', () => {
   describe('isLikelySecret', () => {
     it('should detect GitHub personal access tokens', () => {
-      expect(isLikelySecret('ghp_1234567890123456789012345678901234567890')).toBe(true);
+      expect(
+        isLikelySecret('ghp_1234567890123456789012345678901234567890'),
+      ).toBe(true);
     });
 
     it('should detect OpenAI API keys', () => {
-      expect(isLikelySecret('sk-1234567890123456789012345678901234567890')).toBe(true);
+      expect(
+        isLikelySecret('sk-1234567890123456789012345678901234567890'),
+      ).toBe(true);
     });
 
     it('should detect generic long API keys', () => {
@@ -51,7 +55,9 @@ describe('env-var-converter', () => {
 
       expect(result.converted.GITHUB_TOKEN).toBe('${GITHUB_TOKEN}');
       expect(result.varsToSet).toContain('GITHUB_TOKEN');
-      expect(result.detectedTypes.GITHUB_TOKEN).toBe('GitHub Personal Access Token');
+      expect(result.detectedTypes.GITHUB_TOKEN).toBe(
+        'GitHub Personal Access Token',
+      );
     });
 
     it('should convert OpenAI API keys to ${OPENAI_API_KEY}', () => {
@@ -160,7 +166,9 @@ describe('env-var-converter', () => {
 
       const result = convertFromOpenCodeEnv(env);
 
-      expect(result.DATABASE_URL).toBe('${DATABASE_URL:-postgresql://localhost:5432/dev}');
+      expect(result.DATABASE_URL).toBe(
+        '${DATABASE_URL:-postgresql://localhost:5432/dev}',
+      );
     });
 
     it('should preserve non-OpenCode values', () => {
@@ -206,7 +214,9 @@ describe('env-var-converter', () => {
 
       const result = convertToOpenCodeEnv(env);
 
-      expect(result.DATABASE_URL).toBe('{env:DATABASE_URL:-postgresql://localhost:5432/dev}');
+      expect(result.DATABASE_URL).toBe(
+        '{env:DATABASE_URL:-postgresql://localhost:5432/dev}',
+      );
     });
 
     it('should preserve non-Overture values', () => {
