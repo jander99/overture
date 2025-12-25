@@ -735,7 +735,9 @@ my-project/
 
 ## AI Coding CLI Comparison Matrix
 
-This comparison focuses on the 3 CLI clients supported by Overture as of v0.3.0 (December 2025).
+> **Last Updated:** December 24, 2025 | [Full research notes](docs/archive/research/cli-feature-comparison-2025-12-24.md)
+
+This comparison focuses on the 3 CLI clients supported by Overture as of v0.3.0.
 
 ### Supported Clients
 
@@ -747,60 +749,69 @@ This comparison focuses on the 3 CLI clients supported by Overture as of v0.3.0 
 | Subagents/Task Delegation | ✅ Built-in Task tool   | ✅ Via `/delegate`                   | ✅ Subagent system                 |
 | Background/Async Tasks    | ✅ Task tool            | ✅ Coding agent                      | ❌                                 |
 | **Memory & Context**      |
-| Session Persistence       | ✅ `/init`, CLAUDE.md   | ✅ Session history                   | ✅ `/init`, AGENTS.md              |
+| Session Persistence       | ✅ `/init`, CLAUDE.md   | ✅ `--resume`, `--continue`          | ✅ `/init`, AGENTS.md              |
 | Cross-Session Memory      | ✅ Via MCP servers      | ✅ Via MCP                           | ✅ Via MCP servers                 |
 | Project Context Files     | ✅ CLAUDE.md, .mcp.json | ✅ .github/agents/, .github/mcp.json | ✅ AGENTS.md, opencode.json        |
 | Context Window            | ~200K tokens            | ~200K tokens                         | ~200K tokens                       |
-| **Extensibility**         |
+| **Extensibility** ¹       |
+| Agent Skills              | ✅ `.github/skills/`    | ✅ `.github/skills/`                 | ✅ `.opencode/skill/`              |
+| Custom Agents             | ✅ Plugins              | ✅ `.github/agents/`                 | ✅ `.opencode/agent/`              |
+| Custom Commands           | ✅ `.claude/commands/`  | ❌                                   | ✅ `.opencode/command/`            |
 | Hooks/Automation          | ✅ Pre/post hooks       | ❌                                   | ❌                                 |
-| Custom Slash Commands     | ✅ `.claude/commands/`  | ❌                                   | ✅ `.opencode/command/`            |
-| Plugin System             | ✅ `claude plugin`      | ✅ Custom agents                     | ❌                                 |
 | **Development Features**  |
-| Code Review               | ✅ Via commands         | ✅ Built-in                          | ✅ Via commands                    |
+| Code Review               | ✅ Via commands         | ✅ Built-in                          | ✅ Plan agent                      |
 | Web Search                | ✅ Built-in             | ✅ Via GitHub                        | ✅ Via MCP                         |
 | File Operations           | ✅ Native tools         | ✅ Native tools                      | ✅ Native tools                    |
 | Git Integration           | ✅ Native               | ✅ Deep GitHub                       | ✅ Native                          |
 | **Platform & Access**     |
 | Open Source               | ❌                      | ❌                                   | ✅                                 |
-| Free Tier                 | ❌ Subscription         | ❌ Subscription                      | ✅ Full                            |
+| Free Tier                 | ❌ Subscription         | ❌ Subscription                      | ✅ Full (BYOK)                     |
 | IDE Integration           | ✅ VS Code, JetBrains   | ✅ VS Code, JetBrains                | ✅ VS Code, Desktop                |
+| Web/Mobile Access         | ✅ Browser, iOS         | ❌                                   | ❌                                 |
+| Slack Integration         | ✅ Beta                 | ❌                                   | ❌                                 |
 | **MCP Configuration**     |
 | User Config Path          | `~/.claude.json`        | `~/.config/github-copilot/mcp.json`  | `~/.config/opencode/opencode.json` |
 | Project Config Path       | `./.mcp.json`           | `./.github/mcp.json`                 | `./opencode.json`                  |
 | Schema Root Key           | `mcpServers`            | `mcpServers`                         | `mcp`                              |
 | Env Var Support           | ✅ Native `${VAR}`      | ✅ Native `${VAR}`                   | ✅ `{env:VAR}` syntax              |
+| OAuth for Remote MCP      | ❌                      | ❌                                   | ✅ Auto OAuth                      |
 | Special Behavior          | None                    | **Excludes 'github' MCP** (bundled)  | JSON patching support              |
 
 ### Key Differentiators
 
-**Claude Code** ([docs](https://docs.anthropic.com/en/docs/claude-code))
+**Claude Code** ([docs](https://code.claude.com/docs/en/overview))
 
 - Only CLI that can run as both MCP client AND server
 - Rich plugin ecosystem with hooks for automation
+- Web, iOS, and Slack access for coding on-the-go
 - Project-scoped configuration via `.mcp.json`
 
 **GitHub Copilot CLI** ([docs](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli))
 
-- Deep GitHub integration (PRs, issues, repos)
-- Partner-built agents (Terraform, MongoDB, etc.)
+- Deep GitHub integration (PRs, issues, repos, Actions)
+- Custom agents via `.github/agents/` directory
 - **Built-in GitHub MCP** - Overture automatically excludes 'github' MCP to prevent conflicts
-- `/delegate` for async background work
+- `/delegate` for async background work via cloud coding agent
+- Session persistence with `--resume` and `--continue`
 
 **OpenCode** ([docs](https://opencode.ai/docs/))
 
-- Open-source AI coding agent with comprehensive configuration
+- Open-source AI coding agent (MIT license)
 - Granular permissions system (ask/allow/deny per tool/command)
-- Per-agent tool and permission customization
-- Rich configuration with agents, commands, themes, and rules
-- Variable substitution: `{env:VAR}`, `{file:path}`
+- Built-in agent system: Build, Plan, General, Explore
 - OAuth support for remote MCP servers
+- Plugin SDK and LSP integration
+- Conversation sharing via `/share`
+- Variable substitution: `{env:VAR}`, `{file:path}`
+
+¹ **Extensibility Convergence:** All three CLIs now support the [Agent Skills](https://github.com/anthropics/agent-skills) open standard—a portable format for defining reusable agent capabilities via `SKILL.md` files with YAML frontmatter. Skills created for one CLI work across all three (with minor path differences). Custom Agents use similar markdown-based definitions across platforms.
 
 > **Note:** Overture v0.3+ focuses on these 3 production-ready clients. Previous versions supported 8 clients (including Claude Desktop, VS Code, Cursor, Windsurf, JetBrains). See [Migration Notes](#migration-from-v02x-to-v03) for upgrade guidance.
 
 ### Why These 3 Clients?
 
 **Claude Code** - Industry-leading capabilities, robust MCP support, rich ecosystem  
-**Copilot CLI** - Deep GitHub integration, enterprise adoption, strong community  
+**Copilot CLI** - Deep GitHub integration, enterprise adoption, Agent Skills support  
 **OpenCode** - Open-source, highly configurable, community-driven development
 
 These clients represent the best-in-class options for AI-assisted development with MCP support
