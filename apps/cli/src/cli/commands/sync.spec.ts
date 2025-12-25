@@ -57,6 +57,8 @@ describe('sync command', () => {
         dryRun: false,
         force: false,
         skipPlugins: false,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -92,6 +94,8 @@ describe('sync command', () => {
         dryRun: false,
         force: false,
         skipPlugins: false,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -116,6 +120,8 @@ describe('sync command', () => {
         dryRun: true,
         force: false,
         skipPlugins: false,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -140,6 +146,8 @@ describe('sync command', () => {
         dryRun: false,
         force: true,
         skipPlugins: false,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -161,6 +169,8 @@ describe('sync command', () => {
         dryRun: false,
         force: false,
         skipPlugins: true,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
@@ -182,6 +192,8 @@ describe('sync command', () => {
         dryRun: false,
         force: false,
         skipPlugins: false,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: false,
         detail: false,
       });
@@ -211,6 +223,8 @@ describe('sync command', () => {
         dryRun: true,
         force: true,
         skipPlugins: true,
+        skipSkills: false,
+        skipSkills: false,
         skipUndetected: true,
         detail: false,
       });
