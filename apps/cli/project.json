@@ -28,6 +28,9 @@
           "sourcemap": true,
           "outExtension": {
             ".js": ".js"
+          },
+          "logOverride": {
+            "empty-import-meta": "silent"
           }
         }
       },
@@ -38,6 +41,9 @@
             "sourcemap": false,
             "outExtension": {
               ".js": ".js"
+            },
+            "logOverride": {
+              "empty-import-meta": "silent"
             }
           }
         }
