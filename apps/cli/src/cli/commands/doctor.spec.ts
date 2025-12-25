@@ -621,8 +621,15 @@ describe('doctor command', () => {
         mockDiscoveryReport,
       );
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
-      vi.mocked(deps.pathResolver.findProjectRoot).mockReturnValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true); // Config repo exists
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: 'https://github.com/user/repo.git',
+        stderr: '',
+        exitCode: 0,
+      }); // Git remote configured
 
       const command = createDoctorCommand(deps);
 
@@ -715,6 +722,663 @@ describe('doctor command', () => {
       // Act & Assert
       await expect(command.parseAsync(['node', 'doctor'])).rejects.toThrow(
         'Command check failed',
+      );
+    });
+  });
+
+  describe('config repo check', () => {
+    it('should check if config repo exists', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.filesystem.exists).toHaveBeenCalledWith(
+        '/home/user/.config/overture',
+      );
+      expect(deps.filesystem.exists).toHaveBeenCalledWith(
+        '/home/user/.config/overture/skills',
+      );
+    });
+
+    it('should display config repo found message when repo exists', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('Config repo'),
+      );
+    });
+
+    it('should display warning when config repo does not exist', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(false);
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Config repo not found'),
+      );
+    });
+
+    it('should display warning when skills directory does not exist', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return false;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Skills directory not found'),
+      );
+    });
+
+    it('should include config repo status in JSON output', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor', '--json']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"configRepo"'),
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"exists"'),
+      );
+    });
+
+    it('should show config repo status in summary', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Config repo:'),
+      );
+    });
+
+    it('should check if config repo is a git repository', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.filesystem.exists).toHaveBeenCalledWith(
+        '/home/user/.config/overture/.git',
+      );
+    });
+
+    it('should display git repository status when it is a git repo', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: 'https://github.com/user/overture-config.git',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('Git repository'),
+      );
+    });
+
+    it('should display warning when config repo is not a git repository', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return false;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Not a git repository'),
+      );
+    });
+
+    it('should check for git remote when config repo is a git repository', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: 'https://github.com/user/overture-config.git',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.process.exec).toHaveBeenCalledWith('git', [
+        '-C',
+        '/home/user/.config/overture',
+        'remote',
+        'get-url',
+        'origin',
+      ]);
+    });
+
+    it('should display git remote when configured', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: 'https://github.com/user/overture-config.git\n',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('Remote configured'),
+      );
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('https://github.com/user/overture-config.git'),
+      );
+    });
+
+    it('should display warning when git remote is not configured', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: '',
+        stderr: 'fatal: No such remote',
+        exitCode: 128,
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('No git remote configured'),
+      );
+    });
+
+    it('should include git status in JSON output', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockResolvedValue({
+        stdout: 'https://github.com/user/overture-config.git',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor', '--json']);
+
+      // Assert
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"isGitRepo"'),
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"gitRemote"'),
+      );
+    });
+
+    it('should get local git hash', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockImplementation(
+        async (cmd: string, args: string[]) => {
+          if (args.includes('rev-parse') && args.includes('HEAD')) {
+            return {
+              stdout: 'abc123def456\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          return { stdout: '', stderr: '', exitCode: 0 };
+        },
+      );
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.process.exec).toHaveBeenCalledWith('git', [
+        '-C',
+        '/home/user/.config/overture',
+        'rev-parse',
+        'HEAD',
+      ]);
+    });
+
+    it('should get remote git hash and compare with local', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockImplementation(
+        async (cmd: string, args: string[]) => {
+          if (args.includes('remote') && args.includes('get-url')) {
+            return {
+              stdout: 'https://github.com/user/repo.git\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          if (args.includes('rev-parse') && args.includes('HEAD')) {
+            return { stdout: 'abc123def456\n', stderr: '', exitCode: 0 };
+          }
+          if (args.includes('ls-remote')) {
+            return {
+              stdout: 'abc123def456\tHEAD\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          return { stdout: '', stderr: '', exitCode: 0 };
+        },
+      );
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.process.exec).toHaveBeenCalledWith('git', [
+        '-C',
+        '/home/user/.config/overture',
+        'ls-remote',
+        'origin',
+        'HEAD',
+      ]);
+    });
+
+    it('should display in sync status when hashes match', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockImplementation(
+        async (cmd: string, args: string[]) => {
+          if (args.includes('remote') && args.includes('get-url')) {
+            return {
+              stdout: 'https://github.com/user/repo.git\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          if (args.includes('rev-parse') && args.includes('HEAD')) {
+            return { stdout: 'abc123def456\n', stderr: '', exitCode: 0 };
+          }
+          if (args.includes('ls-remote')) {
+            return {
+              stdout: 'abc123def456\tHEAD\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          return { stdout: '', stderr: '', exitCode: 0 };
+        },
+      );
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('In sync with remote'),
+      );
+    });
+
+    it('should display out of sync warning when hashes differ', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        return false;
+      });
+      vi.mocked(deps.process.exec).mockImplementation(
+        async (cmd: string, args: string[]) => {
+          if (args.includes('remote') && args.includes('get-url')) {
+            return {
+              stdout: 'https://github.com/user/repo.git\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          if (args.includes('rev-parse') && args.includes('HEAD')) {
+            return { stdout: 'abc123def456\n', stderr: '', exitCode: 0 };
+          }
+          if (args.includes('ls-remote')) {
+            return {
+              stdout: 'different789hash\tHEAD\n',
+              stderr: '',
+              exitCode: 0,
+            };
+          }
+          return { stdout: '', stderr: '', exitCode: 0 };
+        },
+      );
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Out of sync with remote'),
+      );
+    });
+
+    it('should count skills in skills directory', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        if (path === '/home/user/.config/overture/skills/skill1/SKILL.md')
+          return true;
+        if (path === '/home/user/.config/overture/skills/skill2/SKILL.md')
+          return true;
+        return false;
+      });
+      vi.mocked(deps.filesystem.readdir).mockResolvedValue([
+        'skill1',
+        'skill2',
+        'not-a-skill',
+      ]);
+      vi.mocked(deps.filesystem.stat).mockImplementation(async (path) => ({
+        isFile: () => false,
+        isDirectory: () =>
+          path.includes('skill1') ||
+          path.includes('skill2') ||
+          path.includes('not-a-skill'),
+        size: 0,
+        mtime: new Date(),
+      }));
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.filesystem.readdir).toHaveBeenCalledWith(
+        '/home/user/.config/overture/skills',
+      );
+    });
+
+    it('should display skill count when skills exist', async () => {
+      // Arrange
+      const mockDiscoveryReport = createMockDiscoveryReport();
+      vi.mocked(deps.discoveryService.discoverAll).mockResolvedValue(
+        mockDiscoveryReport,
+      );
+      vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue(null);
+      vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
+      vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/skills') return true;
+        if (path === '/home/user/.config/overture/skills/skill1/SKILL.md')
+          return true;
+        if (path === '/home/user/.config/overture/skills/skill2/SKILL.md')
+          return true;
+        return false;
+      });
+      vi.mocked(deps.filesystem.readdir).mockResolvedValue([
+        'skill1',
+        'skill2',
+      ]);
+      vi.mocked(deps.filesystem.stat).mockImplementation(async () => ({
+        isFile: () => false,
+        isDirectory: () => true,
+        size: 0,
+        mtime: new Date(),
+      }));
+
+      const command = createDoctorCommand(deps);
+
+      // Act
+      await command.parseAsync(['node', 'doctor']);
+
+      // Assert
+      expect(deps.output.success).toHaveBeenCalledWith(
+        expect.stringContaining('2 skills'),
       );
     });
   });

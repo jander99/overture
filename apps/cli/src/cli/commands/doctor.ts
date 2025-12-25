@@ -75,6 +75,7 @@ export function createDoctorCommand(deps: AppDependencies): Command {
     pathResolver,
     process,
     filesystem,
+    environment,
   } = deps;
   const command = new Command('doctor');
 
@@ -89,7 +90,7 @@ export function createDoctorCommand(deps: AppDependencies): Command {
         const platform = getCurrentPlatform();
 
         // Detect project root
-        const projectRoot = pathResolver.findProjectRoot();
+        const projectRoot = await pathResolver.findProjectRoot();
 
         // Load configs
         const userConfig = await configLoader.loadUserConfig();
@@ -110,11 +111,126 @@ export function createDoctorCommand(deps: AppDependencies): Command {
         // Run discovery
         const discoveryReport = await discoveryService.discoverAll(adapters);
 
+        // Check config repo
+        const homeDir = environment.homedir();
+        const configRepoPath = `${homeDir}/.config/overture`;
+        const skillsPath = `${configRepoPath}/skills`;
+        const configRepoExists = await filesystem.exists(configRepoPath);
+        const skillsDirExists = await filesystem.exists(skillsPath);
+
+        // Check if config repo is a git repository
+        let isGitRepo = false;
+        let gitRemote: string | null = null;
+        let localHash: string | null = null;
+        let remoteHash: string | null = null;
+        let gitInSync = false;
+
+        if (configRepoExists) {
+          const gitDirPath = `${configRepoPath}/.git`;
+          isGitRepo = await filesystem.exists(gitDirPath);
+
+          // Check for git remote and hashes if it's a git repo
+          if (isGitRepo) {
+            try {
+              const remoteResult = await process.exec('git', [
+                '-C',
+                configRepoPath,
+                'remote',
+                'get-url',
+                'origin',
+              ]);
+              if (remoteResult.exitCode === 0 && remoteResult.stdout.trim()) {
+                gitRemote = remoteResult.stdout.trim();
+              }
+            } catch {
+              // Ignore errors - remote might not be configured
+            }
+
+            // Get local HEAD hash
+            try {
+              const localResult = await process.exec('git', [
+                '-C',
+                configRepoPath,
+                'rev-parse',
+                'HEAD',
+              ]);
+              if (localResult.exitCode === 0 && localResult.stdout.trim()) {
+                localHash = localResult.stdout.trim();
+              }
+            } catch {
+              // Ignore errors - might not have any commits
+            }
+
+            // Get remote HEAD hash if remote exists
+            if (gitRemote && localHash) {
+              try {
+                // Use git ls-remote to get remote HEAD without fetching
+                const lsRemoteResult = await process.exec('git', [
+                  '-C',
+                  configRepoPath,
+                  'ls-remote',
+                  'origin',
+                  'HEAD',
+                ]);
+                if (
+                  lsRemoteResult.exitCode === 0 &&
+                  lsRemoteResult.stdout.trim()
+                ) {
+                  // Output format: "hash\tHEAD" or "hash\trefs/heads/main"
+                  const match = lsRemoteResult.stdout.trim().split(/\s+/);
+                  if (match.length > 0) {
+                    remoteHash = match[0];
+                    gitInSync = localHash === remoteHash;
+                  }
+                }
+              } catch {
+                // Ignore errors - remote might not be accessible
+              }
+            }
+          }
+        }
+
+        // Count skills in skills directory
+        let skillCount = 0;
+        if (skillsDirExists) {
+          try {
+            const entries = await filesystem.readdir(skillsPath);
+            // Count directories that contain SKILL.md
+            for (const entry of entries) {
+              const entryPath = `${skillsPath}/${entry}`;
+              const stats = await filesystem.stat(entryPath);
+              if (stats.isDirectory()) {
+                const skillFile = `${entryPath}/SKILL.md`;
+                const hasSkillFile = await filesystem.exists(skillFile);
+                if (hasSkillFile) {
+                  skillCount++;
+                }
+              }
+            }
+          } catch {
+            // Ignore errors - directory might not be readable
+          }
+        }
+
         const results = {
           environment: {
             platform: discoveryReport.environment.platform,
             isWSL2: discoveryReport.environment.isWSL2,
             wsl2Info: discoveryReport.environment.wsl2Info,
+          },
+          configRepo: {
+            path: configRepoPath,
+            exists: configRepoExists,
+            isGitRepo,
+            gitRemote,
+            localHash,
+            remoteHash,
+            gitInSync,
+            skillsDirectory: {
+              path: skillsPath,
+              exists: skillsDirExists,
+              skillCount,
+            },
           },
           clients: [] as any[],
           mcpServers: [] as any[],
@@ -138,6 +254,94 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           if (discoveryReport.environment.wsl2Info?.windowsUserProfile) {
             console.log(
               `  Windows User: ${chalk.dim(discoveryReport.environment.wsl2Info.windowsUserProfile)}`,
+            );
+          }
+          console.log('');
+        }
+
+        // Show config repo status (if not JSON mode)
+        if (!options.json) {
+          output.info(chalk.bold('Checking config repository...\n'));
+          if (configRepoExists) {
+            output.success(
+              `${chalk.green('✓')} Config repo - ${chalk.dim(configRepoPath)}`,
+            );
+
+            // Git repo status
+            if (isGitRepo) {
+              const hashShort = localHash
+                ? localHash.substring(0, 7)
+                : 'unknown';
+              output.success(
+                `  ${chalk.green('✓')} Git repository - ${chalk.dim('initialized')} ${chalk.dim(`(${hashShort})`)}`,
+              );
+              if (gitRemote) {
+                output.success(
+                  `    ${chalk.green('✓')} Remote configured - ${chalk.dim(gitRemote)}`,
+                );
+
+                // Show sync status if we have both hashes
+                if (localHash && remoteHash) {
+                  if (gitInSync) {
+                    output.success(
+                      `      ${chalk.green('✓')} In sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
+                    );
+                  } else {
+                    output.warn(
+                      `      ${chalk.yellow('⚠')} Out of sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
+                    );
+                    console.log(
+                      `        ${chalk.dim('→')} ${chalk.dim('Run: git pull or git push')}`,
+                    );
+                  }
+                } else if (localHash && !remoteHash) {
+                  output.warn(
+                    `      ${chalk.yellow('⚠')} Remote HEAD not available`,
+                  );
+                  console.log(
+                    `        ${chalk.dim('→')} ${chalk.dim('Run: git push -u origin main')}`,
+                  );
+                }
+              } else {
+                output.warn(
+                  `    ${chalk.yellow('⚠')} No git remote configured`,
+                );
+                console.log(
+                  `      ${chalk.dim('→')} ${chalk.dim('Run: git remote add origin <url>')}`,
+                );
+              }
+            } else {
+              output.warn(`  ${chalk.yellow('⚠')} Not a git repository`);
+              console.log(
+                `    ${chalk.dim('→')} ${chalk.dim('Run: cd ' + configRepoPath + ' && git init')}`,
+              );
+            }
+
+            // Skills directory
+            if (skillsDirExists) {
+              const skillCountStr =
+                skillCount === 0
+                  ? chalk.yellow('no skills')
+                  : skillCount === 1
+                    ? chalk.green('1 skill')
+                    : chalk.green(`${skillCount} skills`);
+              output.success(
+                `  ${chalk.green('✓')} Skills directory - ${chalk.dim(skillsPath)} ${chalk.dim(`(${skillCountStr})`)}`,
+              );
+            } else {
+              output.warn(
+                `  ${chalk.yellow('⚠')} Skills directory not found - ${chalk.dim(skillsPath)}`,
+              );
+              console.log(
+                `    ${chalk.dim('→')} ${chalk.dim('Run: mkdir -p ' + skillsPath)}`,
+              );
+            }
+          } else {
+            output.warn(
+              `${chalk.yellow('⚠')} Config repo not found - ${chalk.dim(configRepoPath)}`,
+            );
+            console.log(
+              `  ${chalk.dim('→')} ${chalk.dim('Run: overture init to create config repo')}`,
             );
           }
           console.log('');
@@ -330,6 +534,43 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           // Summary
           console.log('');
           output.info(chalk.bold('Summary:\n'));
+
+          // Config repo status
+          const configRepoStatus = configRepoExists
+            ? chalk.green('exists')
+            : chalk.yellow('not found');
+          console.log(`  Config repo:      ${configRepoStatus}`);
+          if (configRepoExists) {
+            const gitRepoStatus = isGitRepo
+              ? chalk.green('yes')
+              : chalk.yellow('no');
+            console.log(`  Git repository:   ${gitRepoStatus}`);
+            if (isGitRepo) {
+              const remoteStatus = gitRemote
+                ? chalk.green('configured')
+                : chalk.yellow('not configured');
+              console.log(`  Git remote:       ${remoteStatus}`);
+
+              if (gitRemote && localHash && remoteHash) {
+                const syncStatus = gitInSync
+                  ? chalk.green('in sync')
+                  : chalk.yellow('out of sync');
+                console.log(`  Git sync:         ${syncStatus}`);
+              }
+            }
+            const skillsStatus = skillsDirExists
+              ? chalk.green('exists')
+              : chalk.yellow('not found');
+            const skillCountStr =
+              skillsDirExists && skillCount > 0
+                ? chalk.dim(
+                    ` (${skillCount} skill${skillCount === 1 ? '' : 's'})`,
+                  )
+                : '';
+            console.log(`  Skills directory: ${skillsStatus}${skillCountStr}`);
+          }
+          console.log('');
+
           console.log(
             `  Clients detected: ${chalk.green(results.summary.clientsDetected)} / ${ALL_CLIENTS.length}`,
           );
