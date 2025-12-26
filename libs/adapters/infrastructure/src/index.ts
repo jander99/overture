@@ -13,17 +13,12 @@
  * import {
  *   NodeFilesystemAdapter,
  *   NodeProcessAdapter,
- *   NodeEnvironmentAdapter,
- *   FsUtils,
- *   TemplateLoader
+ *   NodeEnvironmentAdapter
  * } from '@overture/adapters-infrastructure';
  *
  * // Use port implementations
  * const filesystem = new NodeFilesystemAdapter();
  * await filesystem.readFile('config.yml');
- *
- * // Use legacy utilities (being phased out)
- * const config = await FsUtils.readFile('config.yml');
  * ```
  */
 
@@ -31,10 +26,6 @@
 export { NodeFilesystemAdapter } from './lib/node-filesystem.adapter.js';
 export { NodeProcessAdapter } from './lib/node-process.adapter.js';
 export { NodeEnvironmentAdapter } from './lib/node-environment.adapter.js';
-
-// Legacy Utilities (TODO: Phase out in favor of port-based architecture)
-export { FsUtils } from './lib/fs-utils.js';
-export { TemplateLoader } from './lib/template-loader.js';
 
 // Re-export types from ports for convenience
 export type { FilesystemPort, Stats } from '@overture/ports-filesystem';

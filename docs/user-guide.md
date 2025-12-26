@@ -1200,6 +1200,45 @@ You can provide defaults using `${VAR:-default}` syntax.
 
 ## Troubleshooting
 
+### Debug Mode
+
+Enable debug mode to see detailed error information and stack traces:
+
+```bash
+DEBUG=1 overture sync
+```
+
+**What Debug Mode Shows:**
+
+- Full stack traces for errors
+- Detailed validation messages
+- File operation logs
+- Internal state information
+
+**When to Use Debug Mode:**
+
+- Investigating sync failures
+- Reporting bugs (include debug output)
+- Understanding why a config isn't loading
+- Tracking down file permission issues
+
+**Example:**
+
+```bash
+# Normal mode (concise errors)
+$ overture sync
+✗ Config file not found: /path/to/config.yaml
+
+# Debug mode (detailed stack traces)
+$ DEBUG=1 overture sync
+→ Loading config from /path/to/config.yaml
+✗ Config file not found: /path/to/config.yaml
+  Error: ENOENT: no such file or directory
+    at Object.readFileSync (node:fs:441:20)
+    at ConfigLoader.loadUserConfig (/path/to/config-loader.ts:123:45)
+    ...
+```
+
 ### Configuration Not Loading
 
 **Problem:** Changes to `.overture/config.yaml` don't take effect.

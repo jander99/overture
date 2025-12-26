@@ -35,4 +35,33 @@ export interface OutputPort {
    * @param message - The message to output
    */
   error(message: string): void;
+
+  /**
+   * Output a debug message (only when DEBUG env var is set).
+   * @param message - The message to output
+   */
+  debug?(message: string): void;
+
+  /**
+   * Print a blank line for spacing.
+   */
+  nl?(): void;
+
+  /**
+   * Output a section header.
+   * @param message - The section header text
+   */
+  section?(message: string): void;
+
+  /**
+   * Output a skipped item message.
+   * @param message - The skip message
+   */
+  skip?(message: string): void;
+
+  /**
+   * Output plain text without formatting.
+   * @param message - The message to display
+   */
+  plain?(message: string): void;
 }

@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import chalk from 'chalk';
 import type { AppDependencies } from '../../composition-root';
 import type { ClientName } from '@overture/config-types';
 import { formatDiff } from '@overture/sync-core';
@@ -222,8 +221,8 @@ export function createSyncCommand(deps: AppDependencies): Command {
         const result = await syncEngine.syncClients(syncOptions);
 
         // ==================== Phase 1: Detection Summary ====================
-        (output as any).section('🔍 Detecting clients...');
-        (output as any).nl();
+        output.section?.('🔍 Detecting clients...');
+        output.nl?.();
 
         // Separate clients by detection status and whether they were actually skipped
         // Note: With dual-sync, we may have 2 results per client (user + project)
@@ -287,26 +286,23 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show actually skipped clients
         for (const clientResult of actuallySkippedClients) {
-          (output as any).skip(
-            `${clientResult.client} - not detected, skipped`,
-          );
+          output.skip?.(`${clientResult.client} - not detected, skipped`);
         }
 
         // ==================== Phase 1.3: MCP Configuration Table ====================
         const mcpTable = generateMcpTable(result);
         if (mcpTable) {
-          console.log();
-          console.log(chalk.bold('📋 MCP Server Configuration:'));
-          console.log();
-          console.log(mcpTable);
-          console.log();
+          output.nl?.();
+          output.section?.('📋 MCP Server Configuration:');
+          output.plain?.(mcpTable);
+          output.nl?.();
         }
 
         // ==================== Phase 1.5: Plugin Sync Plan (detail mode) ====================
         if (detailMode && result.pluginSyncDetails) {
           const details = result.pluginSyncDetails;
-          (output as any).section('📦 Plugin Sync Plan:');
-          (output as any).nl();
+          output.section?.('📦 Plugin Sync Plan:');
+          output.nl?.();
           output.info(`  Configured: ${details.configured} plugins`);
           output.info(`  Already installed: ${details.installed}`);
 
@@ -318,7 +314,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           } else {
             output.success(`  ✅ All plugins already installed`);
           }
-          (output as any).nl();
+          output.nl?.();
         }
 
         // ==================== Phase 1.6: Skill Sync Summary ====================
@@ -355,7 +351,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
               }
             }
           }
-          (output as any).nl();
+          output.nl?.();
         }
 
         // ==================== Phase 2: Sync Summary ====================
@@ -364,8 +360,8 @@ export function createSyncCommand(deps: AppDependencies): Command {
           ...undetectedButSyncedClients,
         ];
         if (syncedClients.length > 0) {
-          (output as any).section('⚙️  Syncing configurations...');
-          (output as any).nl();
+          output.section?.('⚙️  Syncing configurations...');
+          output.nl?.();
 
           // Group results by client to show user + project syncs together
           const resultsByClient = new Map<string, ClientSyncResult[]>();
@@ -373,12 +369,16 @@ export function createSyncCommand(deps: AppDependencies): Command {
             if (!resultsByClient.has(r.client)) {
               resultsByClient.set(r.client, []);
             }
-            resultsByClient.get(r.client)!.push(r);
+            const clientResults = resultsByClient.get(r.client);
+            if (clientResults) {
+              clientResults.push(r);
+            }
           }
 
           // Display results grouped by client
           for (const clientName of resultsByClient.keys()) {
-            const clientResults = resultsByClient.get(clientName)!;
+            const clientResults = resultsByClient.get(clientName);
+            if (!clientResults) continue;
             const allSuccess = clientResults.every((r) => r.success);
 
             if (allSuccess) {
@@ -399,7 +399,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
               if (detailMode) {
                 for (const clientResult of clientResults) {
                   if (clientResult.diff && clientResult.diff.hasChanges) {
-                    (output as any).nl();
+                    output.nl?.();
 
                     const configLabel = clientResult.configType
                       ? ` (${clientResult.configType} config)`
@@ -424,14 +424,14 @@ export function createSyncCommand(deps: AppDependencies): Command {
                       output.info(
                         `Configuration changes for ${clientResult.client}${configLabel}:`,
                       );
-                      (output as any).nl();
+                      output.nl?.();
 
                       if (globalMcps.length > 0) {
                         output.info(`Global MCPs (${globalMcps.length}):`);
                         for (const mcpName of globalMcps.sort()) {
                           output.info(`  ~ ${mcpName}`);
                         }
-                        (output as any).nl();
+                        output.nl?.();
                       }
 
                       if (projectMcps.length > 0) {
@@ -439,13 +439,13 @@ export function createSyncCommand(deps: AppDependencies): Command {
                         for (const mcpName of projectMcps.sort()) {
                           output.info(`  ~ ${mcpName}`);
                         }
-                        (output as any).nl();
+                        output.nl?.();
                       }
                     }
 
                     const diffOutput = formatDiff(clientResult.diff);
-                    console.log(diffOutput); // Use console.log to preserve formatting
-                    (output as any).nl();
+                    output.plain?.(diffOutput); // Preserve diff formatting
+                    output.nl?.();
                   }
                 }
               }
@@ -503,11 +503,11 @@ export function createSyncCommand(deps: AppDependencies): Command {
           criticalWarnings.length > 0 ||
           informationalWarnings.length > 0
         ) {
-          (output as any).section('⚠️  Warnings:');
+          output.section?.('⚠️  Warnings:');
 
           // Show global warnings first (config validation issues)
           if (globalWarnings.length > 0) {
-            (output as any).nl();
+            output.nl?.();
             output.warn('Configuration:');
             for (const warning of globalWarnings) {
               output.warn(`  - ${warning}`);
@@ -519,7 +519,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
               detailMode &&
               (informationalWarnings.length > 0 || globalWarnings.length > 0)
             ) {
-              (output as any).nl();
+              output.nl?.();
               output.warn('Critical:');
             }
             for (const item of criticalWarnings) {
@@ -528,7 +528,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
           }
 
           if (detailMode && informationalWarnings.length > 0) {
-            (output as any).nl();
+            output.nl?.();
             output.info('Informational:');
             for (const item of informationalWarnings) {
               output.info(`  - ${item.client}: ${item.warning}`);
@@ -542,9 +542,9 @@ export function createSyncCommand(deps: AppDependencies): Command {
             criticalWarnings.length === 0 &&
             informationalWarnings.length === 0
           ) {
-            (output as any).section('💡 Tips:');
+            output.section?.('💡 Tips:');
           } else {
-            (output as any).nl();
+            output.nl?.();
           }
           for (const tip of tips) {
             output.info(`  ${tip}`);
@@ -553,7 +553,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Show global errors
         if (result.errors.length > 0) {
-          (output as any).section('❌ Errors:');
+          output.section?.('❌ Errors:');
           for (const error of result.errors) {
             output.error(`  - ${error}`);
           }
@@ -563,7 +563,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         if (detailMode) {
           const backups = result.results.filter((r) => r.backupPath);
           if (backups.length > 0) {
-            (output as any).section('💾 Backups:');
+            output.section?.('💾 Backups:');
             for (const clientResult of backups) {
               output.info(
                 `  ${clientResult.client}: ${clientResult.backupPath}`,
@@ -573,7 +573,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         }
 
         // Final status
-        (output as any).nl();
+        output.nl?.();
         if (result.success) {
           output.success('Sync complete!');
         } else {
