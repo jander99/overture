@@ -326,11 +326,36 @@ This syncs skills from `~/.config/overture/skills/` to:
 - `~/.github/skills/` (GitHub Copilot CLI)
 - `~/.opencode/skill/` (OpenCode)
 
+**Important:** `overture sync` **overwrites existing skills** to ensure they match your source. If you've manually customized skill files, those changes will be lost. To preserve customizations:
+
+- Keep a backup of modified skills outside the skills directory
+- Fork customized skills to a new name (e.g., `debugging-custom`)
+- Track your skills in version control
+
 You can skip skill sync with `--skip-skills`:
 
 ```bash
 overture sync --skip-skills
 ```
+
+#### Copying Individual Skills
+
+To copy a single skill without syncing all skills, use `overture skill cp`:
+
+```bash
+# Copy skill (skips if already exists)
+overture skill cp debugging
+
+# Force overwrite existing skill
+overture skill cp debugging --force
+```
+
+**Difference from sync:**
+
+- `overture sync` - Overwrites all skills by default (ensures consistency)
+- `overture skill cp` - Skips existing skills by default (requires `--force` to overwrite)
+
+Use `skill cp` when you want to selectively add skills without affecting existing ones.
 
 #### Sharing Skills with Your Team
 

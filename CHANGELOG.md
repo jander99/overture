@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BREAKING: Skill Synchronization** - `overture sync` now overwrites existing skills by default
+  - **Previous behavior:** Skills were never updated during sync (hardcoded bug - always skipped existing files)
+  - **New behavior:** Skills are always synchronized to match source (like MCP configs)
+  - **Rationale:** "Sync" semantics imply making destination match source
+  - **Migration:** If you have manually customized skills in `.claude/skills/`, back them up before upgrading
+  - **Note:** `overture skill cp` still requires `--force` flag to overwrite (unchanged)
+
 - **Claude Code Settings Preservation** - User settings no longer overwritten during sync
   - Detects when writing to `~/.claude.json` (user config vs project config)
   - Reads existing config and merges new mcpServers while preserving:

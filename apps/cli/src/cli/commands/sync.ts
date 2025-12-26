@@ -159,7 +159,9 @@ export function createSyncCommand(deps: AppDependencies): Command {
   const command = new Command('sync');
 
   command
-    .description('Sync MCP configuration and Agent Skills to AI clients')
+    .description(
+      'Sync MCP configuration and Agent Skills to AI clients (overwrites existing)',
+    )
     .option('--dry-run', 'Preview changes without writing files')
     .option(
       '--client <name>',
@@ -324,7 +326,20 @@ export function createSyncCommand(deps: AppDependencies): Command {
           const summary = result.skillSyncSummary;
           output.info('📚 Skills:');
           if (summary.synced > 0) {
-            output.success(`  ✓ Synced ${summary.synced} skill(s) to clients`);
+            // Calculate unique skills and clients from synced results
+            const syncedResults = summary.results.filter(
+              (r) => r.success && !r.skipped,
+            );
+            const uniqueSkills = new Set(syncedResults.map((r) => r.skill));
+            const uniqueClients = new Set(syncedResults.map((r) => r.client));
+
+            const skillCount = uniqueSkills.size;
+            const clientCount = uniqueClients.size;
+            const totalOps = summary.synced;
+
+            output.success(
+              `  ✓ Synced ${skillCount} skill(s) to ${clientCount} client(s) (${totalOps} total operations)`,
+            );
           }
           if (summary.skipped > 0) {
             output.info(`  ○ Skipped ${summary.skipped} (already synced)`);

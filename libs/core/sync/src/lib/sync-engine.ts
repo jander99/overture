@@ -252,7 +252,7 @@ export class SyncEngine {
       if (!options.skipSkills && this.deps.skillSyncService) {
         try {
           skillSyncSummary = await this.deps.skillSyncService.syncSkills({
-            force: false,
+            force: true, // Always overwrite - sync is source of truth
             clients: targetClients as ClientName[],
             dryRun: options.dryRun,
           });

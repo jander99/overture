@@ -351,7 +351,7 @@ describe('mcp command', () => {
             command: 'mcp-server-github',
             args: [],
             clients: {
-              only: ['claude-code'], // Only for claude-code
+              include: ['claude-code'], // Only for claude-code
             },
           },
         },
@@ -388,14 +388,14 @@ describe('mcp command', () => {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-memory'],
             clients: {
-              only: ['claude-code'],
+              include: ['claude-code'],
             },
           },
           filesystem: {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             clients: {
-              only: ['cursor'],
+              include: ['copilot-cli'],
             },
           },
         },
@@ -428,7 +428,7 @@ describe('mcp command', () => {
       expect(hasFilesystem).toBe(false);
     });
 
-    it('should respect clients.except exclusions', async () => {
+    it('should respect clients.exclude exclusions', async () => {
       vi.mocked(deps.configLoader.loadUserConfig).mockResolvedValue({
         version: '1.0' as const,
         mcp: {
@@ -436,7 +436,7 @@ describe('mcp command', () => {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-memory'],
             clients: {
-              except: ['cursor'], // Not for cursor
+              exclude: ['copilot-cli'], // Not for cursor
             },
           },
         },
@@ -448,7 +448,13 @@ describe('mcp command', () => {
       });
 
       const command = createMcpCommand(deps);
-      await command.parseAsync(['node', 'mcp', 'list', '--client', 'cursor']);
+      await command.parseAsync([
+        'node',
+        'mcp',
+        'list',
+        '--client',
+        'copilot-cli',
+      ]);
 
       // Should warn about no MCPs (memory is excluded for cursor)
       expect(deps.output.warn).toHaveBeenCalledWith(
@@ -464,14 +470,14 @@ describe('mcp command', () => {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-memory'],
             clients: {
-              only: ['claude-code'],
+              include: ['claude-code'],
             },
           },
           filesystem: {
             command: 'npx',
             args: ['-y', '@modelcontextprotocol/server-filesystem'],
             clients: {
-              only: ['cursor'],
+              include: ['copilot-cli'],
             },
           },
         },
