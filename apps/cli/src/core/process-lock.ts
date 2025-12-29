@@ -155,6 +155,45 @@ async function handleRetryableError(
  * const acquired = await acquireLock(getLockPath, { operation: 'sync' });
  * ```
  */
+/**
+ * Try to create lock file atomically
+ */
+function tryCreateLockFile(lockPath: string, opts: LockOptions): boolean {
+  const lockData: LockData = {
+    pid: process.pid,
+    timestamp: Date.now(),
+    operation: opts.operation!,
+  };
+
+  // Atomically create lock file using 'wx' flag (exclusive create, fails if exists)
+  // This eliminates TOCTOU race condition between checking and creating
+  fs.writeFileSync(lockPath, JSON.stringify(lockData, null, 2), {
+    encoding: 'utf-8',
+    flag: 'wx', // Exclusive create - fails with EEXIST if file exists
+  });
+
+  return true;
+}
+
+/**
+ * Handle lock acquisition error
+ */
+async function handleLockError(
+  error: NodeJS.ErrnoException,
+  lockPath: string,
+  opts: LockOptions,
+  attempts: number,
+  delay: number,
+): Promise<{ shouldRetry: boolean; newAttempts: number; newDelay: number }> {
+  // File already exists - check if it's stale
+  if (error.code === 'EEXIST') {
+    return handleExistingLockFile(lockPath, opts, attempts, delay);
+  }
+
+  // Other errors (permission denied, etc.)
+  return handleRetryableError(attempts, opts.maxRetries!, delay);
+}
+
 export async function acquireLock(
   getLockFilePath: GetLockFilePath,
   options: LockOptions = {},
@@ -172,47 +211,17 @@ export async function acquireLock(
   let delay = opts.retryDelay;
 
   while (attempts <= opts.maxRetries) {
-    // Prepare lock data
-    const lockData: LockData = {
-      pid: process.pid,
-      timestamp: Date.now(),
-      operation: opts.operation,
-    };
-
     try {
-      // Atomically create lock file using 'wx' flag (exclusive create, fails if exists)
-      // This eliminates TOCTOU race condition between checking and creating
-      fs.writeFileSync(lockPath, JSON.stringify(lockData, null, 2), {
-        encoding: 'utf-8',
-        flag: 'wx', // Exclusive create - fails with EEXIST if file exists
-      });
-
-      // Lock acquired successfully
-      registerCleanupHandler(getLockFilePath);
-      return true;
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-
-      // File already exists - check if it's stale
-      if (err.code === 'EEXIST') {
-        const { shouldRetry, newAttempts, newDelay } =
-          await handleExistingLockFile(lockPath, opts, attempts, delay);
-
-        if (shouldRetry) {
-          attempts = newAttempts;
-          delay = newDelay;
-          if (newDelay > delay) {
-            // If delay changed, wait before retrying
-            await sleep(delay);
-          }
-          continue;
-        }
+      if (tryCreateLockFile(lockPath, opts)) {
+        registerCleanupHandler(getLockFilePath);
+        return true;
       }
-
-      // Other errors (permission denied, etc.)
-      const { shouldRetry, newAttempts, newDelay } = await handleRetryableError(
+    } catch (error) {
+      const { shouldRetry, newAttempts, newDelay } = await handleLockError(
+        error as NodeJS.ErrnoException,
+        lockPath,
+        opts,
         attempts,
-        opts.maxRetries!,
         delay,
       );
 
