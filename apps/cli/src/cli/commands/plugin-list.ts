@@ -4,6 +4,50 @@ import type { InstalledPlugin } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
 
 /**
+ * Display plugins in human-readable format
+ */
+function displayHumanFormat(
+  plugins: Array<InstalledPlugin & { inConfig: boolean }>,
+  comparison: { both: unknown[]; installedOnly: unknown[] },
+  options: { installedOnly?: boolean },
+  output: AppDependencies['output'],
+): void {
+  output.info('Installed Claude Code Plugins:');
+  output.nl();
+
+  if (plugins.length === 0) {
+    output.info('  No plugins found matching filter criteria.');
+  } else {
+    for (const plugin of plugins) {
+      const statusIcon = plugin.enabled ? '✓' : ' ';
+      const configStatus = plugin.inConfig ? 'Yes' : 'No';
+
+      output.info(`${statusIcon} ${plugin.name}@${plugin.marketplace}`);
+      output.info(`  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`);
+      output.info(`  In config: ${configStatus}`);
+      output.nl();
+    }
+  }
+
+  // Summary
+  const totalInstalled =
+    comparison.both.length + comparison.installedOnly.length;
+  const inConfig = comparison.both.length;
+
+  output.info(
+    `📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`,
+  );
+
+  // Tips
+  if (comparison.installedOnly.length > 0 && !options.installedOnly) {
+    output.nl();
+    output.info('💡 Tips:');
+    output.info("   • Use 'overture plugin export' to add plugins to config");
+    output.info("   • Use 'overture sync' to install plugins from config");
+  }
+}
+
+/**
  * Creates the 'plugin list' command for listing installed plugins.
  *
  * Usage: overture plugin list [options]
@@ -78,45 +122,7 @@ export function createPluginListCommand(deps: AppDependencies): Command {
           console.log(JSON.stringify(output, null, 2));
         } else {
           // Human-readable format
-          output.info('Installed Claude Code Plugins:');
-          output.nl();
-
-          if (plugins.length === 0) {
-            output.info('  No plugins found matching filter criteria.');
-          } else {
-            for (const plugin of plugins) {
-              const statusIcon = plugin.enabled ? '✓' : ' ';
-              const configStatus = plugin.inConfig ? 'Yes' : 'No';
-
-              output.info(`${statusIcon} ${plugin.name}@${plugin.marketplace}`);
-              output.info(
-                `  Status: ${plugin.enabled ? 'Enabled' : 'Disabled'}`,
-              );
-              output.info(`  In config: ${configStatus}`);
-              output.nl();
-            }
-          }
-
-          // Summary
-          const totalInstalled =
-            comparison.both.length + comparison.installedOnly.length;
-          const inConfig = comparison.both.length;
-
-          output.info(
-            `📊 Summary: ${totalInstalled} plugin(s) installed, ${inConfig} in config`,
-          );
-
-          // Tips
-          if (comparison.installedOnly.length > 0 && !options.installedOnly) {
-            output.nl();
-            output.info('💡 Tips:');
-            output.info(
-              "   • Use 'overture plugin export' to add plugins to config",
-            );
-            output.info(
-              "   • Use 'overture sync' to install plugins from config",
-            );
-          }
+          displayHumanFormat(plugins, comparison, options, output);
         }
       } catch (error) {
         const verbose =

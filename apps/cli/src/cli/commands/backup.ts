@@ -6,6 +6,59 @@ import { Prompts, ErrorHandler, UserCancelledError } from '@overture/utils';
 import type { AppDependencies } from '../../composition-root';
 
 /**
+ * Find backup to restore
+ */
+async function findBackupToRestore(
+  client: ClientName,
+  timestamp: string | undefined,
+  options: { latest?: boolean },
+  backupService: AppDependencies['backupService'],
+  output: AppDependencies['output'],
+): Promise<{ backup: BackupMetadata; isLatest: boolean }> {
+  if (options.latest || !timestamp) {
+    const backup = await backupService.getLatestBackup(client);
+    if (!backup) {
+      output.error(`No backups found for ${client}`);
+      throw Object.assign(new Error('No backups found'), { exitCode: 2 });
+    }
+    return { backup, isLatest: true };
+  }
+
+  const backups = await backupService.listBackups(client);
+  const backup = backups.find((b) => b.timestamp === timestamp) || null;
+
+  if (!backup) {
+    output.error(`Backup not found: ${client} at ${timestamp}`);
+    output.info(`Available backups for ${client}:`);
+    backups.forEach((b) => {
+      output.info(`  - ${b.timestamp}`);
+    });
+    throw Object.assign(new Error('Backup not found'), { exitCode: 2 });
+  }
+
+  return { backup, isLatest: false };
+}
+
+/**
+ * Display backup details
+ */
+function displayBackupDetails(
+  backup: BackupMetadata,
+  isLatest: boolean,
+  output: AppDependencies['output'],
+): void {
+  output.info('Backup details:');
+  output.info(`  Client: ${chalk.cyan(backup.client)}`);
+  output.info(`  Timestamp: ${formatTimestamp(backup.timestamp)}`);
+  output.info(`  Size: ${formatSize(backup.size)}`);
+  output.info(`  Age: ${formatAge(backup.timestamp)}`);
+  if (isLatest) {
+    output.info(`  ${chalk.yellow('(Most recent backup)')}`);
+  }
+  output.nl();
+}
+
+/**
  * Creates the 'backup' command group for managing client MCP configuration backups.
  *
  * Usage:
@@ -113,49 +166,18 @@ export function createBackupCommand(deps: AppDependencies): Command {
             throw Object.assign(new Error('Invalid client'), { exitCode: 2 });
           }
 
-          // Determine which backup to restore
-          let backupToRestore: BackupMetadata | null = null;
-          let isLatest = false;
-
-          if (options.latest || !timestamp) {
-            backupToRestore = await backupService.getLatestBackup(client);
-            isLatest = true;
-
-            if (!backupToRestore) {
-              output.error(`No backups found for ${client}`);
-              throw Object.assign(new Error('No backups found'), {
-                exitCode: 2,
-              });
-            }
-          } else {
-            const backups = await backupService.listBackups(client);
-            backupToRestore =
-              backups.find((b) => b.timestamp === timestamp) || null;
-
-            if (!backupToRestore) {
-              output.error(`Backup not found: ${client} at ${timestamp}`);
-              output.info(`Available backups for ${client}:`);
-              backups.forEach((b) => {
-                output.info(`  - ${b.timestamp}`);
-              });
-              throw Object.assign(new Error('Backup not found'), {
-                exitCode: 2,
-              });
-            }
-          }
+          // Find backup to restore
+          const { backup: backupToRestore, isLatest } =
+            await findBackupToRestore(
+              client,
+              timestamp,
+              options,
+              backupService,
+              output,
+            );
 
           // Show backup details
-          output.info('Backup details:');
-          output.info(`  Client: ${chalk.cyan(backupToRestore.client)}`);
-          output.info(
-            `  Timestamp: ${formatTimestamp(backupToRestore.timestamp)}`,
-          );
-          output.info(`  Size: ${formatSize(backupToRestore.size)}`);
-          output.info(`  Age: ${formatAge(backupToRestore.timestamp)}`);
-          if (isLatest) {
-            output.info(`  ${chalk.yellow('(Most recent backup)')}`);
-          }
-          output.nl();
+          displayBackupDetails(backupToRestore, isLatest, output);
 
           // Confirm restore
           if (options.confirm) {

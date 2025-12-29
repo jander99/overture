@@ -10,6 +10,166 @@ import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
 import type { ClaudeCodeAdapter } from '@overture/client-adapters';
+import type { CleanupTarget, Platform } from '@overture/config-types';
+
+/**
+ * Filter cleanup targets based on command options
+ */
+async function filterCleanupTargets(
+  targets: CleanupTarget[],
+  options: { directory?: string; all?: boolean },
+): Promise<CleanupTarget[] | null> {
+  if (targets.length === 0) {
+    p.outro('No cleanup needed - no Overture-managed directories found');
+    return null;
+  }
+
+  let filteredTargets = targets;
+
+  // Filter by specific directory if requested
+  if (options.directory) {
+    filteredTargets = targets.filter((t) => t.directory === options.directory);
+    if (filteredTargets.length === 0) {
+      p.cancel(`No Overture config found at ${options.directory}`);
+      return null;
+    }
+  }
+
+  // Interactive selection (unless --all or --directory specified)
+  if (!options.all && !options.directory) {
+    const selectedValues = await p.multiselect({
+      message: `Select directories to clean up (${targets.length} found):`,
+      options: targets.map((t) => ({
+        value: t,
+        label: t.directory,
+        hint: `Remove ${t.mcpsToRemove.length} MCP(s), preserve ${t.mcpsToPreserve.length}`,
+      })),
+      required: false,
+    });
+
+    if (p.isCancel(selectedValues) || selectedValues.length === 0) {
+      p.cancel('Cleanup cancelled');
+      return null;
+    }
+
+    return selectedValues as typeof targets;
+  }
+
+  return filteredTargets;
+}
+
+/**
+ * Generate and display cleanup plan
+ */
+function generateCleanupPlan(
+  selectedTargets: CleanupTarget[],
+  dryRun: boolean,
+  output: { warn(msg: string): void },
+): void {
+  const planLines: string[] = [];
+  let totalToPreserve = 0;
+
+  for (const target of selectedTargets) {
+    planLines.push(`\n${target.directory}:`);
+    planLines.push(`  Remove ${target.mcpsToRemove.length} managed MCP(s):`);
+    target.mcpsToRemove.forEach((name) => planLines.push(`    • ${name}`));
+
+    if (target.mcpsToPreserve.length > 0) {
+      planLines.push(
+        `  Preserve ${target.mcpsToPreserve.length} unmanaged MCP(s):`,
+      );
+      target.mcpsToPreserve.forEach((name) =>
+        planLines.push(`    • ${name} (⚠️  not in Overture)`),
+      );
+    }
+
+    totalToPreserve += target.mcpsToPreserve.length;
+  }
+
+  p.note(
+    planLines.join('\n'),
+    dryRun ? '🔍 Cleanup Plan (Dry Run)' : '🗑️  Cleanup Plan',
+  );
+
+  if (totalToPreserve > 0) {
+    output.warn(
+      `\n⚠️  ${totalToPreserve} unmanaged MCP(s) will be preserved (not in your Overture config)\n`,
+    );
+  }
+}
+
+/**
+ * Confirm cleanup with user
+ */
+async function confirmCleanup(
+  selectedTargetsLength: number,
+  dryRun: boolean,
+  skipConfirm: boolean,
+): Promise<boolean> {
+  if (skipConfirm || dryRun) {
+    return true;
+  }
+
+  const confirmed = await p.confirm({
+    message: `Clean up ${selectedTargetsLength} director${selectedTargetsLength === 1 ? 'y' : 'ies'}? (Backup will be created)`,
+    initialValue: false,
+  });
+
+  if (p.isCancel(confirmed) || !confirmed) {
+    p.cancel('Cleanup cancelled');
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Execute cleanup and display results
+ */
+async function executeCleanupFlow(
+  cleanupService: AppDependencies['cleanupService'],
+  claudeCodeAdapter: ClaudeCodeAdapter,
+  platform: Platform,
+  selectedTargets: CleanupTarget[],
+  dryRun: boolean,
+): Promise<void> {
+  const cleanupSpinner = p.spinner();
+  cleanupSpinner.start(dryRun ? 'Previewing cleanup...' : 'Cleaning up...');
+
+  const result = await cleanupService.executeCleanup(
+    claudeCodeAdapter,
+    platform,
+    selectedTargets,
+    dryRun,
+  );
+
+  cleanupSpinner.stop(dryRun ? 'Preview complete' : 'Cleanup complete');
+
+  // Show results
+  const resultLines = [
+    `Directories cleaned: ${result.directoriesCleaned.length}`,
+    `MCPs removed: ${result.mcpsRemoved}`,
+  ];
+
+  if (result.mcpsPreserved.length > 0) {
+    resultLines.push(`MCPs preserved: ${result.mcpsPreserved.length}`);
+  }
+
+  if (!dryRun && result.backupPath) {
+    resultLines.push(`\nBackup created: ${result.backupPath}`);
+  }
+
+  p.note(
+    resultLines.join('\n'),
+    dryRun ? '🔍 Preview Results' : '✅ Cleanup Results',
+  );
+
+  if (dryRun) {
+    p.outro('Dry run complete - no files were modified');
+  } else {
+    p.outro('Cleanup complete! 🎉');
+  }
+}
 
 /**
  * Create the cleanup command
@@ -61,136 +221,33 @@ export function createCleanupCommand(deps: AppDependencies): Command {
 
         spinner.stop('Scan complete');
 
-        // Check if any targets found
-        if (targets.length === 0) {
-          p.outro('No cleanup needed - no Overture-managed directories found');
+        // Filter targets based on options
+        const selectedTargets = await filterCleanupTargets(targets, options);
+        if (!selectedTargets) {
           return;
         }
 
-        // Filter targets if specific directory requested
-        let filteredTargets = targets;
-        if (options.directory) {
-          filteredTargets = targets.filter(
-            (t) => t.directory === options.directory,
-          );
-          if (filteredTargets.length === 0) {
-            p.cancel(`No Overture config found at ${options.directory}`);
-            return;
-          }
-        }
+        // Generate and display cleanup plan
+        generateCleanupPlan(selectedTargets, options.dryRun, output);
 
-        // Interactive selection (unless --all or --directory is specified)
-        let selectedTargets = filteredTargets;
-        if (!options.all && !options.directory) {
-          const selectedValues = await p.multiselect({
-            message: `Select directories to clean up (${targets.length} found):`,
-            options: targets.map((t) => ({
-              value: t,
-              label: t.directory,
-              hint: `Remove ${t.mcpsToRemove.length} MCP(s), preserve ${t.mcpsToPreserve.length}`,
-            })),
-            required: false,
-          });
-
-          if (p.isCancel(selectedValues) || selectedValues.length === 0) {
-            p.cancel('Cleanup cancelled');
-            return;
-          }
-
-          selectedTargets = selectedValues as typeof targets;
-        }
-
-        // Show cleanup plan
-        const planLines: string[] = [];
-        let totalToPreserve = 0;
-
-        for (const target of selectedTargets) {
-          planLines.push(`\n${target.directory}:`);
-          planLines.push(
-            `  Remove ${target.mcpsToRemove.length} managed MCP(s):`,
-          );
-          target.mcpsToRemove.forEach((name) =>
-            planLines.push(`    • ${name}`),
-          );
-
-          if (target.mcpsToPreserve.length > 0) {
-            planLines.push(
-              `  Preserve ${target.mcpsToPreserve.length} unmanaged MCP(s):`,
-            );
-            target.mcpsToPreserve.forEach((name) =>
-              planLines.push(`    • ${name} (⚠️  not in Overture)`),
-            );
-          }
-
-          totalToPreserve += target.mcpsToPreserve.length;
-        }
-
-        p.note(
-          planLines.join('\n'),
-          options.dryRun ? '🔍 Cleanup Plan (Dry Run)' : '🗑️  Cleanup Plan',
+        // Confirm cleanup
+        const confirmed = await confirmCleanup(
+          selectedTargets.length,
+          options.dryRun,
+          options.yes,
         );
-
-        // Show warnings
-        if (totalToPreserve > 0) {
-          output.warn(
-            `\n⚠️  ${totalToPreserve} unmanaged MCP(s) will be preserved (not in your Overture config)\n`,
-          );
+        if (!confirmed) {
+          return;
         }
 
-        // Confirm cleanup (unless --yes)
-        if (!options.yes && !options.dryRun) {
-          const confirmed = await p.confirm({
-            message: `Clean up ${selectedTargets.length} director${selectedTargets.length === 1 ? 'y' : 'ies'}? (Backup will be created)`,
-            initialValue: false,
-          });
-
-          if (p.isCancel(confirmed) || !confirmed) {
-            p.cancel('Cleanup cancelled');
-            return;
-          }
-        }
-
-        // Execute cleanup
-        const cleanupSpinner = p.spinner();
-        cleanupSpinner.start(
-          options.dryRun ? 'Previewing cleanup...' : 'Cleaning up...',
-        );
-
-        const result = await cleanupService.executeCleanup(
+        // Execute cleanup and display results
+        await executeCleanupFlow(
+          cleanupService,
           claudeCodeAdapter,
           platform,
           selectedTargets,
           options.dryRun,
         );
-
-        cleanupSpinner.stop(
-          options.dryRun ? 'Preview complete' : 'Cleanup complete',
-        );
-
-        // Show results
-        const resultLines = [
-          `Directories cleaned: ${result.directoriesCleaned.length}`,
-          `MCPs removed: ${result.mcpsRemoved}`,
-        ];
-
-        if (result.mcpsPreserved.length > 0) {
-          resultLines.push(`MCPs preserved: ${result.mcpsPreserved.length}`);
-        }
-
-        if (!options.dryRun && result.backupPath) {
-          resultLines.push(`\nBackup created: ${result.backupPath}`);
-        }
-
-        p.note(
-          resultLines.join('\n'),
-          options.dryRun ? '🔍 Preview Results' : '✅ Cleanup Results',
-        );
-
-        if (options.dryRun) {
-          p.outro('Dry run complete - no files were modified');
-        } else {
-          p.outro('Cleanup complete! 🎉');
-        }
       } catch (error) {
         p.cancel(`Cleanup failed: ${(error as Error).message}`);
         throw error;

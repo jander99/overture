@@ -3,6 +3,40 @@ import type { AppDependencies } from '../../composition-root.js';
 import type { SkillSyncResult, ClientName } from '@overture/config-types';
 
 /**
+ * Display skill copy results
+ */
+function displayCopyResults(results: SkillSyncResult[]): void {
+  for (const result of results) {
+    const status = result.success ? (result.skipped ? '○' : '✓') : '✗';
+    const message = result.skipped
+      ? '(already exists, use --force to overwrite)'
+      : result.error
+        ? `(failed: ${result.error})`
+        : '';
+
+    console.log(`  ${status} ${result.targetPath} ${message}`);
+  }
+
+  console.log('');
+}
+
+/**
+ * Handle copy errors
+ */
+function handleCopyErrors(
+  results: SkillSyncResult[],
+  output: AppDependencies['output'],
+): void {
+  const failed = results.filter((r) => !r.success);
+  if (failed.length > 0) {
+    output.error(
+      `Failed to copy skill to ${failed.length} client${failed.length === 1 ? '' : 's'}`,
+    );
+    process.exit(1);
+  }
+}
+
+/**
  * Creates the 'skill' command group for managing Agent Skills.
  *
  * Usage:
@@ -97,28 +131,8 @@ export function createSkillCommand(deps: AppDependencies): Command {
 
           // Output results
           output.info(`\nCopied '${name}' skill to project:\n`);
-
-          for (const result of results) {
-            const status = result.success ? (result.skipped ? '○' : '✓') : '✗';
-            const message = result.skipped
-              ? '(already exists, use --force to overwrite)'
-              : result.error
-                ? `(failed: ${result.error})`
-                : '';
-
-            console.log(`  ${status} ${result.targetPath} ${message}`);
-          }
-
-          console.log('');
-
-          // Exit with error if any failed
-          const failed = results.filter((r: SkillSyncResult) => !r.success);
-          if (failed.length > 0) {
-            output.error(
-              `Failed to copy skill to ${failed.length} client${failed.length === 1 ? '' : 's'}`,
-            );
-            process.exit(1);
-          }
+          displayCopyResults(results);
+          handleCopyErrors(results, output);
         } catch (error) {
           output.error(
             `Failed to copy skill '${name}': ${(error as Error).message}`,
