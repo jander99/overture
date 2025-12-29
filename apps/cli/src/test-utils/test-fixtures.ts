@@ -11,6 +11,7 @@ import { vi } from 'vitest';
 import type { ClientName, Platform } from '@overture/config-types';
 import type { BackupMetadata } from '@overture/sync-core';
 import type { ClientAdapter } from '@overture/client-adapters';
+import { TEST_CLIENTS, TEST_PLATFORMS } from './test-constants';
 
 /**
  * Discovery report structure (from discovery-core)
@@ -93,7 +94,7 @@ export function createMockDiscoveryReport(
  * ```
  */
 export function createFoundClient(
-  clientName: ClientName = 'claude-code',
+  clientName: ClientName = TEST_CLIENTS.CLAUDE_CODE,
   overrides?: Partial<ClientDetection>,
 ): ClientDetection {
   return {
@@ -109,8 +110,8 @@ export function createFoundClient(
         ? overrides.detection
         : {}),
     },
-    source: 'linux-native' as const,
-    environment: 'linux' as const,
+    source: TEST_PLATFORMS.LINUX_NATIVE,
+    environment: TEST_PLATFORMS.LINUX,
     ...overrides,
   };
 }
@@ -229,7 +230,7 @@ export function createWSL2Report(
  * ```
  */
 export function createMockAdapter(
-  name: ClientName = 'claude-code',
+  name: ClientName = TEST_CLIENTS.CLAUDE_CODE,
   overrides?: Partial<ClientAdapter>,
 ): ClientAdapter {
   return {

@@ -10,19 +10,19 @@ Every skill is a directory containing a `SKILL.md` file with YAML frontmatter an
 
 **Required frontmatter fields:**
 
-| Field | Constraints | Purpose |
-|-------|-------------|---------|
-| `name` | 1-64 chars; lowercase `a-z`, `0-9`, and hyphens only; cannot start/end with hyphen or contain `--`; must match directory name | Unique skill identifier |
-| `description` | 1-1024 chars; no XML tags | Primary activation signal for LLM matching |
+| Field         | Constraints                                                                                                                   | Purpose                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `name`        | 1-64 chars; lowercase `a-z`, `0-9`, and hyphens only; cannot start/end with hyphen or contain `--`; must match directory name | Unique skill identifier                    |
+| `description` | 1-1024 chars; no XML tags                                                                                                     | Primary activation signal for LLM matching |
 
 **Optional frontmatter fields:**
 
-| Field | Purpose |
-|-------|---------|
-| `license` | License identifier (e.g., `Apache-2.0`, `MIT`) |
+| Field           | Purpose                                                 |
+| --------------- | ------------------------------------------------------- |
+| `license`       | License identifier (e.g., `Apache-2.0`, `MIT`)          |
 | `compatibility` | Environment requirements (e.g., "Requires Python 3.8+") |
-| `metadata` | Custom key-value pairs for author, version, category |
-| `allowed-tools` | Experimental: pre-approved tools the skill may use |
+| `metadata`      | Custom key-value pairs for author, version, category    |
+| `allowed-tools` | Experimental: pre-approved tools the skill may use      |
 
 The naming regex pattern is `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`. Invalid names like `PDF-Processing` (uppercase), `-pdf` (leading hyphen), or `pdf--tools` (consecutive hyphens) will fail validation.
 
@@ -32,7 +32,7 @@ The naming regex pattern is `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`. Invalid names like 
 skill-name/
 ├── SKILL.md          # Required: frontmatter + instructions
 ├── scripts/          # Optional: executable code
-├── references/       # Optional: detailed documentation  
+├── references/       # Optional: detailed documentation
 └── assets/           # Optional: templates, resources
 ```
 
@@ -63,15 +63,15 @@ Since activation is pure semantic matching, there are no magic keywords—but ce
 
 ```yaml
 # Strong: Specific actions, explicit triggers, domain terms
-description: "Extract text and tables from PDF files, fill forms, merge documents. 
-             Use when working with PDF files or when the user mentions PDFs, 
+description: "Extract text and tables from PDF files, fill forms, merge documents.
+             Use when working with PDF files or when the user mentions PDFs,
              forms, or document extraction."
 
-description: "Generate clear commit messages from git diffs. Use when writing 
+description: "Generate clear commit messages from git diffs. Use when writing
              commit messages or reviewing staged changes."
 
-description: "Guide for creating effective skills. This skill should be used 
-             when users want to create a new skill (or update an existing skill) 
+description: "Guide for creating effective skills. This skill should be used
+             when users want to create a new skill (or update an existing skill)
              that extends Claude's capabilities."
 ```
 
@@ -80,7 +80,7 @@ description: "Guide for creating effective skills. This skill should be used
 ```yaml
 # Too vague—model cannot match intent
 description: "Helps with documents"
-description: "For data analysis"  
+description: "For data analysis"
 description: "Data tools"
 ```
 
@@ -96,6 +96,7 @@ The body of `SKILL.md` should stay under **5,000 tokens** (roughly 500 lines or 
 
 ```markdown
 ## Instructions
+
 1. For basic extraction, use pdfplumber
 2. For form filling, see [FORMS.md](references/FORMS.md)
 3. Run: `python {baseDir}/scripts/extract.py`
@@ -105,18 +106,19 @@ Scripts execute without loading into context—only their output appears. Refere
 
 **Token budget breakdown:**
 
-| Content | Token Target | Loaded When |
-|---------|-------------|-------------|
-| Frontmatter (all skills) | ~100 tokens each | Always at startup |
-| SKILL.md body | <5,000 tokens | On skill activation |
-| Reference files | As needed | On explicit read |
-| Script output | Varies | After execution |
+| Content                  | Token Target     | Loaded When         |
+| ------------------------ | ---------------- | ------------------- |
+| Frontmatter (all skills) | ~100 tokens each | Always at startup   |
+| SKILL.md body            | <5,000 tokens    | On skill activation |
+| Reference files          | As needed        | On explicit read    |
+| Script output            | Varies           | After execution     |
 
 ## Scope and granularity: when to split skills
 
 A skill should represent **one coherent capability** with instructions that share common context. Signs you need multiple skills include: different activation contexts, mutually exclusive use cases, separate permission requirements, or more than 5,000 tokens of distinct content.
 
 **Good granularity:**
+
 - `pdf-form-filler` (not generic "document-processor")
 - `git-commit-helper` (not catch-all "git-tools")
 - `excel-analysis` (not vague "data-tools")
@@ -125,11 +127,11 @@ When skills might overlap, use distinct trigger terms in descriptions to help th
 
 ```yaml
 # Skill 1: Sales domain
-description: "Analyze sales data in Excel files and CRM exports. 
+description: "Analyze sales data in Excel files and CRM exports.
              Use for sales reports, pipeline analysis, revenue tracking."
 
-# Skill 2: Operations domain  
-description: "Analyze log files and system metrics. 
+# Skill 2: Operations domain
+description: "Analyze log files and system metrics.
              Use for performance monitoring, debugging, system diagnostics."
 ```
 
@@ -139,12 +141,12 @@ The Model Context Protocol (MCP) and Agent Skills serve different layers. MCP pr
 
 As the goose team noted: "Saying skills killed MCP is about as accurate as saying GitHub Actions killed Bash."
 
-| Aspect | Agent Skills | MCP |
-|--------|-------------|-----|
-| Layer | Instructions/knowledge | Integration/capability |
-| Provides | Process, workflow, domain expertise | Executable tools, API access |
-| Format | Markdown files | JSON-RPC 2.0 protocol |
-| Security surface | Minimal (prompt-based) | Requires auth and scoping |
+| Aspect           | Agent Skills                        | MCP                          |
+| ---------------- | ----------------------------------- | ---------------------------- |
+| Layer            | Instructions/knowledge              | Integration/capability       |
+| Provides         | Process, workflow, domain expertise | Executable tools, API access |
+| Format           | Markdown files                      | JSON-RPC 2.0 protocol        |
+| Security surface | Minimal (prompt-based)              | Requires auth and scoping    |
 
 Skills can orchestrate MCP server calls, and MCP servers can provide the underlying tools that skills reference. A pdf-processing skill might contain instructions that call MCP tools for file operations while adding domain expertise about handling scanned documents, form fields, and edge cases.
 
@@ -153,6 +155,7 @@ Skills can orchestrate MCP server calls, and MCP servers can provide the underly
 A skill is 100% spec-compliant when it passes these validations:
 
 **Frontmatter requirements:**
+
 - [ ] `name` field present and non-empty
 - [ ] `name` is 1-64 characters, lowercase alphanumeric with hyphens only
 - [ ] `name` does not start or end with hyphen
@@ -163,12 +166,14 @@ A skill is 100% spec-compliant when it passes these validations:
 - [ ] Neither field contains XML tags
 
 **File structure requirements:**
+
 - [ ] `SKILL.md` file exists in skill directory
 - [ ] YAML frontmatter uses `---` delimiters (not tabs)
 - [ ] Markdown body follows frontmatter
 - [ ] File references use relative paths from skill root
 
 **Activation optimization:**
+
 - [ ] Description starts with action verbs
 - [ ] Description includes "Use when..." clause
 - [ ] Description contains domain-specific trigger terms
@@ -187,7 +192,7 @@ skills-ref validate ./my-skill
 ```yaml
 ---
 name: skill-name
-description: "[Action verbs] [specific capabilities]. Use when [condition 1], 
+description: "[Action verbs] [specific capabilities]. Use when [condition 1],
              [condition 2], or when the user mentions [key terms]."
 license: Apache-2.0
 ---
@@ -196,7 +201,7 @@ license: Apache-2.0
 
 ## When to use this skill
 - [Scenario 1 with specific trigger]
-- [Scenario 2 with specific trigger]  
+- [Scenario 2 with specific trigger]
 - [Scenario 3 with specific trigger]
 
 ## Instructions

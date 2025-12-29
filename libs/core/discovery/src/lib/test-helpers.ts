@@ -10,6 +10,11 @@ import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { ClientAdapter, Platform } from '@overture/config-types';
 
 /**
+ * Default test user home directory
+ */
+const DEFAULT_TEST_HOME = '/home/testuser';
+
+/**
  * Create a mock ProcessPort
  */
 export function createMockProcessPort(
@@ -43,9 +48,9 @@ export function createMockEnvironmentPort(
 ): EnvironmentPort {
   return {
     platform: () => platform,
-    homedir: () => '/home/testuser',
+    homedir: () => DEFAULT_TEST_HOME,
     env: {
-      HOME: '/home/testuser',
+      HOME: DEFAULT_TEST_HOME,
       PATH: '/usr/bin:/bin',
       ...env,
     },
@@ -147,7 +152,7 @@ export function joinPath(...paths: string[]): string {
  */
 export function expandTilde(path: string): string {
   if (path.startsWith('~/')) {
-    return '/home/testuser' + path.substring(1);
+    return DEFAULT_TEST_HOME + path.substring(1);
   }
   return path;
 }

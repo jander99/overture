@@ -17,6 +17,17 @@ import type { EnvironmentPort } from '@overture/ports-process';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { Platform, ClientName } from '@overture/config-types';
 import { ValidationError, McpError } from '@overture/errors';
+import { CONFIG_FILE, CONFIG_FILE_YML } from './constants.js';
+
+/**
+ * Configuration file name constants
+ */
+const CONFIG_YAML = CONFIG_FILE;
+const CONFIG_YML = CONFIG_FILE_YML;
+const MCP_CONFIG_JSON = 'mcp-config.json';
+const GITHUB_COPILOT = 'github-copilot';
+const APPLICATION_SUPPORT = 'Application Support';
+const CLAUDE_DESKTOP_CONFIG = 'claude_desktop_config.json';
 
 /**
  * Path resolver service for configuration files
@@ -134,7 +145,7 @@ export class PathResolver {
     const platform = this.getPlatform();
 
     if (platform === 'linux') {
-      return this.joinPaths(this.getXdgConfigHome(), 'overture', 'config.yaml');
+      return this.joinPaths(this.getXdgConfigHome(), 'overture', CONFIG_YAML);
     }
 
     // macOS and Windows both use ~/.config/overture
@@ -142,7 +153,7 @@ export class PathResolver {
       this.getHomeDir(),
       '.config',
       'overture',
-      'config.yaml',
+      CONFIG_YAML,
     );
   }
 
@@ -155,16 +166,11 @@ export class PathResolver {
     const platform = this.getPlatform();
 
     if (platform === 'linux') {
-      return this.joinPaths(this.getXdgConfigHome(), 'overture', 'config.yml');
+      return this.joinPaths(this.getXdgConfigHome(), 'overture', CONFIG_YML);
     }
 
     // macOS and Windows both use ~/.config/overture
-    return this.joinPaths(
-      this.getHomeDir(),
-      '.config',
-      'overture',
-      'config.yml',
-    );
+    return this.joinPaths(this.getHomeDir(), '.config', 'overture', CONFIG_YML);
   }
 
   /**
@@ -192,7 +198,7 @@ export class PathResolver {
    */
   getProjectConfigPath(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
-    return this.joinPaths(root, '.overture', 'config.yaml');
+    return this.joinPaths(root, '.overture', CONFIG_YAML);
   }
 
   /**
@@ -203,7 +209,7 @@ export class PathResolver {
    */
   getProjectConfigPathYml(projectRoot?: string): string {
     const root = projectRoot || this.environment.env.PWD || '/';
-    return this.joinPaths(root, '.overture', 'config.yml');
+    return this.joinPaths(root, '.overture', CONFIG_YML);
   }
 
   /**
@@ -251,22 +257,22 @@ export class PathResolver {
         return this.joinPaths(
           this.getHomeDir(),
           'Library',
-          'Application Support',
+          APPLICATION_SUPPORT,
           'Claude',
-          'claude_desktop_config.json',
+          CLAUDE_DESKTOP_CONFIG,
         );
       case 'linux':
         return this.joinPaths(
           this.getXdgConfigHome(),
           'Claude',
-          'claude_desktop_config.json',
+          CLAUDE_DESKTOP_CONFIG,
         );
       case 'win32':
         return this.joinPaths(
           this.environment.env.APPDATA ||
             this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
           'Claude',
-          'claude_desktop_config.json',
+          CLAUDE_DESKTOP_CONFIG,
         );
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
@@ -287,7 +293,7 @@ export class PathResolver {
         return this.joinPaths(
           this.getHomeDir(),
           'Library',
-          'Application Support',
+          APPLICATION_SUPPORT,
           'Code',
           'User',
           'mcp.json',
@@ -398,11 +404,11 @@ export class PathResolver {
         // On Linux/macOS, when XDG_CONFIG_HOME is not set, use ~/.copilot directly
         // When XDG_CONFIG_HOME is set, use $XDG_CONFIG_HOME/.copilot
         const configBase = this.environment.env.XDG_CONFIG_HOME || homeDir;
-        return this.joinPaths(configBase, '.copilot', 'mcp-config.json');
+        return this.joinPaths(configBase, '.copilot', MCP_CONFIG_JSON);
       }
       case 'win32':
         // On Windows, always use %USERPROFILE%\.copilot
-        return this.joinPaths(homeDir, '.copilot', 'mcp-config.json');
+        return this.joinPaths(homeDir, '.copilot', MCP_CONFIG_JSON);
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
@@ -423,7 +429,7 @@ export class PathResolver {
       case 'darwin':
       case 'linux':
       case 'win32':
-        return this.joinPaths(homeDir, '.codex', 'mcp-config.json');
+        return this.joinPaths(homeDir, '.codex', MCP_CONFIG_JSON);
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
@@ -444,7 +450,7 @@ export class PathResolver {
       case 'darwin':
       case 'linux':
       case 'win32':
-        return this.joinPaths(homeDir, '.gemini', 'mcp-config.json');
+        return this.joinPaths(homeDir, '.gemini', MCP_CONFIG_JSON);
       default:
         throw new ValidationError(`Unsupported platform: ${targetPlatform}`);
     }
@@ -466,8 +472,8 @@ export class PathResolver {
         return this.joinPaths(
           this.getHomeDir(),
           'Library',
-          'Application Support',
-          'github-copilot',
+          APPLICATION_SUPPORT,
+          GITHUB_COPILOT,
           'intellij',
           'mcp.json',
         );
@@ -476,7 +482,7 @@ export class PathResolver {
         // Placeholder based on XDG conventions
         return this.joinPaths(
           this.getXdgConfigHome(),
-          'github-copilot',
+          GITHUB_COPILOT,
           'intellij',
           'mcp.json',
         );
@@ -485,7 +491,7 @@ export class PathResolver {
         return this.joinPaths(
           this.environment.env.LOCALAPPDATA ||
             this.joinPaths(this.getHomeDir(), 'AppData', 'Local'),
-          'github-copilot',
+          GITHUB_COPILOT,
           'intellij',
           'mcp.json',
         );
@@ -580,8 +586,8 @@ export class PathResolver {
     const root = this.parsePathRoot(currentDir);
 
     while (currentDir !== root) {
-      const yamlPath = this.joinPaths(currentDir, '.overture', 'config.yaml');
-      const ymlPath = this.joinPaths(currentDir, '.overture', 'config.yml');
+      const yamlPath = this.joinPaths(currentDir, '.overture', CONFIG_YAML);
+      const ymlPath = this.joinPaths(currentDir, '.overture', CONFIG_YML);
 
       // Check if .overture/config.yaml or .overture/config.yml exists at this level
       if (
@@ -603,8 +609,8 @@ export class PathResolver {
     }
 
     // Check root directory as last resort
-    const rootYamlPath = this.joinPaths(root, '.overture', 'config.yaml');
-    const rootYmlPath = this.joinPaths(root, '.overture', 'config.yml');
+    const rootYamlPath = this.joinPaths(root, '.overture', CONFIG_YAML);
+    const rootYmlPath = this.joinPaths(root, '.overture', CONFIG_YML);
     if (
       (await this.filesystem.exists(rootYamlPath)) ||
       (await this.filesystem.exists(rootYmlPath))

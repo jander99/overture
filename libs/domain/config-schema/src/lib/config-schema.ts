@@ -53,13 +53,17 @@ export const MergeStrategySchema = z.enum(['append', 'replace']);
 /**
  * Environment variable expansion pattern validation
  * Supports: ${VAR} and ${VAR:-default}
+ *
+ * Fixed: Uses negative lookahead to validate syntax safely.
+ * The pattern asserts that no invalid $ signs exist, avoiding
+ * nested quantifiers that could cause ReDoS vulnerabilities.
  */
-const EnvVarPatternSchema = z
-  .string()
-  .regex(
-    /^[^$]*(\$\{[A-Z_][A-Z0-9_]*(:-.+)?\}[^$]*)*$/,
-    'Invalid environment variable syntax',
-  );
+const EnvVarPatternSchema = z.string().regex(
+  // Safe pattern using negative lookahead: prevents ReDoS by avoiding nested quantifiers
+  // Validates that all $ symbols are followed by valid env var syntax
+  /^(?!.*\$(?!\{[A-Z_][A-Z0-9_]*(?:\}|:-[^}]+\})))/,
+  'Invalid environment variable syntax',
+);
 
 /**
  * MCP Server Override Schema
@@ -100,10 +104,7 @@ export const McpServerConfigSchema = z
       .refine(
         (data) => {
           // Ensure exclude and include are mutually exclusive
-          if (data && data.exclude && data.include) {
-            return false;
-          }
-          return true;
+          return !(data && data.exclude && data.include);
         },
         {
           message:

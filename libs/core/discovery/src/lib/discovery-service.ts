@@ -21,6 +21,13 @@ import { BinaryDetector } from './binary-detector.js';
 import { WSL2Detector, WINDOWS_DEFAULT_PATHS } from './wsl2-detector.js';
 
 /**
+ * Detection source constants
+ */
+const SOURCE_CONFIG_OVERRIDE = 'config-override' as const;
+const SOURCE_WSL2_FALLBACK = 'wsl2-fallback' as const;
+const SOURCE_NATIVE = 'native' as const;
+
+/**
  * Discovery Service Dependencies
  */
 export interface DiscoveryServiceDeps {
@@ -109,7 +116,7 @@ export class DiscoveryService {
       );
       clients.push(result);
 
-      if (result.source === 'wsl2-fallback') {
+      if (result.source === SOURCE_WSL2_FALLBACK) {
         wsl2Detections++;
       }
     }
@@ -178,7 +185,7 @@ export class DiscoveryService {
           status: 'skipped',
           warnings: ['Discovery disabled for this client in config'],
         },
-        source: 'config-override',
+        source: SOURCE_CONFIG_OVERRIDE,
         environment: platform,
       };
     }
@@ -206,7 +213,7 @@ export class DiscoveryService {
       return {
         client: adapter.name,
         detection: nativeResult,
-        source: 'native',
+        source: SOURCE_NATIVE,
         environment: platform,
       };
     }
@@ -293,7 +300,7 @@ export class DiscoveryService {
           configPath,
           warnings: ['Detected via config override'],
         },
-        source: 'config-override',
+        source: SOURCE_CONFIG_OVERRIDE,
         environment: platform,
       };
     }
@@ -308,7 +315,7 @@ export class DiscoveryService {
           configPath,
           warnings: ['Detected via config override (app bundle)'],
         },
-        source: 'config-override',
+        source: SOURCE_CONFIG_OVERRIDE,
         environment: platform,
       };
     }
@@ -345,11 +352,67 @@ export class DiscoveryService {
       return null;
     }
 
-    // Check for WSL2 config override
     const wsl2ConfigPath =
       this.config.wsl2?.windows_config_paths?.[adapter.name];
 
-    // Get Windows installation paths to check
+    // Check for binary in Windows paths
+    const binaryResult = await this.detectWSL2Binary(
+      adapter,
+      windowsProfile,
+      wsl2ConfigPath,
+    );
+    if (binaryResult) {
+      return binaryResult;
+    }
+
+    // Check for app bundles (GUI apps)
+    return this.detectWSL2AppBundle(adapter, windowsProfile, wsl2ConfigPath);
+  }
+
+  /**
+   * Detect WSL2 binary in Windows paths
+   */
+  private async detectWSL2Binary(
+    adapter: ClientAdapter,
+    windowsProfile: string,
+    wsl2ConfigPath?: string,
+  ): Promise<ClientDiscoveryResult | null> {
+    const windowsPaths = this.getWSL2BinaryPaths(adapter, windowsProfile);
+
+    for (const searchPath of windowsPaths) {
+      if (this.deps.fileExists(searchPath)) {
+        const configPath =
+          wsl2ConfigPath ||
+          this.wsl2Detector.getWindowsConfigPath(adapter.name, windowsProfile);
+
+        return {
+          client: adapter.name,
+          detection: {
+            status: 'found',
+            binaryPath: searchPath,
+            configPath,
+            warnings: [
+              'Detected via WSL2 Windows path - may not be directly executable from WSL2',
+            ],
+          },
+          source: SOURCE_WSL2_FALLBACK,
+          environment: 'wsl2',
+          windowsPath: searchPath,
+          configSource: 'windows',
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get WSL2 binary paths to check
+   */
+  private getWSL2BinaryPaths(
+    adapter: ClientAdapter,
+    windowsProfile: string,
+  ): string[] {
     const windowsPaths = this.wsl2Detector.getWindowsInstallPaths(
       adapter.name,
       windowsProfile,
@@ -367,37 +430,22 @@ export class DiscoveryService {
       }
     }
 
-    // Check each path
-    for (const searchPath of windowsPaths) {
-      if (this.deps.fileExists(searchPath)) {
-        // Get config path
-        const configPath =
-          wsl2ConfigPath ||
-          this.wsl2Detector.getWindowsConfigPath(adapter.name, windowsProfile);
+    return windowsPaths;
+  }
 
-        return {
-          client: adapter.name,
-          detection: {
-            status: 'found',
-            binaryPath: searchPath,
-            configPath,
-            warnings: [
-              'Detected via WSL2 Windows path - may not be directly executable from WSL2',
-            ],
-          },
-          source: 'wsl2-fallback',
-          environment: 'wsl2',
-          windowsPath: searchPath,
-          configSource: 'windows',
-        };
-      }
-    }
-
-    // Check for app bundles (GUI apps)
+  /**
+   * Detect WSL2 app bundle
+   */
+  private detectWSL2AppBundle(
+    adapter: ClientAdapter,
+    windowsProfile: string,
+    wsl2ConfigPath?: string,
+  ): ClientDiscoveryResult | null {
     const appBundlePaths = this.getWindowsAppBundlePaths(
       adapter.name,
       windowsProfile,
     );
+
     for (const appPath of appBundlePaths) {
       if (this.deps.fileExists(appPath)) {
         const configPath =
@@ -414,7 +462,7 @@ export class DiscoveryService {
               'Detected Windows GUI application via WSL2 - config can be managed but app runs on Windows',
             ],
           },
-          source: 'wsl2-fallback',
+          source: SOURCE_WSL2_FALLBACK,
           environment: 'wsl2',
           windowsPath: appPath,
           configSource: 'windows',
@@ -436,13 +484,23 @@ export class DiscoveryService {
     client: ClientName,
     _windowsProfile: string,
   ): string[] {
-    const paths: string[] = [];
-
     // GUI application paths
     // Note: All currently supported clients (claude-code, copilot-cli, opencode) are CLI-only
+    // Using explicit checks to avoid object injection warnings
+
+    const paths: string[] = [];
     const guiAppPaths: Partial<Record<ClientName, string[]>> = {};
 
-    const clientPaths = guiAppPaths[client];
+    // Use explicit property access for security
+    let clientPaths: string[] | undefined;
+    if (client === 'claude-code') {
+      clientPaths = guiAppPaths['claude-code'];
+    } else if (client === 'copilot-cli') {
+      clientPaths = guiAppPaths['copilot-cli'];
+    } else if (client === 'opencode') {
+      clientPaths = guiAppPaths.opencode;
+    }
+
     if (clientPaths) {
       paths.push(...clientPaths);
     }

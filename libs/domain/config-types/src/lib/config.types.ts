@@ -888,8 +888,12 @@ export function isClientMcpConfig(value: unknown): value is ClientMcpConfig {
   // Check if it has at least one object-valued property
   // (could be mcpServers, servers, or other client-specific keys)
   for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      return true;
+    if (Object.hasOwn(obj, key)) {
+      // eslint-disable-next-line security/detect-object-injection -- Safe: key existence verified with hasOwn
+      const value = obj[key];
+      if (typeof value === 'object' && value !== null) {
+        return true;
+      }
     }
   }
 

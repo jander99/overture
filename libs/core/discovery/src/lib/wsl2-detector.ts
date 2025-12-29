@@ -309,7 +309,17 @@ export class WSL2Detector {
     windowsUserProfile: string,
   ): string[] {
     const paths: string[] = [];
-    const defaults = WINDOWS_DEFAULT_PATHS[client];
+
+    // Use explicit property access to avoid object injection warning
+    let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
+
+    if (client === 'claude-code') {
+      defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
+    } else if (client === 'copilot-cli') {
+      defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
+    } else if (client === 'opencode') {
+      defaults = WINDOWS_DEFAULT_PATHS.opencode;
+    }
 
     if (!defaults) {
       return paths;
@@ -344,7 +354,16 @@ export class WSL2Detector {
     client: ClientName,
     windowsUserProfile: string,
   ): string | undefined {
-    const defaults = WINDOWS_DEFAULT_PATHS[client];
+    // Use explicit property access to avoid object injection warning
+    let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
+
+    if (client === 'claude-code') {
+      defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
+    } else if (client === 'copilot-cli') {
+      defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
+    } else if (client === 'opencode') {
+      defaults = WINDOWS_DEFAULT_PATHS.opencode;
+    }
 
     if (!defaults?.configPath) {
       return undefined;

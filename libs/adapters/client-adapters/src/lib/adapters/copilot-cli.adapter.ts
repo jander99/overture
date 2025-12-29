@@ -104,6 +104,7 @@ export class CopilotCliAdapter extends BaseClientAdapter {
 
       const serverConfig = this.buildServerConfig(mcpConfig, platform);
 
+      // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries() of overtureConfig.mcp, safe
       mcpServers[name] = {
         command: serverConfig.command,
         args: serverConfig.args,

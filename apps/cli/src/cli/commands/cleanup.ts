@@ -9,6 +9,7 @@
 import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
+import type { ClaudeCodeAdapter } from '@overture/client-adapters';
 
 /**
  * Create the cleanup command
@@ -37,7 +38,9 @@ export function createCleanupCommand(deps: AppDependencies): Command {
 
       try {
         // Get Claude Code adapter
-        const claudeCodeAdapter = adapterRegistry.get('claude-code') as any;
+        const claudeCodeAdapter = adapterRegistry.get(
+          'claude-code',
+        ) as ClaudeCodeAdapter;
         if (!claudeCodeAdapter) {
           p.cancel('Claude Code adapter not available');
           return;
@@ -99,7 +102,6 @@ export function createCleanupCommand(deps: AppDependencies): Command {
 
         // Show cleanup plan
         const planLines: string[] = [];
-        let totalToRemove = 0;
         let totalToPreserve = 0;
 
         for (const target of selectedTargets) {
@@ -120,7 +122,6 @@ export function createCleanupCommand(deps: AppDependencies): Command {
             );
           }
 
-          totalToRemove += target.mcpsToRemove.length;
           totalToPreserve += target.mcpsToPreserve.length;
         }
 

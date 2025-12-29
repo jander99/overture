@@ -9,6 +9,7 @@
 
 import { vi } from 'vitest';
 import type { AppDependencies } from '../composition-root';
+import { TEST_PATHS, TEST_CLIENTS, TEST_ALL_CLIENTS } from './test-constants';
 
 /**
  * Create a mock AppDependencies container for testing
@@ -116,7 +117,7 @@ export function createMockAppDependencies(): AppDependencies {
       getProjectOvertureDir: vi
         .fn()
         .mockReturnValue('/home/user/project/.overture'),
-      resolveGlobalMcpPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+      resolveGlobalMcpPath: vi.fn().mockReturnValue(TEST_PATHS.CLAUDE_CONFIG),
       resolveProjectMcpPath: vi
         .fn()
         .mockReturnValue('/home/user/project/.mcp.json'),
@@ -141,7 +142,7 @@ export function createMockAppDependencies(): AppDependencies {
       detectClient: vi.fn().mockResolvedValue({
         status: 'found',
         version: '1.0.0',
-        configPath: '/home/user/.claude.json',
+        configPath: TEST_PATHS.CLAUDE_CONFIG,
       }),
       detectAllClients: vi.fn().mockResolvedValue([]),
       discoverAll: vi.fn().mockResolvedValue({
@@ -155,24 +156,20 @@ export function createMockAppDependencies(): AppDependencies {
 
     adapterRegistry: {
       get: vi.fn().mockReturnValue({
-        name: 'claude-code',
-        detectConfigPath: vi.fn().mockReturnValue('/home/user/.claude.json'),
+        name: TEST_CLIENTS.CLAUDE_CODE,
+        detectConfigPath: vi.fn().mockReturnValue(TEST_PATHS.CLAUDE_CONFIG),
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn().mockResolvedValue(undefined),
         validateTransport: vi.fn().mockReturnValue(true),
       }),
       getAdapter: vi.fn().mockReturnValue({
-        name: 'claude-code',
+        name: TEST_CLIENTS.CLAUDE_CODE,
         readConfig: vi.fn().mockResolvedValue({}),
         writeConfig: vi.fn().mockResolvedValue(undefined),
         validateTransport: vi.fn().mockReturnValue(true),
       }),
-      getAllNames: vi
-        .fn()
-        .mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
-      listAdapters: vi
-        .fn()
-        .mockReturnValue(['claude-code', 'copilot-cli', 'opencode']),
+      getAllNames: vi.fn().mockReturnValue([...TEST_ALL_CLIENTS]),
+      listAdapters: vi.fn().mockReturnValue([...TEST_ALL_CLIENTS]),
       getInstalledAdapters: vi.fn().mockReturnValue([]),
     },
 

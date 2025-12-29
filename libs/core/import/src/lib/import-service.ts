@@ -32,6 +32,12 @@ import type {
   CopilotCliAdapter,
 } from '@overture/client-adapters';
 
+// Constants for duplicate strings
+// eslint-disable-next-line sonarjs/no-duplicate-string
+const CLIENT_NAME_CLAUDE_CODE = 'claude-code' as const;
+// eslint-disable-next-line sonarjs/no-duplicate-string
+const CLIENT_NAME_COPILOT_CLI = 'copilot-cli' as const;
+
 /**
  * Service for importing MCP configurations from client configs
  */
@@ -53,101 +59,35 @@ export class ImportService {
     const discovered: DiscoveredMcp[] = [];
 
     try {
-      // Read full config including projects object
       const fullConfig = await adapter.readFullConfig(platform);
 
-      // Top-level (global) MCPs
-      if (fullConfig.mcpServers) {
-        const configPaths = adapter.detectConfigPath(platform);
-        const userPath =
-          typeof configPaths === 'string'
-            ? configPaths
-            : configPaths?.user || '';
+      // Discover global MCPs
+      this.discoverGlobalClaudeCodeMcps(
+        fullConfig,
+        adapter,
+        platform,
+        overtureConfig,
+        discovered,
+      );
 
-        for (const [name, config] of Object.entries(fullConfig.mcpServers)) {
-          if (!overtureConfig.mcp[name]) {
-            discovered.push(
-              this.createDiscoveredMcp(
-                name,
-                config,
-                {
-                  client: 'claude-code',
-                  location: '~/.claude.json (global)',
-                  locationType: 'global',
-                  filePath: userPath,
-                },
-                'global',
-              ),
-            );
-          }
-        }
-      }
+      // Discover directory-based MCPs
+      await this.discoverDirectoryClaudeCodeMcps(
+        fullConfig,
+        adapter,
+        platform,
+        projectRoot,
+        overtureConfig,
+        discovered,
+      );
 
-      // Directory-based (project) MCPs from projects object
-      if (fullConfig.projects) {
-        const cwd = projectRoot || process.cwd();
-        for (const [dirPath, projectConfig] of Object.entries(
-          fullConfig.projects,
-        )) {
-          if (projectConfig.mcpServers) {
-            for (const [name, config] of Object.entries(
-              projectConfig.mcpServers,
-            )) {
-              if (!overtureConfig.mcp[name]) {
-                const configPaths = adapter.detectConfigPath(platform);
-                const userPath =
-                  typeof configPaths === 'string'
-                    ? configPaths
-                    : configPaths?.user || '';
-
-                discovered.push(
-                  this.createDiscoveredMcp(
-                    name,
-                    config,
-                    {
-                      client: 'claude-code',
-                      location: `~/.claude.json → projects[${dirPath}]`,
-                      locationType: 'directory-override',
-                      filePath: userPath,
-                    },
-                    dirPath === cwd ? 'project' : 'global',
-                  ),
-                );
-              }
-            }
-          }
-        }
-      }
-
-      // .mcp.json (project-scoped)
-      const configPaths = adapter.detectConfigPath(platform, projectRoot);
-      const projectPath =
-        typeof configPaths === 'string' ? '' : configPaths?.project || '';
-
-      if (projectPath && (await this.filesystem.exists(projectPath))) {
-        const projectConfig = await adapter.readConfig(projectPath);
-        if (projectConfig.mcpServers) {
-          for (const [name, config] of Object.entries(
-            projectConfig.mcpServers,
-          )) {
-            if (!overtureConfig.mcp[name]) {
-              discovered.push(
-                this.createDiscoveredMcp(
-                  name,
-                  config,
-                  {
-                    client: 'claude-code',
-                    location: '.mcp.json',
-                    locationType: 'project',
-                    filePath: projectPath,
-                  },
-                  'project',
-                ),
-              );
-            }
-          }
-        }
-      }
+      // Discover project MCPs
+      await this.discoverProjectClaudeCodeMcps(
+        adapter,
+        platform,
+        projectRoot,
+        overtureConfig,
+        discovered,
+      );
     } catch (error) {
       this.output.warn(
         `Failed to discover MCPs from Claude Code: ${(error as Error).message}`,
@@ -155,6 +95,130 @@ export class ImportService {
     }
 
     return discovered;
+  }
+
+  /**
+   * Discover global MCPs from Claude Code config
+   */
+  private discoverGlobalClaudeCodeMcps(
+    fullConfig: { mcpServers?: Record<string, unknown> },
+    adapter: ClaudeCodeAdapter,
+    platform: Platform,
+    overtureConfig: OvertureConfig,
+    discovered: DiscoveredMcp[],
+  ): void {
+    if (!fullConfig.mcpServers) return;
+
+    const configPaths = adapter.detectConfigPath(platform);
+    const userPath =
+      typeof configPaths === 'string' ? configPaths : configPaths?.user || '';
+
+    for (const [name, config] of Object.entries(fullConfig.mcpServers)) {
+      // name comes from Object.entries - safe to check in overtureConfig.mcp
+      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+      if (!Object.hasOwn(overtureConfig.mcp, name)) {
+        discovered.push(
+          this.createDiscoveredMcp(
+            name,
+            config,
+            {
+              client: CLIENT_NAME_CLAUDE_CODE,
+              location: '~/.claude.json (global)',
+              locationType: 'global',
+              filePath: userPath,
+            },
+            'global',
+          ),
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover directory-based MCPs from Claude Code config
+   */
+  private async discoverDirectoryClaudeCodeMcps(
+    fullConfig: {
+      projects?: Record<string, { mcpServers?: Record<string, unknown> }>;
+    },
+    adapter: ClaudeCodeAdapter,
+    platform: Platform,
+    projectRoot: string | undefined,
+    overtureConfig: OvertureConfig,
+    discovered: DiscoveredMcp[],
+  ): Promise<void> {
+    if (!fullConfig.projects) return;
+
+    const cwd = projectRoot || process.cwd();
+    const configPaths = adapter.detectConfigPath(platform);
+    const userPath =
+      typeof configPaths === 'string' ? configPaths : configPaths?.user || '';
+
+    for (const [dirPath, projectConfig] of Object.entries(
+      fullConfig.projects,
+    )) {
+      if (!projectConfig.mcpServers) continue;
+
+      for (const [name, config] of Object.entries(projectConfig.mcpServers)) {
+        // name comes from Object.entries - safe to check in overtureConfig.mcp
+        // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+        if (!Object.hasOwn(overtureConfig.mcp, name)) {
+          discovered.push(
+            this.createDiscoveredMcp(
+              name,
+              config,
+              {
+                client: CLIENT_NAME_CLAUDE_CODE,
+                location: `~/.claude.json → projects[${dirPath}]`,
+                locationType: 'directory-override',
+                filePath: userPath,
+              },
+              dirPath === cwd ? 'project' : 'global',
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Discover project-scoped MCPs from .mcp.json
+   */
+  private async discoverProjectClaudeCodeMcps(
+    adapter: ClaudeCodeAdapter,
+    platform: Platform,
+    projectRoot: string | undefined,
+    overtureConfig: OvertureConfig,
+    discovered: DiscoveredMcp[],
+  ): Promise<void> {
+    const configPaths = adapter.detectConfigPath(platform, projectRoot);
+    const projectPath =
+      typeof configPaths === 'string' ? '' : configPaths?.project || '';
+
+    if (!projectPath || !(await this.filesystem.exists(projectPath))) return;
+
+    const projectConfig = await adapter.readConfig(projectPath);
+    if (!projectConfig.mcpServers) return;
+
+    for (const [name, config] of Object.entries(projectConfig.mcpServers)) {
+      // name comes from Object.entries - safe to check in overtureConfig.mcp
+      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+      if (!Object.hasOwn(overtureConfig.mcp, name)) {
+        discovered.push(
+          this.createDiscoveredMcp(
+            name,
+            config,
+            {
+              client: CLIENT_NAME_CLAUDE_CODE,
+              location: '.mcp.json',
+              locationType: 'project',
+              filePath: projectPath,
+            },
+            'project',
+          ),
+        );
+      }
+    }
   }
 
   /**
@@ -175,58 +239,24 @@ export class ImportService {
 
     try {
       // User config
-      if (await this.filesystem.exists(configPaths.user)) {
-        const userConfig = await adapter.readConfig(configPaths.user);
-        if (userConfig.mcp) {
-          for (const [name, config] of Object.entries(userConfig.mcp)) {
-            if (!overtureConfig.mcp[name]) {
-              // Convert OpenCode env format to Overture format
-              const convertedEnv = adapter.translateFromOpenCodeEnv(config.env);
-
-              discovered.push(
-                this.createDiscoveredMcp(
-                  name,
-                  { ...config, env: convertedEnv },
-                  {
-                    client: 'opencode',
-                    location: configPaths.user,
-                    locationType: 'global',
-                    filePath: configPaths.user,
-                  },
-                  'global',
-                ),
-              );
-            }
-          }
-        }
-      }
+      await this.discoverOpenCodeMcpsFromPath(
+        adapter,
+        configPaths.user,
+        'opencode',
+        'global',
+        overtureConfig,
+        discovered,
+      );
 
       // Project config
-      if (await this.filesystem.exists(configPaths.project)) {
-        const projectConfig = await adapter.readConfig(configPaths.project);
-        if (projectConfig.mcp) {
-          for (const [name, config] of Object.entries(projectConfig.mcp)) {
-            if (!overtureConfig.mcp[name]) {
-              // Convert OpenCode env format to Overture format
-              const convertedEnv = adapter.translateFromOpenCodeEnv(config.env);
-
-              discovered.push(
-                this.createDiscoveredMcp(
-                  name,
-                  { ...config, env: convertedEnv },
-                  {
-                    client: 'opencode',
-                    location: configPaths.project,
-                    locationType: 'project',
-                    filePath: configPaths.project,
-                  },
-                  'project',
-                ),
-              );
-            }
-          }
-        }
-      }
+      await this.discoverOpenCodeMcpsFromPath(
+        adapter,
+        configPaths.project,
+        'opencode',
+        'project',
+        overtureConfig,
+        discovered,
+      );
     } catch (error) {
       this.output.warn(
         `Failed to discover MCPs from OpenCode: ${(error as Error).message}`,
@@ -234,6 +264,45 @@ export class ImportService {
     }
 
     return discovered;
+  }
+
+  /**
+   * Discover MCPs from a specific OpenCode config path
+   */
+  private async discoverOpenCodeMcpsFromPath(
+    adapter: OpenCodeAdapter,
+    configPath: string,
+    client: 'opencode',
+    locationType: 'global' | 'project',
+    overtureConfig: OvertureConfig,
+    discovered: DiscoveredMcp[],
+  ): Promise<void> {
+    if (!(await this.filesystem.exists(configPath))) return;
+
+    const config = await adapter.readConfig(configPath);
+    if (!config.mcp) return;
+
+    for (const [name, mcpConfig] of Object.entries(config.mcp)) {
+      // name comes from Object.entries - safe to check in overtureConfig.mcp
+      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+      if (!Object.hasOwn(overtureConfig.mcp, name)) {
+        const convertedEnv = adapter.translateFromOpenCodeEnv(mcpConfig.env);
+
+        discovered.push(
+          this.createDiscoveredMcp(
+            name,
+            { ...mcpConfig, env: convertedEnv },
+            {
+              client,
+              location: configPath,
+              locationType,
+              filePath: configPath,
+            },
+            locationType,
+          ),
+        );
+      }
+    }
   }
 
   /**
@@ -254,56 +323,22 @@ export class ImportService {
 
     try {
       // User config
-      if (await this.filesystem.exists(configPaths.user)) {
-        const userConfig = await adapter.readConfig(configPaths.user);
-        const rootKey = adapter.schemaRootKey;
-
-        if (userConfig[rootKey]) {
-          for (const [name, config] of Object.entries(userConfig[rootKey])) {
-            if (!overtureConfig.mcp[name]) {
-              discovered.push(
-                this.createDiscoveredMcp(
-                  name,
-                  config,
-                  {
-                    client: 'copilot-cli',
-                    location: configPaths.user,
-                    locationType: 'global',
-                    filePath: configPaths.user,
-                  },
-                  'global',
-                ),
-              );
-            }
-          }
-        }
-      }
+      await this.discoverCopilotMcpsFromPath(
+        adapter,
+        configPaths.user,
+        'global',
+        overtureConfig,
+        discovered,
+      );
 
       // Project config
-      if (await this.filesystem.exists(configPaths.project)) {
-        const projectConfig = await adapter.readConfig(configPaths.project);
-        const rootKey = adapter.schemaRootKey;
-
-        if (projectConfig[rootKey]) {
-          for (const [name, config] of Object.entries(projectConfig[rootKey])) {
-            if (!overtureConfig.mcp[name]) {
-              discovered.push(
-                this.createDiscoveredMcp(
-                  name,
-                  config,
-                  {
-                    client: 'copilot-cli',
-                    location: configPaths.project,
-                    locationType: 'project',
-                    filePath: configPaths.project,
-                  },
-                  'project',
-                ),
-              );
-            }
-          }
-        }
-      }
+      await this.discoverCopilotMcpsFromPath(
+        adapter,
+        configPaths.project,
+        'project',
+        overtureConfig,
+        discovered,
+      );
     } catch (error) {
       this.output.warn(
         `Failed to discover MCPs from Copilot CLI: ${(error as Error).message}`,
@@ -311,6 +346,49 @@ export class ImportService {
     }
 
     return discovered;
+  }
+
+  /**
+   * Discover MCPs from a specific Copilot CLI config path
+   */
+  private async discoverCopilotMcpsFromPath(
+    adapter: CopilotCliAdapter,
+    configPath: string,
+    locationType: 'global' | 'project',
+    overtureConfig: OvertureConfig,
+    discovered: DiscoveredMcp[],
+  ): Promise<void> {
+    if (!(await this.filesystem.exists(configPath))) return;
+
+    const config = await adapter.readConfig(configPath);
+    const rootKey = adapter.schemaRootKey;
+
+    if (!Object.hasOwn(config, rootKey)) return;
+
+    // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
+    // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
+    const rootConfig = config[rootKey];
+    if (!rootConfig) return;
+
+    for (const [name, mcpConfig] of Object.entries(rootConfig)) {
+      // name comes from Object.entries - safe to check in overtureConfig.mcp
+      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+      if (!Object.hasOwn(overtureConfig.mcp, name)) {
+        discovered.push(
+          this.createDiscoveredMcp(
+            name,
+            mcpConfig,
+            {
+              client: CLIENT_NAME_COPILOT_CLI,
+              location: configPath,
+              locationType,
+              filePath: configPath,
+            },
+            locationType,
+          ),
+        );
+      }
+    }
   }
 
   /**
@@ -392,6 +470,61 @@ export class ImportService {
     const allDiscovered: DiscoveredMcp[] = [];
 
     // Detect from each client
+    await this.detectFromAllClients(
+      claudeCodeAdapter,
+      openCodeAdapter,
+      copilotCliAdapter,
+      overtureConfig,
+      platform,
+      projectRoot,
+      clients,
+      parseErrors,
+      allDiscovered,
+    );
+
+    // Categorize and summarize MCPs
+    const { managed, unmanaged, conflicts } = this.categorizeMcps(
+      allDiscovered,
+      overtureConfig,
+    );
+
+    // Calculate summary
+    const mcpsByName = this.groupMcpsByName(allDiscovered);
+    const summary: DetectionSummary = {
+      clientsScanned: clients.length,
+      totalMcps: mcpsByName.size,
+      managed: managed.length,
+      unmanaged: unmanaged.length,
+      conflicts: conflicts.length,
+      parseErrors: parseErrors.length,
+    };
+
+    return {
+      summary,
+      clients,
+      mcps: {
+        managed,
+        unmanaged,
+        conflicts,
+        parseErrors,
+      },
+    };
+  }
+
+  /**
+   * Detect from all clients and populate results
+   */
+  private async detectFromAllClients(
+    claudeCodeAdapter: ClaudeCodeAdapter | null,
+    openCodeAdapter: OpenCodeAdapter | null,
+    copilotCliAdapter: CopilotCliAdapter | null,
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+    projectRoot: string | undefined,
+    clients: ClientDetectionResult[],
+    parseErrors: ParseErrorInfo[],
+    allDiscovered: DiscoveredMcp[],
+  ): Promise<void> {
     const adapters = [
       { adapter: claudeCodeAdapter, name: 'claude-code' as const },
       { adapter: openCodeAdapter, name: 'opencode' as const },
@@ -401,75 +534,126 @@ export class ImportService {
     for (const { adapter, name } of adapters) {
       if (!adapter) continue;
 
-      // Detect binary
-      const binaryDetection = await this.detectClientBinary(adapter, platform);
-
-      // Get config paths
-      const configPathResult = adapter.detectConfigPath(platform, projectRoot);
-      const userPath =
-        typeof configPathResult === 'string'
-          ? configPathResult
-          : configPathResult?.user;
-      const projectPath =
-        typeof configPathResult === 'string'
-          ? undefined
-          : configPathResult?.project;
-
-      const configPaths: ConfigPathStatus[] = [];
-
-      // Check user config
-      if (userPath) {
-        const status = await this.checkConfigPath(userPath, 'user', adapter);
-        configPaths.push(status);
-
-        // If valid, discover MCPs
-        if (status.parseStatus === 'valid') {
-          try {
-            const mcps = await this.discoverFromAdapter(
-              adapter,
-              name,
-              overtureConfig,
-              platform,
-              projectRoot,
-            );
-            allDiscovered.push(...mcps);
-          } catch (_error) {
-            // Already captured in checkConfigPath
-          }
-        } else if (status.parseError) {
-          parseErrors.push({
-            client: name,
-            configPath: userPath,
-            error: status.parseError,
-          });
-        }
-      }
-
-      // Check project config
-      if (projectPath) {
-        const status = await this.checkConfigPath(
-          projectPath,
-          'project',
-          adapter,
-        );
-        configPaths.push(status);
-      }
-
-      clients.push({
+      const clientResult = await this.detectFromSingleClient(
+        adapter,
         name,
-        version: binaryDetection.version,
-        binaryPath: binaryDetection.binaryPath,
-        detected: binaryDetection.status === 'found',
+        overtureConfig,
+        platform,
+        projectRoot,
+        parseErrors,
+        allDiscovered,
+      );
+
+      clients.push(clientResult);
+    }
+  }
+
+  /**
+   * Detect from a single client
+   */
+  private async detectFromSingleClient(
+    adapter: ClaudeCodeAdapter | OpenCodeAdapter | CopilotCliAdapter,
+    name: 'claude-code' | 'opencode' | 'copilot-cli',
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+    projectRoot: string | undefined,
+    parseErrors: ParseErrorInfo[],
+    allDiscovered: DiscoveredMcp[],
+  ): Promise<ClientDetectionResult> {
+    const binaryDetection = await this.detectClientBinary(adapter, platform);
+    const configPathResult = adapter.detectConfigPath(platform, projectRoot);
+    const userPath =
+      typeof configPathResult === 'string'
+        ? configPathResult
+        : configPathResult?.user;
+    const projectPath =
+      typeof configPathResult === 'string'
+        ? undefined
+        : configPathResult?.project;
+
+    const configPaths: ConfigPathStatus[] = [];
+
+    // Check user config
+    if (userPath) {
+      await this.checkAndDiscoverFromPath(
+        userPath,
+        'user',
+        adapter,
+        name,
+        overtureConfig,
+        platform,
+        projectRoot,
         configPaths,
-      });
+        parseErrors,
+        allDiscovered,
+      );
     }
 
-    // Categorize MCPs
-    const managed: ManagedMcpDetection[] = [];
-    const unmanaged: DiscoveredMcp[] = [];
-    const managedNames = Object.keys(overtureConfig.mcp);
+    // Check project config
+    if (projectPath) {
+      const status = await this.checkConfigPath(
+        projectPath,
+        'project',
+        adapter,
+      );
+      configPaths.push(status);
+    }
 
-    // Group discovered MCPs by name
+    return {
+      name,
+      version: binaryDetection.version,
+      binaryPath: binaryDetection.binaryPath,
+      detected: binaryDetection.status === 'found',
+      configPaths,
+    };
+  }
+
+  /**
+   * Check config path and discover MCPs if valid
+   */
+  private async checkAndDiscoverFromPath(
+    path: string,
+    type: 'user' | 'project',
+    adapter: ClaudeCodeAdapter | OpenCodeAdapter | CopilotCliAdapter,
+    clientName: 'claude-code' | 'opencode' | 'copilot-cli',
+    overtureConfig: OvertureConfig,
+    platform: Platform,
+    projectRoot: string | undefined,
+    configPaths: ConfigPathStatus[],
+    parseErrors: ParseErrorInfo[],
+    allDiscovered: DiscoveredMcp[],
+  ): Promise<void> {
+    const status = await this.checkConfigPath(path, type, adapter);
+    configPaths.push(status);
+
+    if (status.parseStatus === 'valid') {
+      try {
+        const mcps = await this.discoverFromAdapter(
+          adapter,
+          clientName,
+          overtureConfig,
+          platform,
+          projectRoot,
+        );
+        allDiscovered.push(...mcps);
+      } catch (_error) {
+        // Already captured in checkConfigPath
+      }
+    } else if (status.parseError) {
+      parseErrors.push({
+        client: clientName,
+        configPath: path,
+        error: status.parseError,
+      });
+    }
+  }
+
+  /**
+   * Group discovered MCPs by name
+   */
+  private groupMcpsByName(
+    allDiscovered: DiscoveredMcp[],
+  ): Map<string, DiscoveredMcp[]> {
     const mcpsByName = new Map<string, DiscoveredMcp[]>();
     for (const mcp of allDiscovered) {
       if (!mcpsByName.has(mcp.name)) {
@@ -480,50 +664,49 @@ export class ImportService {
         mcpList.push(mcp);
       }
     }
+    return mcpsByName;
+  }
+
+  /**
+   * Categorize MCPs into managed, unmanaged, and conflicts
+   */
+  private categorizeMcps(
+    allDiscovered: DiscoveredMcp[],
+    overtureConfig: OvertureConfig,
+  ): {
+    managed: ManagedMcpDetection[];
+    unmanaged: DiscoveredMcp[];
+    conflicts: ReturnType<typeof detectConflicts>;
+  } {
+    const managed: ManagedMcpDetection[] = [];
+    const unmanaged: DiscoveredMcp[] = [];
+    const managedNames = Object.keys(overtureConfig.mcp);
+    const mcpsByName = this.groupMcpsByName(allDiscovered);
 
     // Categorize each unique MCP
     for (const [mcpName, mcps] of mcpsByName.entries()) {
       if (managedNames.includes(mcpName)) {
-        // Already managed
         managed.push({
           name: mcpName,
           sources: mcps.map((m) => m.source),
           inOvertureConfig: true,
         });
       } else {
-        // Unmanaged - take first occurrence
         unmanaged.push(mcps[0]);
       }
     }
 
-    // Detect conflicts
+    // Detect conflicts and filter unmanaged
     const conflicts = detectConflicts(allDiscovered);
-
-    // Remove conflicting MCPs from unmanaged list
     const conflictNames = new Set(conflicts.map((c) => c.name));
     const unmanagedNonConflicting = unmanaged.filter(
       (m) => !conflictNames.has(m.name),
     );
 
-    // Calculate summary
-    const summary: DetectionSummary = {
-      clientsScanned: clients.length,
-      totalMcps: mcpsByName.size,
-      managed: managed.length,
-      unmanaged: unmanagedNonConflicting.length,
-      conflicts: conflicts.length,
-      parseErrors: parseErrors.length,
-    };
-
     return {
-      summary,
-      clients,
-      mcps: {
-        managed,
-        unmanaged: unmanagedNonConflicting,
-        conflicts,
-        parseErrors,
-      },
+      managed,
+      unmanaged: unmanagedNonConflicting,
+      conflicts,
     };
   }
 

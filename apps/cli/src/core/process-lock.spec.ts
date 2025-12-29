@@ -83,8 +83,8 @@ describe('Process Lock', () => {
       });
 
       mockFs.existsSync.mockImplementation((p) => {
-        if (p === mockLockDir) return true; // Dir exists
-        return false; // Lock existence determined by writeFileSync failure
+        // Lock existence determined by writeFileSync failure
+        return p === mockLockDir; // Dir exists
       });
 
       // Always fail with EEXIST (active lock)
@@ -112,8 +112,8 @@ describe('Process Lock', () => {
 
       let lockFileRemoved = false;
       mockFs.existsSync.mockImplementation((p) => {
-        if (p === mockLockDir) return true; // Dir always exists
-        return false; // Lock dir check returns true, but we handle via writeFileSync
+        // Lock dir check returns true, but we handle via writeFileSync
+        return p === mockLockDir; // Dir always exists
       });
 
       // First write fails with EEXIST (lock exists), then succeeds after stale lock removal
@@ -154,8 +154,7 @@ describe('Process Lock', () => {
       });
 
       mockFs.existsSync.mockImplementation((p) => {
-        if (p === mockLockDir) return true; // Dir exists
-        return false;
+        return p === mockLockDir; // Dir exists
       });
 
       let writeAttempts = 0;

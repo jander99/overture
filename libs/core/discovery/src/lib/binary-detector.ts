@@ -62,50 +62,26 @@ export class BinaryDetector {
     platform: Platform,
   ): Promise<BinaryDetectionResult> {
     const warnings: string[] = [];
-    let binaryPath: string | undefined;
-    let version: string | undefined;
-    let appBundlePath: string | undefined;
-    let configPath: string | undefined;
-    let configValid: boolean | undefined;
 
     // Check for CLI binaries
-    const binaryNames = client.getBinaryNames();
-    if (binaryNames.length > 0) {
-      const binaryResult = await this.detectBinary(binaryNames[0]);
-      if (binaryResult.found) {
-        binaryPath = binaryResult.path;
-        version = binaryResult.version;
-      } else if (client.requiresBinary()) {
-        // Required binary not found
-        return {
-          status: 'not-found',
-          warnings: [`Required binary '${binaryNames[0]}' not found in PATH`],
-        };
-      } else {
-        warnings.push(`Binary '${binaryNames[0]}' not found in PATH`);
-      }
+    const binaryResult = await this.detectBinaryForClient(client, warnings);
+    if (binaryResult.notFound) {
+      return binaryResult.notFound;
     }
+    const binaryPath = binaryResult.binaryPath;
+    const version = binaryResult.version;
 
     // Check for app bundles
-    const appBundlePaths = client.getAppBundlePaths(platform);
-    if (appBundlePaths.length > 0) {
-      const appBundleResult = await this.detectAppBundle(appBundlePaths);
-      if (appBundleResult.found) {
-        appBundlePath = appBundleResult.path;
-      } else if (!binaryPath) {
-        // No binary and no app bundle
-        return {
-          status: 'not-found',
-          warnings: [
-            `Application not found. Checked paths: ${appBundlePaths.join(', ')}`,
-          ],
-        };
-      } else {
-        warnings.push(
-          `Application bundle not found (binary available). Checked paths: ${appBundlePaths.join(', ')}`,
-        );
-      }
+    const appBundleResult = await this.detectAppBundleForClient(
+      client,
+      platform,
+      binaryPath,
+      warnings,
+    );
+    if (appBundleResult.notFound) {
+      return appBundleResult.notFound;
     }
+    const appBundlePath = appBundleResult.appBundlePath;
 
     // If neither binary nor app bundle found
     if (!binaryPath && !appBundlePath) {
@@ -116,22 +92,11 @@ export class BinaryDetector {
     }
 
     // Check config file validity
-    const detectedConfigPath = client.detectConfigPath(platform);
-    if (detectedConfigPath) {
-      const configPathToCheck =
-        typeof detectedConfigPath === 'string'
-          ? detectedConfigPath
-          : detectedConfigPath.user;
-
-      configPath = configPathToCheck;
-      configValid = this.validateConfigFile(configPathToCheck);
-
-      if (!configValid) {
-        warnings.push(
-          `Config file exists but is invalid JSON: ${configPathToCheck}`,
-        );
-      }
-    }
+    const { configPath, configValid } = this.validateClientConfig(
+      client,
+      platform,
+      warnings,
+    );
 
     return {
       status: 'found',
@@ -142,6 +107,112 @@ export class BinaryDetector {
       configValid,
       warnings,
     };
+  }
+
+  /**
+   * Detect binary for client
+   */
+  private async detectBinaryForClient(
+    client: ClientAdapter,
+    warnings: string[],
+  ): Promise<{
+    binaryPath?: string;
+    version?: string;
+    notFound?: BinaryDetectionResult;
+  }> {
+    const binaryNames = client.getBinaryNames();
+    if (binaryNames.length === 0) {
+      return {};
+    }
+
+    const binaryResult = await this.detectBinary(binaryNames[0]);
+    if (binaryResult.found) {
+      return {
+        binaryPath: binaryResult.path,
+        version: binaryResult.version,
+      };
+    }
+
+    if (client.requiresBinary()) {
+      return {
+        notFound: {
+          status: 'not-found',
+          warnings: [`Required binary '${binaryNames[0]}' not found in PATH`],
+        },
+      };
+    }
+
+    warnings.push(`Binary '${binaryNames[0]}' not found in PATH`);
+    return {};
+  }
+
+  /**
+   * Detect app bundle for client
+   */
+  private async detectAppBundleForClient(
+    client: ClientAdapter,
+    platform: Platform,
+    binaryPath: string | undefined,
+    warnings: string[],
+  ): Promise<{
+    appBundlePath?: string;
+    notFound?: BinaryDetectionResult;
+  }> {
+    const appBundlePaths = client.getAppBundlePaths(platform);
+    if (appBundlePaths.length === 0) {
+      return {};
+    }
+
+    const appBundleResult = await this.detectAppBundle(appBundlePaths);
+    if (appBundleResult.found) {
+      return { appBundlePath: appBundleResult.path };
+    }
+
+    if (!binaryPath) {
+      return {
+        notFound: {
+          status: 'not-found',
+          warnings: [
+            `Application not found. Checked paths: ${appBundlePaths.join(', ')}`,
+          ],
+        },
+      };
+    }
+
+    warnings.push(
+      `Application bundle not found (binary available). Checked paths: ${appBundlePaths.join(', ')}`,
+    );
+    return {};
+  }
+
+  /**
+   * Validate client config file
+   */
+  private validateClientConfig(
+    client: ClientAdapter,
+    platform: Platform,
+    warnings: string[],
+  ): {
+    configPath?: string;
+    configValid?: boolean;
+  } {
+    const detectedConfigPath = client.detectConfigPath(platform);
+    if (!detectedConfigPath) {
+      return {};
+    }
+
+    const configPath =
+      typeof detectedConfigPath === 'string'
+        ? detectedConfigPath
+        : detectedConfigPath.user;
+
+    const configValid = this.validateConfigFile(configPath);
+
+    if (!configValid) {
+      warnings.push(`Config file exists but is invalid JSON: ${configPath}`);
+    }
+
+    return { configPath, configValid };
   }
 
   /**
@@ -289,13 +360,15 @@ export class BinaryDetector {
     const firstLine = lines[0];
 
     // Try to extract semantic version (x.y.z)
-    const semverMatch = firstLine.match(/(\d+\.\d+\.\d+)/);
+    // Using a bounded regex to prevent ReDoS attacks
+    const semverMatch = firstLine.match(/(\d{1,5}\.\d{1,5}\.\d{1,5})/);
     if (semverMatch) {
       return semverMatch[1];
     }
 
     // Try to extract simple version (vx.y.z or x.y.z)
-    const simpleMatch = firstLine.match(/v?(\d+\.\d+(?:\.\d+)?)/);
+    // Match with explicit alternatives to avoid backtracking
+    const simpleMatch = firstLine.match(/v?(\d{1,5}\.\d{1,5}(?:\.\d{1,5}|$))/);
     if (simpleMatch) {
       return simpleMatch[1];
     }

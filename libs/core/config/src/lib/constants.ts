@@ -12,9 +12,14 @@
 export const OVERTURE_DIR = '.overture';
 
 /**
- * Configuration file name (project-level)
+ * Configuration file name (project-level) - primary extension
  */
 export const CONFIG_FILE = 'config.yaml';
+
+/**
+ * Configuration file name (project-level) - fallback extension for backward compatibility
+ */
+export const CONFIG_FILE_YML = 'config.yml';
 
 /**
  * Full path to project configuration file (relative)

@@ -88,7 +88,7 @@ export function createInitCommand(deps: AppDependencies): Command {
 
 ${yamlContent}`;
 
-        filesystem.writeFile(configPath, configWithComments);
+        await filesystem.writeFile(configPath, configWithComments);
 
         output.success('Configuration created!');
         output.info(`Location: ${configPath}`);

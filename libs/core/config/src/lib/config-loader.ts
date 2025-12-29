@@ -369,14 +369,22 @@ export class ConfigLoader {
     // Mark all global MCPs
     if (globalConfig?.mcp) {
       for (const mcpName of Object.keys(globalConfig.mcp)) {
-        sources[mcpName] = 'global';
+        // mcpName from Object.keys() is always in the object
+        if (Object.hasOwn(globalConfig.mcp, mcpName)) {
+          // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.keys()
+          sources[mcpName] = 'global';
+        }
       }
     }
 
     // Override with project MCPs (they take precedence)
     if (projectConfig?.mcp) {
       for (const mcpName of Object.keys(projectConfig.mcp)) {
-        sources[mcpName] = 'project';
+        // mcpName from Object.keys() is always in the object
+        if (Object.hasOwn(projectConfig.mcp, mcpName)) {
+          // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.keys()
+          sources[mcpName] = 'project';
+        }
       }
     }
 

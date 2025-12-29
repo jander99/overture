@@ -11,6 +11,12 @@ import type { Mocked } from 'vitest';
 import type * as os from 'os';
 
 /**
+ * Test constants for default home directories
+ * Extracted to avoid sonarjs/no-duplicate-string warnings
+ */
+const DEFAULT_HOME_TESTUSER = '/home/testuser';
+
+/**
  * Platform type
  */
 export type Platform = 'linux' | 'darwin' | 'win32';
@@ -52,7 +58,7 @@ export interface MockPlatformConfig {
  * ```
  */
 export function createLinuxPlatform(
-  homedir = '/home/testuser',
+  homedir = DEFAULT_HOME_TESTUSER,
 ): MockPlatformConfig {
   return {
     platform: 'linux',
@@ -120,7 +126,7 @@ export function createWindowsPlatform(
  * ```
  */
 export function createWSL2Platform(
-  homedir = '/home/testuser',
+  homedir = DEFAULT_HOME_TESTUSER,
 ): MockPlatformConfig {
   return {
     platform: 'linux',
@@ -173,7 +179,7 @@ export function configureMockOs(
  */
 export function mockLinuxPlatform(
   osMock: Mocked<typeof os>,
-  homedir = '/home/testuser',
+  homedir = DEFAULT_HOME_TESTUSER,
 ): void {
   const config = createLinuxPlatform(homedir);
   configureMockOs(config, osMock);
@@ -233,7 +239,7 @@ export function mockWindowsPlatform(
  */
 export function mockWSL2Platform(
   osMock: Mocked<typeof os>,
-  homedir = '/home/testuser',
+  homedir = DEFAULT_HOME_TESTUSER,
 ): void {
   const config = createWSL2Platform(homedir);
   configureMockOs(config, osMock);

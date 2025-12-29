@@ -4,9 +4,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SkillDiscovery } from './skill-discovery.js';
-import type { FilesystemPort } from '@overture/ports-filesystem';
+import type { FilesystemPort, Stats } from '@overture/ports-filesystem';
 import type { EnvironmentPort } from '@overture/ports-process';
-import type { Stats } from '@overture/ports-filesystem';
 
 describe('SkillDiscovery', () => {
   let mockFilesystem: FilesystemPort;

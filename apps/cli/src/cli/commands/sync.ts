@@ -182,7 +182,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
         // Load config to determine detail mode default
         let detailMode = options.detail || false;
         try {
-          const projectRoot = pathResolver.findProjectRoot();
+          const projectRoot = await pathResolver.findProjectRoot();
           const userConfig = await configLoader.loadUserConfig();
           const projectConfig = projectRoot
             ? await configLoader.loadProjectConfig(projectRoot)

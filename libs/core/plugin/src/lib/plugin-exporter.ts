@@ -13,8 +13,11 @@
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
 import type { EnvironmentPort } from '@overture/ports-process';
-import type { InstalledPlugin, ExportOptions } from '@overture/config-types';
-import type { OvertureConfig } from '@overture/config-types';
+import type {
+  InstalledPlugin,
+  ExportOptions,
+  OvertureConfig,
+} from '@overture/config-types';
 import { PluginDetector } from './plugin-detector.js';
 import { PluginError } from '@overture/errors';
 import * as yaml from 'js-yaml';

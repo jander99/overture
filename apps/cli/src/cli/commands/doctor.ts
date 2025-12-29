@@ -499,7 +499,10 @@ export function createDoctorCommand(deps: AppDependencies): Command {
 
           for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
             const commandExists = await process.commandExists(mcpDef.command);
-            const source = mcpSources[mcpName] || 'unknown';
+            const source = Object.hasOwn(mcpSources, mcpName)
+              ? // eslint-disable-next-line security/detect-object-injection
+                mcpSources[mcpName]
+              : 'unknown';
 
             const mcpResult = {
               name: mcpName,
@@ -650,7 +653,10 @@ function getInstallRecommendation(client: ClientName): string | null {
     opencode: 'Install OpenCode: https://opencode.ai',
   };
 
-  return recommendations[client] || null;
+  return Object.hasOwn(recommendations, client)
+    ? // eslint-disable-next-line security/detect-object-injection
+      recommendations[client]
+    : null;
 }
 
 /**

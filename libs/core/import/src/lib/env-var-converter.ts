@@ -111,8 +111,12 @@ export function convertToEnvVarReferences(
   const detectedTypes: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(env)) {
+    // key is from Object.entries - always exists in env
+    if (!Object.hasOwn(env, key)) continue;
+
     // Skip if already a reference
     if (value.startsWith('${') || value.startsWith('{env:')) {
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
       converted[key] = value;
       continue;
     }
@@ -123,18 +127,23 @@ export function convertToEnvVarReferences(
       if (detected) {
         // Use detected var name or fallback to key name
         const varName = detected.varName || key.toUpperCase();
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = `\${${varName}}`;
         varsToSet.push(varName);
+        // eslint-disable-next-line security/detect-object-injection -- varName from detection/fallback
         detectedTypes[varName] = detected.type;
       } else {
         // Generic fallback
         const varName = `${mcpName.toUpperCase()}_${key.toUpperCase()}`;
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = `\${${varName}}`;
         varsToSet.push(varName);
+        // eslint-disable-next-line security/detect-object-injection -- varName constructed from string params
         detectedTypes[varName] = 'Secret';
       }
     } else {
       // Not a secret, keep as-is
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
       converted[key] = value;
     }
   }
@@ -157,15 +166,21 @@ export function convertFromOpenCodeEnv(
   const converted: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(env)) {
+    // key is from Object.entries - always exists in env
+    if (!Object.hasOwn(env, key)) continue;
+
     if (value.startsWith('{env:')) {
       // {env:VAR} or {env:VAR:-default}
       const match = value.match(/^\{env:([^}]+)\}$/);
-      if (match) {
+      if (match && match[1]) {
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = `\${${match[1]}}`;
       } else {
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = value;
       }
     } else {
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
       converted[key] = value;
     }
   }
@@ -188,15 +203,21 @@ export function convertToOpenCodeEnv(
   const converted: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(env)) {
+    // key is from Object.entries - always exists in env
+    if (!Object.hasOwn(env, key)) continue;
+
     if (value.startsWith('${')) {
       // ${VAR} or ${VAR:-default}
       const match = value.match(/^\$\{([^}]+)\}$/);
-      if (match) {
+      if (match && match[1]) {
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = `{env:${match[1]}}`;
       } else {
+        // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
         converted[key] = value;
       }
     } else {
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.entries(env)
       converted[key] = value;
     }
   }

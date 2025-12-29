@@ -68,10 +68,12 @@ methods.forEach((method) => {
 
   // Add all methods to this function too (for chaining like chalk.blue.bold())
   methods.forEach((m) => {
+    // eslint-disable-next-line security/detect-object-injection
     methodFn[m] = passThroughFn;
   });
 
   // Assign to chalk
+  // eslint-disable-next-line security/detect-object-injection
   chalk[method] = methodFn;
 });
 

@@ -128,7 +128,7 @@ export function getUnmanagedMcps(
   const preserved: Record<string, unknown> = {};
 
   for (const [name, config] of Object.entries(existingClientConfig)) {
-    if (!overtureNames.has(name)) {
+    if (Object.hasOwn(existingClientConfig, name) && !overtureNames.has(name)) {
       preserved[name] = config;
     }
   }

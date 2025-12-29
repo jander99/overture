@@ -14,6 +14,13 @@ import { createMockProcess } from './process.mock.js';
 import { createMockAdapter } from './adapter.mock.js';
 
 /**
+ * Test constants for default paths and client names
+ * Extracted to avoid sonarjs/no-duplicate-string warnings
+ */
+const DEFAULT_PROJECT_PATH = '/home/user/project';
+const DEFAULT_CLIENT_NAME = 'claude-code';
+
+/**
  * Create mock SyncEngineDeps for testing
  *
  * Returns fully typed mocks with vi.fn() for all methods.
@@ -26,7 +33,7 @@ import { createMockAdapter } from './adapter.mock.js';
  */
 export function createMockSyncEngineDeps(): any {
   const mockProcess = createMockProcess();
-  const mockAdapter = createMockAdapter('claude-code');
+  const mockAdapter = createMockAdapter(DEFAULT_CLIENT_NAME);
 
   return {
     filesystem: {
@@ -57,7 +64,7 @@ export function createMockSyncEngineDeps(): any {
       platform: vi.fn(() => 'linux'),
       homedir: vi.fn(() => '/home/user'),
       env: { HOME: '/home/user', PATH: '/usr/bin' },
-      cwd: vi.fn(() => '/home/user/project'),
+      cwd: vi.fn(() => DEFAULT_PROJECT_PATH),
     },
     configLoader: {
       loadUserConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
@@ -68,8 +75,8 @@ export function createMockSyncEngineDeps(): any {
     } as any,
     adapterRegistry: {
       get: vi.fn((_name: string) => mockAdapter),
-      getAllNames: vi.fn(() => ['claude-code', 'claude-desktop']),
-      listAdapters: vi.fn(() => ['claude-code', 'claude-desktop']),
+      getAllNames: vi.fn(() => [DEFAULT_CLIENT_NAME, 'claude-desktop']),
+      listAdapters: vi.fn(() => [DEFAULT_CLIENT_NAME, 'claude-desktop']),
       getAdapter: vi.fn(() => mockAdapter),
     } as any,
     pluginInstaller: {
@@ -99,9 +106,9 @@ export function createMockSyncEngineDeps(): any {
       }),
     },
     pathResolver: {
-      findProjectRoot: vi.fn(() => '/home/user/project'),
+      findProjectRoot: vi.fn(() => DEFAULT_PROJECT_PATH),
       getDryRunOutputPath: vi.fn((client: string, _originalPath: string) => {
-        return `/home/user/project/dist/${client}-mcp.json`;
+        return `${DEFAULT_PROJECT_PATH}/dist/${client}-mcp.json`;
       }),
     },
   };

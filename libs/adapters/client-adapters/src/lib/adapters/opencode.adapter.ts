@@ -92,6 +92,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
         }
       > = {};
       for (const [name, serverDef] of Object.entries(config.mcp)) {
+        // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries() of config.mcp, safe
         transformedMcp[name] = {
           type: serverDef.type || 'local',
           enabled: true,
@@ -149,6 +150,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
         ? this.translateEnvVars(serverConfig.env)
         : undefined;
 
+      // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries() of overtureConfig.mcp, safe
       mcp[name] = {
         command: serverConfig.command,
         args: serverConfig.args,
@@ -202,6 +204,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
     for (const [key, value] of Object.entries(env)) {
       // Replace ${VAR} or ${env:VAR} with {env:VAR}
+      // eslint-disable-next-line security/detect-object-injection -- key comes from Object.entries() of env parameter, safe
       translated[key] = value
         .replace(/\$\{env:([^}]+)\}/g, '{env:$1}')
         .replace(/\$\{([^}]+)\}/g, '{env:$1}');
@@ -230,6 +233,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
     for (const [key, value] of Object.entries(env)) {
       // Replace {env:VAR} or {env:VAR:-default} with ${VAR} or ${VAR:-default}
+      // eslint-disable-next-line security/detect-object-injection -- key comes from Object.entries() of env parameter, safe
       translated[key] = value.replace(/\{env:([^}]+)\}/g, '$${$1}');
     }
 

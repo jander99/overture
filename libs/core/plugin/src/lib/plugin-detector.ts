@@ -97,16 +97,11 @@ export class PluginDetector {
     }
 
     try {
-      // Parse settings file
-      const settings = await this.parseClaudeSettings(settingsPath);
-
-      // Extract plugins from settings
-      const plugins = this.extractPluginsFromSettings(
-        settings,
+      // Parse settings file and extract plugins
+      return this.extractPluginsFromSettings(
+        await this.parseClaudeSettings(settingsPath),
         includeDisabled,
       );
-
-      return plugins;
     } catch (error) {
       if (error instanceof PluginError && error.code === 'PLUGIN_ERROR') {
         // Settings file not found or malformed - log warning and return empty array
@@ -182,9 +177,7 @@ export class PluginDetector {
       const content = await this.filesystem.readFile(settingsPath);
 
       // Parse JSON
-      const settings = JSON.parse(content) as ClaudeSettings;
-
-      return settings;
+      return JSON.parse(content) as ClaudeSettings;
     } catch (error) {
       // Already a PluginError - rethrow
       if (error instanceof PluginError) {

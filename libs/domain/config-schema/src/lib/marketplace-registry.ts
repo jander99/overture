@@ -123,7 +123,8 @@ export class MarketplaceRegistry {
    */
   static resolveMarketplace(shortNameOrPath: string): string {
     // Check built-in marketplaces first
-    if (shortNameOrPath in this.KNOWN_MARKETPLACES) {
+    if (Object.hasOwn(this.KNOWN_MARKETPLACES, shortNameOrPath)) {
+      // eslint-disable-next-line security/detect-object-injection -- Safe: key existence verified with Object.hasOwn()
       return this.KNOWN_MARKETPLACES[shortNameOrPath];
     }
 

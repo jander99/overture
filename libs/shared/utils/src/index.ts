@@ -54,3 +54,6 @@ export type {
 
 // Path utilities
 export { getDirname } from './lib/path-utils.js';
+
+// User-facing messages
+export * from './lib/messages.js';

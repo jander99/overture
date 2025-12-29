@@ -120,13 +120,12 @@ describe('Sync Multi-Client E2E Tests', () => {
     };
 
     try {
-      const output = execSync(command, {
+      return execSync(command, {
         cwd: join(testDir, 'project'),
         env,
         encoding: 'utf8',
         stdio: 'pipe',
       });
-      return output;
     } catch (error: unknown) {
       const execError = error as {
         stdout?: string;

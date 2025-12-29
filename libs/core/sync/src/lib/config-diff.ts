@@ -54,55 +54,77 @@ export interface ConfigDiff {
  * @param rootKey - Root key for MCP servers ('mcpServers', 'servers', or 'mcp')
  * @returns Detailed diff information
  */
-export function generateDiff(
-  oldConfig: ClientMcpConfig,
-  newConfig: ClientMcpConfig,
-  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
-): ConfigDiff {
-  const oldServers = oldConfig[rootKey] || {};
-  const newServers = newConfig[rootKey] || {};
-
-  const oldKeys = new Set(Object.keys(oldServers));
-  const newKeys = new Set(Object.keys(newServers));
-
+/**
+ * Categorize keys into added, removed, and common
+ */
+function categorizeKeys(
+  oldKeys: Set<string>,
+  newKeys: Set<string>,
+): { added: string[]; removed: string[]; common: string[] } {
   const added: string[] = [];
   const removed: string[] = [];
-  const modified: McpChange[] = [];
-  const unchanged: string[] = [];
+  const common: string[] = [];
 
-  // Find added MCPs
   for (const key of newKeys) {
     if (!oldKeys.has(key)) {
       added.push(key);
+    } else {
+      common.push(key);
     }
   }
 
-  // Find removed MCPs
   for (const key of oldKeys) {
     if (!newKeys.has(key)) {
       removed.push(key);
     }
   }
 
-  // Find modified and unchanged MCPs
-  for (const key of oldKeys) {
-    if (newKeys.has(key)) {
-      const oldValue = oldServers[key];
-      const newValue = newServers[key];
+  return { added, removed, common };
+}
 
-      if (isEqual(oldValue, newValue)) {
-        unchanged.push(key);
-      } else {
-        // Detect field-level changes
-        const fieldChanges = detectFieldChanges(oldValue, newValue);
-        modified.push({
-          name: key,
-          type: 'modified',
-          oldValue,
-          newValue,
-          fieldChanges,
-        });
-      }
+export function generateDiff(
+  oldConfig: ClientMcpConfig,
+  newConfig: ClientMcpConfig,
+  rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
+): ConfigDiff {
+  // rootKey comes from method parameters - validated with Object.hasOwn
+  // eslint-disable-next-line security/detect-object-injection -- rootKey from parameters
+  const oldServers =
+    (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
+  // eslint-disable-next-line security/detect-object-injection -- rootKey from parameters
+  const newServers =
+    (Object.hasOwn(newConfig, rootKey) ? newConfig[rootKey] : {}) || {};
+
+  const oldKeys = new Set(Object.keys(oldServers));
+  const newKeys = new Set(Object.keys(newServers));
+
+  const { added, removed, common } = categorizeKeys(oldKeys, newKeys);
+  const modified: McpChange[] = [];
+  const unchanged: string[] = [];
+
+  // Check common keys for modifications
+  for (const key of common) {
+    // key comes from categorizeKeys() - safe to check in servers objects
+    // eslint-disable-next-line security/detect-object-injection -- key from categorizeKeys()
+    const oldValue = Object.hasOwn(oldServers, key)
+      ? oldServers[key]
+      : undefined;
+    // eslint-disable-next-line security/detect-object-injection -- key from categorizeKeys()
+    const newValue = Object.hasOwn(newServers, key)
+      ? newServers[key]
+      : undefined;
+
+    if (isEqual(oldValue, newValue)) {
+      unchanged.push(key);
+    } else {
+      const fieldChanges = detectFieldChanges(oldValue, newValue);
+      modified.push({
+        name: key,
+        type: 'modified',
+        oldValue,
+        newValue,
+        fieldChanges,
+      });
     }
   }
 
@@ -140,8 +162,15 @@ function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
   ]);
 
   for (const field of allFields) {
-    const oldValue = oldRecord[field];
-    const newValue = newRecord[field];
+    // field comes from Object.keys() - safe to check in record objects
+    // eslint-disable-next-line security/detect-object-injection -- field from Object.keys()
+    const oldValue = Object.hasOwn(oldRecord, field)
+      ? oldRecord[field]
+      : undefined;
+    // eslint-disable-next-line security/detect-object-injection -- field from Object.keys()
+    const newValue = Object.hasOwn(newRecord, field)
+      ? newRecord[field]
+      : undefined;
 
     if (!isEqual(oldValue, newValue)) {
       changes.push({ field, oldValue, newValue });
@@ -174,7 +203,15 @@ function isEqual(a: unknown, b: unknown): boolean {
     const keysA = Object.keys(objA);
     const keysB = Object.keys(objB);
     if (keysA.length !== keysB.length) return false;
-    return keysA.every((key) => isEqual(objA[key], objB[key]));
+    return keysA.every((key) => {
+      // key comes from Object.keys(objA) - safe to check in both objects
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.keys()
+      // eslint-disable-next-line security/detect-object-injection -- key from Object.keys()
+      return isEqual(
+        Object.hasOwn(objA, key) ? objA[key] : undefined,
+        Object.hasOwn(objB, key) ? objB[key] : undefined,
+      );
+    });
   }
 
   return false;

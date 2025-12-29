@@ -3,11 +3,7 @@
     "nx-mcp": {
       "type": "local",
       "enabled": true,
-      "command": [
-        "npx",
-        "nx",
-        "mcp"
-      ]
+      "command": ["npx", "nx", "mcp"]
     }
   },
   "$schema": "https://opencode.ai/config.json"

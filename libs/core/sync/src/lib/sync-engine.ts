@@ -18,13 +18,15 @@ import type {
   ClientMcpServerDef,
   SkillSyncSummary,
 } from '@overture/config-types';
-import type { ClientAdapter, ClientMcpConfig } from '@overture/client-adapters';
+import type {
+  ClientAdapter,
+  ClientMcpConfig,
+  AdapterRegistry,
+} from '@overture/client-adapters';
 import type { FilesystemPort } from '@overture/ports-filesystem';
-import type { ProcessPort } from '@overture/ports-process';
+import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
-import type { EnvironmentPort } from '@overture/ports-process';
 import type { ConfigLoader } from '@overture/config-core';
-import type { AdapterRegistry } from '@overture/client-adapters';
 import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
 import type { SkillSyncService } from '@overture/skill';
@@ -162,6 +164,13 @@ export interface SyncEngineDeps {
  * - No direct Node.js API dependencies
  */
 export class SyncEngine {
+  // Default clients list - extracted as constant to avoid duplication
+  private static readonly DEFAULT_CLIENTS: ClientName[] = [
+    'claude-code',
+    'copilot-cli',
+    'opencode',
+  ];
+
   constructor(private deps: SyncEngineDeps) {}
 
   /**
@@ -224,11 +233,7 @@ export class SyncEngine {
       };
 
       // Determine which clients to sync (needed for both plugin and skill sync)
-      const targetClients = options.clients || [
-        'claude-code',
-        'copilot-cli',
-        'opencode',
-      ];
+      const targetClients = options.clients || SyncEngine.DEFAULT_CLIENTS;
 
       // 1. Sync plugins first (before MCP sync)
       let pluginSyncResult: PluginSyncResult | undefined;
@@ -387,10 +392,12 @@ export class SyncEngine {
         const toInstall: Array<{ name: string; marketplace: string }> = [];
 
         for (const name of pluginNames) {
-          const config = configuredPlugins[name];
-          const key = `${name}@${config.marketplace}`;
-          if (!installedSet.has(key)) {
-            toInstall.push({ name, marketplace: config.marketplace });
+          if (Object.hasOwn(configuredPlugins, name)) {
+            const config = configuredPlugins[name];
+            const key = `${name}@${config.marketplace}`;
+            if (!installedSet.has(key)) {
+              toInstall.push({ name, marketplace: config.marketplace });
+            }
           }
         }
 
@@ -440,6 +447,159 @@ export class SyncEngine {
   }
 
   /**
+   * Perform binary detection and update warnings
+   */
+  private async performBinaryDetection(
+    client: ClientAdapter,
+    platform: Platform,
+    options: SyncOptions,
+    overtureConfig: OvertureConfig,
+    warnings: string[],
+  ): Promise<BinaryDetectionResult | undefined> {
+    const skipDetection =
+      options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
+
+    if (!skipDetection) {
+      const detection = await this.deps.binaryDetector.detectClient(
+        client,
+        platform,
+      );
+
+      // Add version info to warnings if detected
+      if (detection.status === 'found' && detection.version) {
+        warnings.push(
+          `${client.name} detected: ${detection.version}${detection.binaryPath ? ` at ${detection.binaryPath}` : ''}`,
+        );
+      }
+
+      // Add detection warnings
+      if (detection.warnings.length > 0) {
+        warnings.push(...detection.warnings);
+      }
+
+      // If binary not found but skipUndetected is false, add warning but continue
+      if (detection.status === 'not-found' && !options.skipUndetected) {
+        warnings.push(
+          `${client.name} binary/application not detected on system. Generating config anyway.`,
+        );
+      }
+
+      return detection;
+    }
+
+    return {
+      status: 'skipped',
+      warnings: [],
+    };
+  }
+
+  /**
+   * Determine config path based on project context
+   */
+  private resolveConfigPath(
+    configPathResult: string | { user: string; project: string },
+    options: SyncOptions,
+  ): string {
+    const inProject = !!options.projectRoot;
+
+    if (typeof configPathResult === 'string') {
+      return configPathResult;
+    }
+
+    if (options.forceConfigType === 'user') {
+      return configPathResult.user;
+    }
+
+    if (options.forceConfigType === 'project') {
+      return configPathResult.project;
+    }
+
+    if (inProject && configPathResult.project) {
+      return configPathResult.project;
+    }
+
+    return configPathResult.user;
+  }
+
+  /**
+   * Filter MCPs based on config type (user vs project)
+   */
+  private filterMcpsByConfigType(
+    overtureConfig: OvertureConfig,
+    configPath: string,
+    configPathResult: string | { user: string; project: string },
+    options: SyncOptions,
+    mcpSources?: Record<string, 'global' | 'project'>,
+  ): OvertureConfig['mcp'] {
+    const inProject = !!options.projectRoot;
+    const projectPath =
+      typeof configPathResult === 'object' ? configPathResult.project : null;
+    const userPath =
+      typeof configPathResult === 'object'
+        ? configPathResult.user
+        : configPathResult;
+
+    if (inProject && projectPath && configPath === projectPath) {
+      // Project config: only include MCPs from project source
+      return Object.fromEntries(
+        Object.entries(overtureConfig.mcp).filter(
+          ([mcpName]) =>
+            mcpSources &&
+            Object.hasOwn(mcpSources, mcpName) &&
+            mcpSources[mcpName] === 'project',
+        ),
+      );
+    }
+
+    if (!inProject || configPath === userPath) {
+      // User config: only include MCPs from global source
+      return Object.fromEntries(
+        Object.entries(overtureConfig.mcp).filter(
+          ([mcpName]) =>
+            mcpSources &&
+            Object.hasOwn(mcpSources, mcpName) &&
+            mcpSources[mcpName] === 'global',
+        ),
+      );
+    }
+
+    return overtureConfig.mcp;
+  }
+
+  /**
+   * Preserve manually-added MCPs and add warnings
+   */
+  private preserveUnmanagedMcps(
+    oldConfig: ClientMcpConfig,
+    newConfig: ClientMcpConfig,
+    client: ClientAdapter,
+    overtureConfig: OvertureConfig,
+    warnings: string[],
+  ): void {
+    const rootKey = client.schemaRootKey;
+    const oldMcps =
+      (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
+    const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
+
+    if (Object.keys(unmanagedMcps).length > 0) {
+      // Merge: Overture-managed MCPs + preserved manually-added MCPs
+      newConfig[rootKey] = {
+        ...(unmanagedMcps as Record<string, ClientMcpServerDef>),
+        ...(newConfig[rootKey] as Record<string, ClientMcpServerDef>),
+      };
+
+      // Warn user about preserved MCPs
+      const unmanagedNames = Object.keys(unmanagedMcps);
+      warnings.push(
+        `Preserving ${unmanagedNames.length} manually-added MCP${unmanagedNames.length === 1 ? '' : 's'}: ${unmanagedNames.join(', ')}`,
+      );
+      warnings.push(
+        `💡 Tip: Add these to .overture/config.yaml to manage with Overture`,
+      );
+    }
+  }
+
+  /**
    * Sync MCP configuration to a single client (internal)
    */
   private async syncToClient(
@@ -454,49 +614,23 @@ export class SyncEngine {
 
     try {
       // Binary detection (if not skipped)
-      const skipDetection =
-        options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
+      binaryDetection = await this.performBinaryDetection(
+        client,
+        platform,
+        options,
+        overtureConfig,
+        warnings,
+      );
 
-      if (!skipDetection) {
-        binaryDetection = await this.deps.binaryDetector.detectClient(
-          client,
-          platform,
-        );
-
-        // Add version info to warnings if detected
-        if (binaryDetection.status === 'found' && binaryDetection.version) {
-          warnings.push(
-            `${client.name} detected: ${binaryDetection.version}${binaryDetection.binaryPath ? ` at ${binaryDetection.binaryPath}` : ''}`,
-          );
-        }
-
-        // Add detection warnings
-        if (binaryDetection.warnings.length > 0) {
-          warnings.push(...binaryDetection.warnings);
-        }
-
-        // If binary not found and skipUndetected is enabled, skip this client
-        if (binaryDetection.status === 'not-found' && options.skipUndetected) {
-          return {
-            client: client.name,
-            success: true, // Not a failure, just skipped
-            configPath: '', // No config written
-            binaryDetection,
-            warnings: [],
-            error: 'Skipped - client not detected on system',
-          };
-        }
-
-        // If binary not found but skipUndetected is false, add warning but continue
-        if (binaryDetection.status === 'not-found') {
-          warnings.push(
-            `${client.name} binary/application not detected on system. Generating config anyway.`,
-          );
-        }
-      } else {
-        binaryDetection = {
-          status: 'skipped',
+      // If binary not found and skipUndetected is enabled, skip this client
+      if (binaryDetection?.status === 'not-found' && options.skipUndetected) {
+        return {
+          client: client.name,
+          success: true,
+          configPath: '',
+          binaryDetection,
           warnings: [],
+          error: 'Skipped - client not detected on system',
         };
       }
 
@@ -529,25 +663,8 @@ export class SyncEngine {
         };
       }
 
-      // Determine which config path to use based on project context and forceConfigType
-      const inProject = !!options.projectRoot;
-      let configPath: string;
-
-      if (typeof configPathResult === 'string') {
-        configPath = configPathResult;
-      } else if (options.forceConfigType === 'user') {
-        // Force user config (for dual-sync)
-        configPath = configPathResult.user;
-      } else if (options.forceConfigType === 'project') {
-        // Force project config (for dual-sync)
-        configPath = configPathResult.project;
-      } else if (inProject && configPathResult.project) {
-        // Default: prefer project when in project
-        configPath = configPathResult.project;
-      } else {
-        // Default: use user config
-        configPath = configPathResult.user;
-      }
+      // Determine which config path to use
+      const configPath = this.resolveConfigPath(configPathResult, options);
 
       if (!configPath) {
         return {
@@ -580,32 +697,14 @@ export class SyncEngine {
         }
       }
 
-      // Filter MCPs for this client
-      // When writing to project config, only include project MCPs
-      // When writing to user config, only include global MCPs
-      let mcpsToSync = overtureConfig.mcp;
-      const projectPath =
-        typeof configPathResult === 'object' ? configPathResult.project : null;
-      const userPath =
-        typeof configPathResult === 'object'
-          ? configPathResult.user
-          : configPathResult;
-
-      if (inProject && projectPath && configPath === projectPath) {
-        // Project config: only include MCPs from project source
-        mcpsToSync = Object.fromEntries(
-          Object.entries(overtureConfig.mcp).filter(
-            ([mcpName]) => mcpSources?.[mcpName] === 'project',
-          ),
-        );
-      } else if (!inProject || configPath === userPath) {
-        // User config: only include MCPs from global source
-        mcpsToSync = Object.fromEntries(
-          Object.entries(overtureConfig.mcp).filter(
-            ([mcpName]) => mcpSources?.[mcpName] === 'global',
-          ),
-        );
-      }
+      // Filter MCPs for this client based on config type (user vs project)
+      const mcpsToSync = this.filterMcpsByConfigType(
+        overtureConfig,
+        configPath,
+        configPathResult,
+        options,
+        mcpSources,
+      );
 
       const filteredMcps = filterMcpsForClient(mcpsToSync, client, platform);
 
@@ -635,30 +734,14 @@ export class SyncEngine {
       );
 
       // Preserve manually-added MCPs (not in Overture config)
-      // Compare against full merged config, not just filtered MCPs for this config file
       if (oldConfig) {
-        const oldMcps = oldConfig[client.schemaRootKey] || {};
-        const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
-
-        if (Object.keys(unmanagedMcps).length > 0) {
-          // Merge: Overture-managed MCPs + preserved manually-added MCPs
-          newConfig[client.schemaRootKey] = {
-            ...(unmanagedMcps as Record<string, ClientMcpServerDef>), // Manually-added MCPs first
-            ...(newConfig[client.schemaRootKey] as Record<
-              string,
-              ClientMcpServerDef
-            >), // Overture-managed MCPs (take precedence)
-          };
-
-          // Warn user about preserved MCPs
-          const unmanagedNames = Object.keys(unmanagedMcps);
-          warnings.push(
-            `Preserving ${unmanagedNames.length} manually-added MCP${unmanagedNames.length === 1 ? '' : 's'}: ${unmanagedNames.join(', ')}`,
-          );
-          warnings.push(
-            `💡 Tip: Add these to .overture/config.yaml to manage with Overture`,
-          );
-        }
+        this.preserveUnmanagedMcps(
+          oldConfig,
+          newConfig,
+          client,
+          overtureConfig,
+          warnings,
+        );
       }
 
       // Generate diff
@@ -779,13 +862,15 @@ export class SyncEngine {
     const skippedPlugins: string[] = [];
 
     for (const name of pluginNames) {
-      const config = configuredPlugins[name];
-      const key = `${name}@${config.marketplace}`;
+      if (Object.hasOwn(configuredPlugins, name)) {
+        const config = configuredPlugins[name];
+        const key = `${name}@${config.marketplace}`;
 
-      if (installedSet.has(key)) {
-        skippedPlugins.push(key);
-      } else {
-        missingPlugins.push({ name, marketplace: config.marketplace });
+        if (installedSet.has(key)) {
+          skippedPlugins.push(key);
+        } else {
+          missingPlugins.push({ name, marketplace: config.marketplace });
+        }
       }
     }
 
@@ -877,11 +962,7 @@ export class SyncEngine {
     projectConfig: OvertureConfig | null,
   ): string[] {
     const warnings: string[] = [];
-    const validClients = new Set<string>([
-      'claude-code',
-      'copilot-cli',
-      'opencode',
-    ]);
+    const validClients = new Set<string>(SyncEngine.DEFAULT_CLIENTS);
 
     // Check user config
     if (userConfig) {

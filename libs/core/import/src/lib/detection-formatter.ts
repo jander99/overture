@@ -23,10 +23,56 @@ export class DetectionFormatter {
     const lines: string[] = [];
 
     // Header
-    lines.push('🔍 Detecting MCP Configurations');
-    lines.push('');
+    this.addHeader(lines);
 
     // Client Status
+    this.addClientStatus(result, verbose, lines);
+
+    // Separator
+    lines.push('━'.repeat(60));
+    lines.push('');
+
+    // Parse Errors
+    this.addParseErrors(result, lines);
+
+    // Managed MCPs
+    this.addManagedMcps(result, lines);
+
+    // Unmanaged MCPs
+    this.addUnmanagedMcps(result, verbose, lines);
+
+    // Conflicts
+    this.addConflicts(result, lines);
+
+    // Separator
+    lines.push('━'.repeat(60));
+    lines.push('');
+
+    // Summary
+    this.addSummary(result, lines);
+
+    // Next steps
+    this.addNextSteps(result, lines);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Add header section
+   */
+  private addHeader(lines: string[]): void {
+    lines.push('🔍 Detecting MCP Configurations');
+    lines.push('');
+  }
+
+  /**
+   * Add client status section
+   */
+  private addClientStatus(
+    result: DetectionResult,
+    verbose: boolean,
+    lines: string[],
+  ): void {
     lines.push('Scanning clients...');
     for (const client of result.clients) {
       const icon = client.detected ? '✓' : '⊘';
@@ -35,103 +81,146 @@ export class DetectionFormatter {
       lines.push(`${icon} ${client.name}${version}${status}`);
 
       if (verbose) {
-        for (const configPath of client.configPaths) {
-          const statusIcon =
-            configPath.parseStatus === 'valid'
-              ? '✓'
-              : configPath.parseStatus === 'not-found'
-                ? '⊘'
-                : '❌';
-          const statusText =
-            configPath.parseStatus === 'valid'
-              ? 'exists, readable'
-              : configPath.parseStatus === 'not-found'
-                ? 'not found'
-                : 'parse error';
-          lines.push(
-            `  • Config: ${this.shortenPath(configPath.path)} ${statusIcon} ${statusText}`,
-          );
-        }
+        this.addClientConfigPaths(client.configPaths, lines);
       }
     }
     lines.push('');
+  }
 
-    // Separator
-    lines.push('━'.repeat(60));
+  /**
+   * Add client config paths (verbose mode)
+   */
+  private addClientConfigPaths(
+    configPaths: Array<{
+      path: string;
+      parseStatus: string;
+    }>,
+    lines: string[],
+  ): void {
+    for (const configPath of configPaths) {
+      const statusIcon =
+        configPath.parseStatus === 'valid'
+          ? '✓'
+          : configPath.parseStatus === 'not-found'
+            ? '⊘'
+            : '❌';
+      const statusText =
+        configPath.parseStatus === 'valid'
+          ? 'exists, readable'
+          : configPath.parseStatus === 'not-found'
+            ? 'not found'
+            : 'parse error';
+      lines.push(
+        `  • Config: ${this.shortenPath(configPath.path)} ${statusIcon} ${statusText}`,
+      );
+    }
+  }
+
+  /**
+   * Add parse errors section
+   */
+  private addParseErrors(result: DetectionResult, lines: string[]): void {
+    if (result.mcps.parseErrors.length === 0) return;
+
+    lines.push(`❌ Parse Errors (${result.mcps.parseErrors.length}):`);
+    for (const error of result.mcps.parseErrors) {
+      const location = error.error.line ? ` at line ${error.error.line}` : '';
+      lines.push(`  • ${error.client}: ${this.shortenPath(error.configPath)}`);
+      lines.push(`    └─ Error${location}: ${error.error.message}`);
+      lines.push(`    └─ Fix the syntax error before importing`);
+    }
     lines.push('');
+  }
 
-    // Parse Errors (show first if any)
-    if (result.mcps.parseErrors.length > 0) {
-      lines.push(`❌ Parse Errors (${result.mcps.parseErrors.length}):`);
-      for (const error of result.mcps.parseErrors) {
-        const location = error.error.line ? ` at line ${error.error.line}` : '';
-        lines.push(
-          `  • ${error.client}: ${this.shortenPath(error.configPath)}`,
-        );
-        lines.push(`    └─ Error${location}: ${error.error.message}`);
-        lines.push(`    └─ Fix the syntax error before importing`);
-      }
-      lines.push('');
+  /**
+   * Add managed MCPs section
+   */
+  private addManagedMcps(result: DetectionResult, lines: string[]): void {
+    if (result.mcps.managed.length === 0) return;
+
+    lines.push(`✓ Managed by Overture (${result.mcps.managed.length}):`);
+    for (const mcp of result.mcps.managed) {
+      const sources = mcp.sources.map((s) => s.client).join(', ');
+      const scopeInfo = this.getMcpScopeInfo(mcp);
+      lines.push(`  • ${mcp.name} (${sources})${scopeInfo}`);
     }
-
-    // Managed MCPs
-    if (result.mcps.managed.length > 0) {
-      lines.push(`✓ Managed by Overture (${result.mcps.managed.length}):`);
-      for (const mcp of result.mcps.managed) {
-        const sources = mcp.sources.map((s) => s.client).join(', ');
-        const scopeInfo = this.getMcpScopeInfo(mcp);
-        lines.push(`  • ${mcp.name} (${sources})${scopeInfo}`);
-      }
-      lines.push('');
-    }
-
-    // Unmanaged MCPs
-    if (result.mcps.unmanaged.length > 0) {
-      lines.push(`⚠ Unmanaged (${result.mcps.unmanaged.length}):`);
-      for (const mcp of result.mcps.unmanaged) {
-        const location = this.shortenPath(mcp.source.filePath);
-        lines.push(`  • ${mcp.name} (${mcp.source.client}: ${location})`);
-
-        if (verbose) {
-          lines.push(`    └─ Command: ${mcp.command}`);
-          lines.push(`    └─ Args: ${JSON.stringify(mcp.args)}`);
-          if (mcp.env && Object.keys(mcp.env).length > 0) {
-            const envStr = JSON.stringify(mcp.env);
-            const maskedEnv = this.maskSecrets(envStr);
-            lines.push(`    └─ Env: ${maskedEnv}`);
-          }
-          lines.push(`    └─ Transport: ${mcp.transport || 'stdio'}`);
-          lines.push(`    └─ Suggested scope: ${mcp.suggestedScope}`);
-          if (mcp.envVarsToSet && mcp.envVarsToSet.length > 0) {
-            lines.push(
-              `    └─ Warning: Environment variable(s) must be set: ${mcp.envVarsToSet.join(', ')}`,
-            );
-          }
-        }
-      }
-      lines.push('');
-    }
-
-    // Conflicts
-    if (result.mcps.conflicts.length > 0) {
-      lines.push(`⚠️  Conflicts (${result.mcps.conflicts.length}):`);
-      for (const conflict of result.mcps.conflicts) {
-        const formatted = formatConflict(conflict);
-        // Indent the conflict output
-        const indented = formatted
-          .split('\n')
-          .map((line) => `  ${line}`)
-          .join('\n');
-        lines.push(indented);
-      }
-      lines.push('');
-    }
-
-    // Separator
-    lines.push('━'.repeat(60));
     lines.push('');
+  }
 
-    // Summary
+  /**
+   * Add unmanaged MCPs section
+   */
+  private addUnmanagedMcps(
+    result: DetectionResult,
+    verbose: boolean,
+    lines: string[],
+  ): void {
+    if (result.mcps.unmanaged.length === 0) return;
+
+    lines.push(`⚠ Unmanaged (${result.mcps.unmanaged.length}):`);
+    for (const mcp of result.mcps.unmanaged) {
+      const location = this.shortenPath(mcp.source.filePath);
+      lines.push(`  • ${mcp.name} (${mcp.source.client}: ${location})`);
+
+      if (verbose) {
+        this.addUnmanagedMcpDetails(mcp, lines);
+      }
+    }
+    lines.push('');
+  }
+
+  /**
+   * Add unmanaged MCP details (verbose mode)
+   */
+  private addUnmanagedMcpDetails(
+    mcp: {
+      command: string;
+      args: string[];
+      env?: Record<string, string>;
+      transport?: string;
+      suggestedScope: string;
+      envVarsToSet?: string[];
+    },
+    lines: string[],
+  ): void {
+    lines.push(`    └─ Command: ${mcp.command}`);
+    lines.push(`    └─ Args: ${JSON.stringify(mcp.args)}`);
+    if (mcp.env && Object.keys(mcp.env).length > 0) {
+      const envStr = JSON.stringify(mcp.env);
+      const maskedEnv = this.maskSecrets(envStr);
+      lines.push(`    └─ Env: ${maskedEnv}`);
+    }
+    lines.push(`    └─ Transport: ${mcp.transport || 'stdio'}`);
+    lines.push(`    └─ Suggested scope: ${mcp.suggestedScope}`);
+    if (mcp.envVarsToSet && mcp.envVarsToSet.length > 0) {
+      lines.push(
+        `    └─ Warning: Environment variable(s) must be set: ${mcp.envVarsToSet.join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * Add conflicts section
+   */
+  private addConflicts(result: DetectionResult, lines: string[]): void {
+    if (result.mcps.conflicts.length === 0) return;
+
+    lines.push(`⚠️  Conflicts (${result.mcps.conflicts.length}):`);
+    for (const conflict of result.mcps.conflicts) {
+      const formatted = formatConflict(conflict);
+      const indented = formatted
+        .split('\n')
+        .map((line) => `  ${line}`)
+        .join('\n');
+      lines.push(indented);
+    }
+    lines.push('');
+  }
+
+  /**
+   * Add summary section
+   */
+  private addSummary(result: DetectionResult, lines: string[]): void {
     lines.push('📊 Summary:');
     lines.push(`  Clients scanned:      ${result.summary.clientsScanned}`);
     if (result.summary.totalMcps > 0) {
@@ -146,8 +235,12 @@ export class DetectionFormatter {
       lines.push(`  Parse errors:         ${result.summary.parseErrors}`);
     }
     lines.push('');
+  }
 
-    // Next steps
+  /**
+   * Add next steps section
+   */
+  private addNextSteps(result: DetectionResult, lines: string[]): void {
     if (result.summary.parseErrors > 0) {
       lines.push('⚠️  Fix parse errors before running import');
     } else if (result.summary.unmanaged > 0) {
@@ -164,8 +257,6 @@ export class DetectionFormatter {
     } else if (result.summary.totalMcps === 0) {
       lines.push('ℹ️  No MCPs found in client configurations');
     }
-
-    return lines.join('\n');
   }
 
   /**

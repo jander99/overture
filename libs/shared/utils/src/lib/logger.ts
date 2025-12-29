@@ -67,16 +67,14 @@ export class Logger implements OutputPort {
    * @param message - The message to log
    */
   debug(message: string): void {
-    if (process.env['DEBUG']) {
-      console.log(chalk.gray('\u2192'), message);
-    }
+    Logger.debug(message);
   }
 
   /**
    * Print a blank line for spacing.
    */
   nl(): void {
-    console.log();
+    Logger.nl();
   }
 
   /**
@@ -88,8 +86,7 @@ export class Logger implements OutputPort {
    * logger.section('Client Detection:');
    */
   section(message: string): void {
-    console.log();
-    console.log(chalk.bold(message));
+    Logger.section(message);
   }
 
   /**
@@ -101,7 +98,7 @@ export class Logger implements OutputPort {
    * logger.skip('cursor - not detected, skipped');
    */
   skip(message: string): void {
-    console.log(chalk.gray('\u2298'), chalk.gray(message));
+    Logger.skip(message);
   }
 
   /**
@@ -113,7 +110,7 @@ export class Logger implements OutputPort {
    * logger.plain('Additional information here');
    */
   plain(message: string): void {
-    console.log(message);
+    Logger.plain(message);
   }
 
   // Static methods for backward compatibility

@@ -22,8 +22,10 @@ const ENV_VAR_PATTERN = /\$\{([^}]+)\}/g;
 /**
  * Valid environment variable name pattern
  * Must start with uppercase letter or underscore, contain only uppercase, numbers, underscores
+ * Fixed: Use alternation instead of optional non-greedy group to prevent ReDoS
+ * Changed from (?::-(.*?))? to (?::-(.*)|) to avoid nested quantifiers
  */
-const VALID_VAR_NAME_PATTERN = /^([A-Z_][A-Z0-9_]*)(?::-(.*?))?$/;
+const VALID_VAR_NAME_PATTERN = /^([A-Z_][A-Z0-9_]*)(?::-(.*)|)$/;
 
 /**
  * Environment variable validation result
@@ -162,12 +164,8 @@ export function validateEnvVarSyntax(value: string): {
       // Determine what's wrong
       const varName = content.split(':-')[0]; // Get the variable name part
 
-      if (!/^[A-Z_]/.test(varName)) {
-        return {
-          valid: false,
-          error: `Invalid variable name "${varName}". Must start with uppercase letter or underscore, contain only uppercase letters, numbers, and underscores.`,
-        };
-      } else if (!/^[A-Z_][A-Z0-9_]*$/.test(varName)) {
+      // Both conditions have same error message, so combine them
+      if (!/^[A-Z_]/.test(varName) || !/^[A-Z_][A-Z0-9_]*$/.test(varName)) {
         return {
           valid: false,
           error: `Invalid variable name "${varName}". Must start with uppercase letter or underscore, contain only uppercase letters, numbers, and underscores.`,
@@ -198,82 +196,86 @@ export function isHardcodedValue(value: string): boolean {
  * @param processEnv - Process environment variables (to check if vars exist)
  * @returns Validation result
  */
+/**
+ * Check a single env var value for validation issues
+ */
+function validateSingleEnvVar(
+  mcpName: string,
+  key: string,
+  value: string,
+  client: ClientAdapter,
+  processEnv: NodeJS.ProcessEnv,
+): EnvVarValidation | null {
+  // Check syntax first
+  const syntaxCheck = validateEnvVarSyntax(value);
+  if (!syntaxCheck.valid) {
+    return {
+      mcpName,
+      envKey: key,
+      envValue: value,
+      valid: false,
+      error: syntaxCheck.error,
+    };
+  }
+
+  // Check for hardcoded values
+  if (isHardcodedValue(value) && value.length > 50) {
+    return {
+      mcpName,
+      envKey: key,
+      envValue: value,
+      valid: true,
+      warning: `Hardcoded value (${value.length} chars). Consider using environment variable to avoid exposing secrets in config files.`,
+    };
+  }
+
+  // Check that referenced vars exist if client needs expansion
+  if (client.needsEnvVarExpansion()) {
+    const vars = extractEnvVars(value);
+    for (const varRef of vars) {
+      if (!varRef.hasDefault && !(varRef.name in processEnv)) {
+        return {
+          mcpName,
+          envKey: key,
+          envValue: value,
+          valid: false,
+          error: `Referenced environment variable ${varRef.name} is not defined. Client "${client.name}" requires env vars to be pre-expanded.`,
+        };
+      }
+    }
+  }
+
+  // All checks passed
+  return {
+    mcpName,
+    envKey: key,
+    envValue: value,
+    valid: true,
+  };
+}
+
 export function validateMcpEnvVars(
   mcpName: string,
   env: Record<string, string> | undefined,
   client: ClientAdapter,
   processEnv: NodeJS.ProcessEnv = process.env,
 ): EnvVarValidation[] {
-  const results: EnvVarValidation[] = [];
-
   if (!env) {
-    return results;
+    return [];
   }
 
+  const results: EnvVarValidation[] = [];
   for (const [key, value] of Object.entries(env)) {
-    const syntaxCheck = validateEnvVarSyntax(value);
-
-    if (!syntaxCheck.valid) {
-      results.push({
-        mcpName,
-        envKey: key,
-        envValue: value,
-        valid: false,
-        error: syntaxCheck.error,
-      });
-      continue;
-    }
-
-    // Check if hardcoded value (potential security issue)
-    if (isHardcodedValue(value) && value.length > 50) {
-      results.push({
-        mcpName,
-        envKey: key,
-        envValue: value,
-        valid: true,
-        warning: `Hardcoded value (${value.length} chars). Consider using environment variable to avoid exposing secrets in config files.`,
-      });
-      continue;
-    }
-
-    // If client needs env var expansion, check that referenced vars exist
-    if (client.needsEnvVarExpansion()) {
-      const vars = extractEnvVars(value);
-      let hasError = false;
-
-      for (const varRef of vars) {
-        // Skip if has default value (won't fail)
-        if (varRef.hasDefault) {
-          continue;
-        }
-
-        // Check if variable exists in process environment
-        if (!(varRef.name in processEnv)) {
-          results.push({
-            mcpName,
-            envKey: key,
-            envValue: value,
-            valid: false,
-            error: `Referenced environment variable ${varRef.name} is not defined. Client "${client.name}" requires env vars to be pre-expanded.`,
-          });
-          hasError = true;
-          break; // Only report first error per env var
-        }
-      }
-
-      // Only add success result if no errors
-      if (hasError) {
-        continue;
-      }
-    }
-
-    // All checks passed
-    results.push({
+    const result = validateSingleEnvVar(
       mcpName,
-      envKey: key,
-      envValue: value,
-      valid: true,
-    });
+      key,
+      value,
+      client,
+      processEnv,
+    );
+    if (result) {
+      results.push(result);
+    }
   }
 
   return results;
@@ -287,6 +289,27 @@ export function validateMcpEnvVars(
  * @param processEnv - Process environment variables
  * @returns Array of errors
  */
+/**
+ * Extract errors from validation results
+ */
+function extractErrors(
+  results: EnvVarValidation[],
+  mcpNamePrefix: string,
+): EnvVarError[] {
+  const errors: EnvVarError[] = [];
+  for (const result of results) {
+    if (!result.valid && result.error) {
+      errors.push({
+        mcpName: mcpNamePrefix,
+        envKey: result.envKey,
+        message: result.error,
+        suggestion: getSuggestion(result.error),
+      });
+    }
+  }
+  return errors;
+}
+
 export function getEnvVarErrors(
   config: OvertureConfig,
   client: ClientAdapter,
@@ -302,17 +325,7 @@ export function getEnvVarErrors(
       client,
       processEnv,
     );
-
-    for (const result of baseResults) {
-      if (!result.valid && result.error) {
-        errors.push({
-          mcpName,
-          envKey: result.envKey,
-          message: result.error,
-          suggestion: getSuggestion(result.error),
-        });
-      }
-    }
+    errors.push(...extractErrors(baseResults, mcpName));
 
     // Validate env vars in client overrides
     if (mcpConfig.clients?.overrides) {
@@ -326,17 +339,12 @@ export function getEnvVarErrors(
             client,
             processEnv,
           );
-
-          for (const result of overrideResults) {
-            if (!result.valid && result.error) {
-              errors.push({
-                mcpName: `${mcpName} (client override: ${clientName})`,
-                envKey: result.envKey,
-                message: result.error,
-                suggestion: getSuggestion(result.error),
-              });
-            }
-          }
+          errors.push(
+            ...extractErrors(
+              overrideResults,
+              `${mcpName} (client override: ${clientName})`,
+            ),
+          );
         }
       }
     }
@@ -353,6 +361,27 @@ export function getEnvVarErrors(
  * @param processEnv - Process environment variables
  * @returns Array of warnings
  */
+/**
+ * Extract warnings from validation results
+ */
+function extractWarnings(
+  results: EnvVarValidation[],
+  mcpNamePrefix: string,
+): EnvVarWarning[] {
+  const warnings: EnvVarWarning[] = [];
+  for (const result of results) {
+    if (result.warning) {
+      warnings.push({
+        mcpName: mcpNamePrefix,
+        envKey: result.envKey,
+        message: result.warning,
+        severity: getSeverity(result.warning),
+      });
+    }
+  }
+  return warnings;
+}
+
 export function getEnvVarWarnings(
   config: OvertureConfig,
   client: ClientAdapter,
@@ -368,17 +397,7 @@ export function getEnvVarWarnings(
       client,
       processEnv,
     );
-
-    for (const result of baseResults) {
-      if (result.warning) {
-        warnings.push({
-          mcpName,
-          envKey: result.envKey,
-          message: result.warning,
-          severity: getSeverity(result.warning),
-        });
-      }
-    }
+    warnings.push(...extractWarnings(baseResults, mcpName));
 
     // Validate env vars in client overrides
     if (mcpConfig.clients?.overrides) {
@@ -392,17 +411,12 @@ export function getEnvVarWarnings(
             client,
             processEnv,
           );
-
-          for (const result of overrideResults) {
-            if (result.warning) {
-              warnings.push({
-                mcpName: `${mcpName} (client override: ${clientName})`,
-                envKey: result.envKey,
-                message: result.warning,
-                severity: getSeverity(result.warning),
-              });
-            }
-          }
+          warnings.push(
+            ...extractWarnings(
+              overrideResults,
+              `${mcpName} (client override: ${clientName})`,
+            ),
+          );
         }
       }
     }

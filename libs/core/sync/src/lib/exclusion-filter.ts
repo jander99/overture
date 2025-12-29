@@ -38,9 +38,14 @@ export function filterMcpsForClient(
   const filtered: OvertureConfig['mcp'] = {};
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
-    const result = shouldIncludeMcp(mcpConfig, client, platform);
-    if (result.included) {
-      filtered[name] = mcpConfig;
+    // name comes from Object.entries - safe to check in mcps object
+    // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+    if (Object.hasOwn(mcps, name)) {
+      const result = shouldIncludeMcp(mcpConfig, client, platform);
+      if (result.included) {
+        // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+        filtered[name] = mcpConfig;
+      }
     }
   }
 
@@ -148,7 +153,10 @@ export function getFilterSummary(
     excludedByTransport: 0,
   };
 
-  for (const [, mcpConfig] of Object.entries(mcps)) {
+  for (const [name, mcpConfig] of Object.entries(mcps)) {
+    // name comes from Object.entries - safe to check in mcps object
+    // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+    if (!Object.hasOwn(mcps, name)) continue;
     const result = shouldIncludeMcp(mcpConfig, client, platform);
 
     if (result.included) {
@@ -195,7 +203,10 @@ export function validateRequiredMcps(
 
   for (const requiredName of requiredMcps) {
     // Check if MCP exists
-    if (!availableMcps[requiredName]) {
+    if (
+      !Object.hasOwn(availableMcps, requiredName) ||
+      !availableMcps[requiredName]
+    ) {
       missingMcps.push(requiredName);
       continue;
     }

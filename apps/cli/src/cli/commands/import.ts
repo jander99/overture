@@ -9,13 +9,13 @@
 import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
-import type { ClientName, DiscoveredMcp } from '@overture/config-types';
-import { formatConflict, DetectionFormatter } from '@overture/import-core';
+import type { ClientName } from '@overture/config-types';
 import type {
   ClaudeCodeAdapter,
   OpenCodeAdapter,
   CopilotCliAdapter,
 } from '@overture/client-adapters';
+import { ALL_CLIENTS, CLIENTS } from '../constants.js';
 
 /**
  * Create the import command
@@ -63,18 +63,22 @@ export function createImportCommand(deps: AppDependencies): Command {
         // Determine which clients to scan
         const clientFilter: ClientName[] =
           options.client === 'all'
-            ? ['claude-code', 'copilot-cli', 'opencode']
+            ? ALL_CLIENTS
             : [options.client as ClientName];
 
         // Get adapters
-        const claudeCodeAdapter = clientFilter.includes('claude-code')
-          ? (adapterRegistry.get('claude-code') as ClaudeCodeAdapter | null)
+        const claudeCodeAdapter = clientFilter.includes(CLIENTS.CLAUDE_CODE)
+          ? (adapterRegistry.get(
+              CLIENTS.CLAUDE_CODE,
+            ) as ClaudeCodeAdapter | null)
           : null;
-        const openCodeAdapter = clientFilter.includes('opencode')
-          ? (adapterRegistry.get('opencode') as OpenCodeAdapter | null)
+        const openCodeAdapter = clientFilter.includes(CLIENTS.OPENCODE)
+          ? (adapterRegistry.get(CLIENTS.OPENCODE) as OpenCodeAdapter | null)
           : null;
-        const copilotCliAdapter = clientFilter.includes('copilot-cli')
-          ? (adapterRegistry.get('copilot-cli') as CopilotCliAdapter | null)
+        const copilotCliAdapter = clientFilter.includes(CLIENTS.COPILOT_CLI)
+          ? (adapterRegistry.get(
+              CLIENTS.COPILOT_CLI,
+            ) as CopilotCliAdapter | null)
           : null;
 
         // DETECT MODE: Read-only scan without importing

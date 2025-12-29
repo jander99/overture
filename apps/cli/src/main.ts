@@ -68,5 +68,5 @@ export async function main(): Promise<void> {
 // Skip execution in test environment (NODE_ENV=test or when vitest is running)
 /* istanbul ignore next */
 if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
-  main();
+  void main();
 }

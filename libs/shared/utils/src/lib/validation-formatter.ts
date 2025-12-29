@@ -55,52 +55,62 @@ function formatPath(path: PropertyKey[]): string {
 function generateSuggestion(issue: ZodIssue): string | undefined {
   switch (issue.code) {
     case 'invalid_type':
-      if (
-        issue.expected === 'string' &&
-        'received' in issue &&
-        (issue as unknown as Record<string, unknown>).received === 'undefined'
-      ) {
-        return `Add missing field to configuration`;
-      }
-      if (issue.expected === 'array') {
-        return `Change to array format: []`;
-      }
-      {
-        const received =
-          'received' in issue
-            ? (issue as unknown as Record<string, unknown>).received
-            : 'unknown';
-        return `Change type from ${received} to ${issue.expected}`;
-      }
-
+      return handleInvalidTypeSuggestion(issue);
     case 'too_small':
-      if ('minimum' in issue && issue.minimum === 1) {
-        return `Provide a non-empty value`;
-      }
-      return undefined;
-
+      return handleTooSmallSuggestion(issue);
     case 'unrecognized_keys':
-      if ('keys' in issue) {
-        const keys = issue.keys as string[];
-        if (keys.includes('scope')) {
-          return `Remove deprecated 'scope' field (scope is now implicit based on file location)`;
-        }
-        return `Remove unknown ${keys.length === 1 ? 'field' : 'fields'}: ${keys.join(', ')}`;
-      }
-      return undefined;
-
+      return handleUnrecognizedKeysSuggestion(issue);
     case 'custom':
       return undefined;
-
     default:
-      // Handle enum-related errors
-      if ('options' in issue) {
-        const validOptions =
-          (issue as unknown as Record<string, unknown>).options || [];
-        return `Use one of: ${(validOptions as string[]).join(', ')}`;
-      }
-      return undefined;
+      return handleEnumSuggestion(issue);
   }
+}
+
+function handleInvalidTypeSuggestion(issue: ZodIssue): string | undefined {
+  if (issue.code !== 'invalid_type') return undefined;
+
+  if (
+    issue.expected === 'string' &&
+    'received' in issue &&
+    (issue as unknown as Record<string, unknown>).received === 'undefined'
+  ) {
+    return `Add missing field to configuration`;
+  }
+  if (issue.expected === 'array') {
+    return `Change to array format: []`;
+  }
+  const received =
+    'received' in issue
+      ? (issue as unknown as Record<string, unknown>).received
+      : 'unknown';
+  return `Change type from ${received} to ${issue.expected}`;
+}
+
+function handleTooSmallSuggestion(issue: ZodIssue): string | undefined {
+  if ('minimum' in issue && issue.minimum === 1) {
+    return `Provide a non-empty value`;
+  }
+  return undefined;
+}
+
+function handleUnrecognizedKeysSuggestion(issue: ZodIssue): string | undefined {
+  if (!('keys' in issue)) return undefined;
+
+  const keys = issue.keys as string[];
+  if (keys.includes('scope')) {
+    return `Remove deprecated 'scope' field (scope is now implicit based on file location)`;
+  }
+  return `Remove unknown ${keys.length === 1 ? 'field' : 'fields'}: ${keys.join(', ')}`;
+}
+
+function handleEnumSuggestion(issue: ZodIssue): string | undefined {
+  if ('options' in issue) {
+    const validOptions =
+      (issue as unknown as Record<string, unknown>).options || [];
+    return `Use one of: ${(validOptions as string[]).join(', ')}`;
+  }
+  return undefined;
 }
 
 /**
@@ -186,14 +196,7 @@ export function formatValidationSummary(summary: ValidationSummary): string {
   const lines: string[] = [];
 
   // Header
-  if (summary.isValid) {
-    lines.push('');
-    lines.push(chalk.green('\u2713 Configuration is valid'));
-    lines.push('');
-  } else {
-    lines.push('');
-    lines.push(chalk.red('\u2717 Configuration validation failed'));
-  }
+  lines.push(...formatSummaryHeader(summary.isValid));
 
   // Errors
   if (summary.errors.length > 0) {
@@ -202,47 +205,62 @@ export function formatValidationSummary(summary: ValidationSummary): string {
 
   // Warnings
   if (summary.warnings.length > 0) {
-    lines.push('');
-    lines.push(chalk.yellow(`Warnings (${summary.warnings.length}):`));
-    summary.warnings.forEach((warning) => {
-      const icon = chalk.yellow('\u26A0');
-      lines.push(`  ${icon} ${chalk.cyan(warning.path)} - ${warning.message}`);
-      if (warning.suggestion) {
-        lines.push(`    ${chalk.gray('\u2192')} ${warning.suggestion}`);
-      }
-    });
+    lines.push(...formatWarnings(summary.warnings));
   }
 
   // Summary line
   lines.push('');
-  if (summary.isValid && summary.totalWarnings === 0) {
-    lines.push(chalk.green(`Summary: No errors or warnings`));
-  } else if (summary.isValid && summary.totalWarnings > 0) {
-    lines.push(
-      chalk.yellow(
-        `Summary: ${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
-      ),
-    );
-  } else {
-    const parts: string[] = [];
-    if (summary.totalErrors > 0) {
-      parts.push(
-        chalk.red(
-          `${summary.totalErrors} ${summary.totalErrors === 1 ? 'error' : 'errors'}`,
-        ),
-      );
-    }
-    if (summary.totalWarnings > 0) {
-      parts.push(
-        chalk.yellow(
-          `${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
-        ),
-      );
-    }
-    lines.push(`Summary: ${parts.join(', ')}`);
-  }
+  lines.push(formatSummaryLine(summary));
 
   return lines.join('\n');
+}
+
+function formatSummaryHeader(isValid: boolean): string[] {
+  if (isValid) {
+    return ['', chalk.green('\u2713 Configuration is valid'), ''];
+  }
+  return ['', chalk.red('\u2717 Configuration validation failed')];
+}
+
+function formatWarnings(warnings: ValidationError[]): string[] {
+  const lines: string[] = [];
+  lines.push('');
+  lines.push(chalk.yellow(`Warnings (${warnings.length}):`));
+  warnings.forEach((warning) => {
+    const icon = chalk.yellow('\u26A0');
+    lines.push(`  ${icon} ${chalk.cyan(warning.path)} - ${warning.message}`);
+    if (warning.suggestion) {
+      lines.push(`    ${chalk.gray('\u2192')} ${warning.suggestion}`);
+    }
+  });
+  return lines;
+}
+
+function formatSummaryLine(summary: ValidationSummary): string {
+  if (summary.isValid && summary.totalWarnings === 0) {
+    return chalk.green(`Summary: No errors or warnings`);
+  }
+  if (summary.isValid && summary.totalWarnings > 0) {
+    return chalk.yellow(
+      `Summary: ${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
+    );
+  }
+  const parts: string[] = [];
+  if (summary.totalErrors > 0) {
+    parts.push(
+      chalk.red(
+        `${summary.totalErrors} ${summary.totalErrors === 1 ? 'error' : 'errors'}`,
+      ),
+    );
+  }
+  if (summary.totalWarnings > 0) {
+    parts.push(
+      chalk.yellow(
+        `${summary.totalWarnings} ${summary.totalWarnings === 1 ? 'warning' : 'warnings'}`,
+      ),
+    );
+  }
+  return `Summary: ${parts.join(', ')}`;
 }
 
 /**
@@ -283,50 +301,75 @@ export function formatValidationReport(report: ValidationReport): string {
   lines.push(chalk.gray('\u2501'.repeat(50)));
 
   for (const section of report.sections) {
-    lines.push('');
-
-    const icon =
-      section.passed && section.warnings.length === 0
-        ? chalk.green('\u2713')
-        : section.errors.length > 0
-          ? chalk.red('\u2717')
-          : chalk.yellow('\u26A0');
-
-    let title = `${icon} ${section.title}`;
-    if (section.errors.length > 0) {
-      title += chalk.red(
-        ` (${section.errors.length} ${section.errors.length === 1 ? 'error' : 'errors'})`,
-      );
-    }
-    if (section.warnings.length > 0) {
-      title += chalk.yellow(
-        ` (${section.warnings.length} ${section.warnings.length === 1 ? 'warning' : 'warnings'})`,
-      );
-    }
-
-    lines.push(title);
-
-    // Show errors
-    section.errors.forEach((error) => {
-      lines.push(formatError(error));
-    });
-
-    // Show warnings
-    section.warnings.forEach((warning) => {
-      const warnIcon = chalk.yellow('\u26A0');
-      lines.push(
-        `  ${warnIcon} ${chalk.cyan(warning.path)} - ${warning.message}`,
-      );
-      if (warning.suggestion) {
-        lines.push(`    ${chalk.gray('\u2192')} ${warning.suggestion}`);
-      }
-    });
+    lines.push(...formatReportSection(section));
   }
 
   lines.push('');
   lines.push(chalk.gray('\u2501'.repeat(50)));
+  lines.push(formatOverallSummary(report));
+  lines.push('');
 
-  // Overall summary
+  return lines.join('\n');
+}
+
+function formatReportSection(
+  section: ValidationReport['sections'][0],
+): string[] {
+  const lines: string[] = [];
+  lines.push('');
+
+  const icon = getSectionIcon(section);
+  const title = formatSectionTitle(icon, section);
+  lines.push(title);
+
+  // Show errors
+  section.errors.forEach((error) => {
+    lines.push(formatError(error));
+  });
+
+  // Show warnings
+  section.warnings.forEach((warning) => {
+    const warnIcon = chalk.yellow('\u26A0');
+    lines.push(
+      `  ${warnIcon} ${chalk.cyan(warning.path)} - ${warning.message}`,
+    );
+    if (warning.suggestion) {
+      lines.push(`    ${chalk.gray('\u2192')} ${warning.suggestion}`);
+    }
+  });
+
+  return lines;
+}
+
+function getSectionIcon(section: ValidationReport['sections'][0]): string {
+  if (section.passed && section.warnings.length === 0) {
+    return chalk.green('\u2713');
+  }
+  if (section.errors.length > 0) {
+    return chalk.red('\u2717');
+  }
+  return chalk.yellow('\u26A0');
+}
+
+function formatSectionTitle(
+  icon: string,
+  section: ValidationReport['sections'][0],
+): string {
+  let title = `${icon} ${section.title}`;
+  if (section.errors.length > 0) {
+    title += chalk.red(
+      ` (${section.errors.length} ${section.errors.length === 1 ? 'error' : 'errors'})`,
+    );
+  }
+  if (section.warnings.length > 0) {
+    title += chalk.yellow(
+      ` (${section.warnings.length} ${section.warnings.length === 1 ? 'warning' : 'warnings'})`,
+    );
+  }
+  return title;
+}
+
+function formatOverallSummary(report: ValidationReport): string {
   const totalErrors = report.sections.reduce(
     (sum, s) => sum + s.errors.length,
     0,
@@ -337,27 +380,23 @@ export function formatValidationReport(report: ValidationReport): string {
   );
 
   if (totalErrors === 0 && totalWarnings === 0) {
-    lines.push(chalk.green('Summary: \u2713 All validations passed'));
-  } else {
-    const parts: string[] = [];
-    if (totalErrors > 0) {
-      parts.push(
-        chalk.red(
-          `\u2717 ${totalErrors} ${totalErrors === 1 ? 'error' : 'errors'}`,
-        ),
-      );
-    }
-    if (totalWarnings > 0) {
-      parts.push(
-        chalk.yellow(
-          `\u26A0 ${totalWarnings} ${totalWarnings === 1 ? 'warning' : 'warnings'}`,
-        ),
-      );
-    }
-    lines.push(`Summary: ${parts.join(', ')}`);
+    return chalk.green('Summary: \u2713 All validations passed');
   }
 
-  lines.push('');
-
-  return lines.join('\n');
+  const parts: string[] = [];
+  if (totalErrors > 0) {
+    parts.push(
+      chalk.red(
+        `\u2717 ${totalErrors} ${totalErrors === 1 ? 'error' : 'errors'}`,
+      ),
+    );
+  }
+  if (totalWarnings > 0) {
+    parts.push(
+      chalk.yellow(
+        `\u26A0 ${totalWarnings} ${totalWarnings === 1 ? 'warning' : 'warnings'}`,
+      ),
+    );
+  }
+  return `Summary: ${parts.join(', ')}`;
 }

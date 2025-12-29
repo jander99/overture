@@ -100,10 +100,14 @@ export function expandEnvVarsInClientConfig(
   }
 
   const rootKey = client.schemaRootKey;
-  const servers = config[rootKey] || {};
+  // rootKey comes from client.schemaRootKey - validated with Object.hasOwn
+  // eslint-disable-next-line security/detect-object-injection -- rootKey from client schema
+  const servers = (Object.hasOwn(config, rootKey) ? config[rootKey] : {}) || {};
   const expandedServers: Record<string, ClientMcpServerDef> = {};
 
-  for (const [name, mcpConfig] of Object.entries(servers)) {
+  for (const [name, mcpConfig] of Object.entries(
+    servers as Record<string, unknown>,
+  )) {
     expandedServers[name] = expandEnvVarsInMcpConfig(
       mcpConfig,
       client,

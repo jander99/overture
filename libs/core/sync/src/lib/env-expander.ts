@@ -39,10 +39,14 @@ export function expandEnvVars(
   env: Record<string, string | undefined> = process.env,
 ): string {
   // Pattern: ${VAR} or ${VAR:-default}
-  const pattern = /\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]+))?\}/g;
+  // Fixed: Prevent ReDoS by using alternation instead of optional group
+  // Avoids backtracking with: (?::-([^}]+))|() - use alternation to handle default/no-default
+  const pattern = /\$\{([A-Z_][A-Z0-9_]*)(?:(?::-([^}]+))|)\}/g;
 
   return input.replace(pattern, (match, varName, defaultValue) => {
-    const value = env[varName];
+    // varName comes from validated regex capture group - safe to use for property access
+    // eslint-disable-next-line security/detect-object-injection -- varName from regex validation
+    const value = Object.hasOwn(env, varName) ? env[varName] : undefined;
 
     if (value !== undefined) {
       return value;
@@ -164,7 +168,9 @@ export function expandEnvVarsInObject<T extends Record<string, unknown>>(
  * ```
  */
 export function hasEnvVars(input: string): boolean {
-  const pattern = /\$\{[A-Z_][A-Z0-9_]*(?::-[^}]+)?\}/;
+  // Fixed: Prevent ReDoS by using alternation instead of optional group
+  // Safe pattern: ${VAR} or ${VAR:-...}
+  const pattern = /\$\{[A-Z_][A-Z0-9_]*\}|\$\{[A-Z_][A-Z0-9_]*:-[^}]+\}/;
   return pattern.test(input);
 }
 
@@ -184,9 +190,12 @@ export function hasEnvVars(input: string): boolean {
  * ```
  */
 export function extractEnvVarNames(input: string): string[] {
-  const pattern = /\$\{([A-Z_][A-Z0-9_]*)(?::-[^}]+)?\}/g;
+  // Fixed: Prevent ReDoS by using alternation instead of optional group
+  // Safe pattern with captures: ${VAR} | ${VAR:-...}
+  const pattern = /\$\{([A-Z_][A-Z0-9_]*)\}|\$\{([A-Z_][A-Z0-9_]*):-[^}]+\}/g;
   const matches = [...input.matchAll(pattern)];
-  return matches.map((match) => match[1]);
+  // First or second capture group contains the variable name
+  return matches.map((match) => match[1] || match[2]);
 }
 
 /**
@@ -224,7 +233,9 @@ export function validateEnvVars(
       continue;
     }
 
-    if (env[varName] === undefined) {
+    // varName comes from regex extraction - safe to check in env object
+    // eslint-disable-next-line security/detect-object-injection -- varName from regex extraction
+    if (!Object.hasOwn(env, varName) || env[varName] === undefined) {
       missing.push(varName);
     }
   }

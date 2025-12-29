@@ -1,9 +1,13 @@
 import * as yaml from 'js-yaml';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { Prompts, Logger, ErrorHandler } from '@overture/utils';
+import {
+  Prompts,
+  Logger,
+  ErrorHandler,
+  UserCancelledError,
+} from '@overture/utils';
 import { OvertureConfigSchema } from '@overture/config-schema';
-import { UserCancelledError } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
 import {
@@ -180,19 +184,23 @@ export function createUserCommand(deps: AppDependencies): Command {
         // Build MCP configuration
         const mcpConfig: OvertureConfig['mcp'] = {};
         for (const mcpName of selectedMcps) {
-          const defaults = MCP_SERVER_DEFAULTS[mcpName];
-          if (
-            defaults?.command &&
-            defaults?.args &&
-            defaults?.env &&
-            defaults?.transport
-          ) {
-            mcpConfig[mcpName] = {
-              command: defaults.command,
-              args: defaults.args,
-              env: defaults.env,
-              transport: defaults.transport,
-            };
+          if (Object.hasOwn(MCP_SERVER_DEFAULTS, mcpName)) {
+            // eslint-disable-next-line security/detect-object-injection
+            const defaults = MCP_SERVER_DEFAULTS[mcpName];
+            if (
+              defaults?.command &&
+              defaults?.args &&
+              defaults?.env &&
+              defaults?.transport
+            ) {
+              // eslint-disable-next-line security/detect-object-injection
+              mcpConfig[mcpName] = {
+                command: defaults.command,
+                args: defaults.args,
+                env: defaults.env,
+                transport: defaults.transport,
+              };
+            }
           }
         }
 
@@ -275,7 +283,7 @@ export function createUserCommand(deps: AppDependencies): Command {
           noRefs: true,
         });
 
-        filesystem.writeFile(userConfigPath, yamlContent);
+        await filesystem.writeFile(userConfigPath, yamlContent);
 
         output.success('User configuration created!');
         output.info(`Location: ${userConfigPath}`);
@@ -305,7 +313,7 @@ export function createUserCommand(deps: AppDependencies): Command {
         const configPath = pathResolver.getUserConfigPath();
 
         // Check if config exists
-        if (!configLoader.hasUserConfig()) {
+        if (!(await configLoader.hasUserConfig())) {
           throw Object.assign(
             new Error(
               `User configuration not found. Expected location: ${configPath}. Run \`overture user init\` to create a user configuration.`,
@@ -434,14 +442,16 @@ function displayUserConfig(
         }
       }
 
-      if (mcp.platforms) {
-        if (mcp.platforms.exclude && mcp.platforms.exclude.length > 0) {
-          console.log(
-            chalk.gray(
-              `    exclude-platforms: [${mcp.platforms.exclude.join(', ')}]`,
-            ),
-          );
-        }
+      if (
+        mcp.platforms &&
+        mcp.platforms.exclude &&
+        mcp.platforms.exclude.length > 0
+      ) {
+        console.log(
+          chalk.gray(
+            `    exclude-platforms: [${mcp.platforms.exclude.join(', ')}]`,
+          ),
+        );
       }
     }
 

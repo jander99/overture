@@ -63,8 +63,12 @@ export class AuditService {
       const config = await adapter.readConfig(configPath);
       const rootKey = adapter.schemaRootKey;
 
-      if (config[rootKey]) {
-        Object.keys(config[rootKey]).forEach((name) => clientMcps.add(name));
+      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
+      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
+      if (Object.hasOwn(config, rootKey) && config[rootKey]) {
+        Object.keys(config[rootKey] as Record<string, unknown>).forEach(
+          (name) => clientMcps.add(name),
+        );
       }
     } else {
       // User + project config paths (e.g., Claude Code)
@@ -73,15 +77,19 @@ export class AuditService {
 
       const rootKey = adapter.schemaRootKey;
 
-      if (userConfig[rootKey]) {
-        Object.keys(userConfig[rootKey]).forEach((name) =>
-          clientMcps.add(name),
+      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
+      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
+      if (Object.hasOwn(userConfig, rootKey) && userConfig[rootKey]) {
+        Object.keys(userConfig[rootKey] as Record<string, unknown>).forEach(
+          (name) => clientMcps.add(name),
         );
       }
 
-      if (projectConfig[rootKey]) {
-        Object.keys(projectConfig[rootKey]).forEach((name) =>
-          clientMcps.add(name),
+      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
+      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
+      if (Object.hasOwn(projectConfig, rootKey) && projectConfig[rootKey]) {
+        Object.keys(projectConfig[rootKey] as Record<string, unknown>).forEach(
+          (name) => clientMcps.add(name),
         );
       }
     }

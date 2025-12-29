@@ -37,7 +37,6 @@ export class CleanupService {
     const targets: CleanupTarget[] = [];
 
     try {
-      // Read full Claude Code config
       const fullConfig = await claudeCodeAdapter.readFullConfig(platform);
 
       if (!fullConfig.projects) {
@@ -52,40 +51,15 @@ export class CleanupService {
       for (const [dirPath, projectConfig] of Object.entries(
         fullConfig.projects,
       )) {
-        // Check if this directory has an Overture config
-        const overtureConfigPath = `${dirPath}/.overture/config.yaml`;
-        const hasOvertureConfig =
-          await this.filesystem.exists(overtureConfigPath);
+        const target = await this.analyzeDirectoryForCleanup(
+          dirPath,
+          projectConfig,
+          overtureConfig,
+          userPath,
+        );
 
-        if (!hasOvertureConfig) {
-          continue; // Skip directories without Overture configs
-        }
-
-        // Analyze MCPs in this directory's config
-        const mcpsToRemove: string[] = [];
-        const mcpsToPreserve: string[] = [];
-
-        if (projectConfig.mcpServers) {
-          for (const mcpName of Object.keys(projectConfig.mcpServers)) {
-            if (overtureConfig.mcp[mcpName]) {
-              // This MCP is managed by Overture
-              mcpsToRemove.push(mcpName);
-            } else {
-              // This MCP is NOT in Overture config
-              mcpsToPreserve.push(mcpName);
-            }
-          }
-        }
-
-        // Only add as target if there are MCPs to remove
-        if (mcpsToRemove.length > 0) {
-          targets.push({
-            directory: dirPath,
-            hasOvertureConfig: true,
-            filePath: userPath,
-            mcpsToRemove,
-            mcpsToPreserve,
-          });
+        if (target) {
+          targets.push(target);
         }
       }
     } catch (error) {
@@ -95,6 +69,70 @@ export class CleanupService {
     }
 
     return targets;
+  }
+
+  /**
+   * Analyze a directory to determine if it needs cleanup
+   */
+  private async analyzeDirectoryForCleanup(
+    dirPath: string,
+    projectConfig: { mcpServers?: Record<string, unknown> },
+    overtureConfig: OvertureConfig,
+    userPath: string,
+  ): Promise<CleanupTarget | null> {
+    // Check if this directory has an Overture config
+    const overtureConfigPath = `${dirPath}/.overture/config.yaml`;
+    const hasOvertureConfig = await this.filesystem.exists(overtureConfigPath);
+
+    if (!hasOvertureConfig) {
+      return null;
+    }
+
+    // Analyze MCPs in this directory's config
+    const { mcpsToRemove, mcpsToPreserve } = this.categorizeDirectoryMcps(
+      projectConfig,
+      overtureConfig,
+    );
+
+    // Only return target if there are MCPs to remove
+    if (mcpsToRemove.length === 0) {
+      return null;
+    }
+
+    return {
+      directory: dirPath,
+      hasOvertureConfig: true,
+      filePath: userPath,
+      mcpsToRemove,
+      mcpsToPreserve,
+    };
+  }
+
+  /**
+   * Categorize MCPs in directory config as managed or unmanaged
+   */
+  private categorizeDirectoryMcps(
+    projectConfig: { mcpServers?: Record<string, unknown> },
+    overtureConfig: OvertureConfig,
+  ): { mcpsToRemove: string[]; mcpsToPreserve: string[] } {
+    const mcpsToRemove: string[] = [];
+    const mcpsToPreserve: string[] = [];
+
+    if (!projectConfig.mcpServers) {
+      return { mcpsToRemove, mcpsToPreserve };
+    }
+
+    for (const mcpName of Object.keys(projectConfig.mcpServers)) {
+      // mcpName comes from Object.keys - safe to check in overtureConfig.mcp
+      // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.keys()
+      if (Object.hasOwn(overtureConfig.mcp, mcpName)) {
+        mcpsToRemove.push(mcpName);
+      } else {
+        mcpsToPreserve.push(mcpName);
+      }
+    }
+
+    return { mcpsToRemove, mcpsToPreserve };
   }
 
   /**

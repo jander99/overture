@@ -161,27 +161,36 @@ export function createMcpCommand(deps: AppDependencies): Command {
         const config = projectConfig || { version: '1.0' as const, mcp: {} };
 
         // Check if MCP exists in project config
-        if (config.mcp && config.mcp[name]) {
+        if (config.mcp && Object.hasOwn(config.mcp, name)) {
+          // eslint-disable-next-line security/detect-object-injection
+          const mcpConfig = config.mcp[name];
           // Check if already enabled
-          if (config.mcp[name].enabled !== false) {
+          if (mcpConfig && mcpConfig.enabled !== false) {
             output.warn(`MCP server "${name}" is already enabled.`);
             return;
           }
 
           // Enable the MCP
-          config.mcp[name].enabled = true;
+          if (mcpConfig) {
+            mcpConfig.enabled = true;
+          }
         } else {
           // MCP might be in user config, need to add it to project config
           const userConfig = await configLoader.loadUserConfig();
-          if (userConfig?.mcp?.[name]) {
+          if (userConfig?.mcp && Object.hasOwn(userConfig.mcp, name)) {
             // Copy from user config to project config
             if (!config.mcp) {
               config.mcp = {};
             }
-            config.mcp[name] = {
-              ...userConfig.mcp[name],
-              enabled: true,
-            };
+            // eslint-disable-next-line security/detect-object-injection
+            const userMcpConfig = userConfig.mcp[name];
+            if (userMcpConfig) {
+              // eslint-disable-next-line security/detect-object-injection
+              config.mcp[name] = {
+                ...userMcpConfig,
+                enabled: true,
+              };
+            }
           } else {
             // MCP not found in any config
             output.error(

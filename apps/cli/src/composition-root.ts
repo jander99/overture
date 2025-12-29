@@ -10,11 +10,18 @@
  * @module composition-root
  */
 
-import { NodeFilesystemAdapter } from '@overture/adapters-infrastructure';
-import { NodeProcessAdapter } from '@overture/adapters-infrastructure';
-import { NodeEnvironmentAdapter } from '@overture/adapters-infrastructure';
+import {
+  NodeFilesystemAdapter,
+  NodeProcessAdapter,
+  NodeEnvironmentAdapter,
+} from '@overture/adapters-infrastructure';
 import { Logger } from '@overture/utils';
-import { ConfigLoader, PathResolver } from '@overture/config-core';
+import {
+  ConfigLoader,
+  PathResolver,
+  OVERTURE_DIR,
+  CONFIG_FILE,
+} from '@overture/config-core';
 import { createDiscoveryService } from '@overture/discovery-core';
 import { createAdapterRegistry } from '@overture/client-adapters';
 import {
@@ -165,7 +172,7 @@ export function createAppDependencies(): AppDependencies {
       const root = '/';
 
       while (currentDir !== root) {
-        const configPath = path.join(currentDir, '.overture', 'config.yaml');
+        const configPath = path.join(currentDir, OVERTURE_DIR, CONFIG_FILE);
 
         // Check if .overture/config.yaml exists at this level (sync check)
         try {
@@ -187,7 +194,7 @@ export function createAppDependencies(): AppDependencies {
       }
 
       // Check root directory as last resort
-      const rootConfigPath = path.join(root, '.overture', 'config.yaml');
+      const rootConfigPath = path.join(root, OVERTURE_DIR, CONFIG_FILE);
       try {
         fs.accessSync(rootConfigPath);
         return root;

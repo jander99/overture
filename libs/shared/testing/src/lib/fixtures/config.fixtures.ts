@@ -8,6 +8,12 @@
  */
 
 /**
+ * Test constants for MCP server commands
+ * Extracted to avoid sonarjs/no-duplicate-string warnings
+ */
+const MCP_SERVER_GITHUB = 'mcp-server-github';
+
+/**
  * Valid user global configuration
  *
  * Complete configuration with all common fields populated.
@@ -24,7 +30,7 @@ export const validUserConfig = {
   },
   mcp: {
     github: {
-      command: 'mcp-server-github',
+      command: MCP_SERVER_GITHUB,
       args: [],
       env: {
         GITHUB_TOKEN: '${GITHUB_TOKEN}',
@@ -116,7 +122,7 @@ export const configWithExclusions = {
   version: '2.0',
   mcp: {
     github: {
-      command: 'mcp-server-github',
+      command: MCP_SERVER_GITHUB,
       args: [],
       env: {},
       transport: 'stdio' as const,
@@ -243,7 +249,7 @@ export const configWithDisabledClient = {
   },
   mcp: {
     github: {
-      command: 'mcp-server-github',
+      command: MCP_SERVER_GITHUB,
       args: [],
       env: {},
       transport: 'stdio' as const,

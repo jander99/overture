@@ -142,6 +142,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
       const serverConfig = this.buildServerConfig(mcpConfig, platform);
 
       // Claude Code supports native ${VAR} expansion, no need to expand
+      // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries() of overtureConfig.mcp, safe
       mcpServers[name] = {
         command: serverConfig.command,
         args: serverConfig.args,
@@ -252,6 +253,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
 
       // Remove only the managed MCPs
       for (const mcpName of target.mcpsToRemove) {
+        // eslint-disable-next-line security/detect-object-injection -- mcpName is from validated CleanupTarget array
         delete projectConfig.mcpServers[mcpName];
       }
 

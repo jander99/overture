@@ -359,10 +359,14 @@ export abstract class BaseClientAdapter implements ClientAdapter {
     let transport = mcpConfig.transport;
 
     // Apply platform overrides
+    // eslint-disable-next-line security/detect-object-injection -- platform is validated Platform type ('darwin' | 'linux' | 'win32')
     if (mcpConfig.platforms?.commandOverrides?.[platform]) {
+      // eslint-disable-next-line security/detect-object-injection -- platform is validated Platform type
       command = mcpConfig.platforms.commandOverrides[platform];
     }
+    // eslint-disable-next-line security/detect-object-injection -- platform is validated Platform type ('darwin' | 'linux' | 'win32')
     if (mcpConfig.platforms?.argsOverrides?.[platform]) {
+      // eslint-disable-next-line security/detect-object-injection -- platform is validated Platform type
       args = [...mcpConfig.platforms.argsOverrides[platform]];
     }
 

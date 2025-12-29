@@ -123,7 +123,10 @@ export function filterByTransport(
   const filtered: OvertureConfig['mcp'] = {};
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
-    if (client.supportsTransport(mcpConfig.transport)) {
+    if (
+      Object.hasOwn(mcps, name) &&
+      client.supportsTransport(mcpConfig.transport)
+    ) {
       filtered[name] = mcpConfig;
     }
   }
