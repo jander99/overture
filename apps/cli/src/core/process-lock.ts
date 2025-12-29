@@ -68,6 +68,75 @@ const DEFAULT_OPTIONS: Required<LockOptions> = {
 export type GetLockFilePath = () => string;
 
 /**
+ * Handle existing lock file (EEXIST error)
+ */
+async function handleExistingLockFile(
+  lockPath: string,
+  opts: LockOptions,
+  attempts: number,
+  delay: number,
+): Promise<{
+  shouldRetry: boolean;
+  newAttempts: number;
+  newDelay: number;
+}> {
+  try {
+    const lockContent = fs.readFileSync(lockPath, 'utf-8');
+    const existingLock: LockData = JSON.parse(lockContent);
+
+    // Check if lock is stale
+    const lockAge = Date.now() - existingLock.timestamp;
+    if (lockAge > opts.staleTimeout!) {
+      // Stale lock detected, remove it and retry immediately
+      console.warn(
+        `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`,
+      );
+      fs.unlinkSync(lockPath);
+      return { shouldRetry: true, newAttempts: attempts, newDelay: delay };
+    }
+
+    // Lock is active - check if we've exhausted retries
+    if (attempts === opts.maxRetries!) {
+      throw new ConfigError(
+        `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`,
+        lockPath,
+      );
+    }
+
+    // Wait and retry with exponential backoff
+    return {
+      shouldRetry: true,
+      newAttempts: attempts + 1,
+      newDelay: delay * 2,
+    };
+  } catch (readError) {
+    // Lock file disappeared or is corrupt - retry
+    if ((readError as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { shouldRetry: true, newAttempts: attempts, newDelay: delay };
+    }
+    throw readError;
+  }
+}
+
+/**
+ * Handle retry logic for failed lock attempts
+ */
+async function handleRetryableError(
+  attempts: number,
+  maxRetries: number,
+  delay: number,
+): Promise<{ shouldRetry: boolean; newAttempts: number; newDelay: number }> {
+  if (attempts === maxRetries) {
+    return { shouldRetry: false, newAttempts: attempts, newDelay: delay };
+  }
+  return {
+    shouldRetry: true,
+    newAttempts: attempts + 1,
+    newDelay: delay * 2,
+  };
+}
+
+/**
  * Acquire process lock
  *
  * @param getLockFilePath - Function that returns the lock file path
@@ -126,51 +195,35 @@ export async function acquireLock(
 
       // File already exists - check if it's stale
       if (err.code === 'EEXIST') {
-        try {
-          const lockContent = fs.readFileSync(lockPath, 'utf-8');
-          const existingLock: LockData = JSON.parse(lockContent);
+        const { shouldRetry, newAttempts, newDelay } =
+          await handleExistingLockFile(lockPath, opts, attempts, delay);
 
-          // Check if lock is stale
-          const lockAge = Date.now() - existingLock.timestamp;
-          if (lockAge > opts.staleTimeout) {
-            // Stale lock detected, remove it and retry immediately
-            console.warn(
-              `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`,
-            );
-            fs.unlinkSync(lockPath);
-            // Don't increment attempts for stale lock removal
-            continue;
+        if (shouldRetry) {
+          attempts = newAttempts;
+          delay = newDelay;
+          if (newDelay > delay) {
+            // If delay changed, wait before retrying
+            await sleep(delay);
           }
-
-          // Lock is active - check if we've exhausted retries
-          if (attempts === opts.maxRetries) {
-            throw new ConfigError(
-              `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`,
-              lockPath,
-            );
-          }
-
-          // Wait and retry with exponential backoff
-          attempts++;
-          await sleep(delay);
-          delay *= 2;
           continue;
-        } catch (readError) {
-          // Lock file disappeared or is corrupt - retry
-          if ((readError as NodeJS.ErrnoException).code === 'ENOENT') {
-            continue;
-          }
-          throw readError;
         }
       }
 
       // Other errors (permission denied, etc.)
-      if (attempts === opts.maxRetries) {
-        throw error;
+      const { shouldRetry, newAttempts, newDelay } = await handleRetryableError(
+        attempts,
+        opts.maxRetries!,
+        delay,
+      );
+
+      if (shouldRetry) {
+        attempts = newAttempts;
+        delay = newDelay;
+        await sleep(delay);
+        continue;
       }
-      attempts++;
-      await sleep(delay);
-      delay *= 2;
+
+      throw error;
     }
   }
 
