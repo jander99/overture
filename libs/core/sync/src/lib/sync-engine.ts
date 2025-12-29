@@ -1148,6 +1148,42 @@ export class SyncEngine {
   }
 
   /**
+   * Validate a single config for warnings
+   */
+  private validateSingleConfigForWarnings(
+    config: OvertureConfig,
+    configType: 'User' | 'Project',
+    configPath: string,
+    validClients: Set<string>,
+  ): string[] {
+    const warnings: string[] = [];
+
+    // Check version field
+    if (config.version !== '1.0') {
+      warnings.push(
+        `${configType} config has version '${config.version}' but should be '1.0'. ` +
+          `Update ${configPath} to use version: "1.0"`,
+      );
+    }
+
+    // Check for invalid client names
+    if (config.clients) {
+      const invalidClients = Object.keys(config.clients).filter(
+        (client) => !validClients.has(client),
+      );
+      if (invalidClients.length > 0) {
+        warnings.push(
+          `${configType} config references unsupported clients: ${invalidClients.join(', ')}. ` +
+            `Valid clients are: ${Array.from(validClients).join(', ')}. ` +
+            `Remove these from the 'clients' section in ${configPath}`,
+        );
+      }
+    }
+
+    return warnings;
+  }
+
+  /**
    * Validate configuration for warnings (non-breaking issues)
    *
    * Checks for deprecated or invalid keys that should be updated
@@ -1160,54 +1196,26 @@ export class SyncEngine {
     const warnings: string[] = [];
     const validClients = new Set<string>(SyncEngine.DEFAULT_CLIENTS);
 
-    // Check user config
     if (userConfig) {
-      // Check version field
-      if (userConfig.version !== '1.0') {
-        warnings.push(
-          `User config has version '${userConfig.version}' but should be '1.0'. ` +
-            `Update ~/.config/overture.yml to use version: "1.0"`,
-        );
-      }
-
-      // Check for invalid client names
-      if (userConfig.clients) {
-        const invalidClients = Object.keys(userConfig.clients).filter(
-          (client) => !validClients.has(client),
-        );
-        if (invalidClients.length > 0) {
-          warnings.push(
-            `User config references unsupported clients: ${invalidClients.join(', ')}. ` +
-              `Valid clients are: ${Array.from(validClients).join(', ')}. ` +
-              `Remove these from the 'clients' section in ~/.config/overture.yml`,
-          );
-        }
-      }
+      warnings.push(
+        ...this.validateSingleConfigForWarnings(
+          userConfig,
+          'User',
+          '~/.config/overture.yml',
+          validClients,
+        ),
+      );
     }
 
-    // Check project config
     if (projectConfig) {
-      // Check version field
-      if (projectConfig.version !== '1.0') {
-        warnings.push(
-          `Project config has version '${projectConfig.version}' but should be '1.0'. ` +
-            `Update .overture/config.yaml to use version: "1.0"`,
-        );
-      }
-
-      // Check for invalid client names
-      if (projectConfig.clients) {
-        const invalidClients = Object.keys(projectConfig.clients).filter(
-          (client) => !validClients.has(client),
-        );
-        if (invalidClients.length > 0) {
-          warnings.push(
-            `Project config references unsupported clients: ${invalidClients.join(', ')}. ` +
-              `Valid clients are: ${Array.from(validClients).join(', ')}. ` +
-              `Remove these from the 'clients' section in .overture/config.yaml`,
-          );
-        }
-      }
+      warnings.push(
+        ...this.validateSingleConfigForWarnings(
+          projectConfig,
+          'Project',
+          '.overture/config.yaml',
+          validClients,
+        ),
+      );
     }
 
     return warnings;
