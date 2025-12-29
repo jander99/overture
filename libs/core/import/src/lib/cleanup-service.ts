@@ -124,7 +124,7 @@ export class CleanupService {
 
     for (const mcpName of Object.keys(projectConfig.mcpServers)) {
       // mcpName comes from Object.keys - safe to check in overtureConfig.mcp
-      // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.keys()
+       
       if (Object.hasOwn(overtureConfig.mcp, mcpName)) {
         mcpsToRemove.push(mcpName);
       } else {

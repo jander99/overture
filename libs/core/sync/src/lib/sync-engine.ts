@@ -393,9 +393,9 @@ export class SyncEngine {
 
         for (const name of pluginNames) {
           // name from pluginNames parameter - safe to check in configuredPlugins
-          // eslint-disable-next-line security/detect-object-injection -- name from pluginNames
+           
           if (Object.hasOwn(configuredPlugins, name)) {
-            // eslint-disable-next-line security/detect-object-injection -- name from pluginNames
+            // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
             const config = configuredPlugins[name];
             const key = `${name}@${config.marketplace}`;
             if (!installedSet.has(key)) {
@@ -548,7 +548,7 @@ export class SyncEngine {
         Object.entries(overtureConfig.mcp).filter(
           ([mcpName]) =>
             mcpSources &&
-            // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.entries()
+             
             Object.hasOwn(mcpSources, mcpName) &&
             mcpSources[mcpName] === 'project',
         ),
@@ -561,7 +561,7 @@ export class SyncEngine {
         Object.entries(overtureConfig.mcp).filter(
           ([mcpName]) =>
             mcpSources &&
-            // eslint-disable-next-line security/detect-object-injection -- mcpName from Object.entries()
+             
             Object.hasOwn(mcpSources, mcpName) &&
             mcpSources[mcpName] === 'global',
         ),
@@ -583,7 +583,7 @@ export class SyncEngine {
   ): void {
     const rootKey = client.schemaRootKey;
     // rootKey comes from client.schemaRootKey - validated with Object.hasOwn
-    // eslint-disable-next-line security/detect-object-injection -- rootKey from client schema
+     
     const oldMcps =
       (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
     const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);

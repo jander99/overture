@@ -115,7 +115,7 @@ export class ImportService {
 
     for (const [name, config] of Object.entries(fullConfig.mcpServers)) {
       // name comes from Object.entries - safe to check in overtureConfig.mcp
-      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+       
       if (!Object.hasOwn(overtureConfig.mcp, name)) {
         discovered.push(
           this.createDiscoveredMcp(
@@ -161,7 +161,7 @@ export class ImportService {
 
       for (const [name, config] of Object.entries(projectConfig.mcpServers)) {
         // name comes from Object.entries - safe to check in overtureConfig.mcp
-        // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+         
         if (!Object.hasOwn(overtureConfig.mcp, name)) {
           discovered.push(
             this.createDiscoveredMcp(
@@ -202,7 +202,7 @@ export class ImportService {
 
     for (const [name, config] of Object.entries(projectConfig.mcpServers)) {
       // name comes from Object.entries - safe to check in overtureConfig.mcp
-      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+       
       if (!Object.hasOwn(overtureConfig.mcp, name)) {
         discovered.push(
           this.createDiscoveredMcp(
@@ -284,7 +284,7 @@ export class ImportService {
 
     for (const [name, mcpConfig] of Object.entries(config.mcp)) {
       // name comes from Object.entries - safe to check in overtureConfig.mcp
-      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+       
       if (!Object.hasOwn(overtureConfig.mcp, name)) {
         const convertedEnv = adapter.translateFromOpenCodeEnv(mcpConfig.env);
 
@@ -372,7 +372,7 @@ export class ImportService {
 
     for (const [name, mcpConfig] of Object.entries(rootConfig)) {
       // name comes from Object.entries - safe to check in overtureConfig.mcp
-      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
+       
       if (!Object.hasOwn(overtureConfig.mcp, name)) {
         discovered.push(
           this.createDiscoveredMcp(

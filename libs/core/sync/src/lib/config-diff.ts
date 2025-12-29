@@ -88,10 +88,10 @@ export function generateDiff(
   rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
 ): ConfigDiff {
   // rootKey comes from method parameters - validated with Object.hasOwn
-  // eslint-disable-next-line security/detect-object-injection -- rootKey from parameters
+   
   const oldServers =
     (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
-  // eslint-disable-next-line security/detect-object-injection -- rootKey from parameters
+   
   const newServers =
     (Object.hasOwn(newConfig, rootKey) ? newConfig[rootKey] : {}) || {};
 
@@ -105,11 +105,11 @@ export function generateDiff(
   // Check common keys for modifications
   for (const key of common) {
     // key comes from categorizeKeys() - safe to check in servers objects
-    // eslint-disable-next-line security/detect-object-injection -- key from categorizeKeys()
+     
     const oldValue = Object.hasOwn(oldServers, key)
       ? oldServers[key]
       : undefined;
-    // eslint-disable-next-line security/detect-object-injection -- key from categorizeKeys()
+     
     const newValue = Object.hasOwn(newServers, key)
       ? newServers[key]
       : undefined;
@@ -163,11 +163,11 @@ function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
 
   for (const field of allFields) {
     // field comes from Object.keys() - safe to check in record objects
-    // eslint-disable-next-line security/detect-object-injection -- field from Object.keys()
+     
     const oldValue = Object.hasOwn(oldRecord, field)
       ? oldRecord[field]
       : undefined;
-    // eslint-disable-next-line security/detect-object-injection -- field from Object.keys()
+     
     const newValue = Object.hasOwn(newRecord, field)
       ? newRecord[field]
       : undefined;
@@ -205,8 +205,8 @@ function isEqual(a: unknown, b: unknown): boolean {
     if (keysA.length !== keysB.length) return false;
     return keysA.every((key) => {
       // key comes from Object.keys(objA) - safe to check in both objects
-      // eslint-disable-next-line security/detect-object-injection -- key from Object.keys()
-      // eslint-disable-next-line security/detect-object-injection -- key from Object.keys()
+       
+       
       return isEqual(
         Object.hasOwn(objA, key) ? objA[key] : undefined,
         Object.hasOwn(objB, key) ? objB[key] : undefined,

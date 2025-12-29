@@ -23,6 +23,7 @@ import * as yaml from 'js-yaml';
  */
 export async function loadFixture(relativePath: string): Promise<string> {
   const fixturePath = path.join(__dirname, relativePath);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixture path is internal test data, computed safely
   return await fs.readFile(fixturePath, 'utf-8');
 }
 

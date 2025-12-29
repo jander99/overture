@@ -369,6 +369,7 @@ async function checkClients(
     const detection = clientDiscovery.detection;
     const adapter = adapterRegistry.get(clientName);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- adapter is dynamic interface
     const configPath = (adapter as any)?.detectConfigPath?.(
       platform,
       projectRoot || undefined,
@@ -376,7 +377,8 @@ async function checkClients(
     const configPathStr =
       typeof configPath === 'string'
         ? configPath
-        : (configPath as any)?.user || undefined;
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any -- configPath is dynamic interface
+          (configPath as any)?.user || undefined;
 
     const configValid = configPathStr
       ? await validateConfigFile(configPathStr, filesystem)
@@ -454,15 +456,18 @@ async function checkMcpServers(
     mcpCommandsMissing: 0,
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mergedConfig is dynamic configuration object
   const mcpConfig = (mergedConfig as any)?.mcp || {};
 
   for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mcpDef is dynamic configuration object
     const commandExists = await process.commandExists((mcpDef as any).command);
     const source = Object.hasOwn(mcpSources, mcpName)
       ? // eslint-disable-next-line security/detect-object-injection
         mcpSources[mcpName]
       : 'unknown';
 
+     
     const mcpResult = {
       name: mcpName,
       command: (mcpDef as any).command,
