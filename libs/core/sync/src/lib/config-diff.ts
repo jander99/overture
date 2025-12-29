@@ -88,10 +88,10 @@ export function generateDiff(
   rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
 ): ConfigDiff {
   // rootKey comes from method parameters - validated with Object.hasOwn
-   
+
   const oldServers =
     (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
-   
+
   const newServers =
     (Object.hasOwn(newConfig, rootKey) ? newConfig[rootKey] : {}) || {};
 
@@ -105,11 +105,11 @@ export function generateDiff(
   // Check common keys for modifications
   for (const key of common) {
     // key comes from categorizeKeys() - safe to check in servers objects
-     
+
     const oldValue = Object.hasOwn(oldServers, key)
       ? oldServers[key]
       : undefined;
-     
+
     const newValue = Object.hasOwn(newServers, key)
       ? newServers[key]
       : undefined;
@@ -163,11 +163,11 @@ function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
 
   for (const field of allFields) {
     // field comes from Object.keys() - safe to check in record objects
-     
+
     const oldValue = Object.hasOwn(oldRecord, field)
       ? oldRecord[field]
       : undefined;
-     
+
     const newValue = Object.hasOwn(newRecord, field)
       ? newRecord[field]
       : undefined;
@@ -205,8 +205,7 @@ function isEqual(a: unknown, b: unknown): boolean {
     if (keysA.length !== keysB.length) return false;
     return keysA.every((key) => {
       // key comes from Object.keys(objA) - safe to check in both objects
-       
-       
+
       return isEqual(
         Object.hasOwn(objA, key) ? objA[key] : undefined,
         Object.hasOwn(objB, key) ? objB[key] : undefined,
@@ -215,6 +214,78 @@ function isEqual(a: unknown, b: unknown): boolean {
   }
 
   return false;
+}
+
+/**
+ * Format a value for display in diff output
+ *
+ * @param value - Value to format
+ * @returns Formatted string
+ */
+function formatValue(value: unknown): string {
+  if (value === undefined) return '<undefined>';
+  if (value === null) return '<null>';
+  if (Array.isArray(value)) return `[${value.join(', ')}]`;
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'string') return `"${value}"`;
+  return String(value);
+}
+
+/**
+ * Format added MCPs section
+ */
+function formatAddedSection(added: string[]): string[] {
+  if (added.length === 0) return [];
+  const lines = [`Added (${added.length}):`];
+  for (const name of added) {
+    lines.push(`  + ${name}`);
+  }
+  lines.push('');
+  return lines;
+}
+
+/**
+ * Format modified MCPs section
+ */
+function formatModifiedSection(modified: ConfigDiff['modified']): string[] {
+  if (modified.length === 0) return [];
+  const lines = [`Modified (${modified.length}):`];
+  for (const change of modified) {
+    lines.push(`  ~ ${change.name}`);
+    if (change.fieldChanges && change.fieldChanges.length > 0) {
+      for (const fieldChange of change.fieldChanges) {
+        lines.push(`    - ${fieldChange.field}:`);
+        lines.push(`      old: ${formatValue(fieldChange.oldValue)}`);
+        lines.push(`      new: ${formatValue(fieldChange.newValue)}`);
+      }
+    }
+  }
+  lines.push('');
+  return lines;
+}
+
+/**
+ * Format removed MCPs section
+ */
+function formatRemovedSection(removed: string[]): string[] {
+  if (removed.length === 0) return [];
+  const lines = [`Removed (${removed.length}):`];
+  for (const name of removed) {
+    lines.push(`  - ${name}`);
+  }
+  lines.push('');
+  return lines;
+}
+
+/**
+ * Format diff totals
+ */
+function formatDiffTotals(diff: ConfigDiff): string[] {
+  const total = diff.added.length + diff.modified.length + diff.removed.length;
+  return [
+    `Total changes: ${total} (${diff.added.length} added, ${diff.modified.length} modified, ${diff.removed.length} removed)`,
+    `Unchanged: ${diff.unchanged.length}`,
+  ];
 }
 
 /**
@@ -237,63 +308,12 @@ export function formatDiff(diff: ConfigDiff, clientName?: string): string {
     return lines.join('\n');
   }
 
-  // Added MCPs
-  if (diff.added.length > 0) {
-    lines.push(`Added (${diff.added.length}):`);
-    for (const name of diff.added) {
-      lines.push(`  + ${name}`);
-    }
-    lines.push('');
-  }
-
-  // Modified MCPs
-  if (diff.modified.length > 0) {
-    lines.push(`Modified (${diff.modified.length}):`);
-    for (const change of diff.modified) {
-      lines.push(`  ~ ${change.name}`);
-      if (change.fieldChanges && change.fieldChanges.length > 0) {
-        for (const fieldChange of change.fieldChanges) {
-          lines.push(`    - ${fieldChange.field}:`);
-          lines.push(`      old: ${formatValue(fieldChange.oldValue)}`);
-          lines.push(`      new: ${formatValue(fieldChange.newValue)}`);
-        }
-      }
-    }
-    lines.push('');
-  }
-
-  // Removed MCPs
-  if (diff.removed.length > 0) {
-    lines.push(`Removed (${diff.removed.length}):`);
-    for (const name of diff.removed) {
-      lines.push(`  - ${name}`);
-    }
-    lines.push('');
-  }
-
-  // Summary
-  const total = diff.added.length + diff.modified.length + diff.removed.length;
-  lines.push(
-    `Total changes: ${total} (${diff.added.length} added, ${diff.modified.length} modified, ${diff.removed.length} removed)`,
-  );
-  lines.push(`Unchanged: ${diff.unchanged.length}`);
+  lines.push(...formatAddedSection(diff.added));
+  lines.push(...formatModifiedSection(diff.modified));
+  lines.push(...formatRemovedSection(diff.removed));
+  lines.push(...formatDiffTotals(diff));
 
   return lines.join('\n');
-}
-
-/**
- * Format a value for display in diff output
- *
- * @param value - Value to format
- * @returns Formatted string
- */
-function formatValue(value: unknown): string {
-  if (value === undefined) return '<undefined>';
-  if (value === null) return '<null>';
-  if (Array.isArray(value)) return `[${value.join(', ')}]`;
-  if (typeof value === 'object') return JSON.stringify(value);
-  if (typeof value === 'string') return `"${value}"`;
-  return String(value);
 }
 
 /**
