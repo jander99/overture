@@ -203,6 +203,8 @@ export function validateRequiredMcps(
 
   for (const requiredName of requiredMcps) {
     // Check if MCP exists
+    // requiredName from requiredMcps parameter - safe to check in availableMcps
+    // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
     if (
       !Object.hasOwn(availableMcps, requiredName) ||
       !availableMcps[requiredName]

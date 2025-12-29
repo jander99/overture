@@ -127,6 +127,8 @@ export function filterByTransport(
       Object.hasOwn(mcps, name) &&
       client.supportsTransport(mcpConfig.transport)
     ) {
+      // name comes from Object.entries - safe to use as property key
+      // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
       filtered[name] = mcpConfig;
     }
   }
