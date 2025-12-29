@@ -743,6 +743,98 @@ export class SyncEngine {
   }
 
   /**
+   * Create early return result for client sync
+   */
+  private createClientSyncResult(
+    clientName: ClientName,
+    success: boolean,
+    configPath: string,
+    binaryDetection: BinaryDetectionResult | undefined,
+    warnings: string[],
+    error?: string,
+  ): ClientSyncResult {
+    return {
+      client: clientName,
+      success,
+      configPath,
+      binaryDetection,
+      warnings,
+      error,
+    };
+  }
+
+  /**
+   * Validate client installation and get config path
+   */
+  private validateClientAndGetConfigPath(
+    client: ClientAdapter,
+    platform: Platform,
+    options: SyncOptions,
+    binaryDetection: BinaryDetectionResult | undefined,
+    warnings: string[],
+  ):
+    | {
+        configPath: string;
+        configPathResult: string | { user: string; project: string };
+      }
+    | ClientSyncResult {
+    // If binary not found and skipUndetected is enabled, skip this client
+    if (binaryDetection?.status === 'not-found' && options.skipUndetected) {
+      return this.createClientSyncResult(
+        client.name,
+        true,
+        '',
+        binaryDetection,
+        [],
+        'Skipped - client not detected on system',
+      );
+    }
+
+    // Check if client is installed (config path check)
+    if (!client.isInstalled(platform)) {
+      return this.createClientSyncResult(
+        client.name,
+        false,
+        '',
+        binaryDetection,
+        [],
+        `Client ${client.name} is not installed`,
+      );
+    }
+
+    // Detect config path
+    const configPathResult = client.detectConfigPath(
+      platform,
+      options.projectRoot,
+    );
+    if (!configPathResult) {
+      return this.createClientSyncResult(
+        client.name,
+        false,
+        '',
+        binaryDetection,
+        [],
+        `Could not determine config path for ${client.name}`,
+      );
+    }
+
+    // Determine which config path to use
+    const configPath = this.resolveConfigPath(configPathResult, options);
+    if (!configPath) {
+      return this.createClientSyncResult(
+        client.name,
+        false,
+        '',
+        binaryDetection,
+        [],
+        `Could not determine config path for ${client.name}`,
+      );
+    }
+
+    return { configPath, configPathResult };
+  }
+
+  /**
    * Sync MCP configuration to a single client (internal)
    */
   private async syncToClient(
@@ -765,60 +857,21 @@ export class SyncEngine {
         warnings,
       );
 
-      // If binary not found and skipUndetected is enabled, skip this client
-      if (binaryDetection?.status === 'not-found' && options.skipUndetected) {
-        return {
-          client: client.name,
-          success: true,
-          configPath: '',
-          binaryDetection,
-          warnings: [],
-          error: 'Skipped - client not detected on system',
-        };
-      }
-
-      // Check if client is installed (config path check)
-      if (!client.isInstalled(platform)) {
-        return {
-          client: client.name,
-          success: false,
-          configPath: '',
-          binaryDetection,
-          warnings: [],
-          error: `Client ${client.name} is not installed`,
-        };
-      }
-
-      // Detect config path
-      const configPathResult = client.detectConfigPath(
+      // Validate client installation and get config path
+      const validationResult = this.validateClientAndGetConfigPath(
+        client,
         platform,
-        options.projectRoot,
+        options,
+        binaryDetection,
+        warnings,
       );
 
-      if (!configPathResult) {
-        return {
-          client: client.name,
-          success: false,
-          configPath: '',
-          binaryDetection,
-          warnings: [],
-          error: `Could not determine config path for ${client.name}`,
-        };
+      // If validation returned an early exit result, return it
+      if ('client' in validationResult) {
+        return validationResult;
       }
 
-      // Determine which config path to use
-      const configPath = this.resolveConfigPath(configPathResult, options);
-
-      if (!configPath) {
-        return {
-          client: client.name,
-          success: false,
-          configPath: '',
-          binaryDetection,
-          warnings: [],
-          error: `Could not determine config path for ${client.name}`,
-        };
-      }
+      const { configPath, configPathResult } = validationResult;
 
       // Check for transport issues on ALL MCPs (before filtering)
       const transportWarnings = getTransportWarnings(
@@ -829,14 +882,14 @@ export class SyncEngine {
         warnings.push(...transportWarnings.map((w) => w.message));
 
         if (!options.force && hasTransportIssues(overtureConfig.mcp, client)) {
-          return {
-            client: client.name,
-            success: false,
+          return this.createClientSyncResult(
+            client.name,
+            false,
             configPath,
             binaryDetection,
             warnings,
-            error: `Transport issues detected. Use --force to sync anyway.`,
-          };
+            `Transport issues detected. Use --force to sync anyway.`,
+          );
         }
       }
 
