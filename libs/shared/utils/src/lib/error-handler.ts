@@ -190,6 +190,24 @@ export class ErrorHandler {
   }
 
   /**
+   * Create FormattedError with optional stack trace
+   */
+  private static createFormattedError(
+    message: string,
+    exitCode: number,
+    verbose: boolean,
+    stack?: string,
+    details?: string,
+  ): FormattedError {
+    return {
+      message,
+      details,
+      exitCode,
+      stack: verbose && stack ? stack : undefined,
+    };
+  }
+
+  /**
    * Format an error for display
    *
    * @param error - The error to format
@@ -199,74 +217,84 @@ export class ErrorHandler {
   static formatError(error: unknown, verbose = false): FormattedError {
     // Handle known Overture errors
     if (error instanceof OvertureError) {
-      return {
-        message: error.message,
-        details: this.getErrorDetails(error),
-        exitCode: error.exitCode,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      return this.createFormattedError(
+        error.message,
+        error.exitCode,
+        verbose,
+        error.stack,
+        this.getErrorDetails(error),
+      );
     }
 
-    // Handle custom error types
+    // Handle ConfigurationError
     if (error instanceof ConfigurationError) {
-      return {
-        message: error.message,
-        details: error.path ? `Configuration file: ${error.path}` : undefined,
-        exitCode: ExitCode.CONFIG_ERROR,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      return this.createFormattedError(
+        error.message,
+        ExitCode.CONFIG_ERROR,
+        verbose,
+        error.stack,
+        error.path ? `Configuration file: ${error.path}` : undefined,
+      );
     }
 
+    // Handle FileSystemError
     if (error instanceof FileSystemError) {
-      return {
-        message: error.message,
-        details: this.getFileSystemErrorDetails(error),
-        exitCode: ExitCode.FILESYSTEM_ERROR,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      return this.createFormattedError(
+        error.message,
+        ExitCode.FILESYSTEM_ERROR,
+        verbose,
+        error.stack,
+        this.getFileSystemErrorDetails(error),
+      );
     }
 
+    // Handle NetworkError
     if (error instanceof NetworkError) {
-      return {
-        message: error.message,
-        details: this.getNetworkErrorDetails(error),
-        exitCode: ExitCode.GENERAL_ERROR,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      return this.createFormattedError(
+        error.message,
+        ExitCode.GENERAL_ERROR,
+        verbose,
+        error.stack,
+        this.getNetworkErrorDetails(error),
+      );
     }
 
+    // Handle UserCancelledError
     if (error instanceof UserCancelledError) {
-      return {
-        message: error.message,
-        exitCode: ExitCode.USER_CANCELLED,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      return this.createFormattedError(
+        error.message,
+        ExitCode.USER_CANCELLED,
+        verbose,
+        error.stack,
+      );
     }
 
+    // Handle DependencyError
     if (error instanceof DependencyError) {
-      return {
-        message: error.message,
-        details: error.dependency
+      return this.createFormattedError(
+        error.message,
+        ExitCode.GENERAL_ERROR,
+        verbose,
+        error.stack,
+        error.dependency
           ? `Missing dependency: ${error.dependency}`
           : undefined,
-        exitCode: ExitCode.GENERAL_ERROR,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+      );
     }
 
     // Handle standard Error
     if (error instanceof Error) {
-      // Check for custom exitCode property
       const exitCode =
         'exitCode' in error &&
         typeof (error as { exitCode?: number }).exitCode === 'number'
           ? (error as { exitCode: number }).exitCode
           : ExitCode.GENERAL_ERROR;
-      return {
-        message: error.message || 'An unexpected error occurred',
+      return this.createFormattedError(
+        error.message || 'An unexpected error occurred',
         exitCode,
-        stack: verbose && error.stack ? error.stack : undefined,
-      };
+        verbose,
+        error.stack,
+      );
     }
 
     // Handle non-Error throws
@@ -278,7 +306,151 @@ export class ErrorHandler {
   }
 
   /**
-   * Get contextual suggestions for fixing an error
+   * Suggest fix for configuration not found errors
+   */
+  private static suggestConfigNotFound(
+    error: unknown,
+    context: ErrorContext,
+  ): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (
+      !error.message.includes('Configuration not found') &&
+      !error.message.includes('No configuration found') &&
+      !error.message.includes('Config file not found') &&
+      !error.message.includes('ENOENT')
+    ) {
+      return undefined;
+    }
+
+    if (context.path && context.path.includes('.config/overture')) {
+      return 'Run `overture user init` to create global configuration at ~/.config/overture.yml';
+    }
+    return 'Run `overture init` to create project configuration at .overture/config.yaml\nFor global config, use `overture user init`';
+  }
+
+  /**
+   * Suggest fix for YAML format errors
+   */
+  private static suggestYamlError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (
+      !error.message.includes('invalid yaml') &&
+      !error.message.includes('YAMLException') &&
+      !error.message.includes('bad indentation') &&
+      !error.message.includes('unexpected token')
+    ) {
+      return undefined;
+    }
+
+    return 'Check YAML syntax:\n  - Use 2 spaces for indentation (not tabs)\n  - Ensure colons have space after them\n  - Quote strings with special characters\n  - Validate at: https://www.yamllint.com/';
+  }
+
+  /**
+   * Suggest fix for permission denied errors
+   */
+  private static suggestPermissionError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (
+      !error.message.includes('EACCES') &&
+      !error.message.includes('permission denied') &&
+      !error.message.includes('EPERM')
+    ) {
+      return undefined;
+    }
+
+    if (process.platform === 'win32') {
+      return 'Permission denied. Try:\n  1. Run Command Prompt as Administrator\n  2. Check file permissions in Properties > Security';
+    }
+    return 'Permission denied. Try:\n  1. Check file permissions: ls -la ~/.config/overture/\n  2. Fix permissions: chmod 644 <file>\n  3. Avoid using sudo if possible';
+  }
+
+  /**
+   * Suggest fix for validation errors
+   */
+  private static suggestValidationError(error: unknown): string | undefined {
+    if (error instanceof DomainValidationError) {
+      const issueCount = error.issues.length;
+      return `Found ${issueCount} validation ${issueCount === 1 ? 'error' : 'errors'}. Fix them in your configuration:\n  1. Review each error above\n  2. Edit .overture/config.yaml\n  3. Run \`overture validate\` to verify\nSee docs/error-messages.md for detailed troubleshooting`;
+    }
+
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (!error.message.includes('Configuration validation failed')) {
+      return undefined;
+    }
+
+    if (error.message.includes('transport')) {
+      return 'Add "transport" field to MCP configuration:\n  transport: stdio  # or stdio+stderr, sse\nSee docs/overture-schema.md for valid transport types';
+    }
+    if (error.message.includes('command')) {
+      return 'Add "command" field to MCP configuration:\n  command: uvx  # or npx, node, python3, etc.';
+    }
+    return 'Configuration validation failed. Run `overture validate` for detailed error list';
+  }
+
+  /**
+   * Suggest fix for transport compatibility errors
+   */
+  private static suggestTransportError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (
+      !error.message.includes('transport') &&
+      !error.message.includes('Transport issues')
+    ) {
+      return undefined;
+    }
+
+    return 'Transport compatibility issue detected:\n  1. Change transport to "stdio" (most widely supported)\n  2. Or use --force to sync anyway: `overture sync --force`\n  3. Check client compatibility: `overture validate --verbose`';
+  }
+
+  /**
+   * Suggest fix for missing dependency errors
+   */
+  private static suggestDependencyError(error: unknown): string | undefined {
+    const isDependencyError =
+      error instanceof DependencyError ||
+      (error instanceof Error &&
+        (error.message.includes('command not found') ||
+          error.message.includes('not installed')));
+
+    if (!isDependencyError) {
+      return undefined;
+    }
+
+    if (error instanceof DependencyError && error.dependency) {
+      if (
+        error.dependency.includes('uvx') ||
+        error.dependency.includes('pipx')
+      ) {
+        return `Install ${error.dependency}:\n  pip install ${error.dependency}\n  # Or with pipx:\n  pipx install ${error.dependency}`;
+      }
+      if (
+        error.dependency.startsWith('@') ||
+        error.dependency.includes('npm')
+      ) {
+        return `Install ${error.dependency}:\n  npm install -g ${error.dependency}`;
+      }
+      return `Install ${error.dependency} and ensure it's on your PATH`;
+    }
+    return 'Required dependency not found. Check that all MCP commands are installed and on your PATH';
+  }
+
+  /**
+   * Get a user-friendly suggestion for fixing an error
    *
    * @param error - The error to generate suggestions for
    * @param context - Error context
@@ -288,195 +460,191 @@ export class ErrorHandler {
     error: unknown,
     context: ErrorContext,
   ): string | undefined {
-    // Config not found errors
-    if (
-      error instanceof Error &&
-      (error.message.includes('Configuration not found') ||
-        error.message.includes('No configuration found') ||
-        error.message.includes('Config file not found') ||
-        error.message.includes('ENOENT'))
-    ) {
-      // Determine which config is missing from context
-      if (context.path && context.path.includes('.config/overture')) {
-        return 'Run `overture user init` to create global configuration at ~/.config/overture.yml';
-      }
-      return 'Run `overture init` to create project configuration at .overture/config.yaml\nFor global config, use `overture user init`';
-    }
-
-    // Invalid YAML errors
-    if (
-      error instanceof Error &&
-      (error.message.includes('invalid yaml') ||
-        error.message.includes('YAMLException') ||
-        error.message.includes('bad indentation') ||
-        error.message.includes('unexpected token'))
-    ) {
-      return 'Check YAML syntax:\n  - Use 2 spaces for indentation (not tabs)\n  - Ensure colons have space after them\n  - Quote strings with special characters\n  - Validate at: https://www.yamllint.com/';
-    }
-
-    // Permission errors
-    if (
-      error instanceof Error &&
-      (error.message.includes('EACCES') ||
-        error.message.includes('permission denied') ||
-        error.message.includes('EPERM'))
-    ) {
-      if (process.platform === 'win32') {
-        return 'Permission denied. Try:\n  1. Run Command Prompt as Administrator\n  2. Check file permissions in Properties > Security';
-      }
-      return 'Permission denied. Try:\n  1. Check file permissions: ls -la ~/.config/overture/\n  2. Fix permissions: chmod 644 <file>\n  3. Avoid using sudo if possible';
-    }
-
-    // Validation errors
-    if (error instanceof DomainValidationError) {
-      const issueCount = error.issues.length;
-      return `Found ${issueCount} validation ${issueCount === 1 ? 'error' : 'errors'}. Fix them in your configuration:\n  1. Review each error above\n  2. Edit .overture/config.yaml\n  3. Run \`overture validate\` to verify\nSee docs/error-messages.md for detailed troubleshooting`;
-    }
-
-    // Config validation errors with specific field issues
-    if (
-      error instanceof Error &&
-      error.message.includes('Configuration validation failed')
-    ) {
-      if (error.message.includes('transport')) {
-        return 'Add "transport" field to MCP configuration:\n  transport: stdio  # or stdio+stderr, sse\nSee docs/overture-schema.md for valid transport types';
-      }
-      if (error.message.includes('command')) {
-        return 'Add "command" field to MCP configuration:\n  command: uvx  # or npx, node, python3, etc.';
-      }
-      return 'Configuration validation failed. Run `overture validate` for detailed error list';
-    }
-
-    // Transport compatibility warnings
-    if (
-      error instanceof Error &&
-      (error.message.includes('transport') ||
-        error.message.includes('Transport issues'))
-    ) {
-      return 'Transport compatibility issue detected:\n  1. Change transport to "stdio" (most widely supported)\n  2. Or use --force to sync anyway: `overture sync --force`\n  3. Check client compatibility: `overture validate --verbose`';
-    }
-
-    // Missing dependency errors
-    if (
-      error instanceof DependencyError ||
-      (error instanceof Error &&
-        (error.message.includes('command not found') ||
-          error.message.includes('not installed')))
-    ) {
-      if (error instanceof DependencyError && error.dependency) {
-        // Try to be smart about installation method
-        if (
-          error.dependency.includes('uvx') ||
-          error.dependency.includes('pipx')
-        ) {
-          return `Install ${error.dependency}:\n  pip install ${error.dependency}\n  # Or with pipx:\n  pipx install ${error.dependency}`;
-        }
-        if (
-          error.dependency.startsWith('@') ||
-          error.dependency.includes('npm')
-        ) {
-          return `Install ${error.dependency}:\n  npm install -g ${error.dependency}`;
-        }
-        return `Install ${error.dependency} and ensure it's on your PATH`;
-      }
-      return 'Required dependency not found. Check that all MCP commands are installed and on your PATH';
-    }
-
-    // User cancelled
+    // User cancelled - no suggestion needed
     if (error instanceof UserCancelledError) {
-      return undefined; // No suggestion needed for user cancellation
+      return undefined;
     }
 
-    // Disk full errors
+    // Try each suggestion strategy in order of specificity
+    return (
+      this.suggestConfigNotFound(error, context) ||
+      this.suggestYamlError(error) ||
+      this.suggestPermissionError(error) ||
+      this.suggestValidationError(error) ||
+      this.suggestTransportError(error) ||
+      this.suggestDependencyError(error) ||
+      this.suggestDiskError(error) ||
+      this.suggestFileError(error, context) ||
+      this.suggestNetworkError(error) ||
+      this.suggestLockError(error) ||
+      this.suggestClientError(error) ||
+      this.suggestProjectTypeError(error) ||
+      this.suggestMcpError(error) ||
+      this.suggestCommandError(context, error) ||
+      'For detailed troubleshooting, see docs/error-messages.md\nRun with DEBUG=1 for verbose output: DEBUG=1 overture <command>'
+    );
+  }
+
+  /**
+   * Suggest fix for disk space errors
+   */
+  private static suggestDiskError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
     if (
-      error instanceof Error &&
-      (error.message.includes('ENOSPC') ||
-        error.message.includes('no space left'))
+      !error.message.includes('ENOSPC') &&
+      !error.message.includes('no space left')
     ) {
-      return 'No space left on device:\n  1. Check disk space: df -h (Linux/macOS) or wmic logicaldisk (Windows)\n  2. Delete unnecessary files\n  3. Clear temp files\n  4. Retry operation';
+      return undefined;
     }
 
-    // File already exists
+    return 'No space left on device:\n  1. Check disk space: df -h (Linux/macOS) or wmic logicaldisk (Windows)\n  2. Delete unnecessary files\n  3. Clear temp files\n  4. Retry operation';
+  }
+
+  /**
+   * Suggest fix for file-related errors
+   */
+  private static suggestFileError(
+    error: unknown,
+    context: ErrorContext,
+  ): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
     if (
-      error instanceof Error &&
-      (error.message.includes('already exists') ||
-        error.message.includes('EEXIST'))
+      !error.message.includes('already exists') &&
+      !error.message.includes('EEXIST')
     ) {
-      if (context.command === 'init') {
-        return 'Configuration already exists. Use --force to overwrite:\n  overture init --force';
-      }
-      return 'File already exists. Use --force flag to overwrite, or choose a different location';
+      return undefined;
     }
 
-    // Network errors
-    if (error instanceof NetworkError) {
-      if (error.statusCode === 404) {
-        return 'Resource not found (404). Check the URL or endpoint configuration';
-      }
-      if (error.statusCode === 401 || error.statusCode === 403) {
-        return 'Authentication failed. Check your credentials or API tokens';
-      }
-      return 'Network error. Check your internet connection and try again';
+    if (context.command === 'init') {
+      return 'Configuration already exists. Use --force to overwrite:\n  overture init --force';
+    }
+    return 'File already exists. Use --force flag to overwrite, or choose a different location';
+  }
+
+  /**
+   * Suggest fix for network errors
+   */
+  private static suggestNetworkError(error: unknown): string | undefined {
+    if (!(error instanceof NetworkError)) {
+      return undefined;
     }
 
-    // Process lock errors
+    if (error.statusCode === 404) {
+      return 'Resource not found (404). Check the URL or endpoint configuration';
+    }
+    if (error.statusCode === 401 || error.statusCode === 403) {
+      return 'Authentication failed. Check your credentials or API tokens';
+    }
+    return 'Network error. Check your internet connection and try again';
+  }
+
+  /**
+   * Suggest fix for process lock errors
+   */
+  private static suggestLockError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
     if (
-      error instanceof Error &&
-      (error.message.includes('process lock') ||
-        error.message.includes('lock file'))
+      !error.message.includes('process lock') &&
+      !error.message.includes('lock file')
     ) {
-      return 'Another Overture process is running or lock is stale:\n  1. Wait for other operation to complete\n  2. Check running processes: ps aux | grep overture\n  3. Remove stale lock: rm /tmp/overture.lock\n  4. Retry operation';
+      return undefined;
     }
 
-    // No clients installed
+    return 'Another Overture process is running or lock is stale:\n  1. Wait for other operation to complete\n  2. Check running processes: ps aux | grep overture\n  3. Remove stale lock: rm /tmp/overture.lock\n  4. Retry operation';
+  }
+
+  /**
+   * Suggest fix for client detection errors
+   */
+  private static suggestClientError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
     if (
-      error instanceof Error &&
-      (error.message.includes('No clients') ||
-        error.message.includes('no installed clients'))
+      !error.message.includes('No clients') &&
+      !error.message.includes('no installed clients')
     ) {
-      return 'No AI clients detected. Install at least one:\n  - Claude Code: https://claude.ai/code\n  - Claude Desktop: https://claude.ai/download\n  - VS Code with GitHub Copilot\n  - Cursor: https://cursor.sh\n  - Windsurf: https://codeium.com/windsurf';
+      return undefined;
     }
 
-    // Invalid project type
+    return 'No AI clients detected. Install at least one:\n  - Claude Code: https://claude.ai/code\n  - Claude Desktop: https://claude.ai/download\n  - VS Code with GitHub Copilot\n  - Cursor: https://cursor.sh\n  - Windsurf: https://codeium.com/windsurf';
+  }
+
+  /**
+   * Suggest fix for invalid project type errors
+   */
+  private static suggestProjectTypeError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
+    if (!error.message.includes('Invalid project type')) {
+      return undefined;
+    }
+
+    return 'Use a valid project type:\n  - python-backend\n  - node-api\n  - typescript-tooling\n  - fullstack-web\nOr run `overture init` without --type for interactive selection';
+  }
+
+  /**
+   * Suggest fix for MCP server not found errors
+   */
+  private static suggestMcpError(error: unknown): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
+    }
+
     if (
-      error instanceof Error &&
-      error.message.includes('Invalid project type')
+      !error.message.includes('MCP server') ||
+      !error.message.includes('not found')
     ) {
-      return 'Use a valid project type:\n  - python-backend\n  - node-api\n  - typescript-tooling\n  - fullstack-web\nOr run `overture init` without --type for interactive selection';
+      return undefined;
     }
 
-    // MCP not found
-    if (
-      error instanceof Error &&
-      error.message.includes('MCP server') &&
-      error.message.includes('not found')
-    ) {
-      return 'MCP server not found in configuration:\n  1. List available MCPs: `overture mcp list`\n  2. Check spelling\n  3. Add to .overture/config.yaml if missing';
+    return 'MCP server not found in configuration:\n  1. List available MCPs: `overture mcp list`\n  2. Check spelling\n  3. Add to .overture/config.yaml if missing';
+  }
+
+  /**
+   * Suggest fix based on command context
+   */
+  private static suggestCommandError(
+    context: ErrorContext,
+    error: unknown,
+  ): string | undefined {
+    if (!(error instanceof Error)) {
+      return undefined;
     }
 
-    // Command-specific suggestions
-    if (context.command === 'init' && error instanceof Error) {
+    if (context.command === 'init') {
       return 'Failed to initialize configuration:\n  - Use --force to overwrite existing config\n  - Check directory permissions\n  - Manually edit .overture/config.yaml if needed';
     }
 
-    if (context.command === 'sync' && error instanceof Error) {
+    if (context.command === 'sync') {
       return 'Sync failed. Troubleshooting steps:\n  1. Validate configuration: `overture validate`\n  2. Check client installation\n  3. Review error details above\n  4. Try dry-run: `overture sync --dry-run`';
     }
 
-    if (context.command === 'validate' && error instanceof Error) {
+    if (context.command === 'validate') {
       return 'Fix validation errors in .overture/config.yaml:\n  1. Review each error above\n  2. See docs/error-messages.md for details\n  3. Validate YAML syntax at https://www.yamllint.com/\n  4. Re-run `overture validate` after fixes';
     }
 
-    if (context.command === 'mcp list' && error instanceof Error) {
+    if (context.command === 'mcp list') {
       return 'Failed to list MCPs:\n  - Ensure configuration exists (run `overture init`)\n  - Check config file syntax\n  - Verify file permissions';
     }
 
-    if (context.command === 'mcp enable' && error instanceof Error) {
+    if (context.command === 'mcp enable') {
       return 'Failed to enable MCP:\n  - Verify MCP name is correct: `overture mcp list`\n  - Check configuration file permissions\n  - Manually edit .overture/config.yaml if needed';
     }
 
-    // Generic suggestion with reference to docs
-    return 'For detailed troubleshooting, see docs/error-messages.md\nRun with DEBUG=1 for verbose output: DEBUG=1 overture <command>';
+    return undefined;
   }
 
   /**

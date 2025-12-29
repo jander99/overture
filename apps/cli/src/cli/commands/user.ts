@@ -126,6 +126,122 @@ const MCP_SERVER_DEFAULTS: Record<
 type OutputFormat = 'yaml' | 'json';
 
 /**
+ * Prompt user for MCP server selection and handle empty selection case
+ *
+ * @param output - Output port for displaying messages
+ * @returns Selected MCP server names
+ */
+async function selectMcpServers(output: unknown): Promise<string[]> {
+  const selectedMcps = await Prompts.multiSelect(
+    'Select MCP servers to enable globally:',
+    COMMON_MCP_SERVERS,
+  );
+
+  if (selectedMcps.length === 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (output as any).warn('No MCP servers selected');
+    const shouldContinue = await Prompts.confirm(
+      'Continue without any MCP servers?',
+      false,
+    );
+
+    if (!shouldContinue) {
+      throw new UserCancelledError('Configuration cancelled');
+    }
+  }
+
+  return selectedMcps;
+}
+
+/**
+ * Build MCP configuration from selected server names
+ *
+ * @param selectedMcps - Array of selected MCP server names
+ * @returns MCP configuration object
+ */
+function buildMcpConfig(selectedMcps: string[]): OvertureConfig['mcp'] {
+  const mcpConfig: OvertureConfig['mcp'] = {};
+  for (const mcpName of selectedMcps) {
+    if (Object.hasOwn(MCP_SERVER_DEFAULTS, mcpName)) {
+      // eslint-disable-next-line security/detect-object-injection
+      const defaults = MCP_SERVER_DEFAULTS[mcpName];
+      if (
+        defaults?.command &&
+        defaults?.args &&
+        defaults?.env &&
+        defaults?.transport
+      ) {
+        // eslint-disable-next-line security/detect-object-injection
+        mcpConfig[mcpName] = {
+          command: defaults.command,
+          args: defaults.args,
+          env: defaults.env,
+          transport: defaults.transport,
+        };
+      }
+    }
+  }
+  return mcpConfig;
+}
+
+/**
+ * Build complete user configuration object
+ *
+ * @param mcpConfig - MCP configuration object
+ * @returns Complete user configuration
+ */
+function buildUserConfig(mcpConfig: OvertureConfig['mcp']): OvertureConfig {
+  return {
+    version: '2.0',
+    mcp: mcpConfig,
+    clients: {
+      'claude-code': { enabled: true },
+      vscode: { enabled: false },
+      cursor: { enabled: false },
+      windsurf: { enabled: false },
+      'copilot-cli': { enabled: false },
+      'jetbrains-copilot': { enabled: false },
+    },
+    sync: {
+      backup: true,
+      backupDir: '~/.config/overture/backups',
+      backupRetention: 10,
+      mergeStrategy: 'append',
+      autoDetectClients: true,
+    },
+  };
+}
+
+/**
+ * Display configuration summary and get user confirmation
+ *
+ * @param output - Output port for displaying messages
+ * @param userConfigPath - Path to the configuration file
+ * @param selectedMcps - Array of selected MCP server names
+ * @returns true if user confirmed to proceed, false otherwise
+ */
+async function confirmConfiguration(
+  output: unknown,
+  userConfigPath: string,
+  selectedMcps: string[],
+): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const out = output as any;
+  out.nl();
+  out.info('Configuration summary:');
+  out.info(`  Location: ${userConfigPath}`);
+  out.info(`  MCP servers: ${selectedMcps.length}`);
+  if (selectedMcps.length > 0) {
+    selectedMcps.forEach((mcp) => {
+      out.info(`    - ${mcp}`);
+    });
+  }
+  out.nl();
+
+  return await Prompts.confirm('Create user configuration?', true);
+}
+
+/**
  * Creates the 'user' command group for managing user global configuration.
  *
  * Usage:
@@ -163,70 +279,16 @@ export function createUserCommand(deps: AppDependencies): Command {
         output.info('Initializing user global configuration...');
         output.nl();
 
-        // Prompt for MCP servers to enable
-        const selectedMcps = await Prompts.multiSelect(
-          'Select MCP servers to enable globally:',
-          COMMON_MCP_SERVERS,
-        );
+        // Step 1: Select MCP servers
+        const selectedMcps = await selectMcpServers(output);
 
-        if (selectedMcps.length === 0) {
-          output.warn('No MCP servers selected');
-          const shouldContinue = await Prompts.confirm(
-            'Continue without any MCP servers?',
-            false,
-          );
+        // Step 2: Build MCP configuration
+        const mcpConfig = buildMcpConfig(selectedMcps);
 
-          if (!shouldContinue) {
-            throw new UserCancelledError('Configuration cancelled');
-          }
-        }
+        // Step 3: Build user configuration
+        const userConfig = buildUserConfig(mcpConfig);
 
-        // Build MCP configuration
-        const mcpConfig: OvertureConfig['mcp'] = {};
-        for (const mcpName of selectedMcps) {
-          if (Object.hasOwn(MCP_SERVER_DEFAULTS, mcpName)) {
-            // eslint-disable-next-line security/detect-object-injection
-            const defaults = MCP_SERVER_DEFAULTS[mcpName];
-            if (
-              defaults?.command &&
-              defaults?.args &&
-              defaults?.env &&
-              defaults?.transport
-            ) {
-              // eslint-disable-next-line security/detect-object-injection
-              mcpConfig[mcpName] = {
-                command: defaults.command,
-                args: defaults.args,
-                env: defaults.env,
-                transport: defaults.transport,
-              };
-            }
-          }
-        }
-
-        // Build user configuration
-        const userConfig: OvertureConfig = {
-          version: '2.0',
-          mcp: mcpConfig,
-          clients: {
-            'claude-code': { enabled: true },
-            'claude-desktop': { enabled: true },
-            vscode: { enabled: false },
-            cursor: { enabled: false },
-            windsurf: { enabled: false },
-            'copilot-cli': { enabled: false },
-            'jetbrains-copilot': { enabled: false },
-          },
-          sync: {
-            backup: true,
-            backupDir: '~/.config/overture/backups',
-            backupRetention: 10,
-            mergeStrategy: 'append',
-            autoDetectClients: true,
-          },
-        };
-
-        // Validate configuration
+        // Step 4: Validate configuration schema
         const validationResult = OvertureConfigSchema.safeParse(userConfig);
         if (!validationResult.success) {
           throw Object.assign(
@@ -237,7 +299,7 @@ export function createUserCommand(deps: AppDependencies): Command {
           );
         }
 
-        // Validate environment variable security (detect hardcoded credentials)
+        // Step 5: Validate environment variable security
         const envVarValidation = validateEnvVarReferences(userConfig);
         if (!envVarValidation.valid) {
           output.nl();
@@ -249,34 +311,24 @@ export function createUserCommand(deps: AppDependencies): Command {
           output.nl();
         }
 
-        // Confirmation
-        output.nl();
-        output.info('Configuration summary:');
-        output.info(`  Location: ${userConfigPath}`);
-        output.info(`  MCP servers: ${selectedMcps.length}`);
-        if (selectedMcps.length > 0) {
-          selectedMcps.forEach((mcp) => {
-            output.info(`    - ${mcp}`);
-          });
-        }
-        output.nl();
-
-        const shouldProceed = await Prompts.confirm(
-          'Create user configuration?',
-          true,
+        // Step 6: Get user confirmation
+        const shouldProceed = await confirmConfiguration(
+          output,
+          userConfigPath,
+          selectedMcps,
         );
 
         if (!shouldProceed) {
           throw new UserCancelledError('Configuration cancelled');
         }
 
-        // Create config directory if it doesn't exist
+        // Step 7: Create config directory if needed
         if (!filesystem.directoryExists(configDir)) {
           filesystem.createDirectory(configDir);
           output.debug(`Created directory: ${configDir}`);
         }
 
-        // Write YAML configuration
+        // Step 8: Write YAML configuration
         const yamlContent = yaml.dump(userConfig, {
           indent: 2,
           lineWidth: 100,
@@ -347,6 +399,189 @@ export function createUserCommand(deps: AppDependencies): Command {
 }
 
 /**
+ * Display client configuration section
+ *
+ * @param clients - Client configuration object
+ */
+function displayClients(clients: OvertureConfig['clients'] | undefined): void {
+  if (!clients || Object.keys(clients).length === 0) {
+    return;
+  }
+
+  console.log(chalk.bold('Clients:'));
+  for (const [clientName, clientConfig] of Object.entries(clients)) {
+    const enabledText =
+      clientConfig.enabled !== false
+        ? chalk.green('enabled')
+        : chalk.red('disabled');
+    console.log(chalk.cyan(`  ${clientName}:`), enabledText);
+
+    if (clientConfig.configPath) {
+      const pathDisplay =
+        typeof clientConfig.configPath === 'string'
+          ? clientConfig.configPath
+          : JSON.stringify(clientConfig.configPath);
+      console.log(chalk.gray(`    config-path: ${pathDisplay}`));
+    }
+
+    if (clientConfig.maxServers) {
+      console.log(chalk.gray(`    max-servers: ${clientConfig.maxServers}`));
+    }
+  }
+  Logger.nl();
+}
+
+/**
+ * Display environment variables for an MCP server
+ *
+ * @param env - Environment variables object
+ */
+function displayMcpEnv(env: Record<string, string> | undefined): void {
+  if (!env || Object.keys(env).length === 0) {
+    return;
+  }
+
+  console.log(chalk.gray('    env:'));
+  for (const [key, value] of Object.entries(env)) {
+    console.log(chalk.gray(`      ${key}: ${value}`));
+  }
+}
+
+/**
+ * Display client filters for an MCP server
+ *
+ * @param clients - Client filter configuration
+ */
+function displayMcpClientFilters(
+  clients:
+    | {
+        exclude?: string[];
+        include?: string[];
+      }
+    | undefined,
+): void {
+  if (!clients) {
+    return;
+  }
+
+  if (clients.exclude && clients.exclude.length > 0) {
+    console.log(
+      chalk.gray(`    exclude-clients: [${clients.exclude.join(', ')}]`),
+    );
+  }
+  if (clients.include && clients.include.length > 0) {
+    console.log(
+      chalk.gray(`    include-clients: [${clients.include.join(', ')}]`),
+    );
+  }
+}
+
+/**
+ * Display a single MCP server configuration
+ *
+ * @param name - MCP server name
+ * @param mcpConfig - MCP server configuration
+ */
+function displayMcpServer(
+  name: string,
+  mcpConfig: OvertureConfig['mcp'][string],
+): void {
+  console.log(chalk.cyan(`  ${name}:`));
+  console.log(chalk.gray(`    command: ${mcpConfig.command}`));
+  if (mcpConfig.args && mcpConfig.args.length > 0) {
+    console.log(chalk.gray(`    args: [${mcpConfig.args.join(', ')}]`));
+  }
+  console.log(chalk.gray(`    transport: ${mcpConfig.transport}`));
+
+  if (mcpConfig.version) {
+    console.log(chalk.gray(`    version: ${mcpConfig.version}`));
+  }
+
+  displayMcpEnv(mcpConfig.env);
+  displayMcpClientFilters(mcpConfig.clients);
+
+  if (
+    mcpConfig.platforms &&
+    mcpConfig.platforms.exclude &&
+    mcpConfig.platforms.exclude.length > 0
+  ) {
+    console.log(
+      chalk.gray(
+        `    exclude-platforms: [${mcpConfig.platforms.exclude.join(', ')}]`,
+      ),
+    );
+  }
+}
+
+/**
+ * Display MCP servers configuration section
+ *
+ * @param mcp - MCP configuration object
+ */
+function displayMcpServers(mcp: OvertureConfig['mcp'] | undefined): void {
+  if (!mcp || Object.keys(mcp).length === 0) {
+    console.log(chalk.yellow('No MCP servers configured'));
+    Logger.nl();
+    return;
+  }
+
+  console.log(chalk.bold('MCP Servers:'));
+
+  for (const [name, mcpConfig] of Object.entries(mcp)) {
+    displayMcpServer(name, mcpConfig);
+  }
+
+  Logger.nl();
+}
+
+/**
+ * Display sync options configuration section
+ *
+ * @param sync - Sync configuration object
+ */
+function displaySyncOptions(sync: OvertureConfig['sync'] | undefined): void {
+  if (!sync) {
+    return;
+  }
+
+  console.log(chalk.bold('Sync Options:'));
+
+  if (sync.backup !== undefined) {
+    const backupText = sync.backup
+      ? chalk.green('enabled')
+      : chalk.red('disabled');
+    console.log(`  backup: ${backupText}`);
+  }
+
+  if (sync.backupDir) {
+    console.log(chalk.gray(`  backup-dir: ${sync.backupDir}`));
+  }
+
+  if (sync.backupRetention !== undefined) {
+    console.log(chalk.gray(`  backup-retention: ${sync.backupRetention}`));
+  }
+
+  Logger.nl();
+}
+
+/**
+ * Display configuration footer with summary
+ *
+ * @param config - User configuration object
+ */
+function displayFooter(config: OvertureConfig): void {
+  const mcpCount = config.mcp ? Object.keys(config.mcp).length : 0;
+  const clientCount = config.clients ? Object.keys(config.clients).length : 0;
+
+  console.log(
+    chalk.gray(
+      `Total: ${mcpCount} MCP servers, ${clientCount} clients configured`,
+    ),
+  );
+  Logger.nl();
+}
+
+/**
  * Display user configuration with formatted output
  *
  * @param config - User configuration object
@@ -377,122 +612,9 @@ function displayUserConfig(
   console.log(chalk.yellow(`  ${config.version}`));
   Logger.nl();
 
-  // Display client configuration
-  if (config.clients && Object.keys(config.clients).length > 0) {
-    console.log(chalk.bold('Clients:'));
-    for (const [clientName, clientConfig] of Object.entries(config.clients)) {
-      const enabledText =
-        clientConfig.enabled !== false
-          ? chalk.green('enabled')
-          : chalk.red('disabled');
-      console.log(chalk.cyan(`  ${clientName}:`), enabledText);
-
-      if (clientConfig.configPath) {
-        const pathDisplay =
-          typeof clientConfig.configPath === 'string'
-            ? clientConfig.configPath
-            : JSON.stringify(clientConfig.configPath);
-        console.log(chalk.gray(`    config-path: ${pathDisplay}`));
-      }
-
-      if (clientConfig.maxServers) {
-        console.log(chalk.gray(`    max-servers: ${clientConfig.maxServers}`));
-      }
-    }
-    Logger.nl();
-  }
-
-  // Display MCP servers
-  if (config.mcp && Object.keys(config.mcp).length > 0) {
-    console.log(chalk.bold('MCP Servers:'));
-
-    for (const [name, mcp] of Object.entries(config.mcp)) {
-      console.log(chalk.cyan(`  ${name}:`));
-      console.log(chalk.gray(`    command: ${mcp.command}`));
-      if (mcp.args && mcp.args.length > 0) {
-        console.log(chalk.gray(`    args: [${mcp.args.join(', ')}]`));
-      }
-      console.log(chalk.gray(`    transport: ${mcp.transport}`));
-
-      if (mcp.version) {
-        console.log(chalk.gray(`    version: ${mcp.version}`));
-      }
-
-      if (mcp.env && Object.keys(mcp.env).length > 0) {
-        console.log(chalk.gray('    env:'));
-        for (const [key, value] of Object.entries(mcp.env)) {
-          console.log(chalk.gray(`      ${key}: ${value}`));
-        }
-      }
-
-      if (mcp.clients) {
-        if (mcp.clients.exclude && mcp.clients.exclude.length > 0) {
-          console.log(
-            chalk.gray(
-              `    exclude-clients: [${mcp.clients.exclude.join(', ')}]`,
-            ),
-          );
-        }
-        if (mcp.clients.include && mcp.clients.include.length > 0) {
-          console.log(
-            chalk.gray(
-              `    include-clients: [${mcp.clients.include.join(', ')}]`,
-            ),
-          );
-        }
-      }
-
-      if (
-        mcp.platforms &&
-        mcp.platforms.exclude &&
-        mcp.platforms.exclude.length > 0
-      ) {
-        console.log(
-          chalk.gray(
-            `    exclude-platforms: [${mcp.platforms.exclude.join(', ')}]`,
-          ),
-        );
-      }
-    }
-
-    Logger.nl();
-  } else {
-    console.log(chalk.yellow('No MCP servers configured'));
-    Logger.nl();
-  }
-
-  // Display sync options
-  if (config.sync) {
-    console.log(chalk.bold('Sync Options:'));
-
-    if (config.sync.backup !== undefined) {
-      const backupText = config.sync.backup
-        ? chalk.green('enabled')
-        : chalk.red('disabled');
-      console.log(`  backup: ${backupText}`);
-    }
-
-    if (config.sync.backupDir) {
-      console.log(chalk.gray(`  backup-dir: ${config.sync.backupDir}`));
-    }
-
-    if (config.sync.backupRetention !== undefined) {
-      console.log(
-        chalk.gray(`  backup-retention: ${config.sync.backupRetention}`),
-      );
-    }
-
-    Logger.nl();
-  }
-
-  // Footer with summary
-  const mcpCount = config.mcp ? Object.keys(config.mcp).length : 0;
-  const clientCount = config.clients ? Object.keys(config.clients).length : 0;
-
-  console.log(
-    chalk.gray(
-      `Total: ${mcpCount} MCP servers, ${clientCount} clients configured`,
-    ),
-  );
-  Logger.nl();
+  // Display each section
+  displayClients(config.clients);
+  displayMcpServers(config.mcp);
+  displaySyncOptions(config.sync);
+  displayFooter(config);
 }

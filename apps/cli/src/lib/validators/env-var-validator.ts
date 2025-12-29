@@ -48,6 +48,48 @@ const TOKEN_PATTERNS = {
 };
 
 /**
+ * Check if value looks like a hardcoded credential
+ */
+function findCredentialPattern(value: string): string | null {
+  for (const [patternName, pattern] of Object.entries(TOKEN_PATTERNS)) {
+    if (pattern.test(value)) {
+      return patternName;
+    }
+  }
+  return null;
+}
+
+/**
+ * Validate environment value and add issue if credential detected
+ */
+function validateEnvValue(
+  value: string,
+  mcpName: string,
+  key: string,
+  issues: string[],
+): void {
+  // Skip empty values
+  if (!value || typeof value !== 'string') {
+    return;
+  }
+
+  // Valid variable reference - skip
+  if (value.startsWith('${') && value.endsWith('}')) {
+    return;
+  }
+
+  // Check if value matches credential patterns
+  const matchedPattern = findCredentialPattern(value);
+  if (matchedPattern) {
+    issues.push(
+      `WARNING: MCP "${mcpName}" env.${key} appears to contain an actual ` +
+        `credential (detected: ${matchedPattern}). ` +
+        `Use variable reference format instead: \${${key}}`,
+    );
+  }
+}
+
+/**
  * Validate that environment variables use references instead of hardcoded values
  *
  * @param config - Overture configuration to validate
@@ -81,38 +123,9 @@ export function validateEnvVarReferences(
       continue;
     }
 
-    // Check each environment variable in this MCP's configuration
+    // Check each environment variable
     for (const [key, value] of Object.entries(mcpConfig.env)) {
-      // Skip empty values
-      if (!value || typeof value !== 'string') {
-        continue;
-      }
-
-      // Check if value is a variable reference (correct format)
-      const isVariableReference = value.startsWith('${') && value.endsWith('}');
-
-      if (isVariableReference) {
-        // Valid variable reference - skip
-        continue;
-      }
-
-      // Check if the value matches any known credential patterns
-      let matchedPattern: string | null = null;
-
-      for (const [patternName, pattern] of Object.entries(TOKEN_PATTERNS)) {
-        if (pattern.test(value)) {
-          matchedPattern = patternName;
-          break;
-        }
-      }
-
-      if (matchedPattern) {
-        issues.push(
-          `WARNING: MCP "${mcpName}" env.${key} appears to contain an actual ` +
-            `credential (detected: ${matchedPattern}). ` +
-            `Use variable reference format instead: \${${key}}`,
-        );
-      }
+      validateEnvValue(value as string, mcpName, key, issues);
     }
   }
 

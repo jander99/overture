@@ -12,9 +12,12 @@ import type {
   Platform,
   ClientName,
   KnownClientName,
+  OvertureConfig,
 } from '@overture/config-types';
 import { ALL_KNOWN_CLIENTS } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root';
+import type { AdapterRegistry } from '@overture/client-adapters';
+import type { OutputPort } from '@overture/ports-output';
 import {
   validateEnvVarReferences,
   getFixSuggestion,
@@ -30,6 +33,349 @@ const VALID_PLATFORMS: Platform[] = ['darwin', 'linux', 'win32'];
  * Includes all known clients for validation purposes
  */
 const VALID_CLIENT_NAMES: readonly KnownClientName[] = ALL_KNOWN_CLIENTS;
+
+/**
+ * Validates a list of items from MCP config against valid values
+ */
+function validateConfigItems(
+  items: string[],
+  validItems: readonly string[],
+  mcpName: string,
+  section: string,
+  itemType: string,
+  errors: string[],
+): void {
+  for (const item of items) {
+    if (!validItems.includes(item)) {
+      errors.push(
+        `MCP "${mcpName}": invalid ${itemType} in ${section}: "${item}". Valid ${itemType}s: ${validItems.join(', ')}`,
+      );
+    }
+  }
+}
+
+/**
+ * Validates platform configuration for a single MCP
+ */
+function validateMcpPlatforms(
+  mcpName: string,
+  platforms: Record<string, unknown> | undefined,
+  errors: string[],
+): void {
+  if (!platforms) return;
+
+  if (platforms.exclude) {
+    validateConfigItems(
+      platforms.exclude as string[],
+      VALID_PLATFORMS,
+      mcpName,
+      'exclusion list',
+      'platform',
+      errors,
+    );
+  }
+
+  if (platforms.commandOverrides) {
+    validateConfigItems(
+      Object.keys(platforms.commandOverrides as Record<string, unknown>),
+      VALID_PLATFORMS,
+      mcpName,
+      'commandOverrides',
+      'platform',
+      errors,
+    );
+  }
+
+  if (platforms.argsOverrides) {
+    validateConfigItems(
+      Object.keys(platforms.argsOverrides as Record<string, unknown>),
+      VALID_PLATFORMS,
+      mcpName,
+      'argsOverrides',
+      'platform',
+      errors,
+    );
+  }
+}
+
+/**
+ * Validates client configuration for a single MCP
+ */
+function validateMcpClients(
+  mcpName: string,
+  clients: Record<string, unknown> | undefined,
+  errors: string[],
+): void {
+  if (!clients) return;
+
+  if (clients.exclude) {
+    validateConfigItems(
+      clients.exclude as string[],
+      VALID_CLIENT_NAMES,
+      mcpName,
+      'exclusion list',
+      'client',
+      errors,
+    );
+  }
+
+  if (clients.include) {
+    validateConfigItems(
+      clients.include as string[],
+      VALID_CLIENT_NAMES,
+      mcpName,
+      'include list',
+      'client',
+      errors,
+    );
+  }
+
+  if (clients.overrides) {
+    validateConfigItems(
+      Object.keys(clients.overrides as Record<string, unknown>),
+      VALID_CLIENT_NAMES,
+      mcpName,
+      'overrides',
+      'client',
+      errors,
+    );
+  }
+}
+
+/**
+ * Validates MCP configuration fields (command, transport, platforms, clients)
+ */
+function validateMcpConfigs(config: OvertureConfig, errors: string[]): void {
+  for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
+    // Validate required fields
+    if (!mcpConfig.command || mcpConfig.command.trim() === '') {
+      errors.push(`MCP "${mcpName}": command is required and cannot be empty`);
+    }
+
+    if (!mcpConfig.transport) {
+      errors.push(`MCP "${mcpName}": transport is required`);
+    }
+
+    // Validate platform configuration
+    validateMcpPlatforms(mcpName, mcpConfig.platforms, errors);
+
+    // Validate client configuration
+    validateMcpClients(mcpName, mcpConfig.clients, errors);
+  }
+}
+
+/**
+ * Checks for duplicate MCP names (case-insensitive)
+ */
+function checkDuplicateMcpNames(
+  config: OvertureConfig,
+  errors: string[],
+): void {
+  const mcpNames = Object.keys(config.mcp);
+  const lowerCaseNames = new Map<string, string>();
+  for (const name of mcpNames) {
+    const lower = name.toLowerCase();
+    if (lowerCaseNames.has(lower)) {
+      errors.push(
+        `Duplicate MCP name (case-insensitive): "${name}" and "${lowerCaseNames.get(lower)}"`,
+      );
+    } else {
+      lowerCaseNames.set(lower, name);
+    }
+  }
+}
+
+/**
+ * Validates environment variable security (detects hardcoded credentials)
+ */
+function validateEnvVarSecurity(
+  config: OvertureConfig,
+  output: OutputPort,
+  options: { verbose?: boolean },
+): void {
+  const envVarValidation = validateEnvVarReferences(config);
+  if (!envVarValidation.valid) {
+    output.warn('Environment variable security warnings:');
+    envVarValidation.issues.forEach((issue) => output.warn(`  - ${issue}`));
+    if (options.verbose) {
+      output.info(getFixSuggestion(envVarValidation.issues));
+    }
+  }
+}
+
+/**
+ * Validates sync.enabledClients configuration
+ */
+function validateEnabledClients(
+  config: OvertureConfig,
+  errors: string[],
+): void {
+  if (config.sync?.enabledClients) {
+    for (const client of config.sync.enabledClients) {
+      if (!VALID_CLIENT_NAMES.includes(client)) {
+        errors.push(
+          `Invalid client in sync.enabledClients: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Validates --client option if provided
+ */
+function validateClientOption(
+  options: { client?: string },
+  adapterRegistry: AdapterRegistry,
+  errors: string[],
+): void {
+  if (options.client) {
+    if (!VALID_CLIENT_NAMES.includes(options.client as ClientName)) {
+      errors.push(
+        `Invalid --client option: "${options.client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
+      );
+    } else {
+      // Check if client adapter exists
+      const adapter = adapterRegistry.get(options.client as ClientName);
+      if (!adapter) {
+        errors.push(`No adapter registered for client: "${options.client}"`);
+      }
+    }
+  }
+}
+
+/**
+ * Determines which clients to validate based on options and config
+ */
+function determineClientsToValidate(
+  options: { client?: string },
+  config: OvertureConfig,
+  _adapterRegistry: AdapterRegistry,
+): ClientName[] {
+  const clientsToValidate: ClientName[] = [];
+  if (options.client) {
+    clientsToValidate.push(options.client as ClientName);
+  } else if (config.sync?.enabledClients) {
+    clientsToValidate.push(...config.sync.enabledClients);
+  } else if (config.clients) {
+    for (const [clientName, clientConfig] of Object.entries(config.clients)) {
+      if (
+        clientConfig &&
+        typeof clientConfig === 'object' &&
+        (!('enabled' in clientConfig) || clientConfig.enabled === true)
+      ) {
+        clientsToValidate.push(clientName as ClientName);
+      }
+    }
+  }
+  return clientsToValidate;
+}
+
+/**
+ * Validates transport and environment variables for specified clients
+ */
+function validateTransportAndEnv(
+  clientsToValidate: ClientName[],
+  config: OvertureConfig,
+  adapterRegistry: AdapterRegistry,
+): {
+  allTransportWarnings: TransportWarning[];
+  allEnvErrors: Array<{
+    client: string;
+    error: string;
+    suggestion?: string;
+  }>;
+  allEnvWarnings: Array<{ client: string; warning: string }>;
+} {
+  const allTransportWarnings: TransportWarning[] = [];
+  const allEnvErrors: Array<{
+    client: string;
+    error: string;
+    suggestion?: string;
+  }> = [];
+  const allEnvWarnings: Array<{ client: string; warning: string }> = [];
+
+  for (const clientName of clientsToValidate) {
+    const adapter = adapterRegistry.get(clientName);
+    if (adapter) {
+      const warnings = getTransportWarnings(config.mcp, adapter);
+      allTransportWarnings.push(...warnings);
+
+      const envErrors = getEnvVarErrors(config, adapter);
+      const envWarnings = getEnvVarWarnings(config, adapter);
+
+      // Collect errors with client context
+      for (const error of envErrors) {
+        allEnvErrors.push({
+          client: clientName,
+          error: `[${error.mcpName}] ${error.envKey}: ${error.message}`,
+          suggestion: error.suggestion,
+        });
+      }
+
+      // Collect warnings with client context
+      for (const warning of envWarnings) {
+        allEnvWarnings.push({
+          client: clientName,
+          warning: `[${warning.mcpName}] ${warning.envKey}: ${warning.message}`,
+        });
+      }
+    }
+  }
+
+  return { allTransportWarnings, allEnvErrors, allEnvWarnings };
+}
+
+/**
+ * Displays validation results (warnings and errors)
+ */
+function displayValidationResults(
+  allTransportWarnings: TransportWarning[],
+  allEnvErrors: Array<{ client: string; error: string; suggestion?: string }>,
+  allEnvWarnings: Array<{ client: string; warning: string }>,
+  output: OutputPort,
+  options: { verbose?: boolean; client?: string },
+  config?: OvertureConfig,
+  adapterRegistry?: AdapterRegistry,
+): void {
+  // Display environment variable errors (fail validation)
+  if (allEnvErrors.length > 0) {
+    output.error('Environment variable validation errors:');
+    for (const { client, error, suggestion } of allEnvErrors) {
+      output.error(`  - ${client}: ${error}`);
+      if (suggestion && options.verbose) {
+        output.info(`    💡 ${suggestion}`);
+      }
+    }
+    process.exit(3);
+  }
+
+  // Display transport warnings
+  if (allTransportWarnings.length > 0) {
+    output.warn('Transport compatibility warnings:');
+    allTransportWarnings.forEach((w) => output.warn(`  - ${w.message}`));
+  }
+
+  // Display environment variable warnings (don't fail validation)
+  if (allEnvWarnings.length > 0) {
+    output.warn('Environment variable warnings:');
+    for (const { client, warning } of allEnvWarnings) {
+      output.warn(`  - ${client}: ${warning}`);
+    }
+  }
+
+  // Show verbose summary if requested
+  if (options.verbose && options.client && config && adapterRegistry) {
+    const adapter = adapterRegistry.get(options.client as ClientName);
+    if (adapter) {
+      const summary = getTransportValidationSummary(config.mcp, adapter);
+      output.info('\nTransport validation summary:');
+      output.info(`  Total MCPs: ${summary.total}`);
+      output.info(`  Supported: ${summary.supported}`);
+      output.info(`  Unsupported: ${summary.unsupported}`);
+    }
+  }
+}
 
 /**
  * Creates the 'validate' command for validating Overture configuration.
@@ -72,148 +418,23 @@ export function createValidateCommand(deps: AppDependencies): Command {
           process.exit(2);
         }
 
-        // Custom validations
+        // Collect validation errors
         const errors: string[] = [];
 
-        // Validate all MCP configurations
-        for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
-          // Validate required fields
-          if (!mcpConfig.command || mcpConfig.command.trim() === '') {
-            errors.push(
-              `MCP "${mcpName}": command is required and cannot be empty`,
-            );
-          }
+        // 1. Validate MCP configurations
+        validateMcpConfigs(config, errors);
 
-          if (!mcpConfig.transport) {
-            errors.push(`MCP "${mcpName}": transport is required`);
-          }
+        // 2. Check for duplicate MCP names
+        checkDuplicateMcpNames(config, errors);
 
-          // Validate platform names in exclusion list
-          if (mcpConfig.platforms?.exclude) {
-            for (const platform of mcpConfig.platforms.exclude) {
-              if (!VALID_PLATFORMS.includes(platform)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid platform in exclusion list: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
-                );
-              }
-            }
-          }
+        // 3. Validate environment variable security (hardcoded credentials)
+        validateEnvVarSecurity(config, output, options);
 
-          // Validate platform names in commandOverrides
-          if (mcpConfig.platforms?.commandOverrides) {
-            for (const platform of Object.keys(
-              mcpConfig.platforms.commandOverrides,
-            )) {
-              if (!VALID_PLATFORMS.includes(platform as Platform)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid platform in commandOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
-                );
-              }
-            }
-          }
+        // 4. Validate sync.enabledClients
+        validateEnabledClients(config, errors);
 
-          // Validate platform names in argsOverrides
-          if (mcpConfig.platforms?.argsOverrides) {
-            for (const platform of Object.keys(
-              mcpConfig.platforms.argsOverrides,
-            )) {
-              if (!VALID_PLATFORMS.includes(platform as Platform)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid platform in argsOverrides: "${platform}". Valid platforms: ${VALID_PLATFORMS.join(', ')}`,
-                );
-              }
-            }
-          }
-
-          // Validate client names in exclusion list
-          if (mcpConfig.clients?.exclude) {
-            for (const client of mcpConfig.clients.exclude) {
-              if (!VALID_CLIENT_NAMES.includes(client)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid client in exclusion list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
-                );
-              }
-            }
-          }
-
-          // Validate client names in include list
-          if (mcpConfig.clients?.include) {
-            for (const client of mcpConfig.clients.include) {
-              if (!VALID_CLIENT_NAMES.includes(client)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid client in include list: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
-                );
-              }
-            }
-          }
-
-          // Validate client names in overrides
-          if (mcpConfig.clients?.overrides) {
-            for (const client of Object.keys(mcpConfig.clients.overrides)) {
-              if (!VALID_CLIENT_NAMES.includes(client as ClientName)) {
-                errors.push(
-                  `MCP "${mcpName}": invalid client in overrides: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
-                );
-              }
-            }
-          }
-
-          // Environment variable validation is now handled separately after client determination
-        }
-
-        // Check for duplicate MCP names (case-insensitive)
-        const mcpNames = Object.keys(config.mcp);
-        const lowerCaseNames = new Map<string, string>();
-        for (const name of mcpNames) {
-          const lower = name.toLowerCase();
-          if (lowerCaseNames.has(lower)) {
-            errors.push(
-              `Duplicate MCP name (case-insensitive): "${name}" and "${lowerCaseNames.get(lower)}"`,
-            );
-          } else {
-            lowerCaseNames.set(lower, name);
-          }
-        }
-
-        // Validate environment variable security (detect hardcoded credentials)
-        const envVarValidation = validateEnvVarReferences(config);
-        if (!envVarValidation.valid) {
-          output.warn('Environment variable security warnings:');
-          envVarValidation.issues.forEach((issue) =>
-            output.warn(`  - ${issue}`),
-          );
-          if (options.verbose) {
-            output.info(getFixSuggestion(envVarValidation.issues));
-          }
-        }
-
-        // Validate sync.enabledClients
-        if (config.sync?.enabledClients) {
-          for (const client of config.sync.enabledClients) {
-            if (!VALID_CLIENT_NAMES.includes(client)) {
-              errors.push(
-                `Invalid client in sync.enabledClients: "${client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
-              );
-            }
-          }
-        }
-
-        // Validate --client option if provided
-        if (options.client) {
-          if (!VALID_CLIENT_NAMES.includes(options.client)) {
-            errors.push(
-              `Invalid --client option: "${options.client}". Valid clients: ${VALID_CLIENT_NAMES.join(', ')}`,
-            );
-          } else {
-            // Check if client adapter exists
-            const adapter = adapterRegistry.get(options.client);
-            if (!adapter) {
-              errors.push(
-                `No adapter registered for client: "${options.client}"`,
-              );
-            }
-          }
-        }
+        // 5. Validate --client option if provided
+        validateClientOption(options, adapterRegistry, errors);
 
         // If there are validation errors, exit with code 3
         if (errors.length > 0) {
@@ -222,109 +443,27 @@ export function createValidateCommand(deps: AppDependencies): Command {
           process.exit(3);
         }
 
-        // Transport validation - determine which clients to validate
-        const clientsToValidate: ClientName[] = [];
-        if (options.client) {
-          // Validate specific client
-          clientsToValidate.push(options.client);
-        } else if (config.sync?.enabledClients) {
-          // Validate all enabled clients from sync.enabledClients
-          clientsToValidate.push(...config.sync.enabledClients);
-        } else if (config.clients) {
-          // Fallback: extract enabled clients from clients section
-          for (const [clientName, clientConfig] of Object.entries(
-            config.clients,
-          )) {
-            if (
-              clientConfig &&
-              typeof clientConfig === 'object' &&
-              (!('enabled' in clientConfig) || clientConfig.enabled === true)
-            ) {
-              clientsToValidate.push(clientName as ClientName);
-            }
-          }
-        }
+        // 6. Determine which clients to validate
+        const clientsToValidate = determineClientsToValidate(
+          options,
+          config,
+          adapterRegistry,
+        );
 
-        // Run transport validation for each client
-        const allTransportWarnings: TransportWarning[] = [];
-        for (const clientName of clientsToValidate) {
-          const adapter = adapterRegistry.get(clientName);
-          if (adapter) {
-            const warnings = getTransportWarnings(config.mcp, adapter);
-            allTransportWarnings.push(...warnings);
-          }
-        }
+        // 7. Validate transport and environment variables for each client
+        const { allTransportWarnings, allEnvErrors, allEnvWarnings } =
+          validateTransportAndEnv(clientsToValidate, config, adapterRegistry);
 
-        // Run environment variable validation for each client
-        const allEnvErrors: Array<{
-          client: string;
-          error: string;
-          suggestion?: string;
-        }> = [];
-        const allEnvWarnings: Array<{ client: string; warning: string }> = [];
-
-        for (const clientName of clientsToValidate) {
-          const adapter = adapterRegistry.get(clientName);
-          if (adapter) {
-            const envErrors = getEnvVarErrors(config, adapter);
-            const envWarnings = getEnvVarWarnings(config, adapter);
-
-            // Collect errors with client context
-            for (const error of envErrors) {
-              allEnvErrors.push({
-                client: clientName,
-                error: `[${error.mcpName}] ${error.envKey}: ${error.message}`,
-                suggestion: error.suggestion,
-              });
-            }
-
-            // Collect warnings with client context
-            for (const warning of envWarnings) {
-              allEnvWarnings.push({
-                client: clientName,
-                warning: `[${warning.mcpName}] ${warning.envKey}: ${warning.message}`,
-              });
-            }
-          }
-        }
-
-        // Display environment variable errors (fail validation)
-        if (allEnvErrors.length > 0) {
-          output.error('Environment variable validation errors:');
-          for (const { client, error, suggestion } of allEnvErrors) {
-            output.error(`  - ${client}: ${error}`);
-            if (suggestion && options.verbose) {
-              output.info(`    💡 ${suggestion}`);
-            }
-          }
-          process.exit(3);
-        }
-
-        // Display transport warnings
-        if (allTransportWarnings.length > 0) {
-          output.warn('Transport compatibility warnings:');
-          allTransportWarnings.forEach((w) => output.warn(`  - ${w.message}`));
-        }
-
-        // Display environment variable warnings (don't fail validation)
-        if (allEnvWarnings.length > 0) {
-          output.warn('Environment variable warnings:');
-          for (const { client, warning } of allEnvWarnings) {
-            output.warn(`  - ${client}: ${warning}`);
-          }
-        }
-
-        // Show verbose summary if requested
-        if (options.verbose && options.client) {
-          const adapter = adapterRegistry.get(options.client);
-          if (adapter) {
-            const summary = getTransportValidationSummary(config.mcp, adapter);
-            output.info('\nTransport validation summary:');
-            output.info(`  Total MCPs: ${summary.total}`);
-            output.info(`  Supported: ${summary.supported}`);
-            output.info(`  Unsupported: ${summary.unsupported}`);
-          }
-        }
+        // 8. Display validation results
+        displayValidationResults(
+          allTransportWarnings,
+          allEnvErrors,
+          allEnvWarnings,
+          output,
+          options,
+          config,
+          adapterRegistry,
+        );
 
         output.success('Configuration is valid');
         process.exit(0);
