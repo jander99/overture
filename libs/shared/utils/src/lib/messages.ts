@@ -18,9 +18,11 @@ export const PROJECT_CONFIG_FILE_LEGACY = '.overture/config.yml';
  * Common message fragments
  */
 export const MSG_EDIT_CONFIG = `Edit ${PROJECT_CONFIG_FILE_PATH}`;
-export const MSG_RUN_INIT = 'Run `overture init` to create project configuration';
+export const MSG_RUN_INIT =
+  'Run `overture init` to create project configuration';
 export const MSG_RUN_VALIDATE = 'Run `overture validate` to verify';
-export const MSG_CHECK_CONFIG_SYNTAX = 'Check YAML syntax at https://www.yamllint.com/';
+export const MSG_CHECK_CONFIG_SYNTAX =
+  'Check YAML syntax at https://www.yamllint.com/';
 export const MSG_LIST_MCPS = 'List available MCPs: `overture mcp list`';
 
 /**
