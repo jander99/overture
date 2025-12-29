@@ -9,13 +9,18 @@
 import { Command } from 'commander';
 import * as p from '@clack/prompts';
 import type { AppDependencies } from '../../composition-root.js';
-import type { ClientName } from '@overture/config-types';
+import type {
+  ClientName,
+  DiscoveredMcp,
+  Platform,
+} from '@overture/config-types';
 import type {
   ClaudeCodeAdapter,
   OpenCodeAdapter,
   CopilotCliAdapter,
 } from '@overture/client-adapters';
 import { ALL_CLIENTS, CLIENTS } from '../constants.js';
+import { DetectionFormatter, formatConflict } from '@overture/import-core';
 
 /**
  * Create the import command
@@ -83,198 +88,30 @@ export function createImportCommand(deps: AppDependencies): Command {
 
         // DETECT MODE: Read-only scan without importing
         if (options.detect) {
-          const result = await importService.performDetection(
+          await executeDetectionMode(
+            importService,
             claudeCodeAdapter,
             openCodeAdapter,
             copilotCliAdapter,
             overtureConfig,
             platform,
+            options,
           );
-
-          const formatter = new DetectionFormatter();
-          let formattedOutput: string;
-
-          switch (options.format) {
-            case 'json':
-              formattedOutput = formatter.formatJson(result);
-              break;
-            case 'table':
-              formattedOutput = formatter.formatTable(result);
-              break;
-            case 'text':
-            default:
-              formattedOutput = formatter.formatText(
-                result,
-                options.verbose || false,
-              );
-          }
-
-          console.log(formattedOutput);
-
-          // Exit with appropriate code
-          if (result.summary.parseErrors > 0) {
-            process.exit(1);
-          } else if (result.summary.conflicts > 0) {
-            process.exit(2);
-          } else {
-            process.exit(0);
-          }
+          return;
         }
 
         // NORMAL IMPORT MODE
-        p.intro('🔍 Import MCPs from Client Configs');
-
-        // Discover unmanaged MCPs
-        const spinner = p.spinner();
-        spinner.start('Scanning client configurations...');
-
-        const discovery = await importService.discoverUnmanagedMcps(
+        await executeImportMode(
+          importService,
+          pathResolver,
+          output,
           claudeCodeAdapter,
           openCodeAdapter,
           copilotCliAdapter,
           overtureConfig,
           platform,
+          options,
         );
-
-        spinner.stop('Scan complete');
-
-        // Show conflicts if any
-        if (discovery.conflicts.length > 0) {
-          p.note(
-            discovery.conflicts.map((c) => formatConflict(c)).join('\n\n'),
-            '⚠️  Conflicts Detected',
-          );
-          output.info(
-            'These MCPs have different configurations across clients and cannot be imported automatically.',
-          );
-          output.info(
-            'Please resolve conflicts manually by making the configurations match.\n',
-          );
-        }
-
-        // Check if any MCPs found
-        if (discovery.discovered.length === 0) {
-          if (discovery.alreadyManaged.length > 0) {
-            p.outro(
-              `✅ All ${discovery.alreadyManaged.length} MCP(s) already managed by Overture`,
-            );
-          } else {
-            p.outro('No unmanaged MCPs found');
-          }
-          return;
-        }
-
-        // Interactive selection
-        const selectedValues = await p.multiselect({
-          message: `Select MCPs to import (${discovery.discovered.length} found):`,
-          options: discovery.discovered.map((mcp) => ({
-            value: mcp,
-            label: mcp.name,
-            hint: `${mcp.source.client}: ${mcp.command} (${mcp.suggestedScope})`,
-          })),
-          required: false,
-        });
-
-        if (p.isCancel(selectedValues) || selectedValues.length === 0) {
-          p.cancel('Import cancelled');
-          return;
-        }
-
-        const selected = selectedValues as DiscoveredMcp[];
-
-        // Group by suggested scope for confirmation
-        const globalMcps = selected.filter(
-          (m) => m.suggestedScope === 'global',
-        );
-        const projectMcps = selected.filter(
-          (m) => m.suggestedScope === 'project',
-        );
-
-        // Show scope assignments
-        const scopeLines: string[] = [];
-        if (globalMcps.length > 0) {
-          scopeLines.push(`\nGlobal scope (~/.config/overture/config.yaml):`);
-          globalMcps.forEach((m) => scopeLines.push(`  • ${m.name}`));
-        }
-        if (projectMcps.length > 0) {
-          scopeLines.push(`\nProject scope (.overture/config.yaml):`);
-          projectMcps.forEach((m) => scopeLines.push(`  • ${m.name}`));
-        }
-
-        p.note(scopeLines.join('\n'), 'Import Plan');
-
-        // Show environment variables that need to be set
-        const allEnvVars = new Set<string>();
-        selected.forEach((m) =>
-          m.envVarsToSet?.forEach((v) => allEnvVars.add(v)),
-        );
-
-        if (allEnvVars.size > 0) {
-          const envLines = Array.from(allEnvVars).map(
-            (v) => `export ${v}="your-value-here"`,
-          );
-          p.note(envLines.join('\n'), '⚠️  Environment Variables Required');
-        }
-
-        // Confirm import
-        if (!options.yes) {
-          const confirmed = await p.confirm({
-            message: `Import ${selected.length} MCP(s)?`,
-            initialValue: true,
-          });
-
-          if (p.isCancel(confirmed) || !confirmed) {
-            p.cancel('Import cancelled');
-            return;
-          }
-        }
-
-        // Execute import
-        const importSpinner = p.spinner();
-        importSpinner.start('Importing MCPs...');
-
-        const globalPath = pathResolver.getUserConfigPath();
-        const projectPath = pathResolver.getProjectConfigPath();
-
-        const result = await importService.importMcps(
-          selected,
-          globalPath,
-          projectPath,
-        );
-
-        importSpinner.stop('Import complete');
-
-        // Show results
-        p.note(
-          [
-            `Imported: ${result.imported.length}`,
-            `Skipped: ${result.skipped.length}`,
-            `Scopes modified: ${result.scopesModified.join(', ')}`,
-          ].join('\n'),
-          '✅ Import Results',
-        );
-
-        // Show environment variables reminder if any
-        if (allEnvVars.size > 0) {
-          output.info(
-            '\n⚠️  Remember to set the required environment variables!',
-          );
-        }
-
-        // Offer to run sync
-        if (result.imported.length > 0 && !options.yes) {
-          const shouldSync = await p.confirm({
-            message: 'Run overture sync now?',
-            initialValue: true,
-          });
-
-          if (!p.isCancel(shouldSync) && shouldSync) {
-            output.info('\nRun: overture sync');
-            output.info('(Automatic sync integration coming in next update)\n');
-          }
-        }
-
-        p.outro('Import complete! 🎉');
       } catch (error) {
         p.cancel(`Import failed: ${(error as Error).message}`);
         throw error;
@@ -282,4 +119,302 @@ export function createImportCommand(deps: AppDependencies): Command {
     });
 
   return cmd;
+}
+
+/**
+ * Execute detection mode: scan client configs without importing
+ */
+async function executeDetectionMode(
+  importService: any,
+  claudeCodeAdapter: ClaudeCodeAdapter | null,
+  openCodeAdapter: OpenCodeAdapter | null,
+  copilotCliAdapter: CopilotCliAdapter | null,
+  overtureConfig: any,
+  platform: Platform,
+  options: any,
+): Promise<void> {
+  const result = await importService.performDetection(
+    claudeCodeAdapter,
+    openCodeAdapter,
+    copilotCliAdapter,
+    overtureConfig,
+    platform,
+  );
+
+  const formatter = new DetectionFormatter();
+  let formattedOutput: string;
+
+  switch (options.format) {
+    case 'json':
+      formattedOutput = formatter.formatJson(result);
+      break;
+    case 'table':
+      formattedOutput = formatter.formatTable(result);
+      break;
+    case 'text':
+    default:
+      formattedOutput = formatter.formatText(result, options.verbose || false);
+  }
+
+  console.log(formattedOutput);
+
+  // Exit with appropriate code
+  if (result.summary.parseErrors > 0) {
+    process.exit(1);
+  } else if (result.summary.conflicts > 0) {
+    process.exit(2);
+  } else {
+    process.exit(0);
+  }
+}
+
+/**
+ * Execute import mode: interactive import of unmanaged MCPs
+ */
+async function executeImportMode(
+  importService: any,
+  pathResolver: any,
+  output: any,
+  claudeCodeAdapter: ClaudeCodeAdapter | null,
+  openCodeAdapter: OpenCodeAdapter | null,
+  copilotCliAdapter: CopilotCliAdapter | null,
+  overtureConfig: any,
+  platform: Platform,
+  options: any,
+): Promise<void> {
+  p.intro('🔍 Import MCPs from Client Configs');
+
+  // Discover unmanaged MCPs
+  const discovery = await discoverUnmanagedMcps(
+    importService,
+    claudeCodeAdapter,
+    openCodeAdapter,
+    copilotCliAdapter,
+    overtureConfig,
+    platform,
+    output,
+  );
+
+  // Exit early if no MCPs found
+  if (discovery.discovered.length === 0) {
+    return;
+  }
+
+  // Let user select MCPs to import
+  const selected = await selectMcpsToImport(discovery);
+  if (!selected) {
+    return; // User cancelled
+  }
+
+  // Show import plan and confirm
+  await showImportPlan(selected);
+  const confirmed = await confirmImport(selected, options);
+  if (!confirmed) {
+    return;
+  }
+
+  // Execute and show results
+  await executeAndShowImportResults(
+    importService,
+    pathResolver,
+    output,
+    selected,
+    options,
+  );
+
+  p.outro('Import complete! 🎉');
+}
+
+/**
+ * Discover unmanaged MCPs and handle conflicts/completeness
+ */
+async function discoverUnmanagedMcps(
+  importService: any,
+  claudeCodeAdapter: ClaudeCodeAdapter | null,
+  openCodeAdapter: OpenCodeAdapter | null,
+  copilotCliAdapter: CopilotCliAdapter | null,
+  overtureConfig: any,
+  platform: Platform,
+  output: any,
+): Promise<any> {
+  const spinner = p.spinner();
+  spinner.start('Scanning client configurations...');
+
+  const discovery = await importService.discoverUnmanagedMcps(
+    claudeCodeAdapter,
+    openCodeAdapter,
+    copilotCliAdapter,
+    overtureConfig,
+    platform,
+  );
+
+  spinner.stop('Scan complete');
+
+  // Show conflicts if any
+  if (discovery.conflicts.length > 0) {
+    p.note(
+      discovery.conflicts.map((c: any) => formatConflict(c)).join('\n\n'),
+      '⚠️  Conflicts Detected',
+    );
+    output.info(
+      'These MCPs have different configurations across clients and cannot be imported automatically.',
+    );
+    output.info(
+      'Please resolve conflicts manually by making the configurations match.\n',
+    );
+  }
+
+  // Check if any MCPs found
+  if (discovery.discovered.length === 0) {
+    if (discovery.alreadyManaged.length > 0) {
+      p.outro(
+        `✅ All ${discovery.alreadyManaged.length} MCP(s) already managed by Overture`,
+      );
+    } else {
+      p.outro('No unmanaged MCPs found');
+    }
+  }
+
+  return discovery;
+}
+
+/**
+ * Let user select MCPs to import
+ */
+async function selectMcpsToImport(
+  discovery: any,
+): Promise<DiscoveredMcp[] | null> {
+  const selectedValues = await p.multiselect({
+    message: `Select MCPs to import (${discovery.discovered.length} found):`,
+    options: discovery.discovered.map((mcp: DiscoveredMcp) => ({
+      value: mcp,
+      label: mcp.name,
+      hint: `${mcp.source.client}: ${mcp.command} (${mcp.suggestedScope})`,
+    })),
+    required: false,
+  });
+
+  if (p.isCancel(selectedValues) || selectedValues.length === 0) {
+    p.cancel('Import cancelled');
+    return null;
+  }
+
+  return selectedValues as DiscoveredMcp[];
+}
+
+/**
+ * Show import plan with scope assignments and environment variables
+ */
+async function showImportPlan(selected: DiscoveredMcp[]): Promise<void> {
+  // Group by suggested scope
+  const globalMcps = selected.filter((m) => m.suggestedScope === 'global');
+  const projectMcps = selected.filter((m) => m.suggestedScope === 'project');
+
+  // Show scope assignments
+  const scopeLines: string[] = [];
+  if (globalMcps.length > 0) {
+    scopeLines.push(`\nGlobal scope (~/.config/overture/config.yaml):`);
+    globalMcps.forEach((m) => scopeLines.push(`  • ${m.name}`));
+  }
+  if (projectMcps.length > 0) {
+    scopeLines.push(`\nProject scope (.overture/config.yaml):`);
+    projectMcps.forEach((m) => scopeLines.push(`  • ${m.name}`));
+  }
+
+  p.note(scopeLines.join('\n'), 'Import Plan');
+
+  // Show environment variables if needed
+  const allEnvVars = new Set<string>();
+  selected.forEach((m) =>
+    m.envVarsToSet?.forEach((v: string) => allEnvVars.add(v)),
+  );
+
+  if (allEnvVars.size > 0) {
+    const envLines = Array.from(allEnvVars).map(
+      (v) => `export ${v}="your-value-here"`,
+    );
+    p.note(envLines.join('\n'), '⚠️  Environment Variables Required');
+  }
+}
+
+/**
+ * Confirm import with user
+ */
+async function confirmImport(
+  selected: DiscoveredMcp[],
+  options: any,
+): Promise<boolean> {
+  if (options.yes) {
+    return true;
+  }
+
+  const confirmed = await p.confirm({
+    message: `Import ${selected.length} MCP(s)?`,
+    initialValue: true,
+  });
+
+  if (p.isCancel(confirmed) || !confirmed) {
+    p.cancel('Import cancelled');
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Execute import and show results
+ */
+async function executeAndShowImportResults(
+  importService: any,
+  pathResolver: any,
+  output: any,
+  selected: DiscoveredMcp[],
+  options: any,
+): Promise<void> {
+  const importSpinner = p.spinner();
+  importSpinner.start('Importing MCPs...');
+
+  const globalPath = pathResolver.getUserConfigPath();
+  const projectPath = pathResolver.getProjectConfigPath();
+
+  const result = await importService.importMcps(
+    selected,
+    globalPath,
+    projectPath,
+  );
+
+  importSpinner.stop('Import complete');
+
+  // Show results
+  p.note(
+    [
+      `Imported: ${result.imported.length}`,
+      `Skipped: ${result.skipped.length}`,
+      `Scopes modified: ${result.scopesModified.join(', ')}`,
+    ].join('\n'),
+    '✅ Import Results',
+  );
+
+  // Show environment variables reminder if needed
+  const allEnvVars = new Set<string>();
+  selected.forEach((m) =>
+    m.envVarsToSet?.forEach((v: string) => allEnvVars.add(v)),
+  );
+
+  if (allEnvVars.size > 0) {
+    output.info('\n⚠️  Remember to set the required environment variables!');
+  }
+
+  // Offer to run sync
+  if (result.imported.length > 0 && !options.yes) {
+    const shouldSync = await p.confirm({
+      message: 'Run overture sync now?',
+      initialValue: true,
+    });
+
+    if (!p.isCancel(shouldSync) && shouldSync) {
+      output.info('\nRun: overture sync');
+      output.info('(Automatic sync integration coming in next update)\n');
+    }
+  }
 }
