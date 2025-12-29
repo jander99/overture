@@ -467,7 +467,6 @@ async function checkMcpServers(
         mcpSources[mcpName]
       : 'unknown';
 
-     
     const mcpResult = {
       name: mcpName,
       command: (mcpDef as any).command,
@@ -524,6 +523,127 @@ function outputEnvironment(
 }
 
 /**
+ * Display git sync status (in sync vs out of sync)
+ */
+function outputGitSyncStatus(
+  localHash: string | null,
+  remoteHash: string | null,
+  gitInSync: boolean,
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+  },
+): void {
+  if (localHash && remoteHash) {
+    if (gitInSync) {
+      output.success(
+        `      ${chalk.green('✓')} In sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
+      );
+    } else {
+      output.warn(
+        `      ${chalk.yellow('⚠')} Out of sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
+      );
+      console.log(
+        `        ${chalk.dim('→')} ${chalk.dim('Run: git pull or git push')}`,
+      );
+    }
+  } else if (localHash && !remoteHash) {
+    output.warn(`      ${chalk.yellow('⚠')} Remote HEAD not available`);
+    console.log(
+      `        ${chalk.dim('→')} ${chalk.dim('Run: git push -u origin main')}`,
+    );
+  }
+}
+
+/**
+ * Display git repository status (initialized, remote configured, etc.)
+ */
+function outputGitRepoStatus(
+  isGitRepo: boolean,
+  gitRemote: string | null,
+  localHash: string | null,
+  remoteHash: string | null,
+  gitInSync: boolean,
+  configRepoPath: string,
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+  },
+): void {
+  if (isGitRepo) {
+    const hashShort = localHash ? localHash.substring(0, 7) : 'unknown';
+    output.success(
+      `  ${chalk.green('✓')} Git repository - ${chalk.dim('initialized')} ${chalk.dim(`(${hashShort})`)}`,
+    );
+    if (gitRemote) {
+      output.success(
+        `    ${chalk.green('✓')} Remote configured - ${chalk.dim(gitRemote)}`,
+      );
+      outputGitSyncStatus(localHash, remoteHash, gitInSync, output);
+    } else {
+      output.warn(`    ${chalk.yellow('⚠')} No git remote configured`);
+      console.log(
+        `      ${chalk.dim('→')} ${chalk.dim('Run: git remote add origin <url>')}`,
+      );
+    }
+  } else {
+    output.warn(`  ${chalk.yellow('⚠')} Not a git repository`);
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Run: cd ' + configRepoPath + ' && git init')}`,
+    );
+  }
+}
+
+/**
+ * Display skills directory status
+ */
+function outputSkillsStatus(
+  skillsDirExists: boolean,
+  skillsPath: string,
+  skillCount: number,
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+  },
+): void {
+  if (skillsDirExists) {
+    const skillCountStr =
+      skillCount === 0
+        ? chalk.yellow('no skills')
+        : skillCount === 1
+          ? chalk.green('1 skill')
+          : chalk.green(`${skillCount} skills`);
+    output.success(
+      `  ${chalk.green('✓')} Skills directory - ${chalk.dim(skillsPath)} ${chalk.dim(`(${skillCountStr})`)}`,
+    );
+  } else {
+    output.warn(
+      `  ${chalk.yellow('⚠')} Skills directory not found - ${chalk.dim(skillsPath)}`,
+    );
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Run: mkdir -p ' + skillsPath)}`,
+    );
+  }
+}
+
+/**
+ * Display config repository not found message
+ */
+function outputConfigRepoNotFound(
+  configRepoPath: string,
+  output: {
+    warn(message: string): void;
+  },
+): void {
+  output.warn(
+    `${chalk.yellow('⚠')} Config repo not found - ${chalk.dim(configRepoPath)}`,
+  );
+  console.log(
+    `  ${chalk.dim('→')} ${chalk.dim('Run: overture init to create config repo')}`,
+  );
+}
+
+/**
  * Output config repository status to console
  */
 function outputConfigRepoStatus(
@@ -549,79 +669,142 @@ function outputConfigRepoStatus(
     output.success(
       `${chalk.green('✓')} Config repo - ${chalk.dim(configRepoPath)}`,
     );
-
-    // Git repo status
-    if (isGitRepo) {
-      const hashShort = localHash ? localHash.substring(0, 7) : 'unknown';
-      output.success(
-        `  ${chalk.green('✓')} Git repository - ${chalk.dim('initialized')} ${chalk.dim(`(${hashShort})`)}`,
-      );
-      if (gitRemote) {
-        output.success(
-          `    ${chalk.green('✓')} Remote configured - ${chalk.dim(gitRemote)}`,
-        );
-
-        // Show sync status if we have both hashes
-        if (localHash && remoteHash) {
-          if (gitInSync) {
-            output.success(
-              `      ${chalk.green('✓')} In sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
-            );
-          } else {
-            output.warn(
-              `      ${chalk.yellow('⚠')} Out of sync with remote ${chalk.dim(`(${remoteHash.substring(0, 7)})`)}`,
-            );
-            console.log(
-              `        ${chalk.dim('→')} ${chalk.dim('Run: git pull or git push')}`,
-            );
-          }
-        } else if (localHash && !remoteHash) {
-          output.warn(`      ${chalk.yellow('⚠')} Remote HEAD not available`);
-          console.log(
-            `        ${chalk.dim('→')} ${chalk.dim('Run: git push -u origin main')}`,
-          );
-        }
-      } else {
-        output.warn(`    ${chalk.yellow('⚠')} No git remote configured`);
-        console.log(
-          `      ${chalk.dim('→')} ${chalk.dim('Run: git remote add origin <url>')}`,
-        );
-      }
-    } else {
-      output.warn(`  ${chalk.yellow('⚠')} Not a git repository`);
-      console.log(
-        `    ${chalk.dim('→')} ${chalk.dim('Run: cd ' + configRepoPath + ' && git init')}`,
-      );
-    }
-
-    // Skills directory
-    if (skillsDirExists) {
-      const skillCountStr =
-        skillCount === 0
-          ? chalk.yellow('no skills')
-          : skillCount === 1
-            ? chalk.green('1 skill')
-            : chalk.green(`${skillCount} skills`);
-      output.success(
-        `  ${chalk.green('✓')} Skills directory - ${chalk.dim(skillsPath)} ${chalk.dim(`(${skillCountStr})`)}`,
-      );
-    } else {
-      output.warn(
-        `  ${chalk.yellow('⚠')} Skills directory not found - ${chalk.dim(skillsPath)}`,
-      );
-      console.log(
-        `    ${chalk.dim('→')} ${chalk.dim('Run: mkdir -p ' + skillsPath)}`,
-      );
-    }
-  } else {
-    output.warn(
-      `${chalk.yellow('⚠')} Config repo not found - ${chalk.dim(configRepoPath)}`,
+    outputGitRepoStatus(
+      isGitRepo,
+      gitRemote,
+      localHash,
+      remoteHash,
+      gitInSync,
+      configRepoPath,
+      output,
     );
+    outputSkillsStatus(skillsDirExists, skillsPath, skillCount, output);
+  } else {
+    outputConfigRepoNotFound(configRepoPath, output);
+  }
+
+  console.log('');
+}
+
+/**
+ * Output client config status
+ */
+function outputClientConfig(
+  client: {
+    configPath?: string;
+    configValid: boolean;
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _output: {
+    warn(message: string): void;
+  },
+): void {
+  if (client.configPath) {
+    const configStatus = client.configValid
+      ? chalk.green('valid')
+      : chalk.yellow('invalid');
+    console.log(`  Config: ${client.configPath} (${configStatus})`);
+  }
+}
+
+/**
+ * Output Windows path for WSL2 detections
+ */
+function outputWindowsPath(
+  client: {
+    windowsPath?: string;
+  },
+  verbose: boolean,
+): void {
+  if (client.windowsPath && verbose) {
     console.log(
-      `  ${chalk.dim('→')} ${chalk.dim('Run: overture init to create config repo')}`,
+      `  ${chalk.dim('Windows path:')} ${chalk.dim(client.windowsPath)}`,
     );
   }
-  console.log('');
+}
+
+/**
+ * Output client warnings
+ */
+function outputClientWarnings(
+  client: {
+    warnings?: string[];
+  },
+  output: {
+    warn(message: string): void;
+  },
+  verbose: boolean,
+): void {
+  if ((client.warnings || []).length > 0 && verbose) {
+    (client.warnings || []).forEach((warning) => {
+      output.warn(`  ${chalk.yellow('⚠')} ${warning}`);
+    });
+  }
+}
+
+/**
+ * Output found client status
+ */
+function outputFoundClient(
+  client: {
+    client: string;
+    version?: string;
+    source?: string;
+    binaryPath?: string;
+    appBundlePath?: string;
+    configPath?: string;
+    configValid: boolean;
+    windowsPath?: string;
+    warnings?: string[];
+  },
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+  },
+  verbose: boolean,
+): void {
+  const versionStr = client.version ? chalk.dim(` (${client.version})`) : '';
+  const pathStr = client.binaryPath || client.appBundlePath;
+  const wsl2Tag =
+    client.source === 'wsl2-fallback' ? chalk.cyan(' [WSL2: Windows]') : '';
+
+  output.success(
+    `${chalk.green('✓')} ${chalk.bold(client.client)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`,
+  );
+
+  outputClientConfig(client, output);
+  outputWindowsPath(client, verbose);
+  outputClientWarnings(client, output, verbose);
+}
+
+/**
+ * Output missing client status
+ */
+function outputMissingClient(
+  client: {
+    client: string;
+  },
+  output: {
+    error(message: string): void;
+  },
+): void {
+  output.error(
+    `${chalk.red('✗')} ${chalk.bold(client.client)} - not installed`,
+  );
+
+  const recommendation = getInstallRecommendation(client.client as ClientName);
+  if (recommendation) {
+    console.log(`  ${chalk.dim('→')} ${chalk.dim(recommendation)}`);
+  }
+}
+
+/**
+ * Output skipped client status
+ */
+function outputSkippedClient(client: { client: string }): void {
+  console.log(
+    `${chalk.gray('○')} ${chalk.bold(client.client)} - ${chalk.dim('skipped')}`,
+  );
 }
 
 /**
@@ -652,57 +835,15 @@ function outputClientResults(
   output.info(chalk.bold('Checking client installations...\n'));
 
   for (const client of clients) {
-    if (client.status === 'found') {
-      const versionStr = client.version
-        ? chalk.dim(` (${client.version})`)
-        : '';
-      const pathStr = client.binaryPath || client.appBundlePath;
-
-      // Show WSL2 tag for Windows detections
-      const wsl2Tag =
-        client.source === 'wsl2-fallback' ? chalk.cyan(' [WSL2: Windows]') : '';
-
-      output.success(
-        `${chalk.green('✓')} ${chalk.bold(client.client)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`,
-      );
-
-      if (client.configPath) {
-        const configStatus = client.configValid
-          ? chalk.green('valid')
-          : chalk.yellow('invalid');
-        console.log(`  Config: ${client.configPath} (${configStatus})`);
-      }
-
-      // Show Windows path for WSL2 detections
-      if (client.windowsPath && verbose) {
-        console.log(
-          `  ${chalk.dim('Windows path:')} ${chalk.dim(client.windowsPath)}`,
-        );
-      }
-
-      // Show warnings
-      if ((client.warnings || []).length > 0 && verbose) {
-        (client.warnings || []).forEach((warning) => {
-          output.warn(`  ${chalk.yellow('⚠')} ${warning}`);
-        });
-      }
-    } else if (client.status === 'not-found') {
-      output.error(
-        `${chalk.red('✗')} ${chalk.bold(client.client)} - not installed`,
-      );
-
-      // Show recommendation
-      const recommendation = getInstallRecommendation(
-        client.client as ClientName,
-      );
-      if (recommendation) {
-        console.log(`  ${chalk.dim('→')} ${chalk.dim(recommendation)}`);
-      }
-    } else {
-      // Skipped
-      console.log(
-        `${chalk.gray('○')} ${chalk.bold(client.client)} - ${chalk.dim('skipped')}`,
-      );
+    switch (client.status) {
+      case 'found':
+        outputFoundClient(client, output, verbose);
+        break;
+      case 'not-found':
+        outputMissingClient(client, output);
+        break;
+      default:
+        outputSkippedClient(client);
     }
 
     console.log(''); // Blank line
@@ -754,6 +895,142 @@ function outputMcpResults(
 }
 
 /**
+ * Output git sync summary
+ */
+function outputGitSyncSummary(
+  gitRemote: string | null,
+  localHash: string | null,
+  remoteHash: string | null,
+  gitInSync: boolean,
+): void {
+  if (gitRemote && localHash && remoteHash) {
+    const syncStatus = gitInSync
+      ? chalk.green('in sync')
+      : chalk.yellow('out of sync');
+    console.log(`  Git sync:         ${syncStatus}`);
+  }
+}
+
+/**
+ * Output git repository summary
+ */
+function outputGitRepoSummary(
+  isGitRepo: boolean,
+  gitRemote: string | null,
+  localHash: string | null,
+  remoteHash: string | null,
+  gitInSync: boolean,
+): void {
+  const gitRepoStatus = isGitRepo ? chalk.green('yes') : chalk.yellow('no');
+  console.log(`  Git repository:   ${gitRepoStatus}`);
+  if (isGitRepo) {
+    const remoteStatus = gitRemote
+      ? chalk.green('configured')
+      : chalk.yellow('not configured');
+    console.log(`  Git remote:       ${remoteStatus}`);
+    outputGitSyncSummary(gitRemote, localHash, remoteHash, gitInSync);
+  }
+}
+
+/**
+ * Output skills directory summary
+ */
+function outputSkillsSummary(
+  skillsDirExists: boolean,
+  skillCount: number,
+): void {
+  const skillsStatus = skillsDirExists
+    ? chalk.green('exists')
+    : chalk.yellow('not found');
+  const skillCountStr =
+    skillsDirExists && skillCount > 0
+      ? chalk.dim(` (${skillCount} skill${skillCount === 1 ? '' : 's'})`)
+      : '';
+  console.log(`  Skills directory: ${skillsStatus}${skillCountStr}`);
+}
+
+/**
+ * Output config repository summary
+ */
+function outputConfigRepoSummary(
+  configRepoExists: boolean,
+  isGitRepo: boolean,
+  gitRemote: string | null,
+  localHash: string | null,
+  remoteHash: string | null,
+  gitInSync: boolean,
+  skillsDirExists: boolean,
+  skillCount: number,
+): void {
+  const configRepoStatus = configRepoExists
+    ? chalk.green('exists')
+    : chalk.yellow('not found');
+  console.log(`  Config repo:      ${configRepoStatus}`);
+  if (configRepoExists) {
+    outputGitRepoSummary(
+      isGitRepo,
+      gitRemote,
+      localHash,
+      remoteHash,
+      gitInSync,
+    );
+    outputSkillsSummary(skillsDirExists, skillCount);
+  }
+}
+
+/**
+ * Output clients summary
+ */
+function outputClientsSummary(
+  clientsDetected: number,
+  clientsMissing: number,
+  wsl2Detections: number,
+): void {
+  console.log(
+    `  Clients detected: ${chalk.green(clientsDetected)} / ${ALL_CLIENTS.length}`,
+  );
+  console.log(`  Clients missing:  ${chalk.red(clientsMissing)}`);
+
+  if (wsl2Detections > 0) {
+    console.log(`  WSL2 detections:  ${chalk.cyan(wsl2Detections)}`);
+  }
+}
+
+/**
+ * Output configs summary
+ */
+function outputConfigsSummary(
+  configsValid: number,
+  configsInvalid: number,
+): void {
+  console.log(`  Configs valid:    ${chalk.green(configsValid)}`);
+  if (configsInvalid > 0) {
+    console.log(`  Configs invalid:  ${chalk.yellow(configsInvalid)}`);
+  }
+}
+
+/**
+ * Output MCP servers summary
+ */
+function outputMcpSummary(
+  totalMcpServers: number,
+  mcpCommandsAvailable: number,
+  mcpCommandsMissing: number,
+): void {
+  if (totalMcpServers > 0) {
+    console.log('');
+    console.log(
+      `  MCP commands available: ${chalk.green(mcpCommandsAvailable)} / ${totalMcpServers}`,
+    );
+    if (mcpCommandsMissing > 0) {
+      console.log(
+        `  MCP commands missing:   ${chalk.yellow(mcpCommandsMissing)}`,
+      );
+    }
+  }
+}
+
+/**
  * Output summary to console
  */
 function outputSummary(
@@ -780,64 +1057,21 @@ function outputSummary(
   console.log('');
   output.info(chalk.bold('Summary:\n'));
 
-  // Config repo status
-  const configRepoStatus = configRepoExists
-    ? chalk.green('exists')
-    : chalk.yellow('not found');
-  console.log(`  Config repo:      ${configRepoStatus}`);
-  if (configRepoExists) {
-    const gitRepoStatus = isGitRepo ? chalk.green('yes') : chalk.yellow('no');
-    console.log(`  Git repository:   ${gitRepoStatus}`);
-    if (isGitRepo) {
-      const remoteStatus = gitRemote
-        ? chalk.green('configured')
-        : chalk.yellow('not configured');
-      console.log(`  Git remote:       ${remoteStatus}`);
-
-      if (gitRemote && localHash && remoteHash) {
-        const syncStatus = gitInSync
-          ? chalk.green('in sync')
-          : chalk.yellow('out of sync');
-        console.log(`  Git sync:         ${syncStatus}`);
-      }
-    }
-    const skillsStatus = skillsDirExists
-      ? chalk.green('exists')
-      : chalk.yellow('not found');
-    const skillCountStr =
-      skillsDirExists && skillCount > 0
-        ? chalk.dim(` (${skillCount} skill${skillCount === 1 ? '' : 's'})`)
-        : '';
-    console.log(`  Skills directory: ${skillsStatus}${skillCountStr}`);
-  }
+  outputConfigRepoSummary(
+    configRepoExists,
+    isGitRepo,
+    gitRemote,
+    localHash,
+    remoteHash,
+    gitInSync,
+    skillsDirExists,
+    skillCount,
+  );
   console.log('');
 
-  console.log(
-    `  Clients detected: ${chalk.green(clientsDetected)} / ${ALL_CLIENTS.length}`,
-  );
-  console.log(`  Clients missing:  ${chalk.red(clientsMissing)}`);
-
-  // Show WSL2 detections if any
-  if (wsl2Detections > 0) {
-    console.log(`  WSL2 detections:  ${chalk.cyan(wsl2Detections)}`);
-  }
-
-  console.log(`  Configs valid:    ${chalk.green(configsValid)}`);
-  if (configsInvalid > 0) {
-    console.log(`  Configs invalid:  ${chalk.yellow(configsInvalid)}`);
-  }
-
-  if (totalMcpServers > 0) {
-    console.log('');
-    console.log(
-      `  MCP commands available: ${chalk.green(mcpCommandsAvailable)} / ${totalMcpServers}`,
-    );
-    if (mcpCommandsMissing > 0) {
-      console.log(
-        `  MCP commands missing:   ${chalk.yellow(mcpCommandsMissing)}`,
-      );
-    }
-  }
+  outputClientsSummary(clientsDetected, clientsMissing, wsl2Detections);
+  outputConfigsSummary(configsValid, configsInvalid);
+  outputMcpSummary(totalMcpServers, mcpCommandsAvailable, mcpCommandsMissing);
 
   console.log('');
 }
