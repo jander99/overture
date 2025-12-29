@@ -174,6 +174,301 @@ export class SyncEngine {
   constructor(private deps: SyncEngineDeps) {}
 
   /**
+   * Load and validate all configurations
+   */
+  private async loadConfigurations(options: SyncOptions): Promise<{
+    userConfig: OvertureConfig | null;
+    projectConfig: OvertureConfig | null;
+    overtureConfig: OvertureConfig;
+    mcpSources: Record<string, 'global' | 'project'>;
+    warnings: string[];
+    detectedProjectRoot: string | null;
+  }> {
+    const warnings: string[] = [];
+
+    // Auto-detect project root if not provided
+    const detectedProjectRoot =
+      options.projectRoot || this.deps.pathResolver.findProjectRoot();
+
+    // Load configurations
+    const userConfig = await this.deps.configLoader.loadUserConfig();
+    const projectConfig = detectedProjectRoot
+      ? await this.deps.configLoader.loadProjectConfig(detectedProjectRoot)
+      : null;
+
+    // Merge configs (project overrides user)
+    const overtureConfig = this.deps.configLoader.mergeConfigs(
+      userConfig,
+      projectConfig,
+    );
+
+    // Check for config warnings (invalid/deprecated keys)
+    const configWarnings = this.validateConfigForWarnings(
+      userConfig,
+      projectConfig,
+    );
+    warnings.push(...configWarnings);
+
+    // Validate environment variables
+    const envVarWarnings = validateConfigEnvVars(
+      overtureConfig,
+      this.deps.environment.env,
+    );
+    if (envVarWarnings.length > 0) {
+      warnings.push(...envVarWarnings);
+      // Show formatted warnings to user
+      const formatted = formatEnvVarWarnings(envVarWarnings);
+      if (formatted) {
+        this.deps.output.warn(formatted);
+      }
+    }
+
+    // Get MCP sources (user vs project)
+    const mcpSources = this.deps.configLoader.getMcpSources(
+      userConfig,
+      projectConfig,
+    );
+
+    return {
+      userConfig,
+      projectConfig,
+      overtureConfig,
+      mcpSources,
+      warnings,
+      detectedProjectRoot,
+    };
+  }
+
+  /**
+   * Sync plugins and skills
+   */
+  private async syncPluginsAndSkills(
+    userConfig: OvertureConfig | null,
+    projectConfig: OvertureConfig | null,
+    targetClients: ClientName[],
+    options: SyncOptions,
+  ): Promise<{
+    pluginSyncResult: PluginSyncResult | undefined;
+    skillSyncSummary: SkillSyncSummary | undefined;
+    warnings: string[];
+  }> {
+    const warnings: string[] = [];
+    let pluginSyncResult: PluginSyncResult | undefined;
+    let skillSyncSummary: SkillSyncSummary | undefined;
+
+    // 1. Sync plugins first (before MCP sync)
+    if (!options.skipPlugins) {
+      try {
+        pluginSyncResult = await this.syncPlugins(
+          userConfig,
+          projectConfig,
+          options,
+        );
+      } catch (error) {
+        // Log plugin sync errors but don't fail the entire sync
+        const errorMsg = `Plugin sync failed: ${(error as Error).message}`;
+        this.deps.output.warn(`⚠️  ${errorMsg}`);
+        warnings.push(errorMsg);
+      }
+    }
+
+    // 2. Sync skills (after plugins, before MCP)
+    if (!options.skipSkills && this.deps.skillSyncService) {
+      try {
+        skillSyncSummary = await this.deps.skillSyncService.syncSkills({
+          force: true, // Always overwrite - sync is source of truth
+          clients: targetClients as ClientName[],
+          dryRun: options.dryRun,
+        });
+
+        // Log warnings if any skills failed
+        if (skillSyncSummary.failed > 0) {
+          const failedSkills = skillSyncSummary.results
+            .filter((r) => !r.success)
+            .map((r) => r.skill);
+          warnings.push(
+            `Failed to sync ${skillSyncSummary.failed} skill(s): ${failedSkills.join(', ')}`,
+          );
+        }
+      } catch (error) {
+        // Log skill sync errors but don't fail the entire sync
+        const errorMsg = `Skill sync failed: ${(error as Error).message}`;
+        this.deps.output.warn(`⚠️  ${errorMsg}`);
+        warnings.push(errorMsg);
+      }
+    }
+
+    return { pluginSyncResult, skillSyncSummary, warnings };
+  }
+
+  /**
+   * Get validated client adapters from registry
+   */
+  private getClientAdapters(targetClients: ClientName[]): {
+    clients: ClientAdapter[];
+    warnings: string[];
+  } {
+    const clients: ClientAdapter[] = [];
+    const warnings: string[] = [];
+
+    for (const clientName of targetClients) {
+      const adapter = this.deps.adapterRegistry.get(clientName as ClientName);
+      if (adapter) {
+        clients.push(adapter);
+      } else {
+        warnings.push(`No adapter registered for ${clientName}`);
+      }
+    }
+
+    return { clients, warnings };
+  }
+
+  /**
+   * Extract critical warnings from sync result
+   */
+  private extractCriticalWarnings(resultWarnings: string[]): string[] {
+    return resultWarnings.filter(
+      (w) =>
+        !w.includes('detected:') ||
+        w.includes('not detected') ||
+        w.includes('Generating config anyway'),
+    );
+  }
+
+  /**
+   * Collect warnings and errors from sync result
+   */
+  private collectResultWarningsAndErrors(
+    result: ClientSyncResult,
+    clientName: string,
+  ): { warnings: string[]; errors: string[] } {
+    const warnings = this.extractCriticalWarnings(result.warnings);
+    const errors: string[] = [];
+    if (!result.success && result.error) {
+      errors.push(`${clientName}: ${result.error}`);
+    }
+    return { warnings, errors };
+  }
+
+  /**
+   * Sync to all clients (handles both dual-config and single-config modes)
+   */
+  private async syncToAllClients(
+    clients: ClientAdapter[],
+    overtureConfig: OvertureConfig,
+    options: SyncOptions,
+    mcpSources: Record<string, 'global' | 'project'>,
+  ): Promise<{
+    results: ClientSyncResult[];
+    warnings: string[];
+    errors: string[];
+  }> {
+    const results: ClientSyncResult[] = [];
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    const platform = options.platform || this.deps.environment.platform();
+
+    for (const client of clients) {
+      const inProject = !!options.projectRoot;
+      const configPathResult = client.detectConfigPath(
+        platform,
+        options.projectRoot,
+      );
+
+      const supportsDualConfigs =
+        configPathResult !== null &&
+        typeof configPathResult === 'object' &&
+        configPathResult.user &&
+        configPathResult.project;
+
+      if (inProject && supportsDualConfigs) {
+        // Sync global MCPs to user config
+        const userResult = await this.syncToClient(
+          client,
+          overtureConfig,
+          { ...options, forceConfigType: 'user' },
+          mcpSources,
+        );
+        results.push(userResult);
+
+        // Sync project MCPs to project config
+        const projectResult = await this.syncToClient(
+          client,
+          overtureConfig,
+          { ...options, forceConfigType: 'project' },
+          mcpSources,
+        );
+        results.push(projectResult);
+
+        // Collect warnings and errors from both
+        for (const result of [userResult, projectResult]) {
+          const { warnings: w, errors: e } =
+            this.collectResultWarningsAndErrors(result, client.name);
+          warnings.push(...w);
+          errors.push(...e);
+        }
+      } else {
+        // Single config sync (not in project or client doesn't support dual configs)
+        const result = await this.syncToClient(
+          client,
+          overtureConfig,
+          options,
+          mcpSources,
+        );
+        results.push(result);
+
+        // Collect warnings and errors
+        const { warnings: w, errors: e } = this.collectResultWarningsAndErrors(
+          result,
+          client.name,
+        );
+        warnings.push(...w);
+        errors.push(...e);
+      }
+    }
+
+    return { results, warnings, errors };
+  }
+
+  /**
+   * Build plugin sync details for detail mode
+   */
+  private async buildPluginSyncDetails(
+    userConfig: OvertureConfig | null,
+    pluginSyncResult: PluginSyncResult,
+  ): Promise<SyncResult['pluginSyncDetails']> {
+    // Get plugins from user config to calculate "to install"
+    const configuredPlugins = userConfig?.plugins || {};
+    const pluginNames = Object.keys(configuredPlugins);
+
+    // Calculate plugins to install
+    const installedPlugins =
+      await this.deps.pluginDetector.detectInstalledPlugins();
+    const installedSet = new Set(
+      installedPlugins.map((p) => `${p.name}@${p.marketplace}`),
+    );
+    const toInstall: Array<{ name: string; marketplace: string }> = [];
+
+    for (const name of pluginNames) {
+      // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
+      if (Object.hasOwn(configuredPlugins, name)) {
+        // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
+        const config = configuredPlugins[name];
+        const key = `${name}@${config.marketplace}`;
+        if (!installedSet.has(key)) {
+          toInstall.push({ name, marketplace: config.marketplace });
+        }
+      }
+    }
+
+    return {
+      configured: pluginNames.length,
+      installed: pluginSyncResult.skipped,
+      toInstall,
+    };
+  }
+
+  /**
    * Sync MCP configuration to multiple clients
    *
    * Main entry point for the sync engine. Orchestrates the entire sync workflow.
@@ -183,112 +478,43 @@ export class SyncEngine {
     const errors: string[] = [];
 
     try {
-      // Auto-detect project root if not provided
-      const detectedProjectRoot =
-        options.projectRoot || this.deps.pathResolver.findProjectRoot();
-
-      // Load configurations
-      const userConfig = await this.deps.configLoader.loadUserConfig();
-      const projectConfig = detectedProjectRoot
-        ? await this.deps.configLoader.loadProjectConfig(detectedProjectRoot)
-        : null;
-
-      // Merge configs (project overrides user)
-      const overtureConfig = this.deps.configLoader.mergeConfigs(
+      // Step 1: Load and validate all configurations
+      const {
         userConfig,
         projectConfig,
-      );
-
-      // Check for config warnings (invalid/deprecated keys)
-      const configWarnings = this.validateConfigForWarnings(
-        userConfig,
-        projectConfig,
-      );
+        overtureConfig,
+        mcpSources,
+        warnings: configWarnings,
+        detectedProjectRoot,
+      } = await this.loadConfigurations(options);
       warnings.push(...configWarnings);
 
-      // Validate environment variables
-      const envVarWarnings = validateConfigEnvVars(
-        overtureConfig,
-        this.deps.environment.env,
-      );
-      if (envVarWarnings.length > 0) {
-        warnings.push(...envVarWarnings);
-        // Show formatted warnings to user
-        const formatted = formatEnvVarWarnings(envVarWarnings);
-        if (formatted) {
-          this.deps.output.warn(formatted);
-        }
-      }
-
-      // Get MCP sources (user vs project)
-      const mcpSources = this.deps.configLoader.getMcpSources(
-        userConfig,
-        projectConfig,
-      );
-
-      // Pass detected project root to all sync operations
+      // Prepare sync options with detected project root
       const syncOptionsWithProject: SyncOptions = {
         ...options,
         projectRoot: detectedProjectRoot || undefined,
       };
 
-      // Determine which clients to sync (needed for both plugin and skill sync)
+      // Determine which clients to sync
       const targetClients = options.clients || SyncEngine.DEFAULT_CLIENTS;
 
-      // 1. Sync plugins first (before MCP sync)
-      let pluginSyncResult: PluginSyncResult | undefined;
-      if (!options.skipPlugins) {
-        try {
-          pluginSyncResult = await this.syncPlugins(
-            userConfig,
-            projectConfig,
-            syncOptionsWithProject,
-          );
-        } catch (error) {
-          // Log plugin sync errors but don't fail the entire sync
-          const errorMsg = `Plugin sync failed: ${(error as Error).message}`;
-          this.deps.output.warn(`⚠️  ${errorMsg}`);
-          warnings.push(errorMsg);
-        }
-      }
+      // Step 2: Sync plugins and skills
+      const {
+        pluginSyncResult,
+        skillSyncSummary,
+        warnings: syncWarnings,
+      } = await this.syncPluginsAndSkills(
+        userConfig,
+        projectConfig,
+        targetClients,
+        syncOptionsWithProject,
+      );
+      warnings.push(...syncWarnings);
 
-      // 2. Sync skills (after plugins, before MCP)
-      let skillSyncSummary: SkillSyncSummary | undefined;
-      if (!options.skipSkills && this.deps.skillSyncService) {
-        try {
-          skillSyncSummary = await this.deps.skillSyncService.syncSkills({
-            force: true, // Always overwrite - sync is source of truth
-            clients: targetClients as ClientName[],
-            dryRun: options.dryRun,
-          });
-
-          // Log warnings if any skills failed
-          if (skillSyncSummary.failed > 0) {
-            const failedSkills = skillSyncSummary.results
-              .filter((r) => !r.success)
-              .map((r) => r.skill);
-            warnings.push(
-              `Failed to sync ${skillSyncSummary.failed} skill(s): ${failedSkills.join(', ')}`,
-            );
-          }
-        } catch (error) {
-          // Log skill sync errors but don't fail the entire sync
-          const errorMsg = `Skill sync failed: ${(error as Error).message}`;
-          this.deps.output.warn(`⚠️  ${errorMsg}`);
-          warnings.push(errorMsg);
-        }
-      }
-
-      // Get client adapters
-      const clients: ClientAdapter[] = [];
-      for (const clientName of targetClients) {
-        const adapter = this.deps.adapterRegistry.get(clientName as ClientName);
-        if (adapter) {
-          clients.push(adapter);
-        } else {
-          warnings.push(`No adapter registered for ${clientName}`);
-        }
-      }
+      // Step 3: Get validated client adapters
+      const { clients, warnings: adapterWarnings } =
+        this.getClientAdapters(targetClients);
+      warnings.push(...adapterWarnings);
 
       if (clients.length === 0) {
         return {
@@ -299,117 +525,27 @@ export class SyncEngine {
         };
       }
 
-      // Sync to each client
-      const results: ClientSyncResult[] = [];
-      const platform =
-        syncOptionsWithProject.platform || this.deps.environment.platform();
-
-      for (const client of clients) {
-        // When in a project, sync to BOTH user and project configs
-        const inProject = !!syncOptionsWithProject.projectRoot;
-        const configPathResult = client.detectConfigPath(
-          platform,
-          syncOptionsWithProject.projectRoot,
-        );
-
-        const supportsDualConfigs =
-          configPathResult !== null &&
-          typeof configPathResult === 'object' &&
-          configPathResult.user &&
-          configPathResult.project;
-
-        if (inProject && supportsDualConfigs) {
-          // Sync global MCPs to user config
-          const userResult = await this.syncToClient(
-            client,
-            overtureConfig,
-            { ...syncOptionsWithProject, forceConfigType: 'user' },
-            mcpSources,
-          );
-          results.push(userResult);
-
-          // Sync project MCPs to project config
-          const projectResult = await this.syncToClient(
-            client,
-            overtureConfig,
-            { ...syncOptionsWithProject, forceConfigType: 'project' },
-            mcpSources,
-          );
-          results.push(projectResult);
-
-          // Collect warnings and errors from both
-          for (const result of [userResult, projectResult]) {
-            const criticalWarnings = result.warnings.filter(
-              (w) =>
-                !w.includes('detected:') ||
-                w.includes('not detected') ||
-                w.includes('Generating config anyway'),
-            );
-            warnings.push(...criticalWarnings);
-            if (!result.success && result.error) {
-              errors.push(`${client.name}: ${result.error}`);
-            }
-          }
-        } else {
-          // Single config sync (not in project or client doesn't support dual configs)
-          const result = await this.syncToClient(
-            client,
-            overtureConfig,
-            syncOptionsWithProject,
-            mcpSources,
-          );
-          results.push(result);
-
-          // Collect warnings and errors
-          const criticalWarnings = result.warnings.filter(
-            (w) =>
-              !w.includes('detected:') ||
-              w.includes('not detected') ||
-              w.includes('Generating config anyway'),
-          );
-          warnings.push(...criticalWarnings);
-          if (!result.success && result.error) {
-            errors.push(`${client.name}: ${result.error}`);
-          }
-        }
-      }
+      // Step 4: Sync to all clients
+      const {
+        results,
+        warnings: clientWarnings,
+        errors: clientErrors,
+      } = await this.syncToAllClients(
+        clients,
+        overtureConfig,
+        syncOptionsWithProject,
+        mcpSources,
+      );
+      warnings.push(...clientWarnings);
+      errors.push(...clientErrors);
 
       const success = results.every((r) => r.success);
 
-      // Build plugin sync details for detail mode
-      let pluginSyncDetails: SyncResult['pluginSyncDetails'];
-      if (options.detail && pluginSyncResult) {
-        // Get plugins from user config to calculate "to install"
-        const configuredPlugins = userConfig?.plugins || {};
-        const pluginNames = Object.keys(configuredPlugins);
-
-        // Calculate plugins to install
-        const installedPlugins =
-          await this.deps.pluginDetector.detectInstalledPlugins();
-        const installedSet = new Set(
-          installedPlugins.map((p) => `${p.name}@${p.marketplace}`),
-        );
-        const toInstall: Array<{ name: string; marketplace: string }> = [];
-
-        for (const name of pluginNames) {
-          // name from pluginNames parameter - safe to check in configuredPlugins
-           
-          if (Object.hasOwn(configuredPlugins, name)) {
-            // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
-            const config = configuredPlugins[name];
-            const key = `${name}@${config.marketplace}`;
-            if (!installedSet.has(key)) {
-              toInstall.push({ name, marketplace: config.marketplace });
-            }
-          }
-        }
-
-        pluginSyncDetails = {
-          configured: pluginNames.length,
-          installed: pluginSyncResult.skipped,
-          toInstall,
-        };
-      }
+      // Step 5: Build plugin sync details (if detail mode)
+      const pluginSyncDetails =
+        options.detail && pluginSyncResult
+          ? await this.buildPluginSyncDetails(userConfig, pluginSyncResult)
+          : undefined;
 
       return {
         success,
@@ -548,7 +684,6 @@ export class SyncEngine {
         Object.entries(overtureConfig.mcp).filter(
           ([mcpName]) =>
             mcpSources &&
-             
             Object.hasOwn(mcpSources, mcpName) &&
             mcpSources[mcpName] === 'project',
         ),
@@ -561,7 +696,6 @@ export class SyncEngine {
         Object.entries(overtureConfig.mcp).filter(
           ([mcpName]) =>
             mcpSources &&
-             
             Object.hasOwn(mcpSources, mcpName) &&
             mcpSources[mcpName] === 'global',
         ),
@@ -583,7 +717,7 @@ export class SyncEngine {
   ): void {
     const rootKey = client.schemaRootKey;
     // rootKey comes from client.schemaRootKey - validated with Object.hasOwn
-     
+
     const oldMcps =
       (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
     const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
