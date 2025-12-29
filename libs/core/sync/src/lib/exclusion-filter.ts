@@ -39,7 +39,6 @@ export function filterMcpsForClient(
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
     // name comes from Object.entries - safe to check in mcps object
-    // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
     if (Object.hasOwn(mcps, name)) {
       const result = shouldIncludeMcp(mcpConfig, client, platform);
       if (result.included) {
@@ -155,7 +154,6 @@ export function getFilterSummary(
 
   for (const [name, mcpConfig] of Object.entries(mcps)) {
     // name comes from Object.entries - safe to check in mcps object
-    // eslint-disable-next-line security/detect-object-injection -- name from Object.entries()
     if (!Object.hasOwn(mcps, name)) continue;
     const result = shouldIncludeMcp(mcpConfig, client, platform);
 
@@ -204,9 +202,9 @@ export function validateRequiredMcps(
   for (const requiredName of requiredMcps) {
     // Check if MCP exists
     // requiredName from requiredMcps parameter - safe to check in availableMcps
-    // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
     if (
       !Object.hasOwn(availableMcps, requiredName) ||
+      // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
       !availableMcps[requiredName]
     ) {
       missingMcps.push(requiredName);
@@ -215,6 +213,7 @@ export function validateRequiredMcps(
 
     // Check if MCP would be excluded
     const result = shouldIncludeMcp(
+      // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
       availableMcps[requiredName],
       client,
       platform,
