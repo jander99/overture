@@ -689,16 +689,10 @@ function outputConfigRepoStatus(
 /**
  * Output client config status
  */
-function outputClientConfig(
-  client: {
-    configPath?: string;
-    configValid: boolean;
-  },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _output: {
-    warn(message: string): void;
-  },
-): void {
+function outputClientConfig(client: {
+  configPath?: string;
+  configValid: boolean;
+}): void {
   if (client.configPath) {
     const configStatus = client.configValid
       ? chalk.green('valid')
@@ -772,7 +766,7 @@ function outputFoundClient(
     `${chalk.green('✓')} ${chalk.bold(client.client)}${versionStr}${wsl2Tag} - ${chalk.dim(pathStr)}`,
   );
 
-  outputClientConfig(client, output);
+  outputClientConfig(client);
   outputWindowsPath(client, verbose);
   outputClientWarnings(client, output, verbose);
 }

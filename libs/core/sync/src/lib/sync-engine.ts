@@ -450,7 +450,6 @@ export class SyncEngine {
     const toInstall: Array<{ name: string; marketplace: string }> = [];
 
     for (const name of pluginNames) {
-      // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
       if (Object.hasOwn(configuredPlugins, name)) {
         // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
         const config = configuredPlugins[name];
@@ -771,7 +770,7 @@ export class SyncEngine {
     platform: Platform,
     options: SyncOptions,
     binaryDetection: BinaryDetectionResult | undefined,
-    warnings: string[],
+    _warnings: string[],
   ):
     | {
         configPath: string;
