@@ -1,9 +1,10 @@
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 
 describe('CLI tests', () => {
-  const cliPath = join(process.cwd(), 'dist/apps/cli/main.js');
+  const workspaceRoot = resolve(__dirname, '../../../..');
+  const cliPath = join(workspaceRoot, 'dist/apps/cli/main.js');
 
   beforeAll(() => {
     if (!existsSync(cliPath)) {

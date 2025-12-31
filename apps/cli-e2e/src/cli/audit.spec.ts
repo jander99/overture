@@ -13,7 +13,7 @@
 
 import { execSync } from 'child_process';
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { tmpdir } from 'os';
 
 describe('Audit Command E2E Tests', () => {
@@ -36,17 +36,17 @@ describe('Audit Command E2E Tests', () => {
     mkdirSync(overtureConfigDir, { recursive: true });
 
     // Client config paths
-    const claudeCodeDir = join(testDir, '.config', 'claude');
+    // Claude Code uses ~/.claude.json (not .config/claude/mcp.json)
+    claudeCodeConfigPath = join(testDir, '.claude.json');
+
+    // VSCode uses ~/.config/Code/User/settings.json but for MCP testing we'll use a simpler path
     const vscodeDir = join(testDir, '.config', 'Code', 'User');
-
-    mkdirSync(claudeCodeDir, { recursive: true });
     mkdirSync(vscodeDir, { recursive: true });
-
-    claudeCodeConfigPath = join(claudeCodeDir, 'mcp.json');
     vscodeConfigPath = join(vscodeDir, 'mcp.json');
 
-    // CLI executable path
-    cliPath = join(process.cwd(), 'dist/apps/cli/main.js');
+    // CLI executable path - resolve to workspace root
+    const workspaceRoot = resolve(__dirname, '../../../..');
+    cliPath = join(workspaceRoot, 'dist/apps/cli/main.js');
 
     // Verify CLI exists
     if (!existsSync(cliPath)) {

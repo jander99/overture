@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import {
   mkdirSync,
   writeFileSync,
@@ -45,8 +45,9 @@ describe('Sync Multi-Client E2E Tests', () => {
     // Build CLI
     console.log('Building CLI...');
     try {
+      const workspaceRoot = resolve(__dirname, '../../../..');
       execSync('nx build @overture/cli', {
-        cwd: process.cwd(),
+        cwd: workspaceRoot,
         stdio: 'inherit',
       });
       console.log('CLI build complete');
@@ -55,8 +56,9 @@ describe('Sync Multi-Client E2E Tests', () => {
       throw error;
     }
 
-    // Set CLI path
-    cliPath = join(process.cwd(), 'dist/apps/cli/main.js');
+    // Set CLI path - resolve to workspace root
+    const workspaceRoot = resolve(__dirname, '../../../..');
+    cliPath = join(workspaceRoot, 'dist/apps/cli/main.js');
     if (!existsSync(cliPath)) {
       throw new Error(`CLI not found at ${cliPath}`);
     }
