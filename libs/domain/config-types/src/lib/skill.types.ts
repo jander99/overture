@@ -29,6 +29,12 @@ export interface DiscoveredSkill {
   path: string;
 
   /**
+   * Full path to skill directory (containing SKILL.md and optional references/, scripts/, assets/)
+   * @example "/home/user/.config/overture/skills/debugging"
+   */
+  directoryPath: string;
+
+  /**
    * Description extracted from SKILL.md (first paragraph or frontmatter)
    * @example "Advanced debugging techniques for complex issues"
    */

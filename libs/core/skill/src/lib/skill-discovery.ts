@@ -113,6 +113,7 @@ export class SkillDiscovery {
           skills.push({
             name: entry,
             path: skillPath,
+            directoryPath: entryPath,
             description,
           });
         }
@@ -147,7 +148,8 @@ export class SkillDiscovery {
     options: SkillDiscoveryOptions = {},
   ): Promise<DiscoveredSkill | null> {
     const skillsDir = options.skillsDir || this.getDefaultSkillsDirectoryPath();
-    const skillPath = `${skillsDir}/${name}/SKILL.md`;
+    const skillDirectoryPath = `${skillsDir}/${name}`;
+    const skillPath = `${skillDirectoryPath}/SKILL.md`;
 
     const exists = await this.filesystem.exists(skillPath);
     if (!exists) {
@@ -161,6 +163,7 @@ export class SkillDiscovery {
       return {
         name,
         path: skillPath,
+        directoryPath: skillDirectoryPath,
         description,
       };
     } catch (error) {

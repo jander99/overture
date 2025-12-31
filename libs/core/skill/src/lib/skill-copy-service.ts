@@ -124,7 +124,7 @@ export class SkillCopyService {
 
     for (const client of targetClients) {
       const result = await this.copySkillToClient(
-        skill.path,
+        skill.directoryPath,
         skillName,
         client,
         homeDir,
@@ -165,7 +165,7 @@ export class SkillCopyService {
   /**
    * Copy skill to a specific client's project directory
    *
-   * @param sourcePath - Source SKILL.md path from config repo
+   * @param sourceDir - Source skill directory path from config repo
    * @param skillName - Skill name
    * @param client - Target client
    * @param homeDir - Home directory
@@ -174,7 +174,7 @@ export class SkillCopyService {
    * @returns Copy result
    */
   private async copySkillToClient(
-    sourcePath: string,
+    sourceDir: string,
     skillName: string,
     client: ClientName,
     homeDir: string,
@@ -212,11 +212,8 @@ export class SkillCopyService {
         };
       }
 
-      // Create target directory
-      await this.filesystem.mkdir(targetDir, { recursive: true });
-
-      // Copy SKILL.md file
-      await this.copySkillFile(sourcePath, targetPath);
+      // Copy entire skill directory (SKILL.md + references/, scripts/, assets/)
+      await this.copySkillDirectory(sourceDir, targetDir);
 
       return {
         skill: skillName,
@@ -236,24 +233,40 @@ export class SkillCopyService {
   }
 
   /**
-   * Copy skill file from source to target
+   * Recursively copy an entire skill directory
    *
-   * @param sourcePath - Source SKILL.md path
-   * @param targetPath - Target SKILL.md path
+   * @param sourceDir - Source skill directory path
+   * @param targetDir - Target skill directory path
    */
-  private async copySkillFile(
-    sourcePath: string,
-    targetPath: string,
+  private async copySkillDirectory(
+    sourceDir: string,
+    targetDir: string,
   ): Promise<void> {
     try {
-      // Read source file
-      const content = await this.filesystem.readFile(sourcePath);
+      // Create target directory
+      await this.filesystem.mkdir(targetDir, { recursive: true });
 
-      // Write to target
-      await this.filesystem.writeFile(targetPath, content);
+      // Read source directory contents
+      const entries = await this.filesystem.readdir(sourceDir);
+
+      for (const entry of entries) {
+        const sourcePath = `${sourceDir}/${entry}`;
+        const targetPath = `${targetDir}/${entry}`;
+
+        const stats = await this.filesystem.stat(sourcePath);
+
+        if (stats.isDirectory()) {
+          // Recursively copy subdirectory
+          await this.copySkillDirectory(sourcePath, targetPath);
+        } else {
+          // Copy file
+          const content = await this.filesystem.readFile(sourcePath);
+          await this.filesystem.writeFile(targetPath, content);
+        }
+      }
     } catch (error) {
       throw new OvertureError(
-        `Failed to copy skill from ${sourcePath} to ${targetPath}: ${(error as Error).message}`,
+        `Failed to copy skill directory from ${sourceDir} to ${targetDir}: ${(error as Error).message}`,
         'SKILL_COPY_ERROR',
       );
     }

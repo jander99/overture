@@ -75,11 +75,13 @@ describe('SkillDiscovery', () => {
       expect(skills[0]).toEqual({
         name: 'debugging',
         path: `${skillsDir}/debugging/SKILL.md`,
+        directoryPath: `${skillsDir}/debugging`,
         description: 'Advanced debugging techniques.',
       });
       expect(skills[1]).toEqual({
         name: 'code-review',
         path: `${skillsDir}/code-review/SKILL.md`,
+        directoryPath: `${skillsDir}/code-review`,
         description: 'Code review best practices',
       });
     });
@@ -241,7 +243,8 @@ This is the second paragraph.`;
 
   describe('getSkill()', () => {
     it('should return skill if it exists', async () => {
-      const skillPath = '/home/user/.config/overture/skills/debugging/SKILL.md';
+      const skillDir = '/home/user/.config/overture/skills/debugging';
+      const skillPath = `${skillDir}/SKILL.md`;
 
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
       vi.mocked(mockFilesystem.readFile).mockResolvedValue(
@@ -253,6 +256,7 @@ This is the second paragraph.`;
       expect(skill).toEqual({
         name: 'debugging',
         path: skillPath,
+        directoryPath: skillDir,
         description: 'Advanced debugging techniques.',
       });
     });

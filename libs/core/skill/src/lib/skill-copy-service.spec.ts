@@ -18,7 +18,26 @@ describe('SkillCopyService', () => {
   const mockSkill: DiscoveredSkill = {
     name: 'debugging',
     path: '/home/user/.config/overture/skills/debugging/SKILL.md',
+    directoryPath: '/home/user/.config/overture/skills/debugging',
     description: 'Advanced debugging techniques',
+  };
+
+  // Helper to set up mocks for recursive directory copy
+  const setupDirectoryCopyMocks = () => {
+    // Mock readdir to return just SKILL.md (simple skill with no subdirs)
+    vi.mocked(mockFilesystem.readdir).mockResolvedValue(['SKILL.md']);
+
+    // Mock stat to identify files vs directories
+    vi.mocked(mockFilesystem.stat).mockResolvedValue({
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 100,
+      mtime: new Date(),
+    });
+
+    vi.mocked(mockFilesystem.readFile).mockResolvedValue('# Skill content');
+    vi.mocked(mockFilesystem.writeFile).mockResolvedValue();
+    vi.mocked(mockFilesystem.mkdir).mockResolvedValue();
   };
 
   beforeEach(() => {
@@ -55,11 +74,9 @@ describe('SkillCopyService', () => {
       // Mock skill discovery
       vi.spyOn(mockDiscovery, 'getSkill').mockResolvedValue(mockSkill);
 
-      // Mock filesystem operations
+      // Mock filesystem operations for directory copy
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue('# Debugging Skill');
-      vi.mocked(mockFilesystem.writeFile).mockResolvedValue();
-      vi.mocked(mockFilesystem.mkdir).mockResolvedValue();
+      setupDirectoryCopyMocks();
 
       const results = await copyService.copySkillToProject('debugging');
 
@@ -77,7 +94,7 @@ describe('SkillCopyService', () => {
       // Verify mkdir called for each client
       expect(mockFilesystem.mkdir).toHaveBeenCalledTimes(3);
 
-      // Verify writeFile called for each client
+      // Verify writeFile called for each client (1 file per client)
       expect(mockFilesystem.writeFile).toHaveBeenCalledTimes(3);
     });
 
@@ -105,9 +122,7 @@ describe('SkillCopyService', () => {
       vi.spyOn(mockDiscovery, 'getSkill').mockResolvedValue(mockSkill);
 
       vi.mocked(mockFilesystem.exists).mockResolvedValue(true);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue('# Debugging Skill');
-      vi.mocked(mockFilesystem.writeFile).mockResolvedValue();
-      vi.mocked(mockFilesystem.mkdir).mockResolvedValue();
+      setupDirectoryCopyMocks();
 
       const results = await copyService.copySkillToProject('debugging', {
         force: true,
@@ -121,7 +136,7 @@ describe('SkillCopyService', () => {
         expect(result.skipped).toBeUndefined();
       }
 
-      // Should have written files
+      // Should have written files (1 file per client)
       expect(mockFilesystem.writeFile).toHaveBeenCalledTimes(3);
     });
 
@@ -195,9 +210,7 @@ describe('SkillCopyService', () => {
       vi.spyOn(mockDiscovery, 'getSkill').mockResolvedValue(mockSkill);
 
       vi.mocked(mockFilesystem.exists).mockResolvedValue(false);
-      vi.mocked(mockFilesystem.readFile).mockResolvedValue('# Debugging Skill');
-      vi.mocked(mockFilesystem.writeFile).mockResolvedValue();
-      vi.mocked(mockFilesystem.mkdir).mockResolvedValue();
+      setupDirectoryCopyMocks();
 
       const customRoot = '/custom/project';
 

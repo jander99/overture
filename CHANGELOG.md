@@ -5,6 +5,22 @@ All notable changes to the Overture project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-31
+
+### Fixed
+
+- **Skill Directory Copy** - `overture sync` and `overture skill cp` now copy entire skill directories
+  - **Previous behavior:** Only copied `SKILL.md` file, missing `references/`, `scripts/`, `assets/` subdirectories
+  - **New behavior:** Recursively copies entire skill directory structure including all subdirectories
+  - Added `directoryPath` field to `DiscoveredSkill` type for proper directory tracking
+  - Updated `SkillSyncService` and `SkillCopyService` to use recursive directory copy
+
+### Documentation
+
+- Removed 14 completed work artifact documents (refactoring summaries, audit reports, complexity analyses)
+- Consolidated skills primer documentation (removed v1, kept comprehensive v2)
+- Added new research documents for agent skills activation patterns and skill grading rubrics
+
 ## [Unreleased]
 
 ### Added
