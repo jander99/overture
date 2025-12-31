@@ -596,7 +596,7 @@ describe('doctor command', () => {
       );
     });
 
-    it('should not show warnings in non-verbose mode', async () => {
+    it('should not show client detection warnings in non-verbose mode', async () => {
       // Arrange
       const mockDiscoveryReport = {
         environment: {
@@ -624,7 +624,16 @@ describe('doctor command', () => {
       vi.mocked(deps.pathResolver.findProjectRoot).mockResolvedValue(null);
       vi.mocked(deps.adapterRegistry.get).mockReturnValue(null);
       vi.mocked(deps.environment.homedir).mockReturnValue('/home/user');
-      vi.mocked(deps.filesystem.exists).mockResolvedValue(true); // Config repo exists
+      // Config repo exists, but agents/models.yaml don't
+      vi.mocked(deps.filesystem.exists).mockImplementation(async (path) => {
+        if (path === '/home/user/.config/overture') return true;
+        if (path === '/home/user/.config/overture/.git') return true;
+        if (path === '/home/user/.config/overture/skills') return false;
+        if (path === '/home/user/.config/overture/agents') return false;
+        if (path === '/home/user/.config/overture/models.yaml') return false;
+        return false;
+      });
+      vi.mocked(deps.filesystem.readdir).mockResolvedValue([]);
       vi.mocked(deps.process.exec).mockResolvedValue({
         stdout: 'https://github.com/user/repo.git',
         stderr: '',
@@ -636,8 +645,11 @@ describe('doctor command', () => {
       // Act
       await command.parseAsync(['node', 'doctor']);
 
-      // Assert - warn should not be called for client warnings (only MCP warnings)
-      expect(deps.output.warn).not.toHaveBeenCalled();
+      // Assert - client detection warnings should not be shown, but infra warnings (skills, agents, models) should be shown
+      expect(deps.output.warn).toHaveBeenCalled();
+      expect(deps.output.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('Test warning'),
+      );
     });
   });
 

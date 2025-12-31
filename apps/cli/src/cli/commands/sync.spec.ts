@@ -58,6 +58,7 @@ describe('sync command', () => {
         force: false,
         skipPlugins: false,
         skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -94,7 +95,7 @@ describe('sync command', () => {
         force: false,
         skipPlugins: false,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -120,7 +121,7 @@ describe('sync command', () => {
         force: false,
         skipPlugins: false,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -146,7 +147,7 @@ describe('sync command', () => {
         force: true,
         skipPlugins: false,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -169,7 +170,7 @@ describe('sync command', () => {
         force: false,
         skipPlugins: true,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -192,7 +193,7 @@ describe('sync command', () => {
         force: false,
         skipPlugins: false,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: false,
         detail: false,
       });
@@ -223,7 +224,7 @@ describe('sync command', () => {
         force: true,
         skipPlugins: true,
         skipSkills: false,
-        skipSkills: false,
+        skipAgents: false,
         skipUndetected: true,
         detail: false,
       });
@@ -723,7 +724,6 @@ describe('sync command', () => {
       vi.mocked(deps.syncEngine.syncClients).mockResolvedValue({
         success: true,
         results: [],
-        warnings: [],
         warnings: [],
         errors: [],
         pluginSyncDetails: {

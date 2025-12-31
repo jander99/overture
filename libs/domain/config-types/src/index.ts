@@ -47,6 +47,11 @@ export type {
   JsonValue,
   JsonObject,
   JsonArray,
+  ModelMapping,
+  AgentConfig,
+  AgentDefinition,
+  AgentSyncResult,
+  AgentSyncSummary,
 } from './lib/config.types.js';
 
 // Type guards

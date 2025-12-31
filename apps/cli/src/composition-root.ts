@@ -35,6 +35,7 @@ import {
   RestoreService,
   AuditService,
 } from '@overture/sync-core';
+import { AgentSyncService } from '@overture/agent-core';
 import { ImportService, CleanupService } from '@overture/import-core';
 import {
   SkillDiscovery,
@@ -231,6 +232,13 @@ export function createAppDependencies(): AppDependencies {
     skillDiscovery,
   );
 
+  const agentSyncService = new AgentSyncService(
+    filesystem,
+    output,
+    environment.homedir(),
+    path.join(environment.homedir(), '.config'), // Default XDG_CONFIG_HOME
+  );
+
   const syncEngine = createSyncEngine({
     filesystem,
     process,
@@ -244,6 +252,7 @@ export function createAppDependencies(): AppDependencies {
     backupService,
     pathResolver: pathResolverAdapter,
     skillSyncService,
+    agentSyncService,
   });
 
   // Import and Cleanup services

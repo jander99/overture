@@ -16,7 +16,10 @@ import type {
   PluginSyncResult,
   InstallationResult,
   ClientMcpServerDef,
+  SkillSyncResult,
   SkillSyncSummary,
+  AgentSyncResult,
+  AgentSyncSummary,
 } from '@overture/config-types';
 import type {
   ClientAdapter,
@@ -30,6 +33,7 @@ import type { ConfigLoader } from '@overture/config-core';
 import type { PluginInstaller, PluginDetector } from '@overture/plugin-core';
 import type { BinaryDetector } from '@overture/discovery-core';
 import type { SkillSyncService } from '@overture/skill';
+import type { AgentSyncService } from '@overture/agent-core';
 import { filterMcpsForClient } from './exclusion-filter.js';
 import {
   getTransportWarnings,
@@ -67,6 +71,8 @@ export interface SyncOptions {
   detail?: boolean;
   /** Skip skill synchronization (default: false) */
   skipSkills?: boolean;
+  /** Skip agent synchronization (default: false) */
+  skipAgents?: boolean;
   /** Force sync to specific config type (internal use for dual-sync) */
   forceConfigType?: 'user' | 'project';
 }
@@ -114,6 +120,7 @@ export interface SyncResult {
     toInstall: Array<{ name: string; marketplace: string }>;
   };
   skillSyncSummary?: SkillSyncSummary;
+  agentSyncSummary?: AgentSyncSummary;
 }
 
 /**
@@ -151,6 +158,8 @@ export interface SyncEngineDeps {
   };
   /** Skill sync service (optional) */
   skillSyncService?: SkillSyncService;
+  /** Agent sync service (optional) */
+  agentSyncService?: AgentSyncService;
 }
 
 /**
@@ -250,11 +259,13 @@ export class SyncEngine {
   ): Promise<{
     pluginSyncResult: PluginSyncResult | undefined;
     skillSyncSummary: SkillSyncSummary | undefined;
+    agentSyncSummary: AgentSyncSummary | undefined;
     warnings: string[];
   }> {
     const warnings: string[] = [];
     let pluginSyncResult: PluginSyncResult | undefined;
     let skillSyncSummary: SkillSyncSummary | undefined;
+    let agentSyncSummary: AgentSyncSummary | undefined;
 
     // 1. Sync plugins first (before MCP sync)
     if (!options.skipPlugins) {
@@ -284,8 +295,8 @@ export class SyncEngine {
         // Log warnings if any skills failed
         if (skillSyncSummary.failed > 0) {
           const failedSkills = skillSyncSummary.results
-            .filter((r) => !r.success)
-            .map((r) => r.skill);
+            .filter((r: SkillSyncResult) => !r.success)
+            .map((r: SkillSyncResult) => r.skill);
           warnings.push(
             `Failed to sync ${skillSyncSummary.failed} skill(s): ${failedSkills.join(', ')}`,
           );
@@ -298,7 +309,31 @@ export class SyncEngine {
       }
     }
 
-    return { pluginSyncResult, skillSyncSummary, warnings };
+    // 3. Sync agents
+    if (!options.skipAgents && this.deps.agentSyncService) {
+      try {
+        agentSyncSummary = await this.deps.agentSyncService.syncAgents({
+          projectRoot: options.projectRoot,
+          clients: targetClients as ClientName[],
+          dryRun: options.dryRun,
+        });
+
+        if (agentSyncSummary.failed > 0) {
+          const failedAgents = agentSyncSummary.results
+            .filter((r: AgentSyncResult) => !r.success)
+            .map((r: AgentSyncResult) => r.agent);
+          warnings.push(
+            `Failed to sync ${agentSyncSummary.failed} agent(s): ${failedAgents.join(', ')}`,
+          );
+        }
+      } catch (error) {
+        const errorMsg = `Agent sync failed: ${(error as Error).message}`;
+        this.deps.output.warn(`⚠️  ${errorMsg}`);
+        warnings.push(errorMsg);
+      }
+    }
+
+    return { pluginSyncResult, skillSyncSummary, agentSyncSummary, warnings };
   }
 
   /**
@@ -497,10 +532,11 @@ export class SyncEngine {
       // Determine which clients to sync
       const targetClients = options.clients || SyncEngine.DEFAULT_CLIENTS;
 
-      // Step 2: Sync plugins and skills
+      // Step 2: Sync plugins, skills, and agents
       const {
         pluginSyncResult,
         skillSyncSummary,
+        agentSyncSummary,
         warnings: syncWarnings,
       } = await this.syncPluginsAndSkills(
         userConfig,
@@ -553,6 +589,7 @@ export class SyncEngine {
         errors,
         pluginSyncDetails,
         skillSyncSummary,
+        agentSyncSummary,
       };
     } catch (error) {
       errors.push((error as Error).message);
