@@ -1,6 +1,6 @@
-import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 describe('CLI tests', () => {
   const workspaceRoot = resolve(__dirname, '../../../..');

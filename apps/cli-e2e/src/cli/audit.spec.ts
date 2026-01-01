@@ -11,10 +11,10 @@
  * @module cli-e2e/audit
  */
 
-import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
-import { tmpdir } from 'os';
+import { execSync } from 'node:child_process';
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
 describe('Audit Command E2E Tests', () => {
   let testDir: string;

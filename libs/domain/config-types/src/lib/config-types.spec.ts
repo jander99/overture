@@ -166,7 +166,7 @@ describe('config-types', () => {
         'jetbrains-copilot',
       ];
 
-      expect(clients.length).toBe(7);
+      expect(clients).toHaveLength(7);
       expect(clients).toContain('claude-code');
       expect(clients).toContain('vscode');
     });

@@ -7,8 +7,7 @@
  * @module cli/commands/types
  */
 
-import type { ConfigLoader } from '@overture/config-core';
-import type { PathResolver } from '@overture/config-core';
+import type { ConfigLoader , PathResolver } from '@overture/config-core';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
 import type { ImportService } from '@overture/import-core';

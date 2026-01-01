@@ -479,7 +479,7 @@ function displayClientDiff(
   clientResult: ClientSyncResult,
   detailMode: boolean,
 ): void {
-  if (!detailMode || !clientResult.diff || !clientResult.diff.hasChanges) {
+  if (!detailMode || !clientResult.diff?.hasChanges) {
     return;
   }
 

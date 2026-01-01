@@ -18,8 +18,8 @@
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { execSync } from 'child_process';
-import { join, resolve } from 'path';
+import { execSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
 import {
   mkdirSync,
   writeFileSync,
@@ -27,8 +27,8 @@ import {
   existsSync,
   rmSync,
   readdirSync,
-} from 'fs';
-import { tmpdir } from 'os';
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 
 describe('Sync Multi-Client E2E Tests', () => {
   let testDir: string;
@@ -378,7 +378,7 @@ mcp:
       const backupsBefore = existsSync(backupDir)
         ? readdirSync(backupDir).length
         : 0;
-      expect(readdirSync(backupDir).length).toBe(backupsBefore);
+      expect(readdirSync(backupDir)).toHaveLength(backupsBefore);
     });
   });
 

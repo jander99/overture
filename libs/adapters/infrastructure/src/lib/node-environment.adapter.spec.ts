@@ -124,7 +124,7 @@ describe('NodeEnvironmentAdapter', () => {
 
       const result = adapter.env;
 
-      expect(Object.keys(result).length).toBe(0);
+      expect(Object.keys(result)).toHaveLength(0);
     });
 
     it('should reflect changes to process.env', () => {

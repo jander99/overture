@@ -14,8 +14,8 @@ import type {
   CopilotCliAdapter,
 } from '@overture/client-adapters';
 import type { Platform, OvertureConfig } from '@overture/config-types';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Load test fixtures
 const fixturesPath = join(__dirname, '__fixtures__');

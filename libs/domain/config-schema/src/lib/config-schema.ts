@@ -104,7 +104,7 @@ export const McpServerConfigSchema = z
       .refine(
         (data) => {
           // Ensure exclude and include are mutually exclusive
-          return !(data && data.exclude && data.include);
+          return !(data?.exclude && data.include);
         },
         {
           message:

@@ -488,7 +488,7 @@ describe('MarketplaceRegistry', () => {
 
       MarketplaceRegistry.addCustomMarketplace('temp', 'temp-org/temp-repo');
 
-      expect(MarketplaceRegistry.getAllKnown().length).toBe(initialCount + 1);
+      expect(MarketplaceRegistry.getAllKnown()).toHaveLength(initialCount + 1);
       expect(MarketplaceRegistry.isKnownMarketplace('temp')).toBe(true);
       expect(MarketplaceRegistry.resolveMarketplace('temp')).toBe(
         'temp-org/temp-repo',
@@ -496,12 +496,12 @@ describe('MarketplaceRegistry', () => {
 
       MarketplaceRegistry.removeCustomMarketplace('temp');
 
-      expect(MarketplaceRegistry.getAllKnown().length).toBe(initialCount);
+      expect(MarketplaceRegistry.getAllKnown()).toHaveLength(initialCount);
       expect(MarketplaceRegistry.isKnownMarketplace('temp')).toBe(false);
     });
 
     it('should handle Unicode characters in marketplace names', () => {
-      const unicode = 'org/repo-\u65e5\u672c\u8a9e';
+      const unicode = 'org/repo-\u65E5\u672C\u8A9E';
       const resolved = MarketplaceRegistry.resolveMarketplace(unicode);
 
       expect(resolved).toBe(unicode);

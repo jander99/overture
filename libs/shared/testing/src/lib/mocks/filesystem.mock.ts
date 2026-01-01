@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Mocked } from 'vitest';
-import type * as fs from 'fs';
+import type * as fs from 'node:fs';
 
 /**
  * Mock filesystem structure for testing

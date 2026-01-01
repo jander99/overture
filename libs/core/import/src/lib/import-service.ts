@@ -636,7 +636,7 @@ export class ImportService {
           projectRoot,
         );
         allDiscovered.push(...mcps);
-      } catch (_error) {
+      } catch {
         // Already captured in checkConfigPath
       }
     } else if (status.parseError) {
@@ -810,27 +810,32 @@ export class ImportService {
     projectRoot?: string,
   ): Promise<DiscoveredMcp[]> {
     // Route to appropriate discover method based on client type
-    if (clientName === 'claude-code') {
+    switch (clientName) {
+    case 'claude-code': {
       return this.discoverFromClaudeCode(
         adapter as ClaudeCodeAdapter,
         overtureConfig,
         platform,
         projectRoot,
       );
-    } else if (clientName === 'opencode') {
+    }
+    case 'opencode': {
       return this.discoverFromOpenCode(
         adapter as OpenCodeAdapter,
         overtureConfig,
         platform,
         projectRoot,
       );
-    } else if (clientName === 'copilot-cli') {
+    }
+    case 'copilot-cli': {
       return this.discoverFromCopilotCLI(
         adapter as CopilotCliAdapter,
         overtureConfig,
         platform,
         projectRoot,
       );
+    }
+    // No default
     }
     return [];
   }

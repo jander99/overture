@@ -247,7 +247,7 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
     // Process each cleanup target
     for (const target of targets) {
       const projectConfig = fullConfig.projects?.[target.directory];
-      if (!projectConfig || !projectConfig.mcpServers) {
+      if (!projectConfig?.mcpServers) {
         continue;
       }
 
