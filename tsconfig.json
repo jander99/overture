@@ -65,6 +65,9 @@
     },
     {
       "path": "./libs/shared/formatters"
+    },
+    {
+      "path": "./libs/domain/diagnostics-types"
     }
   ]
 }
