@@ -9,11 +9,11 @@ import {
 } from '@overture/utils';
 import { OvertureConfigSchema } from '@overture/config-schema';
 import type { OvertureConfig } from '@overture/config-types';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 import {
   validateEnvVarReferences,
   getFixSuggestion,
-} from '../../lib/validators/env-var-validator';
+} from '../../lib/validators/env-var-validator.js';
 
 /**
  * Common MCP servers available for global configuration

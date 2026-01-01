@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { handleError, main } from './main';
+import { handleError, main } from './main.js';
 import { OvertureError } from '@overture/errors';
 import { Logger } from '@overture/utils';
 import type { Command } from 'commander';
-import type { AppDependencies } from './composition-root';
+import type { AppDependencies } from './composition-root.js';
 
 // Mock the Logger
 vi.mock('@overture/utils', () => ({
@@ -202,8 +202,8 @@ describe('main.ts', () => {
   describe('main function', () => {
     it('should create dependencies before creating program', async () => {
       // Arrange
-      const { createProgram } = await import('./cli');
-      const { createAppDependencies } = await import('./composition-root');
+      const { createProgram } = await import('./cli/index.js');
+      const { createAppDependencies } = await import('./composition-root.js');
       const initOrder: string[] = [];
 
       vi.mocked(createAppDependencies).mockImplementation(() => {
@@ -231,7 +231,7 @@ describe('main.ts', () => {
 
     it('should call parseAsync with process.argv', async () => {
       // Arrange
-      const { createProgram } = await import('./cli');
+      const { createProgram } = await import('./cli/index.js');
       const mockParseAsync = vi.fn().mockResolvedValue(undefined);
       vi.mocked(createProgram).mockReturnValue({
         parseAsync: mockParseAsync,
@@ -247,7 +247,7 @@ describe('main.ts', () => {
 
     it('should call process.exit with correct code on OvertureError', async () => {
       // Arrange
-      const { createProgram } = await import('./cli');
+      const { createProgram } = await import('./cli/index.js');
       const mockExit = vi
         .spyOn(process, 'exit')
         .mockImplementation(() => undefined as never);
@@ -268,7 +268,7 @@ describe('main.ts', () => {
 
     it('should call process.exit with 1 on unexpected error', async () => {
       // Arrange
-      const { createProgram } = await import('./cli');
+      const { createProgram } = await import('./cli/index.js');
       const mockExit = vi
         .spyOn(process, 'exit')
         .mockImplementation(() => undefined as never);

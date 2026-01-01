@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import { CONFIG_PATH } from '@overture/config-core';
 import { ErrorHandler } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Creates the 'init' command for initializing Overture configuration.

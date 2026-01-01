@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { ErrorHandler } from '@overture/utils';
 import type { InstalledPlugin } from '@overture/config-types';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Display plugins in human-readable format

@@ -13,7 +13,7 @@
  */
 
 import { Command } from 'commander';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Creates the 'doctor' command for system diagnostics.

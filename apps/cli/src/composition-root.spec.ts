@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createAppDependencies } from './composition-root';
+import { createAppDependencies } from './composition-root.js';
 
 describe('createAppDependencies', () => {
   it('should create all required dependencies', () => {

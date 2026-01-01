@@ -15,13 +15,13 @@ import type {
   OvertureConfig,
 } from '@overture/config-types';
 import { ALL_KNOWN_CLIENTS } from '@overture/config-types';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 import type { AdapterRegistry } from '@overture/client-adapters';
 import type { OutputPort } from '@overture/ports-output';
 import {
   validateEnvVarReferences,
   getFixSuggestion,
-} from '../../lib/validators/env-var-validator';
+} from '../../lib/validators/env-var-validator.js';
 
 /**
  * Valid platform names

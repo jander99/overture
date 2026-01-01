@@ -11,7 +11,7 @@ import { vi } from 'vitest';
 import type { ClientName, Platform } from '@overture/config-types';
 import type { BackupMetadata } from '@overture/sync-core';
 import type { ClientAdapter } from '@overture/client-adapters';
-import { TEST_CLIENTS, TEST_PLATFORMS } from './test-constants';
+import { TEST_CLIENTS, TEST_PLATFORMS } from './test-constants.js';
 
 /**
  * Discovery report structure (from discovery-core)

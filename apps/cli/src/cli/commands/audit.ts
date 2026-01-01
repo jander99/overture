@@ -16,7 +16,7 @@ import type {
   Platform,
 } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Audit results mapping client names to their unmanaged MCPs

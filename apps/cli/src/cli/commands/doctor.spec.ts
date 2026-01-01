@@ -14,9 +14,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createDoctorCommand } from './doctor';
-import type { AppDependencies } from '../../composition-root';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createDoctorCommand } from './doctor.js';
+import type { AppDependencies } from '../../composition-root.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
 import type { DiagnosticsResult } from '@overture/diagnostics-types';
 
 describe('doctor command', () => {

@@ -22,6 +22,11 @@
             "input": "{projectRoot}/src/assets",
             "glob": "**/*",
             "output": "assets"
+          },
+          {
+            "input": "{projectRoot}/src/assets",
+            "glob": "package.json",
+            "output": "."
           }
         ],
         "esbuildOptions": {

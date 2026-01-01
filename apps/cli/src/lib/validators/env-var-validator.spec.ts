@@ -20,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import {
   validateEnvVarReferences,
   getFixSuggestion,
-} from './env-var-validator';
+} from './env-var-validator.js';
 import type { OvertureConfig } from '@overture/config-types';
 
 describe('validateEnvVarReferences', () => {

@@ -17,9 +17,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
-import { createUserCommand } from './user';
-import type { AppDependencies } from '../../composition-root';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createUserCommand } from './user.js';
+import type { AppDependencies } from '../../composition-root.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
 import { Prompts } from '@overture/utils';
 import { ConfigError } from '@overture/errors';
 

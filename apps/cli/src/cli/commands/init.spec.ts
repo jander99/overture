@@ -17,9 +17,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
-import { createInitCommand } from './init';
-import type { AppDependencies } from '../../composition-root';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createInitCommand } from './init.js';
+import type { AppDependencies } from '../../composition-root.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
 
 describe('init command', () => {
   let deps: AppDependencies;

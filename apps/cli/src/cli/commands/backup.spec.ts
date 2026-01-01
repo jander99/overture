@@ -6,13 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createBackupCommand } from './backup';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
+import { createBackupCommand } from './backup.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
 import {
   createMockBackupMetadata,
   createMockAdapter,
-} from '../../test-utils/test-fixtures';
-import type { AppDependencies } from '../../composition-root';
+} from '../../test-utils/test-fixtures.js';
+import type { AppDependencies } from '../../composition-root.js';
 import type { BackupMetadata } from '@overture/sync-core';
 
 // Mock chalk to avoid ANSI codes in test assertions
