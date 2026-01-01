@@ -18,16 +18,62 @@ This file provides guidance for AI agents (GitHub Copilot, Cursor, Windsurf, etc
 4. **Documentation Generation** - Creates CLAUDE.md with plugin→MCP usage guidance
 5. **System Diagnostics** - `overture doctor` command for health checks and troubleshooting
 
+## Module System
+
+**Overture is a Pure ESM Project** (as of v0.4.0)
+
+All packages use ECMAScript Modules (ESM):
+
+- ✅ All packages have `"type": "module"`
+- ✅ TypeScript configured with `"module": "nodenext"`
+- ✅ Build outputs ESM format
+- ✅ Relative imports require `.js` extensions
+
+### ESM Patterns Used
+
+**Import Syntax:**
+
+```typescript
+// Relative imports need .js extension (even for .ts files)
+import { foo } from './utils.js';
+import { bar } from '../helpers.js';
+import { baz } from './directory/index.js'; // Explicit index required
+
+// Package imports don't need extension
+import { qux } from '@overture/utils';
+```
+
+**\_\_dirname Equivalent:**
+
+```typescript
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+```
+
+**Dynamic Imports:**
+
+```typescript
+const module = await import('./plugin.js'); // Note: .js extension required
+```
+
+### Requirements
+
+- **Node.js 18+** (required for full ESM support)
+- Modern package managers (npm 10+, pnpm 8+, yarn 4+)
+
 ## Architecture
 
 ### Tech Stack
 
-- **Language:** TypeScript 5.x
+- **Language:** TypeScript 5.x (Pure ESM)
 - **Build System:** Nx 22.0.3 monorepo
 - **CLI Framework:** Commander.js
 - **Schema Validation:** Zod
 - **Config Parsing:** js-yaml
-- **Testing:** Vitest (384+ tests, 83%+ coverage)
+- **Testing:** Vitest (918+ tests, 83%+ coverage)
 - **Bundler:** esbuild
 
 ### Project Structure
