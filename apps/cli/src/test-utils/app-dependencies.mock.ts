@@ -268,6 +268,95 @@ export function createMockAppDependencies(): AppDependencies {
     skillCopyService: {
       copySkill: vi.fn().mockResolvedValue({ success: true }),
     },
+
+    // Diagnostics
+    diagnosticsOrchestrator: {
+      runDiagnostics: vi.fn().mockResolvedValue({
+        environment: {
+          platform: 'linux' as const,
+          isWSL2: false,
+        },
+        configRepo: {
+          configRepoPath: '/home/user/.config/overture',
+          skillsPath: '/home/user/.config/overture/skills',
+          configRepoExists: false,
+          skillsDirExists: false,
+          git: {
+            isGitRepo: false,
+            gitRemote: null,
+            localHash: null,
+            remoteHash: null,
+            gitInSync: false,
+          },
+          skills: {
+            skillsPath: '/home/user/.config/overture/skills',
+            skillsDirExists: false,
+            skillCount: 0,
+          },
+          agents: {
+            globalAgentsPath: '/home/user/.config/overture/agents',
+            globalAgentsDirExists: false,
+            globalAgentCount: 0,
+            globalAgentErrors: [],
+            projectAgentsPath: null,
+            projectAgentsDirExists: false,
+            projectAgentCount: 0,
+            projectAgentErrors: [],
+            modelsConfigPath: '/home/user/.config/overture/models.json',
+            modelsConfigExists: false,
+            modelsConfigValid: false,
+            modelsConfigError: null,
+          },
+        },
+        clients: {
+          clients: [],
+          summary: {
+            clientsDetected: 0,
+            clientsMissing: 0,
+            wsl2Detections: 0,
+            configsValid: 0,
+            configsInvalid: 0,
+          },
+        },
+        mcpServers: {
+          mcpServers: [],
+          summary: {
+            mcpCommandsAvailable: 0,
+            mcpCommandsMissing: 0,
+          },
+        },
+        summary: {
+          clientsDetected: 0,
+          clientsMissing: 0,
+          wsl2Detections: 0,
+          configsValid: 0,
+          configsInvalid: 0,
+          mcpCommandsAvailable: 0,
+          mcpCommandsMissing: 0,
+          globalAgents: 0,
+          projectAgents: 0,
+          agentErrors: 0,
+        },
+      }),
+    },
+
+    formatters: {
+      environment: {
+        formatEnvironment: vi.fn(),
+      },
+      configRepo: {
+        formatConfigRepoStatus: vi.fn(),
+      },
+      clients: {
+        formatClientResults: vi.fn(),
+      },
+      mcp: {
+        formatMcpResults: vi.fn(),
+      },
+      summary: {
+        formatSummary: vi.fn(),
+      },
+    },
   } as unknown as AppDependencies;
 }
 
