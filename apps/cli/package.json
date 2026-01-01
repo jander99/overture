@@ -19,6 +19,9 @@
     "@overture/ports-filesystem": "*",
     "@overture/ports-process": "*",
     "@overture/ports-output": "*",
+    "@overture/diagnostics-core": "*",
+    "@overture/diagnostics-types": "*",
+    "@overture/formatters": "*",
     "commander": "^12.1.0"
   }
 }

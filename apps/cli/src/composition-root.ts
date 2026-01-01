@@ -42,6 +42,15 @@ import {
   SkillSyncService,
   SkillCopyService,
 } from '@overture/skill';
+import { createDiagnosticsOrchestrator } from '@overture/diagnostics-core';
+import type { DiagnosticsOrchestrator } from '@overture/diagnostics-core';
+import {
+  EnvironmentFormatter,
+  ConfigRepoFormatter,
+  ClientsFormatter,
+  McpFormatter,
+  SummaryFormatter,
+} from '@overture/formatters';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { ProcessPort, EnvironmentPort } from '@overture/ports-process';
 import type { OutputPort } from '@overture/ports-output';
@@ -90,6 +99,16 @@ export interface AppDependencies {
   skillDiscovery: SkillDiscovery;
   skillSyncService: SkillSyncService;
   skillCopyService: SkillCopyService;
+
+  // Diagnostics
+  diagnosticsOrchestrator: DiagnosticsOrchestrator;
+  formatters: {
+    environment: EnvironmentFormatter;
+    configRepo: ConfigRepoFormatter;
+    clients: ClientsFormatter;
+    mcp: McpFormatter;
+    summary: SummaryFormatter;
+  };
 }
 
 /**
@@ -167,8 +186,12 @@ export function createAppDependencies(): AppDependencies {
     output,
     getBackupDir: () => pathResolver.getBackupDir(),
   });
-  const restoreService = new RestoreService(filesystem, output);
-  const auditService = new AuditService(filesystem, output);
+  const restoreService = new RestoreService({
+    filesystem,
+    output,
+    backupService,
+  });
+  const auditService = new AuditService();
 
   // Create sync engine with all dependencies
   // Note: SyncEngine needs synchronous findProjectRoot(), but PathResolver's is async
@@ -259,6 +282,26 @@ export function createAppDependencies(): AppDependencies {
   const importService = new ImportService(filesystem, output);
   const cleanupService = new CleanupService(filesystem, output);
 
+  // Create diagnostics orchestrator
+  const diagnosticsOrchestrator = createDiagnosticsOrchestrator({
+    filesystem,
+    process,
+    environment,
+    discoveryService,
+    configLoader,
+    pathResolver,
+    adapterRegistry,
+  });
+
+  // Create formatters
+  const formatters = {
+    environment: new EnvironmentFormatter(output),
+    configRepo: new ConfigRepoFormatter(output),
+    clients: new ClientsFormatter(output),
+    mcp: new McpFormatter(output),
+    summary: new SummaryFormatter(output),
+  };
+
   return {
     filesystem,
     process,
@@ -280,5 +323,7 @@ export function createAppDependencies(): AppDependencies {
     skillDiscovery,
     skillSyncService,
     skillCopyService,
+    diagnosticsOrchestrator,
+    formatters,
   };
 }

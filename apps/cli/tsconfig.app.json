@@ -28,6 +28,15 @@
       "path": "../../libs/core/import/tsconfig.lib.json"
     },
     {
+      "path": "../../libs/shared/formatters/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/domain/diagnostics-types/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/core/diagnostics/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/ports/output/tsconfig.lib.json"
     },
     {
