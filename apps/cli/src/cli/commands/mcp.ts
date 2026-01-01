@@ -1,6 +1,45 @@
 import { Command } from 'commander';
-import type { McpServerConfig, ClientName } from '@overture/config-types';
+import type {
+  McpServerConfig,
+  ClientName,
+  OvertureConfig,
+} from '@overture/config-types';
+import type { ConfigLoader, PathResolver } from '@overture/config-core';
+import type { FilesystemPort } from '@overture/ports-filesystem';
+import type { OutputPort } from '@overture/ports-output';
 import type { AppDependencies } from '../../composition-root';
+
+/**
+ * Extended MCP server config that includes the enabled property
+ * used for project-level enable/disable functionality
+ */
+type ExtendedMcpServerConfig = McpServerConfig & {
+  enabled?: boolean;
+};
+
+/**
+ * Extended Overture config with typed MCP servers
+ */
+type ExtendedOvertureConfig = Omit<OvertureConfig, 'mcp'> & {
+  mcp?: Record<string, ExtendedMcpServerConfig>;
+};
+
+/**
+ * MCP display item with scope information
+ */
+type McpDisplayItem = {
+  name: string;
+  config: McpServerConfig;
+  scope: 'global' | 'project';
+};
+
+/**
+ * Options for MCP list command
+ */
+type McpListOptions = {
+  scope?: string;
+  client?: string;
+};
 
 /**
  * Creates the 'mcp' command group for managing MCP servers.
@@ -93,20 +132,10 @@ export function createMcpCommand(deps: AppDependencies): Command {
  * Load MCP servers from configuration files based on scope filter
  */
 async function loadMcpServersToDisplay(
-  configLoader: any,
-  options: { scope?: string; client?: string },
-): Promise<
-  Array<{
-    name: string;
-    config: McpServerConfig;
-    scope: 'global' | 'project';
-  }>
-> {
-  let mcpsToDisplay: Array<{
-    name: string;
-    config: McpServerConfig;
-    scope: 'global' | 'project';
-  }> = [];
+  configLoader: ConfigLoader,
+  options: McpListOptions,
+): Promise<McpDisplayItem[]> {
+  let mcpsToDisplay: McpDisplayItem[] = [];
 
   if (options.scope === 'global') {
     // Load only user config (global MCPs)
@@ -181,17 +210,13 @@ async function loadMcpServersToDisplay(
  * Display list of MCP servers with formatting
  */
 function displayMcpList(
-  mcpsToDisplay: Array<{
-    name: string;
-    config: McpServerConfig;
-    scope: 'global' | 'project';
-  }>,
-  options: { scope?: string; client?: string },
-  output: any,
+  mcpsToDisplay: McpDisplayItem[],
+  options: McpListOptions,
+  output: OutputPort,
 ): void {
   // Display header
   output.info('Configured MCP Servers:');
-  output.nl();
+  output.nl?.();
 
   // Display each MCP with scope indicator (if not filtered)
   for (const { name, config, scope } of mcpsToDisplay) {
@@ -200,7 +225,7 @@ function displayMcpList(
     const scopeLabel = options.scope ? '' : ` (${scope})`;
     output.info(`  ${name}${scopeLabel}`);
     output.info(`    Command: ${commandStr}`);
-    output.nl();
+    output.nl?.();
   }
 }
 
@@ -208,16 +233,17 @@ function displayMcpList(
  * Find and enable MCP server in project configuration
  */
 async function findAndEnableMcp(
-  configLoader: any,
+  configLoader: ConfigLoader,
   name: string,
-  output: any,
-): Promise<any | null> {
+  output: OutputPort,
+): Promise<ExtendedOvertureConfig | null> {
   // Load project config
   const cwd = process.cwd();
   const projectConfig = await configLoader.loadProjectConfig(cwd);
 
   // Initialize or use existing config
-  const config = projectConfig || { version: '1.0' as const, mcp: {} };
+  const config: ExtendedOvertureConfig =
+    projectConfig || ({ version: '1.0' as const, mcp: {} } as const);
 
   // Check if MCP exists in project config
   if (config.mcp && Object.hasOwn(config.mcp, name)) {
@@ -232,12 +258,12 @@ async function findAndEnableMcp(
  * Enable MCP from project config
  */
 function tryEnableFromProjectConfig(
-  config: any,
+  config: ExtendedOvertureConfig,
   name: string,
-  output: any,
-): any | null {
+  output: OutputPort,
+): ExtendedOvertureConfig | null {
   // eslint-disable-next-line security/detect-object-injection
-  const mcpConfig = config.mcp[name];
+  const mcpConfig = config.mcp?.[name];
   if (mcpConfig && mcpConfig.enabled !== false) {
     output.warn(`MCP server "${name}" is already enabled.`);
     return null;
@@ -256,11 +282,11 @@ function tryEnableFromProjectConfig(
  * Try to enable MCP by copying from user config
  */
 async function tryEnableFromUserConfig(
-  configLoader: any,
-  config: any,
+  configLoader: ConfigLoader,
+  config: ExtendedOvertureConfig,
   name: string,
-  output: any,
-): Promise<any | null> {
+  output: OutputPort,
+): Promise<ExtendedOvertureConfig | null> {
   const userConfig = await configLoader.loadUserConfig();
   if (userConfig?.mcp && Object.hasOwn(userConfig.mcp, name)) {
     // Copy from user config to project config
@@ -290,9 +316,9 @@ async function tryEnableFromUserConfig(
  * Write updated MCP configuration to project config file
  */
 async function writeUpdatedConfig(
-  pathResolver: any,
-  filesystem: any,
-  config: any,
+  pathResolver: PathResolver,
+  filesystem: FilesystemPort,
+  config: ExtendedOvertureConfig,
 ): Promise<void> {
   const configPath = pathResolver.getProjectConfigPath(process.cwd());
   const yaml = await import('js-yaml');

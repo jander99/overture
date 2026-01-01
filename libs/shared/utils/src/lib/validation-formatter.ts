@@ -53,6 +53,7 @@ function formatPath(path: PropertyKey[]): string {
  * Generate a suggestion based on error type and path
  */
 function generateSuggestion(issue: ZodIssue): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- Default case handles all other Zod error codes
   switch (issue.code) {
     case 'invalid_type':
       return handleInvalidTypeSuggestion(issue);
@@ -117,6 +118,7 @@ function handleEnumSuggestion(issue: ZodIssue): string | undefined {
  * Categorize Zod issue into error type
  */
 function categorizeIssue(issue: ZodIssue): ValidationError['type'] {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- Default case handles all other Zod error codes
   switch (issue.code) {
     case 'invalid_type':
       if ('received' in issue && issue.received === 'undefined') {

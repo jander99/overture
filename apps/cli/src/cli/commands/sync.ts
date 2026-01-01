@@ -189,12 +189,14 @@ function buildSyncOptions(
   skipUndetected: boolean;
   clients: ClientName[] | undefined;
   detail: boolean;
+  skipAgents?: boolean;
 } {
   return {
     dryRun: (options.dryRun as boolean) || false,
     force: (options.force as boolean) || false,
     skipPlugins: (options.skipPlugins as boolean) || false,
     skipSkills: (options.skipSkills as boolean) || false,
+    skipAgents: (options.skipAgents as boolean) || false,
     skipUndetected: (options.skipUndetected as boolean) !== false,
     clients: (options.client as string)
       ? [options.client as string as ClientName]
@@ -274,6 +276,47 @@ function displayDetectionSummary(
   // Show actually skipped clients
   for (const clientResult of actuallySkippedClients) {
     output.skip?.(`${clientResult.client} - not detected, skipped`);
+  }
+}
+
+/**
+ * Displays agents synchronization summary.
+ *
+ * @param output - Output service
+ * @param result - Sync result containing agent sync information
+ * @param detailMode - Whether detail mode is enabled
+ */
+function displayAgentsSummary(
+  output: AppDependencies['output'],
+  result: SyncResult,
+  detailMode: boolean,
+): void {
+  if (result.agentSyncSummary && result.agentSyncSummary.total > 0) {
+    const summary = result.agentSyncSummary;
+    output.info('🤖 Agents:');
+    if (summary.synced > 0) {
+      const syncedResults = summary.results.filter((r) => r.success);
+      const uniqueAgents = new Set(syncedResults.map((r) => r.agent));
+      const clientCount = new Set(
+        syncedResults.flatMap((r) => Object.keys(r.clientResults)),
+      ).size;
+
+      output.success(
+        `  ✓ Synced ${uniqueAgents.size} agent(s) to ${clientCount} client(s)`,
+      );
+    }
+    if (summary.failed > 0) {
+      output.warn(`  ✗ Failed ${summary.failed} agent(s)`);
+      if (detailMode) {
+        const failedAgents = summary.results
+          .filter((r) => !r.success)
+          .map((r) => r.agent);
+        for (const agent of failedAgents) {
+          output.warn(`    - ${agent}`);
+        }
+      }
+    }
+    output.nl?.();
   }
 }
 
@@ -436,7 +479,7 @@ function displayClientDiff(
   clientResult: ClientSyncResult,
   detailMode: boolean,
 ): void {
-  if (!detailMode || !clientResult.diff || !clientResult.diff.hasChanges) {
+  if (!detailMode || !clientResult.diff?.hasChanges) {
     return;
   }
 
@@ -814,6 +857,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
     .option('--force', 'Force sync even if validation warnings exist')
     .option('--skip-plugins', 'Skip plugin installation, only sync MCPs')
     .option('--skip-skills', 'Skip skill synchronization, only sync MCPs')
+    .option('--skip-agents', 'Skip agent synchronization, only sync MCPs')
     .option(
       '--no-skip-undetected',
       'Generate configs even for clients not detected on system',
@@ -856,6 +900,9 @@ export function createSyncCommand(deps: AppDependencies): Command {
 
         // Phase 1.6: Skill Sync Summary
         displaySkillsSummary(output, result, detailMode);
+
+        // Phase 1.7: Agent Sync Summary
+        displayAgentsSummary(output, result, detailMode);
 
         // Phase 2: Sync Summary
         displaySyncResults(output, result, detailMode);

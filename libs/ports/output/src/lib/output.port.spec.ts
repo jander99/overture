@@ -556,6 +556,7 @@ describe('Port: OutputPort Interface', () => {
 
   describe('Type Safety', () => {
     describe('Compilation checks', () => {
+      // eslint-disable-next-line vitest/expect-expect -- This is a compilation test
       it('should enforce string parameter types', () => {
         // Arrange
         const output: OutputPort = {

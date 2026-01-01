@@ -493,12 +493,23 @@ export class DiscoveryService {
 
     // Use explicit property access for security
     let clientPaths: string[] | undefined;
-    if (client === 'claude-code') {
+    switch (client) {
+    case 'claude-code': {
       clientPaths = guiAppPaths['claude-code'];
-    } else if (client === 'copilot-cli') {
+    
+    break;
+    }
+    case 'copilot-cli': {
       clientPaths = guiAppPaths['copilot-cli'];
-    } else if (client === 'opencode') {
+    
+    break;
+    }
+    case 'opencode': {
       clientPaths = guiAppPaths.opencode;
+    
+    break;
+    }
+    // No default
     }
 
     if (clientPaths) {

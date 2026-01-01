@@ -313,12 +313,23 @@ export class WSL2Detector {
     // Use explicit property access to avoid object injection warning
     let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
 
-    if (client === 'claude-code') {
+    switch (client) {
+    case 'claude-code': {
       defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-    } else if (client === 'copilot-cli') {
+    
+    break;
+    }
+    case 'copilot-cli': {
       defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-    } else if (client === 'opencode') {
+    
+    break;
+    }
+    case 'opencode': {
       defaults = WINDOWS_DEFAULT_PATHS.opencode;
+    
+    break;
+    }
+    // No default
     }
 
     if (!defaults) {
@@ -357,12 +368,23 @@ export class WSL2Detector {
     // Use explicit property access to avoid object injection warning
     let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
 
-    if (client === 'claude-code') {
+    switch (client) {
+    case 'claude-code': {
       defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-    } else if (client === 'copilot-cli') {
+    
+    break;
+    }
+    case 'copilot-cli': {
       defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-    } else if (client === 'opencode') {
+    
+    break;
+    }
+    case 'opencode': {
       defaults = WINDOWS_DEFAULT_PATHS.opencode;
+    
+    break;
+    }
+    // No default
     }
 
     if (!defaults?.configPath) {

@@ -8,7 +8,7 @@
  */
 
 import type { Mocked } from 'vitest';
-import type * as os from 'os';
+import type * as os from 'node:os';
 
 /**
  * Test constants for default home directories

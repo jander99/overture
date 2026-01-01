@@ -13,8 +13,12 @@
  */
 
 import { Command } from 'commander';
-import * as os from 'os';
-import type { Platform, ClientName } from '@overture/config-types';
+import * as os from 'node:os';
+import type {
+  Platform,
+  ClientName,
+  OvertureConfig,
+} from '@overture/config-types';
 import { SUPPORTED_CLIENTS } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
 import chalk from 'chalk';
@@ -293,6 +297,170 @@ async function countSkills(
 }
 
 /**
+ * Check agent directories and validate agent files
+ */
+async function checkAgents(
+  configRepoPath: string,
+  configRepoExists: boolean,
+  projectRoot: string | null,
+  filesystem: {
+    exists(path: string): Promise<boolean>;
+    readdir(path: string): Promise<string[]>;
+    readFile(path: string): Promise<string>;
+  },
+): Promise<{
+  globalAgentsPath: string;
+  globalAgentsDirExists: boolean;
+  globalAgentCount: number;
+  globalAgentErrors: string[];
+  projectAgentsPath: string | null;
+  projectAgentsDirExists: boolean;
+  projectAgentCount: number;
+  projectAgentErrors: string[];
+  modelsConfigPath: string;
+  modelsConfigExists: boolean;
+  modelsConfigValid: boolean;
+  modelsConfigError: string | null;
+}> {
+  const globalAgentsPath = `${configRepoPath}/agents`;
+  const modelsConfigPath = `${configRepoPath}/models.yaml`;
+
+  const globalAgentsDirExists =
+    configRepoExists && (await filesystem.exists(globalAgentsPath));
+  const modelsConfigExists =
+    configRepoExists && (await filesystem.exists(modelsConfigPath));
+
+  // Validate global agents
+  const { agentCount: globalAgentCount, errors: globalAgentErrors } =
+    await validateAgents(globalAgentsPath, globalAgentsDirExists, filesystem);
+
+  // Validate project agents (if in a project)
+  let projectAgentsPath: string | null = null;
+  let projectAgentsDirExists = false;
+  let projectAgentCount = 0;
+  let projectAgentErrors: string[] = [];
+
+  if (projectRoot) {
+    projectAgentsPath = `${projectRoot}/.overture/agents`;
+    projectAgentsDirExists = await filesystem.exists(projectAgentsPath);
+    const projectAgentData = await validateAgents(
+      projectAgentsPath,
+      projectAgentsDirExists,
+      filesystem,
+    );
+    projectAgentCount = projectAgentData.agentCount;
+    projectAgentErrors = projectAgentData.errors;
+  }
+
+  // Validate models.yaml
+  let modelsConfigValid = false;
+  let modelsConfigError: string | null = null;
+
+  if (modelsConfigExists) {
+    try {
+      const content = await filesystem.readFile(modelsConfigPath);
+      // Try parsing as YAML
+      const yaml = await import('js-yaml');
+      const parsed = yaml.load(content);
+
+      // Basic validation - should be an object
+      if (typeof parsed !== 'object' || parsed === null) {
+        modelsConfigError = 'models.yaml must contain a YAML object';
+      } else {
+        modelsConfigValid = true;
+      }
+    } catch (error) {
+      modelsConfigError = (error as Error).message;
+    }
+  }
+
+  return {
+    globalAgentsPath,
+    globalAgentsDirExists,
+    globalAgentCount,
+    globalAgentErrors,
+    projectAgentsPath,
+    projectAgentsDirExists,
+    projectAgentCount,
+    projectAgentErrors,
+    modelsConfigPath,
+    modelsConfigExists,
+    modelsConfigValid,
+    modelsConfigError,
+  };
+}
+
+/**
+ * Validate agent YAML/MD pairs in a directory
+ */
+async function validateAgents(
+  agentsPath: string,
+  agentsDirExists: boolean,
+  filesystem: {
+    readdir(path: string): Promise<string[]>;
+    exists(path: string): Promise<boolean>;
+    readFile(path: string): Promise<string>;
+  },
+): Promise<{ agentCount: number; errors: string[] }> {
+  const errors: string[] = [];
+  let agentCount = 0;
+
+  if (!agentsDirExists) {
+    return { agentCount, errors };
+  }
+
+  try {
+    const files = await filesystem.readdir(agentsPath);
+    const yamlFiles = files.filter(
+      (f) => f.endsWith('.yaml') || f.endsWith('.yml'),
+    );
+
+    for (const yamlFile of yamlFiles) {
+      const name = yamlFile.replace(/\.ya?ml$/, '');
+      const mdFile = `${name}.md`;
+
+      const yamlPath = `${agentsPath}/${yamlFile}`;
+      const mdPath = `${agentsPath}/${mdFile}`;
+
+      // Check if corresponding .md file exists
+      const hasMdFile = await filesystem.exists(mdPath);
+      if (!hasMdFile) {
+        errors.push(`${yamlFile}: Missing corresponding ${mdFile} file`);
+        continue;
+      }
+
+      // Validate YAML syntax
+      try {
+        const yamlContent = await filesystem.readFile(yamlPath);
+        const yaml = await import('js-yaml');
+        const parsed = yaml.load(yamlContent);
+
+        // Basic validation - should have a 'name' field
+        if (typeof parsed !== 'object' || parsed === null) {
+          errors.push(`${yamlFile}: Invalid YAML structure`);
+          continue;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!(parsed as any).name) {
+          errors.push(`${yamlFile}: Missing required 'name' field`);
+          continue;
+        }
+
+        // Successfully validated
+        agentCount++;
+      } catch (error) {
+        errors.push(`${yamlFile}: ${(error as Error).message}`);
+      }
+    }
+  } catch (error) {
+    errors.push(`Failed to read agents directory: ${(error as Error).message}`);
+  }
+
+  return { agentCount, errors };
+}
+
+/**
  * Check all installed clients
  */
 async function checkClients(
@@ -427,7 +595,7 @@ async function checkClients(
  * Check all MCP servers
  */
 async function checkMcpServers(
-  mergedConfig: unknown,
+  mergedConfig: OvertureConfig | null,
   mcpSources: Record<string, string>,
   process: {
     commandExists(command: string): Promise<boolean>;
@@ -456,12 +624,10 @@ async function checkMcpServers(
     mcpCommandsMissing: 0,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mergedConfig is dynamic configuration object
-  const mcpConfig = (mergedConfig as any)?.mcp || {};
+  const mcpConfig = mergedConfig?.mcp || {};
 
   for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mcpDef is dynamic configuration object
-    const commandExists = await process.commandExists((mcpDef as any).command);
+    const commandExists = await process.commandExists(mcpDef.command);
     const source = Object.hasOwn(mcpSources, mcpName)
       ? // eslint-disable-next-line security/detect-object-injection
         mcpSources[mcpName]
@@ -469,7 +635,7 @@ async function checkMcpServers(
 
     const mcpResult = {
       name: mcpName,
-      command: (mcpDef as any).command,
+      command: mcpDef.command,
       available: commandExists,
       source,
     };
@@ -627,6 +793,93 @@ function outputSkillsStatus(
 }
 
 /**
+ * Display agents directory status
+ */
+function outputAgentsStatus(
+  agentsDirExists: boolean,
+  agentsPath: string,
+  agentCount: number,
+  agentErrors: string[],
+  scope: 'Global' | 'Project',
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+    error(message: string): void;
+  },
+  verbose: boolean,
+): void {
+  if (agentsDirExists) {
+    const agentCountStr =
+      agentCount === 0
+        ? chalk.yellow('no agents')
+        : agentCount === 1
+          ? chalk.green('1 agent')
+          : chalk.green(`${agentCount} agents`);
+
+    const hasErrors = agentErrors.length > 0;
+
+    if (hasErrors) {
+      output.warn(
+        `  ${chalk.yellow('⚠')} ${scope} agents - ${chalk.dim(agentsPath)} ${chalk.dim(`(${agentCountStr}, ${chalk.yellow(agentErrors.length + ' error' + (agentErrors.length === 1 ? '' : 's'))})`)}`,
+      );
+
+      if (verbose) {
+        agentErrors.forEach((error) => {
+          console.log(`    ${chalk.red('✗')} ${chalk.dim(error)}`);
+        });
+      }
+    } else {
+      output.success(
+        `  ${chalk.green('✓')} ${scope} agents - ${chalk.dim(agentsPath)} ${chalk.dim(`(${agentCountStr})`)}`,
+      );
+    }
+  } else {
+    output.warn(
+      `  ${chalk.yellow('⚠')} ${scope} agents directory not found - ${chalk.dim(agentsPath)}`,
+    );
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Run: mkdir -p ' + agentsPath)}`,
+    );
+  }
+}
+
+/**
+ * Display models.yaml status
+ */
+function outputModelsConfigStatus(
+  modelsConfigExists: boolean,
+  modelsConfigPath: string,
+  modelsConfigValid: boolean,
+  modelsConfigError: string | null,
+  output: {
+    success(message: string): void;
+    warn(message: string): void;
+  },
+): void {
+  if (modelsConfigExists) {
+    if (modelsConfigValid) {
+      output.success(
+        `  ${chalk.green('✓')} Model mappings - ${chalk.dim(modelsConfigPath)}`,
+      );
+    } else {
+      output.warn(
+        `  ${chalk.yellow('⚠')} Model mappings - ${chalk.dim(modelsConfigPath)} ${chalk.yellow('(invalid)')}`,
+      );
+      if (modelsConfigError) {
+        console.log(`    ${chalk.dim('→')} ${chalk.dim(modelsConfigError)}`);
+      }
+    }
+  } else {
+    output.warn(
+      `  ${chalk.yellow('⚠')} Model mappings not found - ${chalk.dim(modelsConfigPath)}`,
+    );
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Optional: Create models.yaml to define agent model mappings')}`,
+    );
+  }
+}
+
+/**
  * Display config repository not found message
  */
 function outputConfigRepoNotFound(
@@ -657,11 +910,21 @@ function outputConfigRepoStatus(
   localHash: string | null,
   remoteHash: string | null,
   gitInSync: boolean,
+  globalAgentsPath: string,
+  globalAgentsDirExists: boolean,
+  globalAgentCount: number,
+  globalAgentErrors: string[],
+  modelsConfigPath: string,
+  modelsConfigExists: boolean,
+  modelsConfigValid: boolean,
+  modelsConfigError: string | null,
   output: {
     success(message: string): void;
     warn(message: string): void;
     info(message: string): void;
+    error(message: string): void;
   },
+  verbose: boolean,
 ): void {
   output.info(chalk.bold('Checking config repository...\n'));
 
@@ -679,6 +942,22 @@ function outputConfigRepoStatus(
       output,
     );
     outputSkillsStatus(skillsDirExists, skillsPath, skillCount, output);
+    outputAgentsStatus(
+      globalAgentsDirExists,
+      globalAgentsPath,
+      globalAgentCount,
+      globalAgentErrors,
+      'Global',
+      output,
+      verbose,
+    );
+    outputModelsConfigStatus(
+      modelsConfigExists,
+      modelsConfigPath,
+      modelsConfigValid,
+      modelsConfigError,
+      output,
+    );
   } else {
     outputConfigRepoNotFound(configRepoPath, output);
   }
@@ -944,6 +1223,67 @@ function outputSkillsSummary(
 }
 
 /**
+ * Output agents summary
+ */
+function outputAgentsSummary(
+  globalAgentsDirExists: boolean,
+  globalAgentCount: number,
+  globalAgentErrors: string[],
+  projectAgentsDirExists: boolean,
+  projectAgentCount: number,
+  projectAgentErrors: string[],
+  modelsConfigExists: boolean,
+  modelsConfigValid: boolean,
+): void {
+  const globalAgentsStatus = globalAgentsDirExists
+    ? chalk.green('exists')
+    : chalk.yellow('not found');
+  const globalAgentCountStr =
+    globalAgentsDirExists && globalAgentCount > 0
+      ? chalk.dim(
+          ` (${globalAgentCount} agent${globalAgentCount === 1 ? '' : 's'})`,
+        )
+      : '';
+  const globalErrorsStr =
+    globalAgentErrors.length > 0
+      ? chalk.yellow(
+          ` - ${globalAgentErrors.length} error${globalAgentErrors.length === 1 ? '' : 's'}`,
+        )
+      : '';
+  console.log(
+    `  Global agents:    ${globalAgentsStatus}${globalAgentCountStr}${globalErrorsStr}`,
+  );
+
+  if (projectAgentsDirExists || projectAgentCount > 0) {
+    const projectAgentsStatus = projectAgentsDirExists
+      ? chalk.green('exists')
+      : chalk.yellow('not found');
+    const projectAgentCountStr =
+      projectAgentsDirExists && projectAgentCount > 0
+        ? chalk.dim(
+            ` (${projectAgentCount} agent${projectAgentCount === 1 ? '' : 's'})`,
+          )
+        : '';
+    const projectErrorsStr =
+      projectAgentErrors.length > 0
+        ? chalk.yellow(
+            ` - ${projectAgentErrors.length} error${projectAgentErrors.length === 1 ? '' : 's'}`,
+          )
+        : '';
+    console.log(
+      `  Project agents:   ${projectAgentsStatus}${projectAgentCountStr}${projectErrorsStr}`,
+    );
+  }
+
+  const modelsStatus = modelsConfigExists
+    ? modelsConfigValid
+      ? chalk.green('valid')
+      : chalk.yellow('invalid')
+    : chalk.dim('not configured');
+  console.log(`  Model mappings:   ${modelsStatus}`);
+}
+
+/**
  * Output config repository summary
  */
 function outputConfigRepoSummary(
@@ -955,6 +1295,14 @@ function outputConfigRepoSummary(
   gitInSync: boolean,
   skillsDirExists: boolean,
   skillCount: number,
+  globalAgentsDirExists: boolean,
+  globalAgentCount: number,
+  globalAgentErrors: string[],
+  projectAgentsDirExists: boolean,
+  projectAgentCount: number,
+  projectAgentErrors: string[],
+  modelsConfigExists: boolean,
+  modelsConfigValid: boolean,
 ): void {
   const configRepoStatus = configRepoExists
     ? chalk.green('exists')
@@ -969,6 +1317,16 @@ function outputConfigRepoSummary(
       gitInSync,
     );
     outputSkillsSummary(skillsDirExists, skillCount);
+    outputAgentsSummary(
+      globalAgentsDirExists,
+      globalAgentCount,
+      globalAgentErrors,
+      projectAgentsDirExists,
+      projectAgentCount,
+      projectAgentErrors,
+      modelsConfigExists,
+      modelsConfigValid,
+    );
   }
 }
 
@@ -1036,6 +1394,14 @@ function outputSummary(
   gitInSync: boolean,
   skillsDirExists: boolean,
   skillCount: number,
+  globalAgentsDirExists: boolean,
+  globalAgentCount: number,
+  globalAgentErrors: string[],
+  projectAgentsDirExists: boolean,
+  projectAgentCount: number,
+  projectAgentErrors: string[],
+  modelsConfigExists: boolean,
+  modelsConfigValid: boolean,
   clientsDetected: number,
   clientsMissing: number,
   wsl2Detections: number,
@@ -1060,6 +1426,14 @@ function outputSummary(
     gitInSync,
     skillsDirExists,
     skillCount,
+    globalAgentsDirExists,
+    globalAgentCount,
+    globalAgentErrors,
+    projectAgentsDirExists,
+    projectAgentCount,
+    projectAgentErrors,
+    modelsConfigExists,
+    modelsConfigValid,
   );
   console.log('');
 
@@ -1144,6 +1518,14 @@ export function createDoctorCommand(deps: AppDependencies): Command {
           filesystem,
         );
 
+        // Check agents
+        const agentsData = await checkAgents(
+          configRepoPath,
+          configRepoExists,
+          projectRoot,
+          filesystem,
+        );
+
         // Check clients
         const clientsData = await checkClients(
           discoveryReport,
@@ -1188,6 +1570,28 @@ export function createDoctorCommand(deps: AppDependencies): Command {
               exists: skillsDirExists,
               skillCount,
             },
+            agentsDirectory: {
+              global: {
+                path: agentsData.globalAgentsPath,
+                exists: agentsData.globalAgentsDirExists,
+                agentCount: agentsData.globalAgentCount,
+                errors: agentsData.globalAgentErrors,
+              },
+              project: projectRoot
+                ? {
+                    path: agentsData.projectAgentsPath,
+                    exists: agentsData.projectAgentsDirExists,
+                    agentCount: agentsData.projectAgentCount,
+                    errors: agentsData.projectAgentErrors,
+                  }
+                : null,
+            },
+            modelsConfig: {
+              path: agentsData.modelsConfigPath,
+              exists: agentsData.modelsConfigExists,
+              valid: agentsData.modelsConfigValid,
+              error: agentsData.modelsConfigError,
+            },
           },
           clients: clientsData.clients,
           mcpServers: mcpData.mcpServers,
@@ -1199,6 +1603,11 @@ export function createDoctorCommand(deps: AppDependencies): Command {
             configsInvalid: clientsData.summary.configsInvalid,
             mcpCommandsAvailable: mcpData.summary.mcpCommandsAvailable,
             mcpCommandsMissing: mcpData.summary.mcpCommandsMissing,
+            globalAgents: agentsData.globalAgentCount,
+            projectAgents: agentsData.projectAgentCount,
+            agentErrors:
+              agentsData.globalAgentErrors.length +
+              agentsData.projectAgentErrors.length,
           },
         };
 
@@ -1218,8 +1627,30 @@ export function createDoctorCommand(deps: AppDependencies): Command {
             localHash,
             remoteHash,
             gitInSync,
+            agentsData.globalAgentsPath,
+            agentsData.globalAgentsDirExists,
+            agentsData.globalAgentCount,
+            agentsData.globalAgentErrors,
+            agentsData.modelsConfigPath,
+            agentsData.modelsConfigExists,
+            agentsData.modelsConfigValid,
+            agentsData.modelsConfigError,
             output,
+            options.verbose,
           );
+          if (projectRoot && agentsData.projectAgentsDirExists) {
+            output.info(chalk.bold('Checking project agents...\n'));
+            outputAgentsStatus(
+              agentsData.projectAgentsDirExists,
+              agentsData.projectAgentsPath!,
+              agentsData.projectAgentCount,
+              agentsData.projectAgentErrors,
+              'Project',
+              output,
+              options.verbose,
+            );
+            console.log('');
+          }
           outputClientResults(clientsData.clients, output, options.verbose);
           outputMcpResults(mcpData.mcpServers, output, options.verbose);
           outputSummary(
@@ -1231,6 +1662,14 @@ export function createDoctorCommand(deps: AppDependencies): Command {
             gitInSync,
             skillsDirExists,
             skillCount,
+            agentsData.globalAgentsDirExists,
+            agentsData.globalAgentCount,
+            agentsData.globalAgentErrors,
+            agentsData.projectAgentsDirExists,
+            agentsData.projectAgentCount,
+            agentsData.projectAgentErrors,
+            agentsData.modelsConfigExists,
+            agentsData.modelsConfigValid,
             clientsData.summary.clientsDetected,
             clientsData.summary.clientsMissing,
             clientsData.summary.wsl2Detections,

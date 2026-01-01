@@ -22,6 +22,9 @@
       "path": "../../libs/core/skill/tsconfig.lib.json"
     },
     {
+      "path": "../../libs/core/agent/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/core/import/tsconfig.lib.json"
     },
     {

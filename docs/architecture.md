@@ -1045,10 +1045,11 @@ apps/cli/src/
 ├── cli/                    # Command handlers
 │   ├── commands/
 │   │   ├── init.command.ts
-│   │   ├── sync.command.ts      # Enhanced in v0.2
+│   │   ├── sync.command.ts      # Enhanced in v0.2, v0.3 (agent sync)
 │   │   ├── validate.command.ts  # Enhanced in v0.2
 │   │   ├── user.command.ts      # NEW in v0.2
 │   │   ├── audit.command.ts     # NEW in v0.2
+│   │   ├── doctor.command.ts    # Enhanced in v0.3 (agent validation)
 │   │   └── backup.command.ts    # NEW in v0.2
 │   ├── middleware/
 │   └── main.ts
@@ -1057,7 +1058,7 @@ apps/cli/src/
 │   ├── config-loader.ts         # Enhanced in v0.2
 │   ├── path-resolver.ts         # NEW in v0.2
 │   ├── env-expander.ts          # NEW in v0.2
-│   ├── sync-engine.ts           # NEW in v0.2
+│   ├── sync-engine.ts           # Enhanced in v0.3 (agent sync)
 │   ├── backup-service.ts        # NEW in v0.2
 │   ├── restore-service.ts       # NEW in v0.2
 │   ├── audit-service.ts         # NEW in v0.2
@@ -1091,6 +1092,35 @@ apps/cli/src/
     ├── prompts.ts
     ├── format.ts
     └── validation.ts
+
+libs/                       # Shared libraries (Nx monorepo)
+├── core/
+│   ├── agent/             # Agent synchronization (NEW in v0.3)
+│   │   ├── src/
+│   │   │   ├── agent-sync-service.ts
+│   │   │   ├── agent-transformer.ts
+│   │   │   └── index.ts
+│   │   ├── package.json
+│   │   └── README.md
+│   ├── config/            # Configuration loading
+│   ├── discovery/         # Client detection
+│   ├── plugin/            # Plugin management
+│   ├── skill/             # Skill synchronization
+│   └── sync/              # Multi-client sync orchestration
+│
+├── adapters/
+│   ├── client-adapters/   # Client-specific adapters
+│   └── infrastructure/    # Filesystem and process adapters
+│
+├── domain/
+│   ├── config-types/      # Core configuration types
+│   ├── config-schema/     # Zod validation schemas
+│   └── errors/            # Error definitions
+│
+└── ports/
+    ├── filesystem/        # Filesystem abstraction
+    ├── output/            # Output/logging abstraction
+    └── process/           # Process execution abstraction
 ```
 
 ---
@@ -1346,6 +1376,89 @@ class AuditService {
   // 4. Generate suggestions
 }
 ```
+
+### Agent Sync Service
+
+Manages AI agent discovery and synchronization across multiple clients.
+
+**Responsibilities:**
+
+- Discover agents from global and project directories
+- Validate agent YAML/MD pairs
+- Load model mapping configuration
+- Transform agents to client-specific formats
+- Sync agents to client-specific locations
+
+**Architecture:**
+
+- **Library**: `@overture/agent-core` (hexagonal architecture)
+- **Dependencies**: FilesystemPort, OutputPort (injected)
+- **Integration**: Optional dependency in SyncEngine
+
+**Agent Discovery:**
+
+```typescript
+class AgentSyncService {
+  async syncAgents(options: AgentSyncOptions): Promise<AgentSyncSummary>;
+
+  private async discoverAgents(
+    projectRoot?: string,
+  ): Promise<AgentDefinition[]>;
+  private async loadModelMapping(): Promise<ModelMapping>;
+  private async loadAgentsFromDir(
+    dir: string,
+    scope: Scope,
+  ): Promise<AgentDefinition[]>;
+}
+```
+
+**Agent Transformation:**
+
+```typescript
+class AgentTransformer {
+  transform(
+    agent: AgentDefinition,
+    client: ClientName,
+    modelMapping: ModelMapping,
+  ): { content: string; filename: string };
+
+  // Client-specific transformations:
+  // - Claude Code: YAML frontmatter + Markdown (permissionMode: all)
+  // - OpenCode: YAML frontmatter + Markdown (mode: subagent, granular permissions)
+  // - Copilot CLI: GitHub-style agent format (.agent.md extension)
+}
+```
+
+**Scope Rules:**
+
+- **Global agents** (`~/.config/overture/agents/`) → All clients
+- **Project agents** (`.overture/agents/`) → Project-aware clients only
+- **Copilot CLI**: Project-only (`.github/agents/`)
+
+**Model Resolution:**
+
+1. Check agent's client-specific model override (`clients.<client-name>.model`)
+2. Fallback to logical model name in `models.yaml`
+3. Use as-is if no mapping found
+
+**File Validation:**
+
+- YAML syntax validation using js-yaml
+- Schema validation using AgentConfigSchema
+- Paired .yaml/.md file verification
+- Required field checks (name, model)
+
+**Integration Points:**
+
+- Called by SyncEngine during `overture sync`
+- Validated by `overture doctor` command
+- Uses FilesystemPort for cross-platform file operations
+
+**Client-Specific Output Paths:**
+
+- **Claude Code**: `~/.claude/agents/<name>.md`
+- **OpenCode**: `~/.config/opencode/agent/<name>.md`
+- **Copilot CLI**: `<projectRoot>/.github/agents/<name>.agent.md`
 
 ---
 

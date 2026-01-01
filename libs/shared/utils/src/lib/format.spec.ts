@@ -84,7 +84,7 @@ describe('Format Utilities', () => {
       });
 
       const lines = result.split('\n');
-      expect(lines.length).toBe(2);
+      expect(lines).toHaveLength(2);
     });
 
     it('should return empty string for empty object', () => {

@@ -244,8 +244,8 @@ export function createBackupCommand(deps: AppDependencies): Command {
     )
     .action(async (options: { client?: ClientName; keep: string }) => {
       try {
-        const keepCount = parseInt(options.keep, 10);
-        if (isNaN(keepCount) || keepCount < 1) {
+        const keepCount = Number.parseInt(options.keep, 10);
+        if (Number.isNaN(keepCount) || keepCount < 1) {
           output.error('Keep count must be a positive integer');
           throw Object.assign(new Error('Invalid keep count'), { exitCode: 2 });
         }

@@ -18,8 +18,8 @@
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { execSync } from 'child_process';
-import { join } from 'path';
+import { execSync } from 'node:child_process';
+import { join, resolve } from 'node:path';
 import {
   mkdirSync,
   writeFileSync,
@@ -27,8 +27,8 @@ import {
   existsSync,
   rmSync,
   readdirSync,
-} from 'fs';
-import { tmpdir } from 'os';
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 
 describe('Sync Multi-Client E2E Tests', () => {
   let testDir: string;
@@ -45,8 +45,9 @@ describe('Sync Multi-Client E2E Tests', () => {
     // Build CLI
     console.log('Building CLI...');
     try {
+      const workspaceRoot = resolve(__dirname, '../../../..');
       execSync('nx build @overture/cli', {
-        cwd: process.cwd(),
+        cwd: workspaceRoot,
         stdio: 'inherit',
       });
       console.log('CLI build complete');
@@ -55,8 +56,9 @@ describe('Sync Multi-Client E2E Tests', () => {
       throw error;
     }
 
-    // Set CLI path
-    cliPath = join(process.cwd(), 'dist/apps/cli/main.js');
+    // Set CLI path - resolve to workspace root
+    const workspaceRoot = resolve(__dirname, '../../../..');
+    cliPath = join(workspaceRoot, 'dist/apps/cli/main.js');
     if (!existsSync(cliPath)) {
       throw new Error(`CLI not found at ${cliPath}`);
     }
@@ -376,7 +378,7 @@ mcp:
       const backupsBefore = existsSync(backupDir)
         ? readdirSync(backupDir).length
         : 0;
-      expect(readdirSync(backupDir).length).toBe(backupsBefore);
+      expect(readdirSync(backupDir)).toHaveLength(backupsBefore);
     });
   });
 

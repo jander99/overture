@@ -172,16 +172,140 @@ interface McpServerConfig {
 }
 ```
 
+## Agent Configuration
+
+Overture supports defining and synchronizing AI agents (subagents) across multiple AI development tools.
+
+### Agent Directory Structure
+
+Agents are defined using a "split source" pattern with two files per agent:
+
+```
+~/.config/overture/agents/          # Global agents
+  my-agent.yaml                      # Agent configuration
+  my-agent.md                        # Agent system prompt
+  another-agent.yaml
+  another-agent.md
+
+.overture/agents/                    # Project-specific agents
+  project-helper.yaml
+  project-helper.md
+```
+
+**Important:** Both files must have matching names (e.g., `my-agent.yaml` + `my-agent.md`).
+
+### Agent Configuration File (`.yaml`)
+
+```yaml
+name: code-reviewer
+model: smart # Logical model name (resolved via models.yaml)
+description: Expert code reviewer focused on best practices
+
+# MCP tools this agent can use
+tools:
+  - filesystem
+  - github
+
+# Client-specific model overrides (optional)
+clients:
+  claude-code:
+    model: claude-3-5-sonnet-20241022
+  copilot-cli:
+    model: gpt-4o
+  opencode:
+    model: claude-3-5-sonnet-20241022
+```
+
+### Agent Prompt File (`.md`)
+
+The `.md` file contains the agent's system prompt:
+
+```markdown
+# Code Reviewer Agent
+
+You are an expert code reviewer with deep knowledge of software engineering best practices.
+
+## Your Role
+
+- Review code for bugs, security issues, and performance problems
+- Suggest improvements following language-specific idioms
+- Explain your reasoning clearly and concisely
+
+## Guidelines
+
+- Always explain WHY a change is needed, not just WHAT to change
+- Prioritize security and correctness over style
+- Be constructive and helpful in tone
+```
+
+### Model Mapping (`~/.config/overture/models.yaml`)
+
+Define logical model names that resolve to client-specific models:
+
+```yaml
+smart: claude-3-5-sonnet-20241022
+fast: claude-3-haiku-20240307
+vision: claude-3-5-sonnet-20241022
+reasoning: o1-preview
+```
+
+**Usage:** Use logical names in agent YAML files, and Overture resolves them based on client capabilities.
+
+### Agent Scope
+
+- **Global agents** (`~/.config/overture/agents/`) - Synced to all clients
+- **Project agents** (`.overture/agents/`) - Synced only to project-aware clients
+
+**Note:** GitHub Copilot CLI only supports project-scoped agents (`.github/agents/`).
+
+### Agent Sync Behavior
+
+When running `overture sync`, agents are automatically:
+
+1. Discovered from global and project directories
+2. Validated (YAML syntax, required fields, matching MD files)
+3. Transformed to client-specific formats:
+   - **Claude Code**: `~/.claude/agents/my-agent.md` (combined YAML frontmatter + prompt)
+   - **OpenCode**: `~/.config/opencode/agent/my-agent.md` (same format)
+   - **Copilot CLI**: `.github/agents/my-agent.md` (project-only)
+
+### TypeScript Schema
+
+```typescript
+interface AgentConfig {
+  name: string;
+  model: string; // Logical name or client-specific model ID
+  description?: string;
+  tools?: string[]; // MCP tool names
+  clients?: {
+    'claude-code'?: { model: string };
+    'copilot-cli'?: { model: string };
+    opencode?: { model: string };
+  };
+}
+
+interface AgentDefinition {
+  config: AgentConfig;
+  body: string; // Markdown content from .md file
+  scope: 'global' | 'project';
+  sourceDir: string;
+}
+
+interface ModelMapping {
+  [logicalName: string]: string; // e.g., { smart: 'claude-3-5-sonnet-20241022' }
+}
+```
+
 ## Common Commands
 
 ```bash
 # Initialize project
 overture init --type python-backend
 
-# Check system status
+# Check system status (includes agent validation)
 overture doctor
 
-# Sync configuration
+# Sync configuration (includes agents)
 overture sync
 
 # Enable disabled MCP

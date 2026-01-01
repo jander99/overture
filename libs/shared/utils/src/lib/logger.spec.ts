@@ -112,7 +112,7 @@ describe('Logger', () => {
     it('should print section header with bold styling', () => {
       loggerInstance.section('Test Section');
       expect(consoleSpy).toHaveBeenCalledTimes(2);
-      expect(consoleSpy.mock.calls[0][0]).toBe(undefined); // first call is newline
+      expect(consoleSpy.mock.calls[0][0]).toBeUndefined(); // first call is newline
       const call = consoleSpy.mock.calls[1].join(' ');
       expect(call).toContain('Test Section');
     });

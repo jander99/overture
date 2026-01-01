@@ -260,7 +260,7 @@ export class PluginDetector {
           enabled,
           installedAt,
         });
-      } catch (_error) {
+      } catch {
         // Skip malformed plugin entries
         console.warn(`⚠️  Skipping malformed plugin entry: ${key}`);
         continue;

@@ -13,14 +13,40 @@ import type {
   ClientName,
   DiscoveredMcp,
   Platform,
+  OvertureConfig,
+  ImportDiscoveryResult,
+  McpConflict,
 } from '@overture/config-types';
 import type {
   ClaudeCodeAdapter,
   OpenCodeAdapter,
   CopilotCliAdapter,
 } from '@overture/client-adapters';
+import type { ImportService } from '@overture/import-core';
+import type { PathResolver } from '@overture/config-core';
+import type { OutputPort } from '@overture/ports-output';
 import { ALL_CLIENTS, CLIENTS } from '../constants.js';
 import { DetectionFormatter, formatConflict } from '@overture/import-core';
+
+/**
+ * Options for import command (detect mode)
+ */
+type DetectModeOptions = {
+  client: string;
+  detect: true;
+  format: 'text' | 'json' | 'table';
+  verbose?: boolean;
+  yes?: boolean;
+};
+
+/**
+ * Options for import command (interactive mode)
+ */
+type InteractiveModeOptions = {
+  client: string;
+  detect?: false;
+  yes?: boolean;
+};
 
 /**
  * Create the import command
@@ -125,13 +151,13 @@ export function createImportCommand(deps: AppDependencies): Command {
  * Execute detection mode: scan client configs without importing
  */
 async function executeDetectionMode(
-  importService: any,
+  importService: ImportService,
   claudeCodeAdapter: ClaudeCodeAdapter | null,
   openCodeAdapter: OpenCodeAdapter | null,
   copilotCliAdapter: CopilotCliAdapter | null,
-  overtureConfig: any,
+  overtureConfig: OvertureConfig,
   platform: Platform,
-  options: any,
+  options: DetectModeOptions,
 ): Promise<void> {
   const result = await importService.performDetection(
     claudeCodeAdapter,
@@ -172,15 +198,15 @@ async function executeDetectionMode(
  * Execute import mode: interactive import of unmanaged MCPs
  */
 async function executeImportMode(
-  importService: any,
-  pathResolver: any,
-  output: any,
+  importService: ImportService,
+  pathResolver: PathResolver,
+  output: OutputPort,
   claudeCodeAdapter: ClaudeCodeAdapter | null,
   openCodeAdapter: OpenCodeAdapter | null,
   copilotCliAdapter: CopilotCliAdapter | null,
-  overtureConfig: any,
+  overtureConfig: OvertureConfig,
   platform: Platform,
-  options: any,
+  options: InteractiveModeOptions,
 ): Promise<void> {
   p.intro('🔍 Import MCPs from Client Configs');
 
@@ -229,14 +255,14 @@ async function executeImportMode(
  * Discover unmanaged MCPs and handle conflicts/completeness
  */
 async function discoverUnmanagedMcps(
-  importService: any,
+  importService: ImportService,
   claudeCodeAdapter: ClaudeCodeAdapter | null,
   openCodeAdapter: OpenCodeAdapter | null,
   copilotCliAdapter: CopilotCliAdapter | null,
-  overtureConfig: any,
+  overtureConfig: OvertureConfig,
   platform: Platform,
-  output: any,
-): Promise<any> {
+  output: OutputPort,
+): Promise<ImportDiscoveryResult> {
   const spinner = p.spinner();
   spinner.start('Scanning client configurations...');
 
@@ -253,7 +279,9 @@ async function discoverUnmanagedMcps(
   // Show conflicts if any
   if (discovery.conflicts.length > 0) {
     p.note(
-      discovery.conflicts.map((c: any) => formatConflict(c)).join('\n\n'),
+      discovery.conflicts
+        .map((c: McpConflict) => formatConflict(c))
+        .join('\n\n'),
       '⚠️  Conflicts Detected',
     );
     output.info(
@@ -282,7 +310,7 @@ async function discoverUnmanagedMcps(
  * Let user select MCPs to import
  */
 async function selectMcpsToImport(
-  discovery: any,
+  discovery: ImportDiscoveryResult,
 ): Promise<DiscoveredMcp[] | null> {
   const selectedValues = await p.multiselect({
     message: `Select MCPs to import (${discovery.discovered.length} found):`,
@@ -342,7 +370,7 @@ async function showImportPlan(selected: DiscoveredMcp[]): Promise<void> {
  */
 async function confirmImport(
   selected: DiscoveredMcp[],
-  options: any,
+  options: InteractiveModeOptions,
 ): Promise<boolean> {
   if (options.yes) {
     return true;
@@ -365,11 +393,11 @@ async function confirmImport(
  * Execute import and show results
  */
 async function executeAndShowImportResults(
-  importService: any,
-  pathResolver: any,
-  output: any,
+  importService: ImportService,
+  pathResolver: PathResolver,
+  output: OutputPort,
   selected: DiscoveredMcp[],
-  options: any,
+  options: InteractiveModeOptions,
 ): Promise<void> {
   const importSpinner = p.spinner();
   importSpinner.start('Importing MCPs...');

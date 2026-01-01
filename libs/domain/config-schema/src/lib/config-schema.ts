@@ -104,7 +104,7 @@ export const McpServerConfigSchema = z
       .refine(
         (data) => {
           // Ensure exclude and include are mutually exclusive
-          return !(data && data.exclude && data.include);
+          return !(data?.exclude && data.include);
         },
         {
           message:
@@ -349,6 +349,58 @@ export const ProcessLockSchema = z.object({
   lockPath: z.string(),
 });
 
+// ============================================================================
+// Agent & Model Mapping Schemas
+// ============================================================================
+
+/**
+ * Model Mapping Schema
+ *
+ * Validates logical model names mapping to client-specific model IDs.
+ */
+export const ModelMappingSchema = z.record(
+  z.string(),
+  z.record(ClientNameSchema, z.string()),
+);
+
+/**
+ * Agent Configuration Schema (YAML)
+ */
+export const AgentConfigSchema: z.ZodTypeAny = z.lazy(() =>
+  z
+    .object({
+      name: z.string().min(1, 'Agent name is required'),
+      description: z.string().min(1, 'Agent description is required'),
+      model: z.string().optional(),
+      tools: z.array(z.string()).optional(),
+      permissions: z.record(z.string(), z.unknown()).optional(),
+      settings: z
+        .object({
+          temperature: z.number().min(0).max(2).optional(),
+          maxSteps: z.number().int().positive().optional(),
+        })
+        .catchall(z.unknown())
+        .optional(),
+      overrides: z
+        .record(
+          ClientNameSchema,
+          z.lazy(() => AgentConfigSchema),
+        )
+        .optional(),
+    })
+    .strict(),
+);
+
+/**
+ * Full Agent Definition Schema (YAML + MD + Metadata)
+ */
+export const AgentDefinitionSchema = z.object({
+  config: AgentConfigSchema,
+  body: z.string(),
+  scope: ScopeSchema,
+  sourceDir: z.string(),
+});
+
 /**
  * Type inference helpers
  */
@@ -377,3 +429,6 @@ export type ClientDiscoveryOverride = z.infer<
 >;
 export type WSL2Config = z.infer<typeof WSL2ConfigSchema>;
 export type DiscoveryConfig = z.infer<typeof DiscoveryConfigSchema>;
+export type ModelMapping = z.infer<typeof ModelMappingSchema>;
+export type AgentConfig = z.infer<typeof AgentConfigSchema>;
+export type AgentDefinition = z.infer<typeof AgentDefinitionSchema>;

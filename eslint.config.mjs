@@ -3,6 +3,9 @@ import security from 'eslint-plugin-security';
 import sonarjs from 'eslint-plugin-sonarjs';
 import importPlugin from 'eslint-plugin-import';
 import nodePlugin from 'eslint-plugin-n';
+import unicorn from 'eslint-plugin-unicorn';
+import vitest from 'eslint-plugin-vitest';
+import prettier from 'eslint-config-prettier';
 
 /**
  * ESLint Configuration for Overture
@@ -83,7 +86,7 @@ export default [
 
       // --- Warning-level rules (should be reviewed but don't block CI) ---
       // These are warn because they're common in existing code or have valid exceptions
-      '@typescript-eslint/no-explicit-any': 'warn', // Prefer specific types, but sometimes any is needed
+      '@typescript-eslint/no-explicit-any': 'error', // Prefer specific types over any
       '@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards, but sometimes needed
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -205,12 +208,12 @@ export default [
       import: importPlugin,
     },
     rules: {
-      // --- Error-level (definite bugs) ---
+      // --- Error-level (definite bugs and inefficiencies) ---
       'import/no-self-import': 'error', // Module importing itself
+      'import/no-duplicates': 'error', // Multiple imports from same module (auto-fixable)
 
       // --- Warning-level (style/cleanup) ---
       'import/no-useless-path-segments': 'warn', // ./foo/../bar => ./bar
-      'import/no-duplicates': 'warn', // Multiple imports from same module
       'import/first': 'warn', // Imports should be at top
       'import/newline-after-import': 'warn', // Blank line after imports
 
@@ -254,13 +257,19 @@ export default [
       },
     },
     rules: {
-      // --- Type-aware rules (require type information) ---
-      // Warn instead of error to allow gradual adoption
-      '@typescript-eslint/no-floating-promises': 'warn', // Unhandled promises
-      '@typescript-eslint/no-misused-promises': 'warn', // Promise in wrong context
+      // --- Error-level type-aware rules (critical bug prevention) ---
+      '@typescript-eslint/no-floating-promises': 'error', // Unhandled promises cause silent failures
+      '@typescript-eslint/no-misused-promises': 'error', // Promise in wrong context (e.g., if (promise))
+      '@typescript-eslint/switch-exhaustiveness-check': 'error', // Ensure all enum/union cases handled
+
+      // --- Warning-level type-aware rules (code quality improvements) ---
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn', // ?? instead of || for null checks
+      '@typescript-eslint/prefer-optional-chain': 'warn', // obj?.prop instead of obj && obj.prop
+      '@typescript-eslint/no-unnecessary-condition': 'warn', // Conditions always true/false
 
       // --- Disabled type-aware rules ---
       '@typescript-eslint/require-await': 'off', // Too noisy for test files with async setup
+      '@typescript-eslint/strict-boolean-expressions': 'off', // Too strict for existing codebase
     },
   },
   // ==========================================================================
@@ -285,7 +294,11 @@ export default [
       '@typescript-eslint/no-empty-function': 'off', // Mock implementations often empty
       '@typescript-eslint/no-explicit-any': 'off', // Mocks often need any type
       '@typescript-eslint/no-floating-promises': 'off', // Test assertions handle promises
+      '@typescript-eslint/no-misused-promises': 'off', // Test assertions handle promises
       '@typescript-eslint/no-non-null-assertion': 'off', // Test assertions guarantee values
+      '@typescript-eslint/no-unnecessary-condition': 'off', // Test guards are intentional
+      '@typescript-eslint/prefer-nullish-coalescing': 'off', // Test defaults are intentional
+      '@typescript-eslint/prefer-optional-chain': 'off', // Test patterns may differ
 
       // --- Security rules off in tests ---
       'security/detect-object-injection': 'off', // Test data uses dynamic keys
@@ -297,6 +310,10 @@ export default [
       'sonarjs/cognitive-complexity': 'off', // Complex test scenarios are fine
       'sonarjs/no-nested-functions': 'off', // describe/it blocks are nested by design
       'sonarjs/no-identical-functions': 'off', // Similar test setups are acceptable
+
+      // --- Unicorn rules relaxed for test patterns ---
+      'unicorn/no-useless-undefined': 'off', // Mock functions often return undefined explicitly
+      'unicorn/consistent-function-scoping': 'off', // Test helper functions inside tests
     },
   },
   // ==========================================================================
@@ -314,4 +331,89 @@ export default [
       'security/detect-non-literal-fs-filename': 'off',
     },
   },
+  // ==========================================================================
+  // Unicorn plugin - Modern JavaScript/TypeScript best practices
+  // ==========================================================================
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    plugins: {
+      unicorn,
+    },
+    rules: {
+      // --- Error-level (bugs and modern best practices) ---
+      'unicorn/prefer-node-protocol': 'error', // Use node: prefix for built-ins
+      'unicorn/prefer-optional-catch-binding': 'error', // catch { } instead of catch (e) { }
+      'unicorn/throw-new-error': 'error', // throw new Error() not throw Error()
+      'unicorn/prefer-type-error': 'error', // Use TypeError for type errors
+      'unicorn/no-instanceof-array': 'error', // Use Array.isArray()
+      'unicorn/prefer-array-some': 'error', // Use .some() instead of .find()
+      'unicorn/prefer-array-find': 'error', // Use .find() instead of .filter()[0]
+      'unicorn/prefer-array-flat-map': 'error', // Use .flatMap() instead of .map().flat()
+      'unicorn/prefer-string-starts-ends-with': 'error', // Use startsWith/endsWith
+      'unicorn/prefer-string-trim-start-end': 'error', // Use trimStart/trimEnd
+      'unicorn/prefer-modern-math-apis': 'error', // Use modern Math methods
+      'unicorn/prefer-date-now': 'error', // Use Date.now() instead of new Date().getTime()
+      'unicorn/no-new-array': 'error', // Use [] instead of new Array()
+      'unicorn/no-new-buffer': 'error', // Use Buffer.from() instead of new Buffer()
+      'unicorn/error-message': 'error', // Require error messages in Error constructors
+      'unicorn/escape-case': 'error', // Consistent escape case (\xA9 not \xaa)
+      'unicorn/no-hex-escape': 'error', // Use Unicode escapes instead of hex
+      'unicorn/prefer-number-properties': 'error', // Number.isNaN instead of isNaN
+      'unicorn/no-unreadable-array-destructuring': 'error', // Prevent [,, foo] = arr
+
+      // --- Warning-level (code quality improvements) ---
+      'unicorn/catch-error-name': 'warn', // Enforce consistent error naming (error/err)
+      'unicorn/consistent-function-scoping': 'warn', // Move functions to appropriate scope
+      'unicorn/explicit-length-check': 'warn', // array.length > 0 instead of array.length
+      'unicorn/filename-case': [
+        'warn',
+        {
+          cases: {
+            kebabCase: true, // Prefer kebab-case for filenames
+            pascalCase: true, // Allow PascalCase for classes/components
+          },
+        },
+      ],
+      'unicorn/prefer-ternary': 'warn', // Prefer ternary over if-else for simple cases
+      'unicorn/prefer-switch': 'warn', // Prefer switch over if-else chains
+
+      // --- Disabled (too opinionated or conflicts with existing patterns) ---
+      'unicorn/no-null': 'off', // We use null in some cases (nullable types)
+      'unicorn/prevent-abbreviations': 'off', // Too strict (e.g., props, env, args)
+      'unicorn/no-array-reduce': 'off', // Reduce is useful when appropriate
+      'unicorn/prefer-module': 'off', // We use both CommonJS and ESM
+      'unicorn/prefer-top-level-await': 'off', // Not always appropriate
+      'unicorn/no-process-exit': 'off', // CLI tool needs process.exit()
+      'unicorn/no-array-for-each': 'off', // forEach is fine for side effects
+      'unicorn/prefer-spread': 'off', // Sometimes Array.from is clearer
+    },
+  },
+  // ==========================================================================
+  // Vitest plugin - Test framework best practices
+  // ==========================================================================
+  {
+    files: ['**/*.spec.ts', '**/*.spec.tsx', '**/*.test.ts', '**/*.test.tsx'],
+    plugins: {
+      vitest,
+    },
+    rules: {
+      // --- Error-level (enforce good test practices) ---
+      'vitest/expect-expect': 'error', // Tests must have assertions
+      'vitest/no-focused-tests': 'error', // Prevent .only() in CI
+      'vitest/no-identical-title': 'error', // Unique test descriptions
+      'vitest/valid-expect': 'error', // Proper expect() usage
+
+      // --- Warning-level (style and consistency) ---
+      'vitest/consistent-test-it': ['warn', { fn: 'it' }], // Prefer it() over test()
+      'vitest/no-disabled-tests': 'warn', // Warn about .skip()
+      'vitest/prefer-to-be': 'warn', // toBe() for primitives
+      'vitest/prefer-to-have-length': 'warn', // toHaveLength() for length checks
+      'vitest/prefer-strict-equal': 'warn', // toStrictEqual() for objects
+    },
+  },
+  // ==========================================================================
+  // Prettier - Disable formatting rules that conflict with Prettier
+  // Must be last to override other configs
+  // ==========================================================================
+  prettier,
 ];

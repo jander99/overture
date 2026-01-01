@@ -501,8 +501,7 @@ function displayMcpServer(
   displayMcpClientFilters(mcpConfig.clients);
 
   if (
-    mcpConfig.platforms &&
-    mcpConfig.platforms.exclude &&
+    mcpConfig.platforms?.exclude &&
     mcpConfig.platforms.exclude.length > 0
   ) {
     console.log(

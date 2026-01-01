@@ -110,6 +110,11 @@ export { AuditService } from './lib/audit-service.js';
 export { compareMcpConfigs, getUnmanagedMcps } from './lib/mcp-detector.js';
 export type { DetectedMcp, McpDetectionResult } from './lib/mcp-detector.js';
 
+// Agent Sync Service
+export type {
+  AgentSyncOptions,
+} from '@overture/agent-core';
+
 // Environment Variable Expander
 export {
   expandEnvVars,
