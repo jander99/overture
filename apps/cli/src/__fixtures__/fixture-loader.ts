@@ -9,6 +9,12 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as yaml from 'js-yaml';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Load a test fixture file as raw string
