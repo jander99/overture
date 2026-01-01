@@ -243,15 +243,155 @@ describe('NodeProcessAdapter', () => {
     });
   });
 
+  describe('commandExistsBatch', () => {
+    beforeEach(() => {
+      vi.stubGlobal('process', { ...process, platform: 'linux' });
+    });
+
+    it('should check multiple commands in parallel', async () => {
+      const execa = (await import('execa')).default;
+
+      // Mock different results for different commands
+      vi.mocked(execa).mockImplementation((async (
+        _cmd: string,
+        args?: string[],
+      ) => {
+        const command = args?.[0]; // The command being checked
+        if (command === 'npm' || command === 'git') {
+          return {
+            stdout: '/usr/bin/' + command,
+            stderr: '',
+            exitCode: 0,
+          } as any;
+        }
+        return { stdout: '', stderr: '', exitCode: 1 } as any;
+      }) as any);
+
+      const results = await adapter.commandExistsBatch([
+        'npm',
+        'git',
+        'nonexistent',
+        'missing',
+      ]);
+
+      expect(results.size).toBe(4);
+      expect(results.get('npm')).toBe(true);
+      expect(results.get('git')).toBe(true);
+      expect(results.get('nonexistent')).toBe(false);
+      expect(results.get('missing')).toBe(false);
+    });
+
+    it('should handle empty command list', async () => {
+      const results = await adapter.commandExistsBatch([]);
+      expect(results.size).toBe(0);
+    });
+
+    it('should handle single command', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '/usr/bin/docker',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const results = await adapter.commandExistsBatch(['docker']);
+
+      expect(results.size).toBe(1);
+      expect(results.get('docker')).toBe(true);
+    });
+
+    it('should handle all commands existing', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '/usr/bin/cmd',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const results = await adapter.commandExistsBatch([
+        'npm',
+        'git',
+        'docker',
+      ]);
+
+      expect(results.size).toBe(3);
+      expect(results.get('npm')).toBe(true);
+      expect(results.get('git')).toBe(true);
+      expect(results.get('docker')).toBe(true);
+    });
+
+    it('should handle all commands missing', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 1,
+      } as any);
+
+      const results = await adapter.commandExistsBatch([
+        'fake1',
+        'fake2',
+        'fake3',
+      ]);
+
+      expect(results.size).toBe(3);
+      expect(results.get('fake1')).toBe(false);
+      expect(results.get('fake2')).toBe(false);
+      expect(results.get('fake3')).toBe(false);
+    });
+
+    it('should work on Windows platform', async () => {
+      const execa = (await import('execa')).default;
+      vi.stubGlobal('process', { ...process, platform: 'win32' });
+
+      vi.mocked(execa).mockImplementation((async (
+        _cmd: string,
+        args?: string[],
+      ) => {
+        const command = args?.[0];
+        if (command === 'npm') {
+          return {
+            stdout: 'C:\\Program Files\\nodejs\\npm.cmd',
+            stderr: '',
+            exitCode: 0,
+          } as any;
+        }
+        return { stdout: '', stderr: '', exitCode: 1 } as any;
+      }) as any);
+
+      const results = await adapter.commandExistsBatch(['npm', 'missing']);
+
+      expect(results.get('npm')).toBe(true);
+      expect(results.get('missing')).toBe(false);
+    });
+
+    it('should preserve command order in results map', async () => {
+      const execa = (await import('execa')).default;
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '/usr/bin/cmd',
+        stderr: '',
+        exitCode: 0,
+      } as any);
+
+      const commands = ['cmd1', 'cmd2', 'cmd3', 'cmd4'];
+      const results = await adapter.commandExistsBatch(commands);
+
+      const resultKeys = Array.from(results.keys());
+      expect(resultKeys).toEqual(commands);
+    });
+  });
+
   describe('ProcessPort compliance', () => {
     it('should implement all ProcessPort methods', () => {
       expect(adapter).toHaveProperty('exec');
       expect(adapter).toHaveProperty('commandExists');
+      expect(adapter).toHaveProperty('commandExistsBatch');
     });
 
     it('should have all methods as functions', () => {
       expect(typeof adapter.exec).toBe('function');
       expect(typeof adapter.commandExists).toBe('function');
+      expect(typeof adapter.commandExistsBatch).toBe('function');
     });
   });
 

@@ -256,7 +256,7 @@ describe('McpFormatter', () => {
       const missingCalls = consoleSpy.mock.calls.filter((call: unknown[]) =>
         String(call[0]).includes('missing'),
       );
-      expect(missingCalls.length).toBe(0);
+      expect(missingCalls).toHaveLength(0);
     });
 
     it('should not output anything when no MCP servers configured', () => {

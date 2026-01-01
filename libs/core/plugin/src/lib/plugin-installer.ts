@@ -162,12 +162,21 @@ export class PluginInstaller {
       this.output.info(`Installing ${name}@${marketplace}...`);
       const installArgs = ['plugin', 'install', `${name}@${marketplace}`];
 
+      let timeoutId: NodeJS.Timeout | undefined;
       const result = await Promise.race([
         this.process.exec('claude', installArgs),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Installation timeout')), timeout),
-        ),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('Installation timeout')),
+            timeout,
+          );
+        }),
       ]);
+
+      // Clear timeout to prevent event loop delay
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
 
       // Check if installation succeeded
       if (result.exitCode === 0) {

@@ -298,7 +298,7 @@ describe('ClientsFormatter', () => {
       const wsl2Calls = consoleSpy.mock.calls.filter((call: unknown[]) =>
         String(call[0]).includes('WSL2'),
       );
-      expect(wsl2Calls.length).toBe(0);
+      expect(wsl2Calls).toHaveLength(0);
     });
   });
 
@@ -325,7 +325,7 @@ describe('ClientsFormatter', () => {
       const invalidCalls = consoleSpy.mock.calls.filter((call: unknown[]) =>
         String(call[0]).includes('invalid'),
       );
-      expect(invalidCalls.length).toBe(0);
+      expect(invalidCalls).toHaveLength(0);
     });
   });
 });

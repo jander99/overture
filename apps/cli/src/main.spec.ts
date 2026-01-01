@@ -223,7 +223,10 @@ describe('main.ts', () => {
       await main();
 
       // Assert
-      expect(initOrder).toEqual(['createAppDependencies', 'createProgram']);
+      expect(initOrder).toStrictEqual([
+        'createAppDependencies',
+        'createProgram',
+      ]);
     });
 
     it('should call parseAsync with process.argv', async () => {

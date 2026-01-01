@@ -225,7 +225,7 @@ export class AgentsChecker {
         onlyInGlobal,
         onlyInProject,
       };
-    } catch (error) {
+    } catch {
       // Never throw - return safe default
       return {
         isInitialized: false,

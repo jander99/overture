@@ -65,8 +65,9 @@ export async function main(): Promise<void> {
 }
 
 // Run the CLI when executed directly (not when imported for testing)
-// Skip execution in test environment (NODE_ENV=test or when vitest is running)
+// Skip execution only in unit test environment (NODE_ENV=test)
+// Allow execution in E2E tests where VITEST is set but we're running as CLI subprocess
 /* istanbul ignore next */
-if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+if (process.env.NODE_ENV !== 'test') {
   void main();
 }

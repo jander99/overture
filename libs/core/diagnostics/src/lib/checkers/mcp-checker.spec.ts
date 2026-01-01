@@ -11,6 +11,7 @@ describe('McpChecker', () => {
     mockProcess = {
       exec: vi.fn(),
       commandExists: vi.fn(),
+      commandExistsBatch: vi.fn(),
     };
 
     mcpChecker = new McpChecker(mockProcess);
@@ -41,9 +42,12 @@ describe('McpChecker', () => {
         github: 'project',
       };
 
-      vi.mocked(mockProcess.commandExists)
-        .mockResolvedValueOnce(true) // npx exists
-        .mockResolvedValueOnce(true); // mcp-server-github exists
+      vi.mocked(mockProcess.commandExistsBatch).mockResolvedValue(
+        new Map([
+          ['npx', true],
+          ['mcp-server-github', true],
+        ]),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -91,9 +95,12 @@ describe('McpChecker', () => {
         github: 'project',
       };
 
-      vi.mocked(mockProcess.commandExists)
-        .mockResolvedValueOnce(false) // npx missing
-        .mockResolvedValueOnce(false); // mcp-server-github missing
+      vi.mocked(mockProcess.commandExistsBatch).mockResolvedValue(
+        new Map([
+          ['npx', false],
+          ['mcp-server-github', false],
+        ]),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -148,10 +155,13 @@ describe('McpChecker', () => {
         memory: 'user',
       };
 
-      vi.mocked(mockProcess.commandExists)
-        .mockResolvedValueOnce(true) // npx exists
-        .mockResolvedValueOnce(false) // mcp-server-github missing
-        .mockResolvedValueOnce(true); // mcp-server-memory exists
+      vi.mocked(mockProcess.commandExistsBatch).mockResolvedValue(
+        new Map([
+          ['npx', true],
+          ['mcp-server-github', false],
+          ['mcp-server-memory', true],
+        ]),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -220,7 +230,9 @@ describe('McpChecker', () => {
 
       const mcpSources = {}; // Empty sources
 
-      vi.mocked(mockProcess.commandExists).mockResolvedValue(true);
+      vi.mocked(mockProcess.commandExistsBatch).mockImplementation(
+        async (cmds) => new Map(cmds.map((c) => [c, true])),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -258,9 +270,12 @@ describe('McpChecker', () => {
         'custom-http-server': 'user',
       };
 
-      vi.mocked(mockProcess.commandExists)
-        .mockResolvedValueOnce(true) // uvx exists
-        .mockResolvedValueOnce(true); // node exists
+      vi.mocked(mockProcess.commandExistsBatch).mockResolvedValue(
+        new Map([
+          ['uvx', true],
+          ['node', true],
+        ]),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -297,7 +312,7 @@ describe('McpChecker', () => {
       };
 
       // commandExists should never reject, but if it does we want to handle it
-      vi.mocked(mockProcess.commandExists).mockRejectedValue(
+      vi.mocked(mockProcess.commandExistsBatch).mockRejectedValue(
         new Error('Command check failed'),
       );
 
@@ -337,7 +352,9 @@ describe('McpChecker', () => {
         gamma: 'user',
       };
 
-      vi.mocked(mockProcess.commandExists).mockResolvedValue(true);
+      vi.mocked(mockProcess.commandExistsBatch).mockImplementation(
+        async (cmds) => new Map(cmds.map((c) => [c, true])),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -379,7 +396,9 @@ describe('McpChecker', () => {
         // 'unknown-mcp' intentionally not in sources
       };
 
-      vi.mocked(mockProcess.commandExists).mockResolvedValue(true);
+      vi.mocked(mockProcess.commandExistsBatch).mockImplementation(
+        async (cmds) => new Map(cmds.map((c) => [c, true])),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -412,7 +431,9 @@ describe('McpChecker', () => {
         '@scope/package': 'user',
       };
 
-      vi.mocked(mockProcess.commandExists).mockResolvedValue(true);
+      vi.mocked(mockProcess.commandExistsBatch).mockImplementation(
+        async (cmds) => new Map(cmds.map((c) => [c, true])),
+      );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
@@ -442,8 +463,10 @@ describe('McpChecker', () => {
       };
 
       // Mock half as available, half as missing
-      vi.mocked(mockProcess.commandExists).mockImplementation(
-        async () => Math.random() > 0.5,
+      vi.mocked(mockProcess.commandExistsBatch).mockImplementation(
+        async (cmds: string[]) => {
+          return new Map(cmds.map((cmd) => [cmd, Math.random() > 0.5]));
+        },
       );
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);

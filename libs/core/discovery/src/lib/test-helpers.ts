@@ -36,6 +36,13 @@ export function createMockProcessPort(
     commandExists: async (command: string) => {
       return commandExistsResults.get(command) ?? false;
     },
+    commandExistsBatch: async (commands: string[]) => {
+      const results = new Map<string, boolean>();
+      for (const cmd of commands) {
+        results.set(cmd, commandExistsResults.get(cmd) ?? false);
+      }
+      return results;
+    },
   };
 }
 

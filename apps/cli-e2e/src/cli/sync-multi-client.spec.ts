@@ -35,8 +35,8 @@ describe('Sync Multi-Client E2E Tests', () => {
   let cliPath: string;
   let userConfigPath: string;
   let projectConfigPath: string;
-  let globalMcpDir: string;
-  let projectMcpDir: string;
+  let claudeCodeGlobalConfigPath: string;
+  let claudeCodeProjectConfigPath: string;
 
   /**
    * Setup before all tests - build CLI once
@@ -83,17 +83,17 @@ describe('Sync Multi-Client E2E Tests', () => {
     mkdirSync(projectOvertureDir, { recursive: true });
     projectConfigPath = join(projectOvertureDir, 'config.yaml');
 
-    // Create mock client config directories
-    globalMcpDir = join(testDir, '.config', 'claude');
-    projectMcpDir = join(testDir, 'project', '.mcp');
+    // Create mock client config paths (Claude Code uses ~/.claude.json)
+    claudeCodeGlobalConfigPath = join(testDir, '.claude.json');
+    claudeCodeProjectConfigPath = join(testDir, 'project', '.mcp.json');
 
-    mkdirSync(globalMcpDir, { recursive: true });
-    mkdirSync(projectMcpDir, { recursive: true });
+    // Create project directory (global config is just a file in HOME)
+    mkdirSync(join(testDir, 'project'), { recursive: true });
 
     // Create initial empty client configs
     const emptyConfig = JSON.stringify({ mcpServers: {} }, null, 2);
-    writeFileSync(join(globalMcpDir, 'mcp.json'), emptyConfig);
-    writeFileSync(join(projectMcpDir, 'mcp.json'), emptyConfig);
+    writeFileSync(claudeCodeGlobalConfigPath, emptyConfig);
+    writeFileSync(claudeCodeProjectConfigPath, emptyConfig);
 
     console.log(`Test directory: ${testDir}`);
   });
@@ -117,6 +117,7 @@ describe('Sync Multi-Client E2E Tests', () => {
     const command = `node ${cliPath} ${args}`;
     const env = {
       ...process.env,
+      NODE_ENV: 'production', // Ensure CLI runs in E2E tests
       HOME: testDir,
       ...options.env,
     };
@@ -231,7 +232,7 @@ mcp:
       expect(output).toContain('Syncing MCP configurations');
 
       // Verify global config (Claude Code)
-      const globalConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const globalConfig = readJsonFile(claudeCodeGlobalConfigPath);
       expect(Object.keys(globalConfig.mcpServers)).toHaveLength(5);
       expect(globalConfig.mcpServers.filesystem).toBeDefined();
       expect(globalConfig.mcpServers.memory).toBeDefined();
@@ -240,7 +241,7 @@ mcp:
       expect(globalConfig.mcpServers.ruff).toBeDefined();
 
       // Verify project config
-      const projectConfig2 = readJsonFile(join(projectMcpDir, 'mcp.json'));
+      const projectConfig2 = readJsonFile(claudeCodeProjectConfigPath);
       expect(Object.keys(projectConfig2.mcpServers)).toHaveLength(5);
 
       // Verify GitHub token expanded
@@ -281,7 +282,7 @@ mcp:
       runOverture('sync');
 
       // Verify initial state
-      const initialGlobal = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const initialGlobal = readJsonFile(claudeCodeGlobalConfigPath);
       expect(initialGlobal.mcpServers.filesystem).toBeDefined();
 
       // Add another MCP
@@ -309,7 +310,7 @@ mcp:
       expect(output).toContain('claude-code');
 
       // Verify global config updated
-      const updatedGlobal = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const updatedGlobal = readJsonFile(claudeCodeGlobalConfigPath);
       expect(Object.keys(updatedGlobal.mcpServers)).toHaveLength(2);
       expect(updatedGlobal.mcpServers.memory).toBeDefined();
     });
@@ -339,7 +340,7 @@ mcp:
 
       // Initial sync
       runOverture('sync');
-      const beforeConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const beforeConfig = readJsonFile(claudeCodeGlobalConfigPath);
 
       // Update config
       const updatedConfig = `
@@ -370,8 +371,8 @@ mcp:
       ).toBe(true);
 
       // Verify config unchanged
-      const afterConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
-      expect(afterConfig).toEqual(beforeConfig);
+      const afterConfig = readJsonFile(claudeCodeGlobalConfigPath);
+      expect(afterConfig).toStrictEqual(beforeConfig);
 
       // Verify no new backups created
       const backupDir = join(testDir, '.config', 'overture', 'backups');
@@ -419,31 +420,31 @@ mcp:
 
       // Sync only global
       runOverture('sync --scope global');
-      const globalOnly = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const globalOnly = readJsonFile(claudeCodeGlobalConfigPath);
       expect(globalOnly.mcpServers.filesystem).toBeDefined();
       expect(globalOnly.mcpServers['python-repl']).toBeUndefined();
 
       // Reset config
       writeFileSync(
-        join(globalMcpDir, 'mcp.json'),
+        claudeCodeGlobalConfigPath,
         JSON.stringify({ mcpServers: {} }, null, 2),
       );
 
       // Sync only project
       runOverture('sync --scope project');
-      const projectOnly = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const projectOnly = readJsonFile(claudeCodeGlobalConfigPath);
       expect(projectOnly.mcpServers['python-repl']).toBeDefined();
       expect(projectOnly.mcpServers.filesystem).toBeUndefined();
 
       // Reset config
       writeFileSync(
-        join(globalMcpDir, 'mcp.json'),
+        claudeCodeGlobalConfigPath,
         JSON.stringify({ mcpServers: {} }, null, 2),
       );
 
       // Sync all
       runOverture('sync');
-      const allScopes = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const allScopes = readJsonFile(claudeCodeGlobalConfigPath);
       expect(allScopes.mcpServers.filesystem).toBeDefined();
       expect(allScopes.mcpServers['python-repl']).toBeDefined();
     });
@@ -488,20 +489,20 @@ mcp:
 
       // Sync for darwin
       runOverture('sync --platform darwin');
-      const darwinConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const darwinConfig = readJsonFile(claudeCodeGlobalConfigPath);
       expect(darwinConfig.mcpServers.filesystem).toBeDefined();
       expect(darwinConfig.mcpServers['macos-only']).toBeDefined();
       expect(darwinConfig.mcpServers['linux-only']).toBeUndefined();
 
       // Reset
       writeFileSync(
-        join(globalMcpDir, 'mcp.json'),
+        claudeCodeGlobalConfigPath,
         JSON.stringify({ mcpServers: {} }, null, 2),
       );
 
       // Sync for linux
       runOverture('sync --platform linux');
-      const linuxConfig = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const linuxConfig = readJsonFile(claudeCodeGlobalConfigPath);
       expect(linuxConfig.mcpServers.filesystem).toBeDefined();
       expect(linuxConfig.mcpServers['linux-only']).toBeDefined();
       expect(linuxConfig.mcpServers['macos-only']).toBeUndefined();
@@ -548,7 +549,7 @@ mcp:
         expect(forceOutput).toBeTruthy();
 
         // Verify config written despite warning
-        const config2 = readJsonFile(join(globalMcpDir, 'mcp.json'));
+        const config2 = readJsonFile(claudeCodeGlobalConfigPath);
         expect(config2.mcpServers['http-server']).toBeDefined();
       }
     });
@@ -579,7 +580,7 @@ mcp:
       writeFileSync(userConfigPath, config);
 
       // Corrupt global config (invalid JSON)
-      writeFileSync(join(globalMcpDir, 'mcp.json'), '{ invalid json }');
+      writeFileSync(claudeCodeGlobalConfigPath, '{ invalid json }');
 
       // Attempt sync (expect error)
       const output = runOverture('sync', { expectError: true });
@@ -630,7 +631,7 @@ mcp:
 
       // Initial sync
       runOverture('sync');
-      const before = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const before = readJsonFile(claudeCodeGlobalConfigPath);
       expect(Object.keys(before.mcpServers)).toHaveLength(2);
       expect(before.mcpServers.filesystem).toBeDefined();
       expect(before.mcpServers.memory).toBeDefined();
@@ -660,76 +661,16 @@ mcp:
       expect(output).toBeTruthy();
 
       // Verify final state
-      const after = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const after = readJsonFile(claudeCodeGlobalConfigPath);
       expect(Object.keys(after.mcpServers)).toHaveLength(2);
       expect(after.mcpServers.filesystem).toBeDefined();
       expect(after.mcpServers.github).toBeDefined();
       expect(after.mcpServers.memory).toBeUndefined();
 
       // Verify filesystem unchanged (only github added)
-      expect(after.mcpServers.filesystem).toEqual(before.mcpServers.filesystem);
-    });
-  });
-
-  /**
-   * TEST 9: Multiple Client Targets
-   *
-   * Tests syncing to multiple specific clients at once:
-   * - Sync to vscode + cursor
-   * - Verify both configs updated
-   * - Verify other clients unchanged
-   */
-  describe('Test 9: Multiple Client Targets', () => {
-    it.skip('should sync to multiple specified clients', () => {
-      // Setup config
-      const config = `
-version: "2.0"
-mcp:
-  filesystem:
-    command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
-    transport: stdio
-
-`;
-      writeFileSync(userConfigPath, config);
-
-      // Create additional client dirs
-      const vscodeDir = join(
-        testDir,
-        '.config',
-        'Code',
-        'User',
-        'globalStorage',
-        'saoudrizwan.claude-dev',
+      expect(after.mcpServers.filesystem).toStrictEqual(
+        before.mcpServers.filesystem,
       );
-      const cursorDir = join(
-        testDir,
-        '.config',
-        'Cursor',
-        'User',
-        'globalStorage',
-        'saoudrizwan.claude-dev',
-      );
-
-      mkdirSync(vscodeDir, { recursive: true });
-      mkdirSync(cursorDir, { recursive: true });
-
-      const emptyConfig = JSON.stringify({ mcpServers: {} }, null, 2);
-      writeFileSync(join(vscodeDir, 'mcp.json'), emptyConfig);
-      writeFileSync(join(cursorDir, 'mcp.json'), emptyConfig);
-
-      // Sync to both clients
-      const output = runOverture('sync --client vscode --client cursor');
-
-      // Verify output mentions both clients
-      expect(output).toBeTruthy();
-
-      // Verify both configs updated
-      const vscodeConfig = readJsonFile(join(vscodeDir, 'mcp.json'));
-      const cursorConfig = readJsonFile(join(cursorDir, 'mcp.json'));
-
-      expect(vscodeConfig.mcpServers.filesystem).toBeDefined();
-      expect(cursorConfig.mcpServers.filesystem).toBeDefined();
     });
   });
 
@@ -767,7 +708,7 @@ mcp:
       });
 
       // Verify config written
-      const config2 = readJsonFile(join(globalMcpDir, 'mcp.json'));
+      const config2 = readJsonFile(claudeCodeGlobalConfigPath);
       expect(config2.mcpServers.github).toBeDefined();
 
       // Verify env vars expanded

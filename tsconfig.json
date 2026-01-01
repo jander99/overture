@@ -68,6 +68,9 @@
     },
     {
       "path": "./libs/domain/diagnostics-types"
+    },
+    {
+      "path": "./libs/shared/cli-utils"
     }
   ]
 }

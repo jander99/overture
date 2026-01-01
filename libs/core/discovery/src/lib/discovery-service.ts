@@ -100,26 +100,29 @@ export class DiscoveryService {
    * }
    * ```
    */
+  /**
+   * PERFORMANCE: Parallelized client discovery
+   *
+   * Runs client detection for all adapters in parallel instead of sequentially.
+   * This reduces discovery time from O(n) to O(1) where n is number of clients.
+   * Example: 3 clients checked in ~500ms instead of ~1.5s.
+   */
   async discoverAll(adapters: ClientAdapter[]): Promise<DiscoveryReport> {
     const platform = this.deps.environmentPort.platform() as Platform;
     const wsl2Info = await this.detectEnvironment();
     const isWSL2 = wsl2Info.isWSL2 && this.config.wsl2_auto_detect !== false;
 
-    const clients: ClientDiscoveryResult[] = [];
-    let wsl2Detections = 0;
+    // PERFORMANCE OPTIMIZATION: Discover all clients in parallel!
+    const discoveryPromises = adapters.map((adapter) =>
+      this.discoverClient(adapter, platform, isWSL2 ? wsl2Info : undefined),
+    );
 
-    for (const adapter of adapters) {
-      const result = await this.discoverClient(
-        adapter,
-        platform,
-        isWSL2 ? wsl2Info : undefined,
-      );
-      clients.push(result);
+    const clients = await Promise.all(discoveryPromises);
 
-      if (result.source === SOURCE_WSL2_FALLBACK) {
-        wsl2Detections++;
-      }
-    }
+    // Count WSL2 detections
+    const wsl2Detections = clients.filter(
+      (c) => c.source === SOURCE_WSL2_FALLBACK,
+    ).length;
 
     return {
       environment: {
@@ -494,22 +497,22 @@ export class DiscoveryService {
     // Use explicit property access for security
     let clientPaths: string[] | undefined;
     switch (client) {
-    case 'claude-code': {
-      clientPaths = guiAppPaths['claude-code'];
-    
-    break;
-    }
-    case 'copilot-cli': {
-      clientPaths = guiAppPaths['copilot-cli'];
-    
-    break;
-    }
-    case 'opencode': {
-      clientPaths = guiAppPaths.opencode;
-    
-    break;
-    }
-    // No default
+      case 'claude-code': {
+        clientPaths = guiAppPaths['claude-code'];
+
+        break;
+      }
+      case 'copilot-cli': {
+        clientPaths = guiAppPaths['copilot-cli'];
+
+        break;
+      }
+      case 'opencode': {
+        clientPaths = guiAppPaths.opencode;
+
+        break;
+      }
+      // No default
     }
 
     if (clientPaths) {

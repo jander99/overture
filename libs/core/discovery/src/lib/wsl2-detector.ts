@@ -177,19 +177,25 @@ export class WSL2Detector {
   private async getProfileViaCmdExe(): Promise<string | undefined> {
     try {
       // Use Promise.race for timeout
+      let timeoutId: NodeJS.Timeout | undefined;
       const result = await Promise.race<{ stdout: string; exitCode: number }>([
         this.processPort.exec('/mnt/c/Windows/System32/cmd.exe', [
           '/c',
           'echo',
           '%USERPROFILE%',
         ]),
-        new Promise((_, reject) =>
-          setTimeout(
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
             () => reject(new Error('timeout')),
             WSL2_DETECTION_TIMEOUT,
-          ),
-        ),
+          );
+        }),
       ]);
+
+      // Clear timeout to prevent event loop delay
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
 
       if (result.exitCode === 0 && result.stdout.trim()) {
         const windowsPath = result.stdout.trim();
@@ -314,22 +320,22 @@ export class WSL2Detector {
     let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
 
     switch (client) {
-    case 'claude-code': {
-      defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-    
-    break;
-    }
-    case 'copilot-cli': {
-      defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-    
-    break;
-    }
-    case 'opencode': {
-      defaults = WINDOWS_DEFAULT_PATHS.opencode;
-    
-    break;
-    }
-    // No default
+      case 'claude-code': {
+        defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
+
+        break;
+      }
+      case 'copilot-cli': {
+        defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
+
+        break;
+      }
+      case 'opencode': {
+        defaults = WINDOWS_DEFAULT_PATHS.opencode;
+
+        break;
+      }
+      // No default
     }
 
     if (!defaults) {
@@ -369,22 +375,22 @@ export class WSL2Detector {
     let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
 
     switch (client) {
-    case 'claude-code': {
-      defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-    
-    break;
-    }
-    case 'copilot-cli': {
-      defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-    
-    break;
-    }
-    case 'opencode': {
-      defaults = WINDOWS_DEFAULT_PATHS.opencode;
-    
-    break;
-    }
-    // No default
+      case 'claude-code': {
+        defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
+
+        break;
+      }
+      case 'copilot-cli': {
+        defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
+
+        break;
+      }
+      case 'opencode': {
+        defaults = WINDOWS_DEFAULT_PATHS.opencode;
+
+        break;
+      }
+      // No default
     }
 
     if (!defaults?.configPath) {

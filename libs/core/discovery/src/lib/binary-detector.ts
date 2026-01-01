@@ -231,50 +231,58 @@ export class BinaryDetector {
     binaryName: string,
   ): Promise<{ found: boolean; path?: string; version?: string }> {
     try {
-      // Check if binary exists in PATH
+      // Check if binary exists in PATH with timeout
+      let timeoutId: NodeJS.Timeout | undefined;
       const exists = await Promise.race([
         this.processPort.commandExists(binaryName),
-        new Promise<boolean>((resolve) =>
-          setTimeout(() => resolve(false), DETECTION_TIMEOUT),
-        ),
+        new Promise<boolean>((resolve) => {
+          timeoutId = setTimeout(() => resolve(false), DETECTION_TIMEOUT);
+        }),
       ]);
+      if (timeoutId) clearTimeout(timeoutId);
 
       if (!exists) {
         return { found: false };
       }
 
-      // Get binary path
+      // Get binary path with timeout
       const platform = this.environmentPort.platform();
       const whichCommand = platform === 'win32' ? 'where' : 'which';
+      let whichTimeoutId: NodeJS.Timeout | undefined;
       const whichResult = await Promise.race([
         this.processPort.exec(whichCommand, [binaryName]),
         new Promise<{ stdout: string; stderr: string; exitCode: number }>(
-          (resolve) =>
-            setTimeout(
+          (resolve) => {
+            whichTimeoutId = setTimeout(
               () => resolve({ stdout: '', stderr: '', exitCode: 1 }),
               DETECTION_TIMEOUT,
-            ),
+            );
+          },
         ),
       ]);
+      if (whichTimeoutId) clearTimeout(whichTimeoutId);
 
       const binaryPath =
         whichResult.exitCode === 0
           ? whichResult.stdout.trim().split('\n')[0]
           : undefined;
 
-      // Try to get version
+      // Try to get version with timeout
       let version: string | undefined;
       try {
+        let versionTimeoutId: NodeJS.Timeout | undefined;
         const versionResult = await Promise.race([
           this.processPort.exec(binaryName, ['--version']),
           new Promise<{ stdout: string; stderr: string; exitCode: number }>(
-            (resolve) =>
-              setTimeout(
+            (resolve) => {
+              versionTimeoutId = setTimeout(
                 () => resolve({ stdout: '', stderr: '', exitCode: 1 }),
                 DETECTION_TIMEOUT,
-              ),
+              );
+            },
           ),
         ]);
+        if (versionTimeoutId) clearTimeout(versionTimeoutId);
 
         if (versionResult.exitCode === 0) {
           version = this.parseVersion(versionResult.stdout);

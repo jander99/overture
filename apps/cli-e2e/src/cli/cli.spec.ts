@@ -15,20 +15,26 @@ describe('CLI tests', () => {
   });
 
   it('should display usage information', () => {
-    const output = execSync(`node ${cliPath} --help`).toString();
+    const output = execSync(`node ${cliPath} --help`, {
+      env: { ...process.env, NODE_ENV: 'production' },
+    }).toString();
 
     expect(output).toMatch(/Usage: overture/);
     expect(output).toMatch(/Orchestration layer/);
   });
 
   it('should display version', () => {
-    const output = execSync(`node ${cliPath} --version`).toString();
+    const output = execSync(`node ${cliPath} --version`, {
+      env: { ...process.env, NODE_ENV: 'production' },
+    }).toString();
 
     expect(output).toMatch(/\d+\.\d+\.\d+/);
   });
 
   it('should display help', () => {
-    const output = execSync(`node ${cliPath} --help`).toString();
+    const output = execSync(`node ${cliPath} --help`, {
+      env: { ...process.env, NODE_ENV: 'production' },
+    }).toString();
 
     expect(output).toMatch(/Commands:/);
     expect(output).toMatch(/init/);

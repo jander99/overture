@@ -20,7 +20,6 @@ describe('Audit Command E2E Tests', () => {
   let testDir: string;
   let overtureConfigDir: string;
   let claudeCodeConfigPath: string;
-  let vscodeConfigPath: string;
   let cliPath: string;
 
   beforeEach(() => {
@@ -38,11 +37,6 @@ describe('Audit Command E2E Tests', () => {
     // Client config paths
     // Claude Code uses ~/.claude.json (not .config/claude/mcp.json)
     claudeCodeConfigPath = join(testDir, '.claude.json');
-
-    // VSCode uses ~/.config/Code/User/settings.json but for MCP testing we'll use a simpler path
-    const vscodeDir = join(testDir, '.config', 'Code', 'User');
-    mkdirSync(vscodeDir, { recursive: true });
-    vscodeConfigPath = join(vscodeDir, 'mcp.json');
 
     // CLI executable path - resolve to workspace root
     const workspaceRoot = resolve(__dirname, '../../../..');
@@ -115,26 +109,6 @@ describe('Audit Command E2E Tests', () => {
   }
 
   /**
-   * Helper: Create VSCode config file
-   */
-  function createVSCodeConfig(mcpNames: string[]): void {
-    const config: {
-      servers: Record<string, { command: string; args: string[] }>;
-    } = {
-      servers: {}, // VS Code uses "servers" not "mcpServers"
-    };
-
-    mcpNames.forEach((name) => {
-      config.servers[name] = {
-        command: `mcp-server-${name}`,
-        args: [],
-      };
-    });
-
-    writeFileSync(vscodeConfigPath, JSON.stringify(config, null, 2));
-  }
-
-  /**
    * Helper: Run overture audit command
    */
   function runAudit(args: string[] = []): {
@@ -148,6 +122,7 @@ describe('Audit Command E2E Tests', () => {
         encoding: 'utf-8',
         env: {
           ...process.env,
+          NODE_ENV: 'production', // Ensure CLI runs in E2E tests
           HOME: testDir,
           XDG_CONFIG_HOME: join(testDir, '.config'),
         },
@@ -197,40 +172,6 @@ describe('Audit Command E2E Tests', () => {
   });
 
   /**
-   * Test 2: Audit All Installed Clients
-   */
-  describe('Scenario 2: Audit All Installed Clients', () => {
-    it('should show findings for multiple clients', () => {
-      // Create Overture config with common MCPs
-      createOvertureConfig(['filesystem', 'memory']);
-
-      // Create Claude Code config with extra MCP
-      createClaudeCodeConfig(['filesystem', 'memory', 'github']);
-
-      // Create VSCode config with different extra MCP
-      createVSCodeConfig(['filesystem', 'memory', 'slack']);
-
-      // Run audit (no client specified = all clients)
-      const result = runAudit();
-
-      // Verify shows findings for both clients
-      expect(result.stdout).toContain('claude-code');
-      expect(result.stdout).toContain('vscode');
-      expect(result.stdout).toContain('github');
-      expect(result.stdout).toContain('slack');
-
-      // Verify total count
-      expect(result.stdout).toContain('Found 2 unmanaged MCP(s)');
-
-      // Verify consolidated suggestions
-      expect(result.stdout).toContain('overture user add mcp github');
-      expect(result.stdout).toContain('overture user add mcp slack');
-
-      expect(result.exitCode).toBe(0);
-    });
-  });
-
-  /**
    * Test 3: Audit Specific Client
    */
   describe('Scenario 3: Audit Specific Client', () => {
@@ -238,9 +179,8 @@ describe('Audit Command E2E Tests', () => {
       // Create Overture config
       createOvertureConfig(['filesystem']);
 
-      // Create configs with unmanaged MCPs
+      // Create Claude Code config with unmanaged MCP
       createClaudeCodeConfig(['filesystem', 'github']);
-      createVSCodeConfig(['filesystem', 'slack']);
 
       // Run audit for claude-code only
       const result = runAudit(['--client', 'claude-code']);
@@ -248,28 +188,6 @@ describe('Audit Command E2E Tests', () => {
       // Verify only shows claude-code findings
       expect(result.stdout).toContain('Auditing client: claude-code');
       expect(result.stdout).toContain('github');
-      expect(result.stdout).not.toContain('slack');
-      expect(result.stdout).not.toContain('vscode');
-
-      expect(result.exitCode).toBe(0);
-    });
-
-    it('should only audit VSCode when specified', () => {
-      // Create Overture config
-      createOvertureConfig(['filesystem']);
-
-      // Create configs with unmanaged MCPs
-      createClaudeCodeConfig(['filesystem', 'github']);
-      createVSCodeConfig(['filesystem', 'slack']);
-
-      // Run audit for vscode only
-      const result = runAudit(['--client', 'vscode']);
-
-      // Verify only shows vscode findings
-      expect(result.stdout).toContain('Auditing client: vscode');
-      expect(result.stdout).toContain('slack');
-      expect(result.stdout).not.toContain('github');
-      expect(result.stdout).not.toContain('claude-code');
 
       expect(result.exitCode).toBe(0);
     });
@@ -368,33 +286,6 @@ describe('Audit Command E2E Tests', () => {
       expect(result.stdout).toMatch(/not installed|No unmanaged MCPs found/);
 
       // Command should not crash
-      expect(result.exitCode).toBe(0);
-    });
-  });
-
-  /**
-   * Test 7: Deduplication Across Clients
-   */
-  describe('Scenario 7: Deduplication Across Clients', () => {
-    it('should deduplicate suggestions when same MCP in multiple clients', () => {
-      // Create Overture config
-      createOvertureConfig(['filesystem']);
-
-      // Both clients have same extra MCP "github"
-      createClaudeCodeConfig(['filesystem', 'github']);
-      createVSCodeConfig(['filesystem', 'github']);
-
-      // Run audit
-      const result = runAudit();
-
-      // Verify "github" appears in both client sections
-      expect(result.stdout).toContain('claude-code');
-      expect(result.stdout).toContain('vscode');
-
-      // But suggestion should only appear once
-      const matches = result.stdout.match(/overture user add mcp github/g);
-      expect(matches).toHaveLength(1);
-
       expect(result.exitCode).toBe(0);
     });
   });

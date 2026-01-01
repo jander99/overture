@@ -75,6 +75,32 @@ export interface ProcessPort {
    *   console.log('Docker is available');
    * }
    * ```
+   *
+   * @deprecated Use commandExistsBatch for better performance when checking multiple commands
    */
   commandExists(command: string): Promise<boolean>;
+
+  /**
+   * Check if multiple commands exist in PATH (parallelized)
+   *
+   * This method checks multiple commands in parallel for improved performance.
+   * Prefer this over calling commandExists() multiple times sequentially.
+   *
+   * @param commands - Array of command names to check
+   * @returns Promise resolving to a map of command name to existence boolean
+   *
+   * @example
+   * ```typescript
+   * const commands = ['docker', 'npm', 'git'];
+   * const results = await processPort.commandExistsBatch(commands);
+   *
+   * if (results.get('docker')) {
+   *   console.log('Docker is available');
+   * }
+   * if (results.get('npm')) {
+   *   console.log('npm is available');
+   * }
+   * ```
+   */
+  commandExistsBatch(commands: string[]): Promise<Map<string, boolean>>;
 }
