@@ -1,25 +1,38 @@
 # Overture
 
-[![Tests](https://img.shields.io/badge/tests-296%20passing-brightgreen)](https://github.com/overture-stack/overture)
-[![Coverage](https://img.shields.io/badge/coverage-69%25-yellow)](https://github.com/overture-stack/overture)
+[![Tests](https://img.shields.io/badge/tests-471%20passing-brightgreen)](https://github.com/overture-stack/overture)
+[![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)](https://github.com/overture-stack/overture)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG.md)
 
-> **Multi-platform MCP configuration orchestrator** - Manage Model Context Protocol (MCP) servers across all AI development tools from a single source of truth.
+> **Multi-platform MCP and Agent orchestrator** - Manage Model Context Protocol (MCP) servers and AI agents across all AI development tools from a single source of truth.
 
-Overture synchronizes MCP configurations to **Claude Code**, **GitHub Copilot CLI**, and **OpenCode** from one unified config file, with automatic client detection, version tracking, and intelligent merging.
+Overture synchronizes MCP configurations and AI agents to **Claude Code**, **GitHub Copilot CLI**, and **OpenCode** from one unified config file, with automatic client detection, version tracking, intelligent merging, and sync status monitoring.
 
 ---
 
 ## ✨ Features
 
+### MCP Server Management
+
 - 🎯 **Single Source of Truth** - Manage all MCP servers in one `config.yaml` file
 - 🔄 **Multi-Platform Sync** - Generates configs for 3+ AI clients automatically
 - 🔍 **Auto-Detection** - Finds installed clients, versions, and validates configs
 - 📊 **Smart Merging** - Preserves user settings while updating MCP configurations
+
+### AI Agent Management
+
+- 🤖 **Universal Agent Sync** - Write agents once, sync to all clients (Claude Code, OpenCode, Copilot CLI)
+- 🔄 **Agent Sync Status** - Track which agents are in sync vs need updating
+- ✅ **Agent Validation** - Automatic YAML schema and Markdown validation
+- 🎨 **Client-Specific Formats** - Automatic transformation to each client's agent format
+
+### Developer Experience
+
+- 🩺 **Comprehensive Diagnostics** - `doctor` command shows system health and sync status
 - 🛡️ **Type-Safe** - Zod schema validation with helpful error messages
-- 🧪 **Well-Tested** - 296 tests with 69% code coverage
+- 🧪 **Well-Tested** - 471 tests with 83% code coverage
 - 🏗️ **Production-Ready** - Zero security vulnerabilities, TypeScript strict mode
 
 ---
@@ -38,7 +51,19 @@ npm install -g @overture/cli
 overture doctor
 ```
 
-Shows installed AI clients, versions, and configuration status.
+Shows installed AI clients, versions, configuration status, and agent sync status.
+
+Example output:
+
+```
+Summary:
+  Config repo:      exists
+  Global agents:    exists (5 agents)
+  Project agents:   exists (3 agents)
+  Agent sync:       2 in sync, 3 need sync
+  Clients detected: 3 / 3
+  MCP commands available: 6 / 6
+```
 
 ### Initialize Project
 
@@ -55,12 +80,27 @@ Creates `.overture/config.yaml` with starter configuration.
 overture sync
 ```
 
-Generates platform-specific configs:
+Synchronizes MCPs and agents to all detected clients.
+
+**MCP Configs Generated:**
 
 - `.mcp.json` (Claude Code project config)
 - `~/.claude.json` (Claude Code user config)
 - `.github/mcp.json` (GitHub Copilot CLI project)
 - `opencode.json` (OpenCode project config)
+
+**Agent Files Synced:**
+
+- `~/.claude/agents/<name>.md` (Claude Code)
+- `~/.config/opencode/agent/<name>.md` (OpenCode)
+- `.github/agents/<name>.agent.md` (GitHub Copilot CLI)
+
+Skip specific sync types:
+
+```bash
+overture sync --skip-agents    # Sync only MCPs
+overture sync --skip-skills    # Sync MCPs and agents, skip skills
+```
 
 ---
 
@@ -151,6 +191,47 @@ mcp:
 
 Run `overture sync` and both configs merge intelligently!
 
+### AI Agent Configuration
+
+**`~/.config/overture/agents/coding-assistant.yaml`**:
+
+```yaml
+name: coding-assistant
+model: claude-3-5-sonnet
+description: Expert coding assistant for Python and TypeScript
+tools:
+  - filesystem
+  - memory
+  - github
+```
+
+**`~/.config/overture/agents/coding-assistant.md`**:
+
+```markdown
+# Coding Assistant
+
+You are an expert software engineer specializing in Python and TypeScript.
+
+## Guidelines
+
+- Write clean, maintainable code following best practices
+- Include comprehensive tests and documentation
+- Consider performance and security implications
+- Explain your reasoning for architectural decisions
+```
+
+**Model Mapping** (`~/.config/overture/models.yaml`):
+
+```yaml
+# Map logical names to client-specific model identifiers
+claude-3-5-sonnet:
+  claude-code: claude-3-5-sonnet-20241022
+  opencode: claude-3-5-sonnet-20241022
+  copilot-cli: claude-3.5-sonnet
+```
+
+Run `overture sync` to deploy agents to all clients with automatic format transformation!
+
 ---
 
 ## 🎯 Use Cases
@@ -196,21 +277,49 @@ mcp:
       exclude: [win32] # Skip on Windows
 ```
 
+### 5. Multi-Agent Workflows
+
+```bash
+# Define specialized agents for different tasks
+~/.config/overture/agents/
+├── code-reviewer.yaml    # Code review and best practices
+├── debugger.yaml         # Bug investigation and fixes
+├── architect.yaml        # System design and planning
+└── tester.yaml          # Test generation and coverage
+
+# Sync all agents to every AI client
+overture sync
+
+# Check agent sync status
+overture doctor --verbose
+# → Shows which agents are in sync across clients
+```
+
 ---
 
 ## 🛠️ Core Commands
 
-| Command             | Description                           |
-| ------------------- | ------------------------------------- |
-| `overture init`     | Initialize project configuration      |
-| `overture sync`     | Sync MCP configs to all clients       |
-| `overture doctor`   | System diagnostics and health check   |
-| `overture validate` | Validate configuration files          |
-| `overture mcp list` | List all configured MCP servers       |
-| `overture user`     | Manage user global configuration      |
-| `overture audit`    | Find unmanaged MCPs in client configs |
-| `overture backup`   | Backup/restore client configurations  |
-| `overture import`   | Import MCPs from client configs       |
+| Command             | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `overture init`     | Initialize project configuration             |
+| `overture sync`     | Sync MCPs, agents, and skills to all clients |
+| `overture doctor`   | System diagnostics with agent sync status    |
+| `overture validate` | Validate configuration files                 |
+| `overture mcp list` | List all configured MCP servers              |
+| `overture user`     | Manage user global configuration             |
+| `overture audit`    | Find unmanaged MCPs in client configs        |
+| `overture backup`   | Backup/restore client configurations         |
+| `overture import`   | Import MCPs from client configs              |
+
+**Sync Options:**
+
+```bash
+overture sync --skip-agents      # Skip agent synchronization
+overture sync --skip-skills      # Skip skill synchronization
+overture sync --skip-plugins     # Skip plugin installation
+overture sync --dry-run          # Preview without making changes
+overture sync --detail           # Show detailed output with diffs
+```
 
 Run `overture --help` for full command reference.
 
@@ -228,24 +337,30 @@ apps/cli/              # CLI application
 │   └── main.ts        # Entry point
 
 libs/
-├── domain/            # Core types and schemas
-│   ├── config-types/  # TypeScript interfaces
-│   ├── config-schema/ # Zod validation schemas
-│   └── errors/        # Error hierarchy
-├── ports/             # Interface definitions
-│   ├── filesystem/    # File operations
-│   ├── process/       # Process execution
-│   └── output/        # Logging and output
-├── adapters/          # Infrastructure implementations
+├── domain/               # Core types and schemas
+│   ├── config-types/     # TypeScript interfaces
+│   ├── config-schema/    # Zod validation schemas
+│   ├── diagnostics-types/# Diagnostic result types
+│   └── errors/           # Error hierarchy
+├── ports/                # Interface definitions
+│   ├── filesystem/       # File operations
+│   ├── process/          # Process execution
+│   └── output/           # Logging and output
+├── adapters/             # Infrastructure implementations
 │   ├── client-adapters/  # AI client adapters
 │   └── infrastructure/   # Node.js adapters
-└── core/              # Domain logic
-    ├── config/        # Config loading/merging
-    ├── sync/          # Multi-client sync engine
-    ├── discovery/     # Client detection
-    ├── plugin/        # Plugin management
-    ├── skill/         # Agent Skills sync
-    └── import/        # Config import
+├── core/                 # Domain logic
+│   ├── config/           # Config loading/merging
+│   ├── sync/             # Multi-client sync engine
+│   ├── discovery/        # Client detection
+│   ├── diagnostics/      # System health checks
+│   ├── agent/            # Agent sync and transformation
+│   ├── plugin/           # Plugin management
+│   ├── skill/            # Agent Skills sync
+│   └── import/           # Config import
+└── shared/               # Shared utilities
+    ├── formatters/       # Diagnostic output formatting
+    └── utils/            # Common utilities
 ```
 
 **Technology Stack:**
@@ -254,7 +369,7 @@ libs/
 - **Build System:** Nx 22 monorepo
 - **CLI Framework:** Commander.js
 - **Validation:** Zod
-- **Testing:** Vitest (296 tests, 69% coverage)
+- **Testing:** Vitest (471 tests, 83% coverage)
 - **Bundler:** esbuild
 
 ---
@@ -393,6 +508,32 @@ ls -la ~/.config/overture/
 chmod 644 ~/.config/overture/config.yaml
 ```
 
+**"Agents not syncing"**
+
+```bash
+# Check agent sync status
+overture doctor --verbose
+
+# Verify agent files exist
+ls -la ~/.config/overture/agents/
+
+# Force sync agents only
+overture sync --skip-skills
+
+# Validate agent YAML syntax
+overture validate
+```
+
+**"Agent model not found"**
+
+```yaml
+# Add model mapping to ~/.config/overture/models.yaml
+claude-3-5-sonnet:
+  claude-code: claude-3-5-sonnet-20241022
+  opencode: claude-3-5-sonnet-20241022
+  copilot-cli: claude-3.5-sonnet
+```
+
 ### Debug Mode
 
 Enable verbose logging:
@@ -417,9 +558,10 @@ See [Troubleshooting Guide](docs/user-guide.md#troubleshooting) for more solutio
 
 **Test Coverage:**
 
-- 296 passing tests
-- 69% code coverage (targeting 80%)
-- 28K+ lines of test code
+- 471 passing tests
+- 83% code coverage
+- 35K+ lines of test code
+- Comprehensive agent sync and diagnostics testing
 
 **Security:**
 

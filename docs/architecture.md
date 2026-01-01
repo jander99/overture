@@ -1462,6 +1462,222 @@ class AgentTransformer {
 
 ---
 
+### Diagnostics System
+
+**Status:** Refactored in v0.3.0 (PR #17)
+
+The diagnostics system provides comprehensive health checks for Overture installations. It was refactored from a monolithic 1,727-line file into a modular hexagonal architecture with 98%+ test coverage.
+
+**Architecture Goals:**
+
+- **Modularity**: Each checker is independent and testable
+- **Parallel Execution**: Checkers run concurrently for speed
+- **Extensibility**: Easy to add new checkers
+- **Testability**: Mock-friendly design with dependency injection
+- **Clear Separation**: Domain logic isolated from infrastructure
+
+**Components:**
+
+```
+libs/
+├── domain/
+│   └── diagnostics-types/    # Core types (DiagnosticResult, CheckerStatus)
+├── core/
+│   └── diagnostics/           # Checker implementations + orchestrator
+└── shared/
+    └── formatters/            # Output formatting strategies
+```
+
+**Checker Abstraction:**
+
+```typescript
+interface DiagnosticChecker {
+  name: string;
+  check(): Promise<DiagnosticResult>;
+}
+
+interface DiagnosticResult {
+  status: CheckerStatus; // 'success' | 'warning' | 'error' | 'skipped'
+  message: string;
+  details?: Record<string, unknown>;
+  suggestions?: string[];
+}
+```
+
+**Checker Implementations:**
+
+1. **ConfigRepoChecker** - Validates config repository existence and structure
+2. **GlobalAgentsChecker** - Checks global agents directory and validates agents
+3. **ProjectAgentsChecker** - Checks project-specific agents
+4. **AgentSyncChecker** - Compares global/project agents for sync status
+5. **ClientsChecker** - Detects installed AI clients and validates configs
+6. **McpCommandsChecker** - Tests MCP command availability
+
+**Orchestrator Pattern:**
+
+```typescript
+class DiagnosticOrchestrator {
+  constructor(private checkers: DiagnosticChecker[]) {}
+
+  async runChecks(): Promise<DiagnosticResult[]> {
+    // Run all checkers in parallel using Promise.all
+    return Promise.all(this.checkers.map((c) => c.check()));
+  }
+}
+```
+
+**Parallel Execution:**
+
+All checkers run concurrently using `Promise.all`, reducing total execution time:
+
+```
+Sequential:  ~3-5 seconds (sum of all checks)
+Parallel:    ~1-2 seconds (max of slowest check)
+```
+
+**Agent Sync Status Detection:**
+
+The `AgentSyncChecker` compares agents across scopes:
+
+```typescript
+interface AgentSyncResult {
+  inSync: string[]; // Agents matching in both scopes
+  outOfSync: string[]; // Agents present but different
+  onlyInGlobal: string[]; // Only in global config
+  onlyInProject: string[]; // Only in project config
+  hasChanges: boolean; // Any differences detected
+}
+```
+
+Comparison algorithm:
+
+1. Discover agents from global and project directories
+2. Compare YAML config (parse and deep equality)
+3. Compare Markdown prompts (string equality)
+4. Categorize into sync states
+
+**Formatter Strategy Pattern:**
+
+Multiple output formats with pluggable formatters:
+
+```typescript
+interface DiagnosticFormatter {
+  format(results: DiagnosticResult[]): string;
+}
+
+// Implementations:
+class SummaryFormatter    // Concise overview
+class DetailedFormatter   // Full diagnostics with suggestions
+class VerboseFormatter    // Agent-by-agent breakdown
+class JsonFormatter       // Machine-readable output
+class QuietFormatter      // Errors/warnings only
+```
+
+**Formatter Selection:**
+
+```typescript
+const formatter = options.verbose
+  ? new VerboseFormatter()
+  : options.json
+    ? new JsonFormatter()
+    : options.quiet
+      ? new QuietFormatter()
+      : new SummaryFormatter();
+```
+
+**Doctor Command Integration:**
+
+```typescript
+// apps/cli/src/commands/doctor.ts
+const orchestrator = new DiagnosticOrchestrator([
+  new ConfigRepoChecker(fsPort),
+  new GlobalAgentsChecker(fsPort),
+  new ProjectAgentsChecker(fsPort, projectRoot),
+  new AgentSyncChecker(fsPort, projectRoot),
+  new ClientsChecker(clientDiscovery),
+  new McpCommandsChecker(processPort),
+]);
+
+const results = await orchestrator.runChecks();
+const formatter = selectFormatter(options);
+output.write(formatter.format(results));
+```
+
+**Testing Strategy:**
+
+- **Unit Tests**: Each checker tested in isolation (92 tests in diagnostics-core)
+- **Formatter Tests**: Each formatter tested with fixtures (76 tests)
+- **Type Tests**: Zero runtime dependencies (19 tests in diagnostics-types)
+- **Integration**: End-to-end doctor command tests
+
+**Test Coverage:**
+
+- `@overture/diagnostics-types`: 100% (19 tests)
+- `@overture/diagnostics`: 98%+ (92 tests)
+- `@overture/formatters`: 98%+ (76 tests)
+- **Total**: 187 tests for diagnostics system
+
+**Benefits of Refactoring:**
+
+- **95.9% code reduction**: doctor.ts went from 1,727 lines → 71 lines
+- **Improved maintainability**: Each checker ~50-100 lines vs monolithic 1,700
+- **Better testability**: Easy to mock dependencies and test in isolation
+- **Faster execution**: Parallel checks vs sequential
+- **Extensibility**: Add new checkers without modifying existing code
+- **Clearer output**: Dedicated formatters for each verbosity level
+
+**Hexagonal Architecture Applied:**
+
+```
+┌─────────────────────────────────────────┐
+│         Doctor Command (CLI)            │
+│         - Argument parsing              │
+│         - Formatter selection           │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│     DiagnosticOrchestrator (Core)       │
+│     - Coordinates checkers              │
+│     - Parallel execution                │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│    DiagnosticChecker[] (Domain)         │
+│    - ConfigRepoChecker                  │
+│    - AgentSyncChecker                   │
+│    - ClientsChecker                     │
+│    - etc.                               │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│         Ports (Interfaces)              │
+│         - FilesystemPort                │
+│         - ProcessPort                   │
+│         - OutputPort                    │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│       Adapters (Infrastructure)         │
+│       - NodeFilesystemAdapter           │
+│       - NodeProcessAdapter              │
+│       - ConsoleOutputAdapter            │
+└─────────────────────────────────────────┘
+```
+
+**Future Enhancements:**
+
+- Add checkers for skill validation
+- Add checker for model mapping validation
+- Add performance metrics (check duration)
+- Add repair suggestions (auto-fix issues)
+- Add watch mode (continuous monitoring)
+
+---
+
 ## Configuration Precedence
 
 ### User vs Project
