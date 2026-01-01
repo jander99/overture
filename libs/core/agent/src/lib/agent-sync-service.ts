@@ -55,7 +55,10 @@ export class AgentSyncService {
       const agentResult: AgentSyncResult = {
         agent: agentDef.config.name,
         success: true,
-        clientResults: {} as any,
+        clientResults: {} as Record<
+          ClientName,
+          { success: boolean; path?: string; error?: string }
+        >,
       };
 
       for (const client of targetClients) {

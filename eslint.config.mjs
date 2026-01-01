@@ -23,12 +23,12 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-      "ignores": [
-        "**/dist",
-        "**/out-tsc",
-        "**/vitest.config.*.timestamp*",
-        "**/vite.config.*.timestamp*"
-      ]
+    ignores: [
+      '**/dist',
+      '**/out-tsc',
+      '**/vitest.config.*.timestamp*',
+      '**/vite.config.*.timestamp*',
+    ],
   },
   // ==========================================================================
   // Core ESLint rules - explicitly set to prevent upstream changes
@@ -83,7 +83,7 @@ export default [
 
       // --- Warning-level rules (should be reviewed but don't block CI) ---
       // These are warn because they're common in existing code or have valid exceptions
-      '@typescript-eslint/no-explicit-any': 'warn', // Prefer specific types, but sometimes any is needed
+      '@typescript-eslint/no-explicit-any': 'error', // Prefer specific types over any
       '@typescript-eslint/no-non-null-assertion': 'warn', // Prefer type guards, but sometimes needed
       '@typescript-eslint/no-unused-vars': [
         'warn',

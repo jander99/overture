@@ -366,7 +366,7 @@ export const ModelMappingSchema = z.record(
 /**
  * Agent Configuration Schema (YAML)
  */
-export const AgentConfigSchema: z.ZodType<any> = z.lazy(() =>
+export const AgentConfigSchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       name: z.string().min(1, 'Agent name is required'),

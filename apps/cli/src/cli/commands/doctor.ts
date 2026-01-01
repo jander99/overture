@@ -14,7 +14,11 @@
 
 import { Command } from 'commander';
 import * as os from 'os';
-import type { Platform, ClientName } from '@overture/config-types';
+import type {
+  Platform,
+  ClientName,
+  OvertureConfig,
+} from '@overture/config-types';
 import { SUPPORTED_CLIENTS } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
 import chalk from 'chalk';
@@ -591,7 +595,7 @@ async function checkClients(
  * Check all MCP servers
  */
 async function checkMcpServers(
-  mergedConfig: unknown,
+  mergedConfig: OvertureConfig | null,
   mcpSources: Record<string, string>,
   process: {
     commandExists(command: string): Promise<boolean>;
@@ -620,12 +624,10 @@ async function checkMcpServers(
     mcpCommandsMissing: 0,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mergedConfig is dynamic configuration object
-  const mcpConfig = (mergedConfig as any)?.mcp || {};
+  const mcpConfig = mergedConfig?.mcp || {};
 
   for (const [mcpName, mcpDef] of Object.entries(mcpConfig)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mcpDef is dynamic configuration object
-    const commandExists = await process.commandExists((mcpDef as any).command);
+    const commandExists = await process.commandExists(mcpDef.command);
     const source = Object.hasOwn(mcpSources, mcpName)
       ? // eslint-disable-next-line security/detect-object-injection
         mcpSources[mcpName]
@@ -633,7 +635,7 @@ async function checkMcpServers(
 
     const mcpResult = {
       name: mcpName,
-      command: (mcpDef as any).command,
+      command: mcpDef.command,
       available: commandExists,
       source,
     };
