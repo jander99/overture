@@ -38,12 +38,12 @@ Overture acts as a multi-platform configuration orchestrator that:
 5. **Validates your setup** - Checks that required tools and clients are available
 6. **Guides Claude's tool selection** - Generates `CLAUDE.md` that tells Claude which tools to prefer
 
-**New in v0.2.5:**
+**New in v0.3.0:**
 
-- **Intelligent client detection** - Knows what's installed and where
-- **System diagnostics** - `overture doctor` command shows health status
-- **Version tracking** - Captures client versions automatically
-- **"Warn but allow"** - Generates configs even if clients not detected (install later)
+- **AI Agent Sync** - Sync subagents to all clients from one source
+- **Agent Sync Status** - Track which agents are in sync vs need updating
+- **Improved Diagnostics** - Enhanced `doctor` command with agent status
+- **Parallel Diagnostics** - Faster system health checks with parallel execution
 
 ### How It Works
 
@@ -274,6 +274,170 @@ mcp:
 ```
 
 Overture will substitute `${GITHUB_TOKEN}` with the actual value from your environment.
+
+### AI Agents (Subagents)
+
+AI Agents (also called subagents) are specialized AI assistants with dedicated system prompts and tool access. Agents allow you to create focused assistants for specific tasks like code review, debugging, or documentation. Overture syncs agents to all AI clients from a single source.
+
+#### Agent Configuration Format
+
+Agents use a "split source" pattern with two files per agent:
+
+1. **`<agent-name>.yaml`** - Configuration (name, model, tools)
+2. **`<agent-name>.md`** - System prompt and instructions
+
+**Example: Code Review Agent**
+
+`~/.config/overture/agents/code-reviewer.yaml`:
+
+```yaml
+name: code-reviewer
+model: claude-3-5-sonnet
+description: Expert code reviewer focused on best practices
+tools:
+  - filesystem
+  - github
+```
+
+`~/.config/overture/agents/code-reviewer.md`:
+
+```markdown
+# Code Review Agent
+
+You are an expert code reviewer with deep knowledge of software engineering best practices.
+
+## Your Role
+
+- Review code for bugs, security issues, and performance problems
+- Suggest improvements following language-specific idioms
+- Explain your reasoning clearly and concisely
+
+## Guidelines
+
+- Always explain WHY a change is needed, not just WHAT to change
+- Prioritize security and correctness over style
+- Be constructive and helpful in tone
+```
+
+#### Agent Directory Structure
+
+Agents can be global (available everywhere) or project-specific:
+
+```
+~/.config/overture/agents/     # Global agents
+  code-reviewer.yaml
+  code-reviewer.md
+  debugger.yaml
+  debugger.md
+
+.overture/agents/               # Project-specific agents
+  api-validator.yaml
+  api-validator.md
+```
+
+#### Model Mapping
+
+Use logical model names in agent configurations and map them to client-specific models:
+
+`~/.config/overture/models.yaml`:
+
+```yaml
+# Map logical names to client-specific model identifiers
+claude-3-5-sonnet:
+  claude-code: claude-3-5-sonnet-20241022
+  opencode: claude-3-5-sonnet-20241022
+  copilot-cli: claude-3.5-sonnet
+
+gpt-4o:
+  copilot-cli: gpt-4o
+  opencode: gpt-4o
+```
+
+Then in your agent YAML:
+
+```yaml
+model: claude-3-5-sonnet # Logical name
+```
+
+Overture automatically resolves this to the correct model for each client.
+
+#### Syncing Agents
+
+Agents sync automatically during `overture sync`:
+
+```bash
+overture sync
+```
+
+This syncs agents to:
+
+- `~/.claude/agents/<name>.md` (Claude Code)
+- `~/.config/opencode/agent/<name>.md` (OpenCode)
+- `.github/agents/<name>.agent.md` (GitHub Copilot CLI - project only)
+
+**Note:** GitHub Copilot CLI only supports project-scoped agents.
+
+You can skip agent sync with:
+
+```bash
+overture sync --skip-agents
+```
+
+#### Checking Agent Sync Status
+
+Use `overture doctor` to see agent sync status:
+
+```bash
+overture doctor
+```
+
+Output shows:
+
+```
+Summary:
+  Config repo:      exists
+  Global agents:    exists (5 agents)
+  Project agents:   exists (3 agents)
+  Agent sync:       2 in sync, 3 need sync
+  Clients detected: 3 / 3
+```
+
+For detailed agent-by-agent status:
+
+```bash
+overture doctor --verbose
+```
+
+#### Multi-Agent Workflows
+
+Create specialized agents for different tasks:
+
+```bash
+# Global agents for all projects
+~/.config/overture/agents/
+  code-reviewer.yaml/.md    # Code review and best practices
+  debugger.yaml/.md         # Bug investigation and fixes
+  architect.yaml/.md        # System design and planning
+  tester.yaml/.md          # Test generation and coverage
+
+# Project-specific agents
+.overture/agents/
+  api-validator.yaml/.md    # Validate API contracts
+  db-migrator.yaml/.md      # Database migration helper
+```
+
+After syncing, all clients can invoke these agents based on task requirements.
+
+#### Agent Validation
+
+Overture validates agents during sync:
+
+- YAML syntax and required fields (name, model, description)
+- Matching `.md` file exists
+- Model names are valid (if using models.yaml)
+- Tool names reference existing MCPs
+
+Fix validation errors shown during `overture validate` or `overture sync`.
 
 ### Agent Skills
 
@@ -1428,6 +1592,116 @@ Common schema errors:
      python-development: # 2 spaces
        marketplace: test # 4 spaces
        mcps: [test] # 4 spaces
+   ```
+
+### Agents Not Syncing
+
+**Problem:** Agents aren't appearing in AI clients after `overture sync`.
+
+**Solutions:**
+
+1. **Check agent sync status:**
+
+   ```bash
+   overture doctor --verbose
+   ```
+
+   Look for agent sync status and any validation errors.
+
+2. **Verify agent files exist:**
+
+   ```bash
+   ls -la ~/.config/overture/agents/
+   ```
+
+   Each agent needs both `.yaml` and `.md` files with matching names.
+
+3. **Validate agent configuration:**
+
+   ```bash
+   overture validate
+   ```
+
+   Fix any YAML syntax errors or missing required fields.
+
+4. **Force sync agents only:**
+
+   ```bash
+   overture sync --skip-skills
+   ```
+
+   Skips skills and focuses on agent sync.
+
+### Agent Model Not Found
+
+**Problem:** Error about model not being available for a client.
+
+**Solution:**
+
+Add model mapping to `~/.config/overture/models.yaml`:
+
+```yaml
+claude-3-5-sonnet:
+  claude-code: claude-3-5-sonnet-20241022
+  opencode: claude-3-5-sonnet-20241022
+  copilot-cli: claude-3.5-sonnet
+
+gpt-4o:
+  copilot-cli: gpt-4o
+  opencode: gpt-4o
+```
+
+Or use client-specific model overrides in agent YAML:
+
+```yaml
+name: my-agent
+model: claude-3-5-sonnet # Default
+clients:
+  copilot-cli:
+    model: gpt-4o # Override for Copilot CLI
+```
+
+### Agent Validation Fails
+
+**Problem:** Agent validation errors during sync.
+
+**Common Issues:**
+
+1. **Missing .md file:**
+
+   ```
+   Error: Agent 'code-reviewer' missing prompt file: code-reviewer.md
+   ```
+
+   Create matching `.md` file:
+
+   ```bash
+   touch ~/.config/overture/agents/code-reviewer.md
+   ```
+
+2. **Invalid YAML syntax:**
+
+   ```
+   Error: Failed to parse agent-name.yaml
+   ```
+
+   Check YAML syntax - common issues:
+   - Use spaces, not tabs for indentation
+   - Quote special characters in strings
+   - Check array syntax: `[item1, item2]` or multi-line
+
+3. **Missing required fields:**
+
+   ```
+   Error: Agent 'my-agent' missing required field: name
+   ```
+
+   Add required fields to YAML:
+
+   ```yaml
+   name: my-agent # Required
+   model: claude-3-5-sonnet # Required
+   description: Agent description # Required
    ```
 
 ### Getting Help
