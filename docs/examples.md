@@ -1333,6 +1333,316 @@ opencode
   overture backup restore claude-code <timestamp>
   ```
 
+---
+
+## Example 8: Multi-Agent Python Development Workflow
+
+This example shows how to configure specialized AI agents for different development tasks in a Python project.
+
+### Project: Python Microservices API
+
+A team building a microservices API wants specialized agents for code review, debugging, testing, and API design.
+
+### Global Agent Configuration
+
+**`~/.config/overture/agents/code-reviewer.yaml`:**
+
+```yaml
+name: code-reviewer
+model: claude-3-5-sonnet
+description: Expert code reviewer focused on Python best practices, security, and performance
+tools:
+  - filesystem
+  - github
+  - ruff
+```
+
+**`~/.config/overture/agents/code-reviewer.md`:**
+
+```markdown
+# Code Review Agent
+
+You are an expert Python code reviewer with deep knowledge of best practices, security patterns, and performance optimization.
+
+## Your Role
+
+- Review code for bugs, security vulnerabilities, and performance issues
+- Suggest improvements following PEP 8 and Python idioms
+- Identify code smells and recommend refactoring
+- Ensure proper error handling and logging
+
+## Guidelines
+
+- **Security First**: Flag any potential security issues (SQL injection, XSS, auth bypasses)
+- **Explain Why**: Always explain WHY a change is needed, not just WHAT to change
+- **Be Constructive**: Provide specific, actionable feedback
+- **Performance**: Consider Big O complexity and memory usage
+- **Testing**: Recommend test cases for changed code
+
+## Review Checklist
+
+1. Type hints present and correct
+2. Error handling comprehensive
+3. No hardcoded credentials or secrets
+4. Proper logging and observability
+5. Tests cover edge cases
+```
+
+**`~/.config/overture/agents/debugger.yaml`:**
+
+```yaml
+name: debugger
+model: claude-3-5-sonnet
+description: Expert at investigating and fixing bugs in Python applications
+tools:
+  - filesystem
+  - python-repl
+  - ruff
+  - memory
+```
+
+**`~/.config/overture/agents/debugger.md`:**
+
+```markdown
+# Debugging Agent
+
+You are a debugging specialist who excels at investigating complex bugs and providing root cause analysis.
+
+## Debugging Process
+
+1. **Reproduce** - Confirm you can trigger the bug consistently
+2. **Isolate** - Use binary search to narrow down the problematic code
+3. **Analyze** - Check logs, stack traces, and variable states
+4. **Hypothesize** - Form theories about the root cause
+5. **Test** - Verify your hypothesis
+6. **Fix** - Implement the minimal fix that resolves the issue
+7. **Verify** - Confirm the fix works and doesn't break anything
+
+## Tools to Use
+
+- `read` - Examine source files
+- `python-repl` - Test hypotheses and reproduce bugs
+- `grep` - Search for related code patterns
+- `memory` - Track debugging insights across sessions
+```
+
+### Project-Specific Agents
+
+**`.overture/agents/api-validator.yaml`:**
+
+```yaml
+name: api-validator
+model: claude-3-5-sonnet
+description: Validates API contracts, request/response schemas, and OpenAPI specs
+tools:
+  - filesystem
+  - python-repl
+```
+
+**`.overture/agents/api-validator.md`:**
+
+```markdown
+# API Validator Agent
+
+You specialize in validating API contracts and ensuring consistency between implementation and documentation.
+
+## Validation Tasks
+
+- Check OpenAPI/Swagger specs match implementation
+- Validate request/response schemas
+- Ensure proper HTTP status codes
+- Verify authentication/authorization flows
+- Check rate limiting and error responses
+
+## Best Practices
+
+- Use Pydantic for request/response validation
+- Follow REST principles (or GraphQL best practices)
+- Include comprehensive error messages
+- Document breaking changes
+```
+
+### Model Mapping
+
+**`~/.config/overture/models.yaml`:**
+
+```yaml
+# Map logical model names to client-specific identifiers
+claude-3-5-sonnet:
+  claude-code: claude-3-5-sonnet-20241022
+  opencode: claude-3-5-sonnet-20241022
+  copilot-cli: claude-3.5-sonnet
+
+gpt-4o:
+  copilot-cli: gpt-4o
+  opencode: gpt-4o
+```
+
+### MCP Configuration
+
+**`.overture/config.yaml`:**
+
+```yaml
+version: '2.0'
+
+project:
+  name: microservices-api
+  type: python-backend
+
+mcp:
+  python-repl:
+    command: uvx
+    args: [mcp-server-python-repl]
+
+  ruff:
+    command: uvx
+    args: [mcp-server-ruff]
+
+  github:
+    command: mcp-server-github
+    env:
+      GITHUB_TOKEN: '${GITHUB_TOKEN}'
+
+  filesystem:
+    command: npx
+    args: [-y, '@modelcontextprotocol/server-filesystem', '.']
+
+  memory:
+    command: npx
+    args: [-y, mcp-server-memory]
+```
+
+### Sync and Verify
+
+```bash
+# Sync agents and MCPs to all clients
+overture sync
+
+# Check agent sync status
+overture doctor --verbose
+```
+
+**Example `doctor` output:**
+
+```
+Summary:
+  Config repo:      exists
+  Global agents:    exists (2 agents: code-reviewer, debugger)
+  Project agents:   exists (1 agent: api-validator)
+  Agent sync:       3 in sync, 0 need sync
+  Clients detected: 3 / 3
+  MCP commands available: 5 / 5
+
+Agent Sync Status:
+  ✓ code-reviewer    - in sync across all clients
+  ✓ debugger         - in sync across all clients
+  ✓ api-validator    - in sync (project-only)
+
+Clients:
+  ✓ claude-code (v2.1.0)
+    Agents: 3 synced to ~/.claude/agents/
+  ✓ opencode (v0.3.0)
+    Agents: 3 synced to ~/.config/opencode/agent/
+  ✓ copilot-cli (v1.2.0)
+    Agents: 1 synced to .github/agents/ (project-only)
+```
+
+### Agent Workflow Examples
+
+#### 1. Code Review Workflow
+
+```bash
+# Developer creates PR
+git checkout -b feature/add-auth-endpoint
+
+# Code review agent reviews changes
+# (Invoked automatically or explicitly in AI client)
+# Agent uses: filesystem, github, ruff
+```
+
+The code-reviewer agent will:
+
+- Check Python code style with `ruff`
+- Review security implications (authentication, authorization)
+- Suggest performance improvements
+- Recommend test cases
+
+#### 2. Debugging Workflow
+
+```bash
+# Bug reported: "500 error on /api/users endpoint"
+
+# Developer invokes debugger agent
+# Agent uses: python-repl, filesystem, memory
+```
+
+The debugger agent will:
+
+- Examine endpoint code with `filesystem`
+- Test reproducer with `python-repl`
+- Check logs and stack traces
+- Store debugging insights in `memory` for future reference
+- Provide root cause analysis and fix
+
+#### 3. API Validation Workflow
+
+```bash
+# Before deploying new API changes
+
+# Developer invokes api-validator agent
+# Agent uses: filesystem, python-repl
+```
+
+The api-validator agent will:
+
+- Compare OpenAPI spec with implementation
+- Validate Pydantic models match documentation
+- Check HTTP status codes are appropriate
+- Verify error responses are comprehensive
+
+### Team Collaboration
+
+**Share agents via Git:**
+
+```bash
+# Commit project-specific agent
+git add .overture/agents/api-validator.yaml
+git add .overture/agents/api-validator.md
+git commit -m "Add API validator agent"
+git push
+
+# Team members sync agents
+git pull
+overture sync
+```
+
+**Share global agents:**
+
+Team members copy global agent definitions to their machines:
+
+```bash
+# Copy from shared drive or repository
+cp team-agents/code-reviewer.* ~/.config/overture/agents/
+overture sync
+```
+
+### Benefits
+
+- **Consistent Expertise**: Same agents work across Claude Code, OpenCode, and Copilot CLI
+- **Task-Specific**: Each agent has specialized knowledge and tools
+- **Team Standards**: Shared agents enforce consistent code review and debugging practices
+- **Isolated Context**: Agents have separate context windows preventing main conversation pollution
+- **Tool Access Control**: Agents only access tools they need (security, performance)
+
+### Key Takeaways
+
+1. **Global vs Project Agents**: Use global for general tasks (review, debug), project-specific for domain logic (API validation)
+2. **Model Mapping**: Define logical names once, resolve per client automatically
+3. **Tool Selection**: Give agents minimal tool access (principle of least privilege)
+4. **Comprehensive Prompts**: Agent `.md` files should include process, guidelines, and checklists
+5. **Sync Workflow**: `overture sync` distributes agents to all clients automatically
+6. **Status Monitoring**: `overture doctor --verbose` shows detailed agent sync status
+
 ### Related Examples
 
 - **Example 1:** Python FastAPI Backend - Similar MCP configuration pattern
@@ -1349,6 +1659,7 @@ These examples demonstrate:
 2. **Example 5** - System diagnostics and troubleshooting with `overture doctor`
 3. **Example 6** - CI/CD integration for automated config generation
 4. **Example 7** - Hybrid setup combining Claude Code and OpenCode
+5. **Example 8** - Multi-agent workflow for specialized development tasks
 
 **Key Takeaways:**
 
