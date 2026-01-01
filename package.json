@@ -14,15 +14,15 @@
     "@nx/vite": "22.3.3",
     "@nx/vitest": "22.3.3",
     "@nx/web": "22.3.3",
-    "@swc-node/register": "~1.9.1",
+    "@swc-node/register": "^1.11.1",
     "@swc/core": "~1.5.7",
-    "@swc/helpers": "~0.5.11",
+    "@swc/helpers": "^0.5.18",
     "@types/inquirer": "^9.0.9",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.6",
-    "@vitest/coverage-v8": "4.0.9",
-    "@vitest/ui": "4.0.9",
-    "esbuild": "^0.25.12",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-import": "^2.32.0",
@@ -31,7 +31,7 @@
     "eslint-plugin-sonarjs": "^3.0.5",
     "eslint-plugin-unicorn": "^62.0.0",
     "eslint-plugin-vitest": "^0.5.4",
-    "jiti": "2.4.2",
+    "jiti": "^2.6.1",
     "memfs": "^4.50.0",
     "nx": "22.3.3",
     "prettier": "^3.6.2",
@@ -39,10 +39,10 @@
     "ts-node": "^10.9.2",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
-    "typescript-eslint": "^8.46.3",
+    "typescript-eslint": "^8.51.0",
     "verdaccio": "^6.0.5",
-    "vite": "^7.0.0",
-    "vitest": "4.0.9"
+    "vite": "^7.3.0",
+    "vitest": "^4.0.16"
   },
   "workspaces": [
     "cli",
@@ -60,7 +60,7 @@
     "execa": "^5.1.1",
     "inquirer": "^9.2.23",
     "js-yaml": "^4.1.1",
-    "zod": "^3.23.8"
+    "zod": "^4.3.4"
   },
   "overrides": {
     "js-yaml": "^4.1.1",

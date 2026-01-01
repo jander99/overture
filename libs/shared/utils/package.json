@@ -27,7 +27,7 @@
   "peerDependencies": {
     "chalk": "^5.3.0",
     "inquirer": "^9.2.23",
-    "zod": "^3.23.8"
+    "zod": "^4.3.4"
   },
   "peerDependenciesMeta": {
     "zod": {
