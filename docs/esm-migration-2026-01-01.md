@@ -53,7 +53,7 @@ Overture was successfully migrated from hybrid CommonJS/ESM to pure ESM.
 
 - **Imports require .js extensions:** `import './utils.js'` not `import './utils'`
 - **Directory imports need index:** `import './cli/index.js'` not `import './cli'`
-- **No **dirname/**filename:** Use `import.meta.url` pattern instead
+- **No \_\_dirname/\_\_filename:** Use `import.meta.url` pattern instead
 - **ESM-only:** Cannot use `require()` in source code
 
 ### For Programmatic Usage
@@ -81,14 +81,27 @@ Overture was successfully migrated from hybrid CommonJS/ESM to pure ESM.
   - `overture validate` works
 - ✅ Performance maintained (~2.0s for doctor command)
 
-## Future Work
+## Package Upgrades (Included in This PR)
 
-Now that Overture is pure ESM, we can upgrade to modern ESM-only packages:
+As part of this migration, we've upgraded to modern ESM-only package versions:
 
-- `execa` from v5.1.1 to v9.6.1 (requires API migration)
-- `inquirer` from v9.3.8 to v13.1.0 (requires API migration)
+- **execa:** v5.1.1 → v9.6.1 (ESM-only, changed from default to named export)
+- **inquirer:** v9.3.8 → v13.1.0 (ESM-only)
+- **chalk:** v5.6.2 (already ESM-compatible)
 
-These upgrades will be done in separate PRs to keep changes focused.
+### API Changes
+
+**execa v9** changed from default export to named export:
+
+```typescript
+// Old (v5)
+import execa from 'execa';
+
+// New (v9)
+import { execa } from 'execa';
+```
+
+All adapters and tests have been updated to use the new API.
 
 ## Migration Timeline
 

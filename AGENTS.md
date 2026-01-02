@@ -20,7 +20,7 @@ This file provides guidance for AI agents (GitHub Copilot, Cursor, Windsurf, etc
 
 ## Module System
 
-**Overture is a Pure ESM Project** (as of v0.4.0)
+**Overture is a Pure ESM Project** (as of the ESM migration PR)
 
 All packages use ECMAScript Modules (ESM):
 
