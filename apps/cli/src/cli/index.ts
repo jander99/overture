@@ -1,17 +1,17 @@
 import { Command } from 'commander';
-import type { AppDependencies } from '../composition-root';
-import { createInitCommand } from './commands/init';
-import { createSyncCommand } from './commands/sync';
-import { createValidateCommand } from './commands/validate';
-import { createMcpCommand } from './commands/mcp';
-import { createPluginCommand } from './commands/plugin';
-import { createUserCommand } from './commands/user';
-import { createAuditCommand } from './commands/audit';
-import { createBackupCommand } from './commands/backup';
-import { createDoctorCommand } from './commands/doctor';
-import { createImportCommand } from './commands/import';
-import { createCleanupCommand } from './commands/cleanup';
-import { createSkillCommand } from './commands/skill';
+import type { AppDependencies } from '../composition-root.js';
+import { createInitCommand } from './commands/init.js';
+import { createSyncCommand } from './commands/sync.js';
+import { createValidateCommand } from './commands/validate.js';
+import { createMcpCommand } from './commands/mcp.js';
+import { createPluginCommand } from './commands/plugin.js';
+import { createUserCommand } from './commands/user.js';
+import { createAuditCommand } from './commands/audit.js';
+import { createBackupCommand } from './commands/backup.js';
+import { createDoctorCommand } from './commands/doctor.js';
+import { createImportCommand } from './commands/import.js';
+import { createCleanupCommand } from './commands/cleanup.js';
+import { createSkillCommand } from './commands/skill.js';
 
 /**
  * CLI version - synchronized with package.json

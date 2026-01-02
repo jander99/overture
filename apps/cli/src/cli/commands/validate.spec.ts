@@ -7,9 +7,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createValidateCommand } from './validate';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
-import type { AppDependencies } from '../../composition-root';
+import { createValidateCommand } from './validate.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
+import type { AppDependencies } from '../../composition-root.js';
 import { ConfigError, ValidationError } from '@overture/errors';
 import type {
   OvertureConfig,

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { ErrorHandler } from '@overture/utils';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Creates the 'plugin export' command for exporting installed plugins to config.

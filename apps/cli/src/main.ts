@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { createProgram } from './cli';
-import { createAppDependencies } from './composition-root';
+import { createProgram } from './cli/index.js';
+import { createAppDependencies } from './composition-root.js';
 import { Logger } from '@overture/utils';
 import { OvertureError } from '@overture/errors';
 

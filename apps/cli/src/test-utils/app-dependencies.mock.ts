@@ -8,8 +8,8 @@
  */
 
 import { vi } from 'vitest';
-import type { AppDependencies } from '../composition-root';
-import { TEST_PATHS, TEST_CLIENTS, TEST_ALL_CLIENTS } from './test-constants';
+import type { AppDependencies } from '../composition-root.js';
+import { TEST_PATHS, TEST_CLIENTS, TEST_ALL_CLIENTS } from './test-constants.js';
 
 /**
  * Create a mock AppDependencies container for testing
@@ -22,8 +22,8 @@ import { TEST_PATHS, TEST_CLIENTS, TEST_ALL_CLIENTS } from './test-constants';
  * @example
  * ```typescript
  * import { vi } from 'vitest';
- * import { createMockAppDependencies } from '../test-utils/app-dependencies.mock';
- * import { createSyncCommand } from './sync';
+ * import { createMockAppDependencies } from '../test-utils/app-dependencies.mock.js';
+ * import { createSyncCommand } from './sync.js';
  *
  * describe('sync command', () => {
  *   let deps: AppDependencies;

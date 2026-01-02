@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createSyncCommand } from './sync';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
-import type { AppDependencies } from '../../composition-root';
+import { createSyncCommand } from './sync.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
+import type { AppDependencies } from '../../composition-root.js';
 
 describe('sync command', () => {
   let deps: AppDependencies;

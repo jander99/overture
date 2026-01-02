@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 import type { ClientName } from '@overture/config-types';
 import { formatDiff } from '@overture/sync-core';
 import type { SyncResult, ClientSyncResult } from '@overture/sync-core';

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { createPluginExportCommand } from './plugin-export';
-import { createPluginListCommand } from './plugin-list';
-import type { AppDependencies } from '../../composition-root';
+import { createPluginExportCommand } from './plugin-export.js';
+import { createPluginListCommand } from './plugin-list.js';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Creates the 'plugin' command group for managing Claude Code plugins.

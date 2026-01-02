@@ -17,10 +17,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
-import { createAuditCommand } from './audit';
-import type { AppDependencies } from '../../composition-root';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
-import { createMockAdapter } from '../../test-utils/test-fixtures';
+import { createAuditCommand } from './audit.js';
+import type { AppDependencies } from '../../composition-root.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
+import { createMockAdapter } from '../../test-utils/test-fixtures.js';
 
 describe('audit command', () => {
   let deps: AppDependencies;

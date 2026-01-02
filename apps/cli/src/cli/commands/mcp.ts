@@ -7,7 +7,7 @@ import type {
 import type { ConfigLoader, PathResolver } from '@overture/config-core';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Extended MCP server config that includes the enabled property

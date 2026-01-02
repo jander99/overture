@@ -3,12 +3,12 @@
  *
  * This barrel export simplifies importing commands in the main CLI setup.
  */
-export { createInitCommand } from './init';
-export { createSyncCommand } from './sync';
-export { createValidateCommand } from './validate';
-export { createDoctorCommand } from './doctor';
-export { createMcpCommand } from './mcp';
-export { createPluginCommand } from './plugin';
-export { createUserCommand } from './user';
-export { createAuditCommand } from './audit';
-export { createBackupCommand } from './backup';
+export { createInitCommand } from './init.js';
+export { createSyncCommand } from './sync.js';
+export { createValidateCommand } from './validate.js';
+export { createDoctorCommand } from './doctor.js';
+export { createMcpCommand } from './mcp.js';
+export { createPluginCommand } from './plugin.js';
+export { createUserCommand } from './user.js';
+export { createAuditCommand } from './audit.js';
+export { createBackupCommand } from './backup.js';

@@ -11,7 +11,7 @@
       "options": {
         "platform": "node",
         "outputPath": "dist/apps/cli",
-        "format": ["cjs"],
+        "format": ["esm"],
         "bundle": false,
         "main": "{projectRoot}/src/main.ts",
         "tsConfig": "{projectRoot}/tsconfig.app.json",
@@ -20,8 +20,8 @@
         "assets": [
           {
             "input": "{projectRoot}/src/assets",
-            "glob": "**/*",
-            "output": "assets"
+            "glob": "package.json",
+            "output": "."
           }
         ],
         "esbuildOptions": {

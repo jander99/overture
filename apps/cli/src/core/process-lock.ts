@@ -146,7 +146,7 @@ async function handleRetryableError(
  *
  * @example
  * ```typescript
- * import { acquireLock } from './process-lock';
+ * import { acquireLock } from './process-lock.js';
  * import { PathResolver } from '@overture/config-core';
  *
  * const pathResolver = new PathResolver(environment, filesystem);

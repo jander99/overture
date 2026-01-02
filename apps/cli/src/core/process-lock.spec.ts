@@ -13,7 +13,7 @@ import {
   getLockInfo,
   forceReleaseLock,
   type GetLockFilePath,
-} from './process-lock';
+} from './process-lock.js';
 
 // Mock fs module
 vi.mock('fs');

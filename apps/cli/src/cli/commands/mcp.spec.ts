@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createMcpCommand } from './mcp';
-import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock';
-import type { AppDependencies } from '../../composition-root';
+import { createMcpCommand } from './mcp.js';
+import { createMockAppDependencies } from '../../test-utils/app-dependencies.mock.js';
+import type { AppDependencies } from '../../composition-root.js';
 import type { OvertureConfig } from '@overture/config-types';
 
 describe('mcp command', () => {

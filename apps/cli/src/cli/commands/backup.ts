@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import type { BackupMetadata } from '@overture/sync-core';
 import type { ClientName } from '@overture/config-types';
 import { Prompts, ErrorHandler, UserCancelledError } from '@overture/utils';
-import type { AppDependencies } from '../../composition-root';
+import type { AppDependencies } from '../../composition-root.js';
 
 /**
  * Find backup to restore

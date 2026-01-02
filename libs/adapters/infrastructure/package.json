@@ -27,10 +27,10 @@
     "@overture/ports-output": "*",
     "@overture/errors": "*",
     "handlebars": "^4.7.8",
-    "execa": "^5.1.1",
+    "execa": "^9.6.1",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.19.3"
   }
 }
