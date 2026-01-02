@@ -26,7 +26,7 @@
   },
   "peerDependencies": {
     "chalk": "^5.3.0",
-    "inquirer": "^9.2.23",
+    "inquirer": "^9.2.23 || ^11.0.0 || ^12.0.0 || ^13.0.0",
     "zod": "^4.3.4"
   },
   "peerDependenciesMeta": {
