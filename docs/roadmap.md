@@ -103,56 +103,22 @@ overture doctor --verbose
 
 **Problem:** Users with existing MCP configurations need an easy migration path to Overture without manually recreating their configs.
 
-**Solution:** Two new commands to streamline adoption:
+**Solution:** ~~Two new commands to streamline adoption~~ (Removed in v0.4.0):
 
-**`overture import`** - Discover and import unmanaged MCPs:
+**`overture import`** - ~~Discover and import unmanaged MCPs~~ **[REMOVED]**
 
-- Reads MCP configs from all 3 supported clients (Claude Code, Copilot CLI, OpenCode)
-- Detects Claude Code's directory-based `~/.claude.json → projects[path].mcpServers` overrides
-- Interactive TUI (using @clack/prompts) for selecting which MCPs to import
-- Auto-converts hardcoded secrets to `${ENV_VAR}` syntax with user guidance
-- Infers scope (global vs project) based on source location
-- Warns on conflicts (same MCP name, different configs across clients)
-- **NEW:** `--detect` mode for read-only scanning with multiple output formats (text, json, table)
-- **NEW:** Exit codes for CI/CD automation (0=ok, 1=parse errors, 2=conflicts)
+**`overture cleanup`** - ~~Remove redundant Claude Code directory configs~~ **[REMOVED]**
 
-```bash
-# Interactive import
-overture import --client all
-overture import --client claude-code --scope project
-
-# Read-only detection
-overture import --detect
-overture import --detect --verbose --format json
-```
-
-**`overture cleanup`** - Remove redundant Claude Code directory configs:
-
-- Identifies directories in `~/.claude.json → projects` that have Overture configs
-- Removes only the `mcpServers` sections managed by Overture
-- Preserves unmanaged MCPs with warnings
-- Preserves all other project settings (trust dialogs, allowed tools, etc.)
-- Creates timestamped backups before modifications
-
-```bash
-overture cleanup --dry-run
-overture cleanup --directory /path/to/project
-```
-
-**User Workflow:**
-
-```bash
-# 1. Discover and import existing MCPs
-overture import --client all
-
-# 2. Review imported config
-cat ~/.config/overture/config.yaml
+**Migration Note:** These commands were removed in v0.4.0 as they had 0% test coverage and limited usage. Users can manually configure MCPs in `config.yaml` instead.
 
 # 3. Sync to all clients (now from single source)
+
 overture sync
 
 # 4. Clean up redundant Claude Code directory configs
+
 overture cleanup
+
 ```
 
 **Benefits:**
@@ -178,16 +144,18 @@ overture cleanup
 **Structure:**
 
 ```
+
 my-overture-config/
-├── config.yaml              # Main configuration
-├── mcp-servers.yaml         # MCP server definitions
-├── environments/            # Environment profiles
-│   ├── development.yaml
-│   ├── staging.yaml
-│   └── production.yaml
-├── templates/               # Reusable templates
-└── README.md                # Setup instructions
-```
+├── config.yaml # Main configuration
+├── mcp-servers.yaml # MCP server definitions
+├── environments/ # Environment profiles
+│ ├── development.yaml
+│ ├── staging.yaml
+│ └── production.yaml
+├── templates/ # Reusable templates
+└── README.md # Setup instructions
+
+````
 
 **User Workflow:**
 
@@ -201,7 +169,7 @@ git clone git@github.com:username/my-overture-config.git ~/overture-configs
 # Use in a project
 cd ~/projects/my-app
 overture init --config ~/overture-configs
-```
+````
 
 **Benefits:**
 

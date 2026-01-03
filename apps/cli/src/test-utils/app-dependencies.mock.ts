@@ -9,7 +9,11 @@
 
 import { vi } from 'vitest';
 import type { AppDependencies } from '../composition-root.js';
-import { TEST_PATHS, TEST_CLIENTS, TEST_ALL_CLIENTS } from './test-constants.js';
+import {
+  TEST_PATHS,
+  TEST_CLIENTS,
+  TEST_ALL_CLIENTS,
+} from './test-constants.js';
 
 /**
  * Create a mock AppDependencies container for testing
@@ -244,16 +248,6 @@ export function createMockAppDependencies(): AppDependencies {
       generateSuggestions: vi.fn().mockReturnValue([]),
     },
 
-    // Import/Cleanup services
-    importService: {
-      importConfig: vi.fn().mockResolvedValue({ success: true }),
-      scanConfigs: vi.fn().mockResolvedValue([]),
-    },
-
-    cleanupService: {
-      cleanup: vi.fn().mockResolvedValue({ success: true }),
-    },
-
     // Skill services
     skillDiscovery: {
       discoverSkills: vi.fn().mockResolvedValue([]),
@@ -263,10 +257,6 @@ export function createMockAppDependencies(): AppDependencies {
 
     skillSyncService: {
       syncSkills: vi.fn().mockResolvedValue({ success: true }),
-    },
-
-    skillCopyService: {
-      copySkill: vi.fn().mockResolvedValue({ success: true }),
     },
 
     // Diagnostics

@@ -25,9 +25,6 @@
       "path": "../../libs/core/agent/tsconfig.lib.json"
     },
     {
-      "path": "../../libs/core/import/tsconfig.lib.json"
-    },
-    {
       "path": "../../libs/shared/formatters/tsconfig.lib.json"
     },
     {

@@ -84,25 +84,8 @@ export type {
 // Adapter types
 export type { ClientAdapter, ConfigPathResult } from './lib/adapter.types.js';
 
-// Import/Cleanup types
-export type {
-  McpSource,
-  DiscoveredMcp,
-  McpConflict,
-  ImportDiscoveryResult,
-  ImportResult,
-  CleanupTarget,
-  CleanupResult,
-  ClaudeCodeFullConfig,
-  ParseErrorDetail,
-  ConfigPathStatus,
-  ClientDetectionResult,
-  ManagedMcpDetection,
-  ParseErrorInfo,
-  McpDetectionCategories,
-  DetectionSummary,
-  DetectionResult,
-} from './lib/import.types.js';
+// Import types (retained for adapter compatibility)
+export type { ClaudeCodeFullConfig } from './lib/import.types.js';
 
 // Skill types
 export type {
@@ -111,5 +94,4 @@ export type {
   SkillSyncSummary,
   SkillDiscoveryOptions,
   SkillSyncOptions,
-  SkillCopyOptions,
 } from './lib/skill.types.js';

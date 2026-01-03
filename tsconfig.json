@@ -52,9 +52,6 @@
       "path": "./libs/core/sync"
     },
     {
-      "path": "./libs/core/import"
-    },
-    {
       "path": "./libs/core/skill"
     },
     {
