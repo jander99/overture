@@ -36,12 +36,7 @@ import {
   AuditService,
 } from '@overture/sync-core';
 import { AgentSyncService } from '@overture/agent-core';
-import { ImportService, CleanupService } from '@overture/import-core';
-import {
-  SkillDiscovery,
-  SkillSyncService,
-  SkillCopyService,
-} from '@overture/skill';
+import { SkillDiscovery, SkillSyncService } from '@overture/skill';
 import { createDiagnosticsOrchestrator } from '@overture/diagnostics-core';
 import type { DiagnosticsOrchestrator } from '@overture/diagnostics-core';
 import {
@@ -91,14 +86,9 @@ export interface AppDependencies {
   restoreService: RestoreService;
   auditService: AuditService;
 
-  // Import/Cleanup services
-  importService: ImportService;
-  cleanupService: CleanupService;
-
   // Skill services
   skillDiscovery: SkillDiscovery;
   skillSyncService: SkillSyncService;
-  skillCopyService: SkillCopyService;
 
   // Diagnostics
   diagnosticsOrchestrator: DiagnosticsOrchestrator;
@@ -249,11 +239,6 @@ export function createAppDependencies(): AppDependencies {
     skillDiscovery,
     output,
   );
-  const skillCopyService = new SkillCopyService(
-    filesystem,
-    environment,
-    skillDiscovery,
-  );
 
   const agentSyncService = new AgentSyncService(
     filesystem,
@@ -277,10 +262,6 @@ export function createAppDependencies(): AppDependencies {
     skillSyncService,
     agentSyncService,
   });
-
-  // Import and Cleanup services
-  const importService = new ImportService(filesystem, output);
-  const cleanupService = new CleanupService(filesystem, output);
 
   // Create diagnostics orchestrator
   const diagnosticsOrchestrator = createDiagnosticsOrchestrator({
@@ -318,11 +299,8 @@ export function createAppDependencies(): AppDependencies {
     backupService,
     restoreService,
     auditService,
-    importService,
-    cleanupService,
     skillDiscovery,
     skillSyncService,
-    skillCopyService,
     diagnosticsOrchestrator,
     formatters,
   };

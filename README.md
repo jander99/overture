@@ -1,10 +1,10 @@
 # Overture
 
-[![Tests](https://img.shields.io/badge/tests-471%20passing-brightgreen)](https://github.com/overture-stack/overture)
+[![Tests](https://img.shields.io/badge/tests-273%20passing-brightgreen)](https://github.com/overture-stack/overture)
 [![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)](https://github.com/overture-stack/overture)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue)](CHANGELOG.md)
 
 > **Multi-platform MCP and Agent orchestrator** - Manage Model Context Protocol (MCP) servers and AI agents across all AI development tools from a single source of truth.
 
@@ -32,7 +32,7 @@ Overture synchronizes MCP configurations and AI agents to **Claude Code**, **Git
 
 - 🩺 **Comprehensive Diagnostics** - `doctor` command shows system health and sync status
 - 🛡️ **Type-Safe** - Zod schema validation with helpful error messages
-- 🧪 **Well-Tested** - 471 tests with 83% code coverage
+- 🧪 **Well-Tested** - 273 tests with 83% code coverage
 - 🏗️ **Production-Ready** - Zero security vulnerabilities, TypeScript strict mode
 
 ---
@@ -107,15 +107,14 @@ overture sync --skip-skills    # Sync MCPs and agents, skip skills
 ## 📖 Documentation
 
 - **[User Guide](docs/user-guide.md)** - Complete walkthrough with examples
-- **[Architecture](docs/architecture.md)** - Technical design and patterns
+- **[Architecture](docs/contributing/architecture.md)** - Technical design and patterns
 - **[Configuration Schema](docs/overture-schema.md)** - Full YAML reference
 - **[Examples](docs/examples.md)** - Real-world configurations
 - **[Roadmap](docs/roadmap.md)** - Upcoming features
 
 ### How-To Guides
 
-- [Add Support for New AI Client](docs/howtos/add-new-cli-client.md)
-- [Import Existing MCP Configurations](docs/howtos/importing-existing-configs.md)
+- [Add Support for New AI Client](docs/contributing/add-new-cli-client.md)
 - [Set Up Shared Config Repository](docs/howtos/setting-up-config-repo.md)
 - [Test MCP Server Changes](docs/howtos/testing-mcp-changes.md)
 
@@ -305,11 +304,12 @@ overture doctor --verbose
 | `overture sync`     | Sync MCPs, agents, and skills to all clients |
 | `overture doctor`   | System diagnostics with agent sync status    |
 | `overture validate` | Validate configuration files                 |
-| `overture mcp list` | List all configured MCP servers              |
+| `overture mcp`      | Manage MCP server configurations             |
+| `overture plugin`   | Manage Claude Code plugins                   |
+| `overture skill`    | Manage Agent Skills                          |
 | `overture user`     | Manage user global configuration             |
 | `overture audit`    | Find unmanaged MCPs in client configs        |
 | `overture backup`   | Backup/restore client configurations         |
-| `overture import`   | Import MCPs from client configs              |
 
 **Sync Options:**
 
@@ -356,8 +356,7 @@ libs/
 │   ├── diagnostics/      # System health checks
 │   ├── agent/            # Agent sync and transformation
 │   ├── plugin/           # Plugin management
-│   ├── skill/            # Agent Skills sync
-│   └── import/           # Config import
+│   └── skill/            # Agent Skills sync
 └── shared/               # Shared utilities
     ├── formatters/       # Diagnostic output formatting
     └── utils/            # Common utilities
@@ -369,7 +368,7 @@ libs/
 - **Build System:** Nx 22 monorepo
 - **CLI Framework:** Commander.js
 - **Validation:** Zod
-- **Testing:** Vitest (471 tests, 83% coverage)
+- **Testing:** Vitest (273 tests, 83% coverage)
 - **Bundler:** esbuild
 
 ---
@@ -554,13 +553,12 @@ See [Troubleshooting Guide](docs/user-guide.md#troubleshooting) for more solutio
 
 ## 📊 Project Status
 
-**Current Version:** v0.3.0 (Production Ready)
+**Current Version:** v0.4.0 (Production Ready)
 
 **Test Coverage:**
 
-- 471 passing tests
+- 273 passing tests
 - 83% code coverage
-- 35K+ lines of test code
 - Comprehensive agent sync and diagnostics testing
 
 **Security:**

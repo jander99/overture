@@ -5,6 +5,44 @@ All notable changes to the Overture project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-01-03
+
+### Removed
+
+- **Cleanup Command** - Removed `overture cleanup` command (0% test coverage)
+  - Removed directory-based Claude Code config cleanup functionality
+  - Deleted cleanup methods from `ClaudeCodeAdapter`
+  - Removed from DI container and command registration
+  - **Migration:** Manually edit `~/.claude.json` to remove directory-specific MCP overrides if needed
+
+- **Import Command** - Removed `overture import` command and `@overture/import-core` library (0% test coverage)
+  - Removed MCP discovery and import functionality from AI client configs
+  - Deleted entire `libs/core/import/` library (38 files including tests, fixtures, implementation)
+  - Removed `ImportService`, `CleanupService`, `EnvVarConverter`, `ConflictDetector`
+  - Kept `ClaudeCodeFullConfig` type (still used by `ClaudeCodeAdapter`)
+  - **Migration:** Manually copy MCP configs from client configs to `.overture/config.yaml`
+  - **Note:** Import guide at `docs/howtos/importing-existing-configs.md` still available for manual reference
+
+- **Skill Copy Subcommand** - Removed `overture skill cp` subcommand (0% test coverage)
+  - Removed manual skill copying functionality
+  - Deleted `SkillCopyService` and related tests
+  - Kept `overture skill list` command (shows discovered skills)
+  - **Migration:** Use `overture sync` to synchronize skills automatically
+
+### Changed
+
+- **Documentation Updates**
+  - Updated README: test count 471→273, version 0.3.0→0.4.0
+  - Fixed architecture diagram (removed `libs/core/import/`)
+  - Added `plugin` and `skill` to commands table
+  - Fixed broken documentation links (`architecture.md`, `add-new-cli-client.md`)
+  - Removed references to deleted commands from user guide and roadmap
+  - Updated statistics (test count, version number) across all documentation
+
+### Rationale
+
+Removed three untested commands to improve code quality and reduce maintenance burden. All three commands had 0% test coverage and represented 45+ files that were not validated by automated tests. Keeping only well-tested, actively used functionality ensures higher reliability and easier maintenance.
+
 ## [0.3.1] - 2025-12-31
 
 ### Fixed

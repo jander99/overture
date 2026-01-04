@@ -140,26 +140,3 @@ export interface SkillSyncOptions {
    */
   dryRun?: boolean;
 }
-
-/**
- * Options for skill copy (to project)
- */
-export interface SkillCopyOptions {
-  /**
-   * Force overwrite existing skills
-   * @default false
-   */
-  force?: boolean;
-
-  /**
-   * Specific clients to copy for
-   * @default undefined (all clients)
-   */
-  clients?: ClientName[];
-
-  /**
-   * Project root directory
-   * @default process.cwd()
-   */
-  projectRoot?: string;
-}

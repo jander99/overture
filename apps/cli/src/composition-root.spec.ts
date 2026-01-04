@@ -23,12 +23,9 @@ describe('createAppDependencies', () => {
     expect(deps.pluginExporter).toBeDefined();
     expect(deps.backupService).toBeDefined();
     expect(deps.restoreService).toBeDefined();
-    expect(deps.importService).toBeDefined();
-    expect(deps.cleanupService).toBeDefined();
     expect(deps.auditService).toBeDefined();
     expect(deps.skillDiscovery).toBeDefined();
     expect(deps.skillSyncService).toBeDefined();
-    expect(deps.skillCopyService).toBeDefined();
   });
 
   it('should create output port with Logger implementation', () => {

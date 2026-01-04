@@ -1,40 +1,5 @@
 import { Command } from 'commander';
 import type { AppDependencies } from '../../composition-root.js';
-import type { SkillSyncResult, ClientName } from '@overture/config-types';
-
-/**
- * Display skill copy results
- */
-function displayCopyResults(results: SkillSyncResult[]): void {
-  for (const result of results) {
-    const status = result.success ? (result.skipped ? '○' : '✓') : '✗';
-    const message = result.skipped
-      ? '(already exists, use --force to overwrite)'
-      : result.error
-        ? `(failed: ${result.error})`
-        : '';
-
-    console.log(`  ${status} ${result.targetPath} ${message}`);
-  }
-
-  console.log('');
-}
-
-/**
- * Handle copy errors
- */
-function handleCopyErrors(
-  results: SkillSyncResult[],
-  output: AppDependencies['output'],
-): void {
-  const failed = results.filter((r) => !r.success);
-  if (failed.length > 0) {
-    output.error(
-      `Failed to copy skill to ${failed.length} client${failed.length === 1 ? '' : 's'}`,
-    );
-    process.exit(1);
-  }
-}
 
 /**
  * Creates the 'skill' command group for managing Agent Skills.
@@ -43,9 +8,6 @@ function handleCopyErrors(
  * - overture skill list                    - List available skills from config repo
  * - overture skill list --json             - Output as JSON
  * - overture skill list --source           - Show source paths
- * - overture skill cp <name>               - Copy skill to current project
- * - overture skill cp <name> --force       - Force overwrite existing skill
- * - overture skill cp <name> --client <c>  - Copy for specific client only
  */
 export function createSkillCommand(deps: AppDependencies): Command {
   const command = new Command('skill');
@@ -103,44 +65,6 @@ export function createSkillCommand(deps: AppDependencies): Command {
         process.exit(1);
       }
     });
-
-  // skill cp subcommand
-  command
-    .command('cp <name>')
-    .description('Copy a skill to the current project')
-    .option('-f, --force', 'Overwrite if skill exists in project')
-    .option(
-      '-c, --client <name>',
-      'Only copy for specified client (claude-code, copilot-cli, or opencode)',
-    )
-    .action(
-      async (name: string, options: { force?: boolean; client?: string }) => {
-        const { skillCopyService, output } = deps;
-
-        try {
-          // Parse client option
-          const clients = options.client
-            ? [options.client as ClientName]
-            : undefined;
-
-          // Copy skill to project
-          const results = await skillCopyService.copySkillToProject(name, {
-            force: options.force,
-            clients,
-          });
-
-          // Output results
-          output.info(`\nCopied '${name}' skill to project:\n`);
-          displayCopyResults(results);
-          handleCopyErrors(results, output);
-        } catch (error) {
-          output.error(
-            `Failed to copy skill '${name}': ${(error as Error).message}`,
-          );
-          process.exit(1);
-        }
-      },
-    );
 
   return command;
 }
