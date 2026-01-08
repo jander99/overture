@@ -2,7 +2,12 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import type { BackupMetadata } from '@overture/sync-core';
 import type { ClientName } from '@overture/config-types';
-import { Prompts, ErrorHandler, UserCancelledError } from '@overture/utils';
+import {
+  Prompts,
+  ErrorHandler,
+  UserCancelledError,
+  TIME_UNITS,
+} from '@overture/utils';
 import type { AppDependencies } from '../../composition-root.js';
 
 /**
@@ -337,16 +342,19 @@ function formatAge(timestamp: string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
 
-  const seconds = Math.floor(diffMs / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+  const seconds = Math.floor(diffMs / TIME_UNITS.MS_PER_SECOND);
+  const minutes = Math.floor(seconds / TIME_UNITS.SECONDS_PER_MINUTE);
+  const hours = Math.floor(minutes / TIME_UNITS.MINUTES_PER_HOUR);
+  const days = Math.floor(hours / TIME_UNITS.HOURS_PER_DAY);
 
-  if (seconds < 60) return 'just now';
-  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-  if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
+  if (seconds < TIME_UNITS.SECONDS_PER_MINUTE) return 'just now';
+  if (minutes < TIME_UNITS.MINUTES_PER_HOUR)
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  if (hours < TIME_UNITS.HOURS_PER_DAY)
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  if (days < TIME_UNITS.DAYS_PER_MONTH)
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
 
-  const months = Math.floor(days / 30);
+  const months = Math.floor(days / TIME_UNITS.DAYS_PER_MONTH);
   return `${months} month${months !== 1 ? 's' : ''} ago`;
 }

@@ -16,6 +16,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ConfigError } from '@overture/errors';
+import { TIMEOUTS, RETRY_CONFIG } from '@overture/utils';
 
 /**
  * Lock metadata stored in lock file
@@ -56,9 +57,9 @@ export interface LockOptions {
 }
 
 const DEFAULT_OPTIONS: Required<LockOptions> = {
-  staleTimeout: 10000, // 10 seconds
-  maxRetries: 3,
-  retryDelay: 100, // 100ms initial
+  staleTimeout: TIMEOUTS.STALE_LOCK_MS,
+  maxRetries: RETRY_CONFIG.MAX_LOCK_RETRIES,
+  retryDelay: RETRY_CONFIG.INITIAL_RETRY_DELAY_MS,
   operation: 'sync',
 };
 

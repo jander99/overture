@@ -57,3 +57,14 @@ export { getDirname } from './lib/path-utils.js';
 
 // User-facing messages
 export * from './lib/messages.js';
+
+// Constants
+export {
+  TABLE_FORMATTING,
+  TIMEOUTS,
+  RETRY_CONFIG,
+  BACKUP_CONFIG,
+  FILE_LIMITS,
+  YAML_FORMATTING,
+  TIME_UNITS,
+} from './lib/constants.js';

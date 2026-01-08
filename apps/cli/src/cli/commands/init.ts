@@ -1,7 +1,7 @@
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
 import { CONFIG_PATH } from '@overture/config-core';
-import { ErrorHandler } from '@overture/utils';
+import { ErrorHandler, YAML_FORMATTING } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root.js';
 
@@ -59,10 +59,9 @@ export function createInitCommand(deps: AppDependencies): Command {
           filesystem.createDirectory(overtureDir);
         }
 
-        // Write YAML configuration
         const yamlContent = yaml.dump(config, {
           indent: 2,
-          lineWidth: 100,
+          lineWidth: YAML_FORMATTING.LINE_WIDTH,
           noRefs: true,
           quotingType: '"',
           forceQuotes: false,

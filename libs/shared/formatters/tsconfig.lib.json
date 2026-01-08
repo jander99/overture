@@ -12,13 +12,19 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
+      "path": "../utils/tsconfig.lib.json"
+    },
+    {
+      "path": "../../core/sync/tsconfig.lib.json"
+    },
+    {
       "path": "../../domain/config-types/tsconfig.lib.json"
     },
     {
-      "path": "../../domain/diagnostics-types/tsconfig.lib.json"
+      "path": "../../ports/output/tsconfig.lib.json"
     },
     {
-      "path": "../../ports/output/tsconfig.lib.json"
+      "path": "../../domain/diagnostics-types/tsconfig.lib.json"
     }
   ],
   "exclude": [
