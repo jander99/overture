@@ -20,6 +20,7 @@ import type {
 } from '@overture/config-types';
 import { PluginDetector } from './plugin-detector.js';
 import { PluginError } from '@overture/errors';
+import { YAML_FORMATTING } from '@overture/utils';
 import * as yaml from 'js-yaml';
 
 /**
@@ -273,12 +274,11 @@ export class PluginExporter {
         };
       }
 
-      // Write updated config back to file
       const yamlContent = yaml.dump(updatedConfig, {
         indent: 2,
-        lineWidth: 100,
+        lineWidth: YAML_FORMATTING.LINE_WIDTH,
         noRefs: true,
-        sortKeys: false, // Preserve key order
+        sortKeys: false,
       });
 
       await this.filesystem.writeFile(configPath, yamlContent);

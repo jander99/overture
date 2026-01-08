@@ -111,9 +111,7 @@ export { compareMcpConfigs, getUnmanagedMcps } from './lib/mcp-detector.js';
 export type { DetectedMcp, McpDetectionResult } from './lib/mcp-detector.js';
 
 // Agent Sync Service
-export type {
-  AgentSyncOptions,
-} from '@overture/agent-core';
+export type { AgentSyncOptions } from '@overture/agent-core';
 
 // Environment Variable Expander
 export {
@@ -131,3 +129,25 @@ export {
   validateConfigEnvVars,
   formatEnvVarWarnings as formatConfigEnvVarWarnings,
 } from './lib/env-var-validator.js';
+
+// Extracted Services (for modular usage)
+export {
+  ConfigSyncService,
+  createConfigSyncService,
+} from './lib/services/config-sync-service.js';
+export type {
+  ConfigSyncServiceDeps,
+  ConfigLoadResult,
+} from './lib/services/config-sync-service.js';
+
+export {
+  McpSyncService,
+  createMcpSyncService,
+} from './lib/services/mcp-sync-service.js';
+export type { McpSyncServiceDeps } from './lib/services/mcp-sync-service.js';
+
+export { PluginSyncCoordinator } from './lib/services/plugin-sync-coordinator.js';
+export type {
+  PluginSyncCoordinatorDeps,
+  PluginSyncDetails,
+} from './lib/services/plugin-sync-coordinator.js';

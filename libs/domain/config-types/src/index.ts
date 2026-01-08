@@ -7,7 +7,6 @@
  * @module @overture/config-types
  */
 
-// Client name constants and types
 export { SUPPORTED_CLIENTS, ALL_KNOWN_CLIENTS } from './lib/client-names.js';
 
 export type {
@@ -15,7 +14,6 @@ export type {
   KnownClientName,
 } from './lib/client-names.js';
 
-// Configuration types
 export type {
   Platform,
   TransportType,
@@ -26,38 +24,55 @@ export type {
   MergeStrategy,
   BinaryDetectionStatus,
   BinaryDetectionResult,
+} from './lib/base-types.js';
+
+export type {
   McpServerConfig,
+  ClientMcpConfig,
+  ClientMcpServerDef,
+} from './lib/mcp-types.js';
+
+export type {
   ClientConfig,
   PluginConfig,
   SyncOptions,
   ClientDiscoveryOverride,
   WSL2Config,
   DiscoveryConfig,
-  OvertureConfig,
-  ClientMcpConfig,
-  ClientMcpServerDef,
+} from './lib/client-types.js';
+
+export type {
   SyncResult,
   ClientSyncResult,
   BackupMetadata,
   AuditResult,
+} from './lib/sync-types.js';
+
+export type {
   ValidationResult,
   ValidationError,
   ValidationWarning,
+} from './lib/validation-types.js';
+
+export type {
   ProcessLock,
   JsonValue,
   JsonObject,
   JsonArray,
+} from './lib/utility-types.js';
+
+export type {
   ModelMapping,
   AgentConfig,
   AgentDefinition,
   AgentSyncResult,
   AgentSyncSummary,
-} from './lib/config.types.js';
+} from './lib/agent-types.js';
 
-// Type guards
+export type { OvertureConfig } from './lib/config.types.js';
+
 export { isClientMcpConfig } from './lib/config.types.js';
 
-// Plugin types
 export type {
   InstalledPlugin,
   InstallationResult,
@@ -70,7 +85,6 @@ export type {
   ClaudePluginEntry,
 } from './lib/plugin.types.js';
 
-// Discovery types
 export type {
   WSL2EnvironmentInfo,
   DetectionSource,
@@ -81,13 +95,10 @@ export type {
   WindowsDefaultPaths,
 } from './lib/discovery.types.js';
 
-// Adapter types
 export type { ClientAdapter, ConfigPathResult } from './lib/adapter.types.js';
 
-// Import types (retained for adapter compatibility)
 export type { ClaudeCodeFullConfig } from './lib/import.types.js';
 
-// Skill types
 export type {
   DiscoveredSkill,
   SkillSyncResult,

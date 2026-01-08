@@ -6,6 +6,7 @@ import {
   Logger,
   ErrorHandler,
   UserCancelledError,
+  YAML_FORMATTING,
 } from '@overture/utils';
 import { OvertureConfigSchema } from '@overture/config-schema';
 import type { OvertureConfig } from '@overture/config-types';
@@ -328,10 +329,9 @@ export function createUserCommand(deps: AppDependencies): Command {
           output.debug(`Created directory: ${configDir}`);
         }
 
-        // Step 8: Write YAML configuration
         const yamlContent = yaml.dump(userConfig, {
           indent: 2,
-          lineWidth: 100,
+          lineWidth: YAML_FORMATTING.LINE_WIDTH,
           noRefs: true,
         });
 
@@ -500,10 +500,7 @@ function displayMcpServer(
   displayMcpEnv(mcpConfig.env);
   displayMcpClientFilters(mcpConfig.clients);
 
-  if (
-    mcpConfig.platforms?.exclude &&
-    mcpConfig.platforms.exclude.length > 0
-  ) {
+  if (mcpConfig.platforms?.exclude && mcpConfig.platforms.exclude.length > 0) {
     console.log(
       chalk.gray(
         `    exclude-platforms: [${mcpConfig.platforms.exclude.join(', ')}]`,

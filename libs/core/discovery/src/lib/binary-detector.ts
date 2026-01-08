@@ -17,11 +17,9 @@ import type {
   BinaryDetectionResult,
   ClientAdapter,
 } from '@overture/config-types';
+import { TIMEOUTS } from '@overture/utils';
 
-/**
- * Binary detection timeout (5 seconds)
- */
-const DETECTION_TIMEOUT = 5000;
+const DETECTION_TIMEOUT = TIMEOUTS.BINARY_DETECTION_MS;
 
 /**
  * Binary Detector Service

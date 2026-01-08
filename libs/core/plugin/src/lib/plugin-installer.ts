@@ -17,11 +17,9 @@ import type {
   InstallationOptions,
 } from '@overture/config-types';
 import { MarketplaceRegistry } from '@overture/config-schema';
+import { TIMEOUTS } from '@overture/utils';
 
-/**
- * Default timeout for plugin installation (30 seconds)
- */
-const DEFAULT_INSTALLATION_TIMEOUT = 30000;
+const DEFAULT_INSTALLATION_TIMEOUT = TIMEOUTS.PLUGIN_INSTALL_MS;
 
 /**
  * Plugin Installer Service

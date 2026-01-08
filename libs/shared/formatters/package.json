@@ -19,6 +19,7 @@
     "@overture/diagnostics-types": "*",
     "@overture/ports-output": "*",
     "@overture/config-types": "*",
+    "@overture/sync-core": "*",
     "chalk": "^5.3.0",
     "tslib": "^2.3.0"
   }
