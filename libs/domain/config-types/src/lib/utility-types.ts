@@ -1,5 +1,5 @@
 /**
- * @module utility-types
+ * @module @overture/config-types/utility-types
  */
 
 /**

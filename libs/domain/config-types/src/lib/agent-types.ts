@@ -1,5 +1,5 @@
 /**
- * @module agent-types
+ * @module @overture/config-types/agent-types
  */
 
 import type { ClientName, Scope } from './base-types.js';

@@ -1,5 +1,5 @@
 /**
- * @module validation-types
+ * @module @overture/config-types/validation-types
  */
 
 /**

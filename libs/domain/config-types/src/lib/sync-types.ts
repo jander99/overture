@@ -1,5 +1,5 @@
 /**
- * @module sync-types
+ * @module @overture/config-types/sync-types
  */
 
 import type { ClientName, BinaryDetectionResult } from './base-types.js';

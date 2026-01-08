@@ -164,7 +164,7 @@ jobs:
           node-version: 20
 
       - name: Install jscpd
-        run: npm install -g jscpd
+        run: npm install -g jscpd@4.0.5
 
       - name: Check for code duplication
         run: |
