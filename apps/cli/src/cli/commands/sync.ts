@@ -3,13 +3,14 @@ import type { AppDependencies } from '../../composition-root.js';
 import type { ClientName } from '@overture/config-types';
 import { SyncFormatter } from '@overture/formatters';
 import { ErrorHandler } from '@overture/utils';
+import { parseSyncOptions } from '../../lib/option-parser.js';
 
 async function loadSyncConfig(
-  options: Record<string, unknown>,
+  parsedOptions: ReturnType<typeof parseSyncOptions>,
   pathResolver: AppDependencies['pathResolver'],
   configLoader: AppDependencies['configLoader'],
 ): Promise<boolean> {
-  let detailMode = (options.detail as boolean) || false;
+  let detailMode = parsedOptions.detail;
   try {
     const projectRoot = await pathResolver.findProjectRoot();
     const userConfig = await configLoader.loadUserConfig();
@@ -17,10 +18,7 @@ async function loadSyncConfig(
       ? await configLoader.loadProjectConfig(projectRoot)
       : null;
     const overtureConfig = configLoader.mergeConfigs(userConfig, projectConfig);
-    detailMode =
-      (options.detail as boolean | undefined) ??
-      overtureConfig.sync?.detail ??
-      false;
+    detailMode = parsedOptions.detail ?? overtureConfig.sync?.detail ?? false;
   } catch {
     // Config load failed, use CLI flag or false
   }
@@ -28,7 +26,7 @@ async function loadSyncConfig(
 }
 
 function buildSyncOptions(
-  options: Record<string, unknown>,
+  parsedOptions: ReturnType<typeof parseSyncOptions>,
   detailMode: boolean,
 ): {
   dryRun: boolean;
@@ -41,15 +39,13 @@ function buildSyncOptions(
   skipAgents?: boolean;
 } {
   return {
-    dryRun: (options.dryRun as boolean) || false,
-    force: (options.force as boolean) || false,
-    skipPlugins: (options.skipPlugins as boolean) || false,
-    skipSkills: (options.skipSkills as boolean) || false,
-    skipAgents: (options.skipAgents as boolean) || false,
-    skipUndetected: (options.skipUndetected as boolean) !== false,
-    clients: (options.client as string)
-      ? [options.client as string as ClientName]
-      : undefined,
+    dryRun: parsedOptions.dryRun,
+    force: parsedOptions.force,
+    skipPlugins: parsedOptions.skipPlugins,
+    skipSkills: parsedOptions.skipSkills,
+    skipAgents: parsedOptions.skipAgents,
+    skipUndetected: parsedOptions.skipUndetected,
+    clients: parsedOptions.clients as ClientName[] | undefined,
     detail: detailMode,
   };
 }
@@ -82,21 +78,22 @@ export function createSyncCommand(deps: AppDependencies): Command {
     )
     .action(async (options) => {
       try {
+        const parsedOptions = parseSyncOptions(options);
         const detailMode = await loadSyncConfig(
-          options,
+          parsedOptions,
           pathResolver,
           configLoader,
         );
 
-        if (options.dryRun) {
+        if (parsedOptions.dryRun) {
           output.info('Running in dry-run mode - no changes will be made');
         }
 
-        if (options.client) {
-          output.info(`Syncing for client: ${options.client}`);
+        if (parsedOptions.clients) {
+          output.info(`Syncing for client: ${parsedOptions.clients[0]}`);
         }
 
-        const syncOptions = buildSyncOptions(options, detailMode);
+        const syncOptions = buildSyncOptions(parsedOptions, detailMode);
         const result = await syncEngine.syncClients(syncOptions);
 
         formatter.displayDetectionSummary(result);

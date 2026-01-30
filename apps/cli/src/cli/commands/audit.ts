@@ -16,6 +16,7 @@ import type {
   Platform,
 } from '@overture/config-types';
 import { ErrorHandler } from '@overture/utils';
+import { parseAuditOptions } from '../../lib/option-parser.js';
 import type { AppDependencies } from '../../composition-root.js';
 
 /**
@@ -49,6 +50,9 @@ export function createAuditCommand(deps: AppDependencies): Command {
     )
     .action(async (options: AuditCommandOptions): Promise<void> => {
       try {
+        const parsedOptions = parseAuditOptions(
+          options as Record<string, unknown>,
+        );
         output.info('Loading Overture configuration...');
 
         // Load Overture configuration
@@ -56,11 +60,11 @@ export function createAuditCommand(deps: AppDependencies): Command {
         const platform = pathResolver.getPlatform();
 
         // Determine which clients to audit
-        if (options.client) {
+        if (parsedOptions.client) {
           // Audit specific client
           await auditSingleClient(
             deps,
-            options.client as ClientName,
+            parsedOptions.client,
             overtureConfig,
             platform,
           );
@@ -83,7 +87,7 @@ export function createAuditCommand(deps: AppDependencies): Command {
  */
 async function auditSingleClient(
   deps: AppDependencies,
-  clientName: ClientName,
+  clientName: string,
   overtureConfig: OvertureConfig,
   platform: Platform,
 ): Promise<void> {

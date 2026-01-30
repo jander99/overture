@@ -258,26 +258,30 @@ describe('parseOptions', () => {
       expect(result.client).toBeUndefined();
     });
 
-    it('should validate client enum in validate options', () => {
-      expect(() => {
-        parseOptions(ValidateOptionsSchema, { client: 'invalid' });
-      }).toThrow();
+    it('should accept any string for client in validate options', () => {
+      const result = parseOptions(ValidateOptionsSchema, {
+        client: 'any-client',
+      });
+      expect(result.client).toBe('any-client');
     });
   });
 
   describe('McpListOptionsSchema', () => {
     it('should parse valid mcp list options', () => {
       const result = parseOptions(McpListOptionsSchema, {
-        detail: true,
+        scope: 'global',
+        client: 'claude-code',
       });
 
-      expect(result.detail).toBe(true);
+      expect(result.scope).toBe('global');
+      expect(result.client).toBe('claude-code');
     });
 
     it('should apply defaults for missing mcp list options', () => {
       const result = parseOptions(McpListOptionsSchema, {});
 
-      expect(result.detail).toBe(false);
+      expect(result.scope).toBeUndefined();
+      expect(result.client).toBeUndefined();
     });
   });
 
@@ -285,44 +289,39 @@ describe('parseOptions', () => {
     it('should parse valid mcp enable options', () => {
       const result = parseOptions(McpEnableOptionsSchema, {
         name: 'test-mcp',
-        client: 'claude-code',
       });
 
       expect(result.name).toBe('test-mcp');
-      expect(result.client).toBe('claude-code');
     });
 
     it('should require name field', () => {
       expect(() => {
-        parseOptions(McpEnableOptionsSchema, {
-          client: 'claude-code',
-        });
-      }).toThrow();
+        parseOptions(McpEnableOptionsSchema, {});
+      }).toThrow(/Invalid options:[\s\S]*name[\s\S]*Invalid input/);
     });
 
-    it('should validate client enum in mcp enable options', () => {
+    it('should reject empty name', () => {
       expect(() => {
         parseOptions(McpEnableOptionsSchema, {
-          name: 'test',
-          client: 'invalid',
+          name: '',
         });
-      }).toThrow();
+      }).toThrow(/Invalid options:[\s\S]*name[\s\S]*MCP name is required/);
     });
   });
 
   describe('AuditOptionsSchema', () => {
     it('should parse valid audit options', () => {
       const result = parseOptions(AuditOptionsSchema, {
-        detail: true,
+        client: 'claude-code',
       });
 
-      expect(result.detail).toBe(true);
+      expect(result.client).toBe('claude-code');
     });
 
     it('should apply defaults for missing audit options', () => {
       const result = parseOptions(AuditOptionsSchema, {});
 
-      expect(result.detail).toBe(false);
+      expect(result.client).toBeUndefined();
     });
   });
 

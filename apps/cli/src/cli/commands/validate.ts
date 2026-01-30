@@ -22,6 +22,7 @@ import {
   validateEnvVarReferences,
   getFixSuggestion,
 } from '../../lib/validators/env-var-validator.js';
+import { parseValidateOptions } from '../../lib/option-parser.js';
 
 /**
  * Valid platform names
@@ -33,6 +34,16 @@ const VALID_PLATFORMS: Platform[] = ['darwin', 'linux', 'win32'];
  * Includes all known clients for validation purposes
  */
 const VALID_CLIENT_NAMES: readonly KnownClientName[] = ALL_KNOWN_CLIENTS;
+
+/**
+ * Safely extracts a string array from an unknown value
+ */
+function extractStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === 'string');
+  }
+  return [];
+}
 
 /**
  * Validates a list of items from MCP config against valid values
@@ -66,7 +77,7 @@ function validateMcpPlatforms(
 
   if (platforms.exclude) {
     validateConfigItems(
-      platforms.exclude as string[],
+      extractStringArray(platforms.exclude),
       VALID_PLATFORMS,
       mcpName,
       'exclusion list',
@@ -75,9 +86,12 @@ function validateMcpPlatforms(
     );
   }
 
-  if (platforms.commandOverrides) {
+  if (
+    platforms.commandOverrides &&
+    typeof platforms.commandOverrides === 'object'
+  ) {
     validateConfigItems(
-      Object.keys(platforms.commandOverrides as Record<string, unknown>),
+      Object.keys(platforms.commandOverrides),
       VALID_PLATFORMS,
       mcpName,
       'commandOverrides',
@@ -86,9 +100,9 @@ function validateMcpPlatforms(
     );
   }
 
-  if (platforms.argsOverrides) {
+  if (platforms.argsOverrides && typeof platforms.argsOverrides === 'object') {
     validateConfigItems(
-      Object.keys(platforms.argsOverrides as Record<string, unknown>),
+      Object.keys(platforms.argsOverrides),
       VALID_PLATFORMS,
       mcpName,
       'argsOverrides',
@@ -110,7 +124,7 @@ function validateMcpClients(
 
   if (clients.exclude) {
     validateConfigItems(
-      clients.exclude as string[],
+      extractStringArray(clients.exclude),
       VALID_CLIENT_NAMES,
       mcpName,
       'exclusion list',
@@ -121,7 +135,7 @@ function validateMcpClients(
 
   if (clients.include) {
     validateConfigItems(
-      clients.include as string[],
+      extractStringArray(clients.include),
       VALID_CLIENT_NAMES,
       mcpName,
       'include list',
@@ -130,9 +144,9 @@ function validateMcpClients(
     );
   }
 
-  if (clients.overrides) {
+  if (clients.overrides && typeof clients.overrides === 'object') {
     validateConfigItems(
-      Object.keys(clients.overrides as Record<string, unknown>),
+      Object.keys(clients.overrides),
       VALID_CLIENT_NAMES,
       mcpName,
       'overrides',
@@ -408,7 +422,10 @@ export function createValidateCommand(deps: AppDependencies): Command {
     )
     .option('--client <client>', 'Validate for specific client')
     .option('--verbose', 'Show detailed validation output')
-    .action(async (options) => {
+    .action(async (options: Record<string, unknown>) => {
+      // Parse and validate options using Zod schema
+      const parsedOptions = parseValidateOptions(options);
+
       try {
         // Load configuration (throws ConfigLoadError or ConfigValidationError)
         const config = await configLoader.loadConfig(process.cwd());
@@ -429,13 +446,13 @@ export function createValidateCommand(deps: AppDependencies): Command {
         checkDuplicateMcpNames(config, errors);
 
         // 3. Validate environment variable security (hardcoded credentials)
-        validateEnvVarSecurity(config, output, options);
+        validateEnvVarSecurity(config, output, parsedOptions);
 
         // 4. Validate sync.enabledClients
         validateEnabledClients(config, errors);
 
         // 5. Validate --client option if provided
-        validateClientOption(options, adapterRegistry, errors);
+        validateClientOption(parsedOptions, adapterRegistry, errors);
 
         // If there are validation errors, exit with code 3
         if (errors.length > 0) {
@@ -446,7 +463,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
 
         // 6. Determine which clients to validate
         const clientsToValidate = determineClientsToValidate(
-          options,
+          parsedOptions,
           config,
           adapterRegistry,
         );
@@ -461,7 +478,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
           allEnvErrors,
           allEnvWarnings,
           output,
-          options,
+          parsedOptions,
           config,
           adapterRegistry,
         );
@@ -479,20 +496,32 @@ export function createValidateCommand(deps: AppDependencies): Command {
 
         // Handle ConfigError with exit code 2
         if (error instanceof ConfigError) {
-          ErrorHandler.handleCommandError(error, 'validate', options.verbose);
+          ErrorHandler.handleCommandError(
+            error,
+            'validate',
+            parsedOptions.verbose,
+          );
           // ErrorHandler.handleCommandError calls process.exit internally
           return; // This won't be reached, but TypeScript needs it
         }
 
         // Handle ValidationError with exit code 3
         if (error instanceof ValidationError) {
-          ErrorHandler.handleCommandError(error, 'validate', options.verbose);
+          ErrorHandler.handleCommandError(
+            error,
+            'validate',
+            parsedOptions.verbose,
+          );
           // ErrorHandler.handleCommandError calls process.exit internally
           return; // This won't be reached, but TypeScript needs it
         }
 
         // Handle all other errors
-        ErrorHandler.handleCommandError(error, 'validate', options.verbose);
+        ErrorHandler.handleCommandError(
+          error,
+          'validate',
+          parsedOptions.verbose,
+        );
         // ErrorHandler.handleCommandError calls process.exit internally
       }
     });

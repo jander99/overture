@@ -124,7 +124,7 @@ export const SyncOptionsSchema = z.object({
   skipAgents: z.boolean().default(false),
   skipUndetected: z.boolean().default(true),
   detail: z.boolean().default(false),
-  client: z.enum(['claude-code', 'copilot-cli', 'opencode']).optional(),
+  client: z.string().optional(),
 });
 
 /**
@@ -158,8 +158,9 @@ export function parseSyncOptions(
  * Schema for validate command options
  */
 export const ValidateOptionsSchema = z.object({
-  client: z.enum(['claude-code', 'copilot-cli', 'opencode']).optional(),
+  client: z.string().optional(),
   detail: z.boolean().default(false),
+  verbose: z.boolean().optional(),
 });
 
 /**
@@ -168,10 +169,23 @@ export const ValidateOptionsSchema = z.object({
 export type ValidateOptions = z.infer<typeof ValidateOptionsSchema>;
 
 /**
+ * Parse and validate validate command options
+ *
+ * @param options - Raw options from Commander.js
+ * @returns Parsed validate options with type safety
+ */
+export function parseValidateOptions(
+  options: Record<string, unknown>,
+): ValidateOptions {
+  return parseOptions(ValidateOptionsSchema, options);
+}
+
+/**
  * Schema for mcp list command options
  */
 export const McpListOptionsSchema = z.object({
-  detail: z.boolean().default(false),
+  scope: z.string().optional(),
+  client: z.string().optional(),
 });
 
 /**
@@ -180,11 +194,22 @@ export const McpListOptionsSchema = z.object({
 export type McpListOptions = z.infer<typeof McpListOptionsSchema>;
 
 /**
+ * Parse and validate mcp list command options
+ *
+ * @param options - Raw options from Commander.js
+ * @returns Parsed mcp list options with type safety
+ */
+export function parseMcpListOptions(
+  options: Record<string, unknown>,
+): McpListOptions {
+  return parseOptions(McpListOptionsSchema, options);
+}
+
+/**
  * Schema for mcp enable command options
  */
 export const McpEnableOptionsSchema = z.object({
   name: z.string().min(1, 'MCP name is required'),
-  client: z.enum(['claude-code', 'copilot-cli', 'opencode']),
 });
 
 /**
@@ -193,13 +218,37 @@ export const McpEnableOptionsSchema = z.object({
 export type McpEnableOptions = z.infer<typeof McpEnableOptionsSchema>;
 
 /**
+ * Parse and validate mcp enable command options
+ *
+ * @param options - Raw options from Commander.js
+ * @returns Parsed mcp enable options with type safety
+ */
+export function parseMcpEnableOptions(
+  options: Record<string, unknown>,
+): McpEnableOptions {
+  return parseOptions(McpEnableOptionsSchema, options);
+}
+
+/**
  * Schema for audit command options
  */
 export const AuditOptionsSchema = z.object({
-  detail: z.boolean().default(false),
+  client: z.string().optional(),
 });
 
 /**
  * Parsed audit options type
  */
 export type AuditOptions = z.infer<typeof AuditOptionsSchema>;
+
+/**
+ * Parse and validate audit command options
+ *
+ * @param options - Raw options from Commander.js
+ * @returns Parsed audit options with type safety
+ */
+export function parseAuditOptions(
+  options: Record<string, unknown>,
+): AuditOptions {
+  return parseOptions(AuditOptionsSchema, options);
+}

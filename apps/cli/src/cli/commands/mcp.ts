@@ -8,6 +8,11 @@ import type { ConfigLoader, PathResolver } from '@overture/config-core';
 import type { FilesystemPort } from '@overture/ports-filesystem';
 import type { OutputPort } from '@overture/ports-output';
 import type { AppDependencies } from '../../composition-root.js';
+import {
+  parseMcpListOptions,
+  parseMcpEnableOptions,
+} from '../../lib/option-parser.js';
+import type { McpListOptions } from '../../lib/option-parser.js';
 
 /**
  * Extended MCP server config that includes the enabled property
@@ -34,14 +39,6 @@ type McpDisplayItem = {
 };
 
 /**
- * Options for MCP list command
- */
-type McpListOptions = {
-  scope?: string;
-  client?: string;
-};
-
-/**
  * Creates the 'mcp' command group for managing MCP servers.
  *
  * Usage:
@@ -61,14 +58,20 @@ export function createMcpCommand(deps: AppDependencies): Command {
     .description('List all configured MCP servers')
     .option('--scope <type>', 'Filter by scope (global or project)')
     .option('--client <name>', 'Filter by client compatibility')
-    .action(async (options: { scope?: string; client?: string }) => {
+    .action(async (options: Record<string, unknown>) => {
       const { configLoader, output } = deps;
 
       try {
+        // Parse and validate options
+        const parsedOptions = parseMcpListOptions(options);
+
         // Validate scope if provided
-        if (options.scope && !['global', 'project'].includes(options.scope)) {
+        if (
+          parsedOptions.scope &&
+          !['global', 'project'].includes(parsedOptions.scope)
+        ) {
           output.error(
-            `Invalid scope: "${options.scope}". Must be "global" or "project".`,
+            `Invalid scope: "${parsedOptions.scope}". Must be "global" or "project".`,
           );
           return;
         }
@@ -76,7 +79,7 @@ export function createMcpCommand(deps: AppDependencies): Command {
         // Load MCPs from configs
         const mcpsToDisplay = await loadMcpServersToDisplay(
           configLoader,
-          options,
+          parsedOptions,
         );
 
         // Handle empty configuration
@@ -86,7 +89,7 @@ export function createMcpCommand(deps: AppDependencies): Command {
         }
 
         // Display the MCPs
-        displayMcpList(mcpsToDisplay, options, output);
+        displayMcpList(mcpsToDisplay, parsedOptions, output);
       } catch (error) {
         // Handle configuration loading errors gracefully
         const errorMessage =
@@ -104,8 +107,15 @@ export function createMcpCommand(deps: AppDependencies): Command {
       const { configLoader, pathResolver, filesystem, output } = deps;
 
       try {
+        // Parse and validate options
+        const parsedOptions = parseMcpEnableOptions({ name });
+
         // Load and update MCP config
-        const config = await findAndEnableMcp(configLoader, name, output);
+        const config = await findAndEnableMcp(
+          configLoader,
+          parsedOptions.name,
+          output,
+        );
         if (!config) {
           return; // Error already handled by findAndEnableMcp
         }
@@ -115,7 +125,7 @@ export function createMcpCommand(deps: AppDependencies): Command {
 
         // Display success message
         output.success(
-          `MCP server "${name}" has been enabled in project configuration.`,
+          `MCP server "${parsedOptions.name}" has been enabled in project configuration.`,
         );
       } catch (error) {
         // Error handling will be added in Cycle 1.8
