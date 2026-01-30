@@ -4,6 +4,7 @@ import type { ClientName } from '@overture/config-types';
 import { SyncFormatter } from '@overture/formatters';
 import { ErrorHandler } from '@overture/utils';
 import { parseSyncOptions } from '../../lib/option-parser.js';
+import { loadMergedConfig } from '../../lib/config-loader.js';
 
 async function loadSyncConfig(
   parsedOptions: ReturnType<typeof parseSyncOptions>,
@@ -12,12 +13,7 @@ async function loadSyncConfig(
 ): Promise<boolean> {
   let detailMode = parsedOptions.detail;
   try {
-    const projectRoot = await pathResolver.findProjectRoot();
-    const userConfig = await configLoader.loadUserConfig();
-    const projectConfig = projectRoot
-      ? await configLoader.loadProjectConfig(projectRoot)
-      : null;
-    const overtureConfig = configLoader.mergeConfigs(userConfig, projectConfig);
+    const overtureConfig = await loadMergedConfig(pathResolver, configLoader);
     detailMode = parsedOptions.detail ?? overtureConfig.sync?.detail ?? false;
   } catch {
     // Config load failed, use CLI flag or false
