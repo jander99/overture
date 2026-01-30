@@ -167,10 +167,10 @@ function buildMcpConfig(selectedMcps: string[]): OvertureConfig['mcp'] {
       // eslint-disable-next-line security/detect-object-injection
       const defaults = MCP_SERVER_DEFAULTS[mcpName];
       if (
-        defaults?.command &&
-        defaults?.args &&
-        defaults?.env &&
-        defaults?.transport
+        defaults.command &&
+        defaults.args &&
+        defaults.env &&
+        defaults.transport
       ) {
         // eslint-disable-next-line security/detect-object-injection
         mcpConfig[mcpName] = {
@@ -488,7 +488,7 @@ function displayMcpServer(
 ): void {
   console.log(chalk.cyan(`  ${name}:`));
   console.log(chalk.gray(`    command: ${mcpConfig.command}`));
-  if (mcpConfig.args && mcpConfig.args.length > 0) {
+  if (mcpConfig.args.length > 0) {
     console.log(chalk.gray(`    args: [${mcpConfig.args.join(', ')}]`));
   }
   console.log(chalk.gray(`    transport: ${mcpConfig.transport}`));
@@ -542,20 +542,16 @@ function displaySyncOptions(sync: OvertureConfig['sync'] | undefined): void {
 
   console.log(chalk.bold('Sync Options:'));
 
-  if (sync.backup !== undefined) {
-    const backupText = sync.backup
-      ? chalk.green('enabled')
-      : chalk.red('disabled');
-    console.log(`  backup: ${backupText}`);
-  }
+  const backupText = sync.backup
+    ? chalk.green('enabled')
+    : chalk.red('disabled');
+  console.log(`  backup: ${backupText}`);
 
   if (sync.backupDir) {
     console.log(chalk.gray(`  backup-dir: ${sync.backupDir}`));
   }
 
-  if (sync.backupRetention !== undefined) {
-    console.log(chalk.gray(`  backup-retention: ${sync.backupRetention}`));
-  }
+  console.log(chalk.gray(`  backup-retention: ${sync.backupRetention}`));
 
   Logger.nl();
 }
@@ -566,7 +562,7 @@ function displaySyncOptions(sync: OvertureConfig['sync'] | undefined): void {
  * @param config - User configuration object
  */
 function displayFooter(config: OvertureConfig): void {
-  const mcpCount = config.mcp ? Object.keys(config.mcp).length : 0;
+  const mcpCount = Object.keys(config.mcp).length;
   const clientCount = config.clients ? Object.keys(config.clients).length : 0;
 
   console.log(

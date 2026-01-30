@@ -73,7 +73,7 @@ export type GetLockFilePath = () => string;
  */
 async function handleExistingLockFile(
   lockPath: string,
-  opts: LockOptions,
+  opts: Required<LockOptions>,
   attempts: number,
   delay: number,
 ): Promise<{
@@ -87,7 +87,7 @@ async function handleExistingLockFile(
 
     // Check if lock is stale
     const lockAge = Date.now() - existingLock.timestamp;
-    if (lockAge > opts.staleTimeout!) {
+    if (lockAge > opts.staleTimeout) {
       // Stale lock detected, remove it and retry immediately
       console.warn(
         `Removing stale lock (age: ${Math.round(lockAge / 1000)}s, PID: ${existingLock.pid})`,
@@ -97,7 +97,7 @@ async function handleExistingLockFile(
     }
 
     // Lock is active - check if we've exhausted retries
-    if (attempts === opts.maxRetries!) {
+    if (attempts === opts.maxRetries) {
       throw new ConfigError(
         `Cannot acquire lock: Another Overture process (PID ${existingLock.pid}) is running '${existingLock.operation}' operation. Please wait or remove stale lock at: ${lockPath}`,
         lockPath,
@@ -159,11 +159,14 @@ async function handleRetryableError(
 /**
  * Try to create lock file atomically
  */
-function tryCreateLockFile(lockPath: string, opts: LockOptions): boolean {
+function tryCreateLockFile(
+  lockPath: string,
+  opts: Required<LockOptions>,
+): boolean {
   const lockData: LockData = {
     pid: process.pid,
     timestamp: Date.now(),
-    operation: opts.operation!,
+    operation: opts.operation,
   };
 
   // Atomically create lock file using 'wx' flag (exclusive create, fails if exists)
@@ -182,7 +185,7 @@ function tryCreateLockFile(lockPath: string, opts: LockOptions): boolean {
 async function handleLockError(
   error: NodeJS.ErrnoException,
   lockPath: string,
-  opts: LockOptions,
+  opts: Required<LockOptions>,
   attempts: number,
   delay: number,
 ): Promise<{ shouldRetry: boolean; newAttempts: number; newDelay: number }> {
@@ -192,14 +195,14 @@ async function handleLockError(
   }
 
   // Other errors (permission denied, etc.)
-  return handleRetryableError(attempts, opts.maxRetries!, delay);
+  return handleRetryableError(attempts, opts.maxRetries, delay);
 }
 
 export async function acquireLock(
   getLockFilePath: GetLockFilePath,
   options: LockOptions = {},
 ): Promise<boolean> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts: Required<LockOptions> = { ...DEFAULT_OPTIONS, ...options };
   const lockPath = getLockFilePath();
   const lockDir = path.dirname(lockPath);
 

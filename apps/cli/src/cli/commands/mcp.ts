@@ -140,7 +140,8 @@ async function loadMcpServersToDisplay(
   if (options.scope === 'global') {
     // Load only user config (global MCPs)
     const userConfig = await configLoader.loadUserConfig();
-    if (userConfig?.mcp) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (userConfig?.mcp && Object.keys(userConfig.mcp).length > 0) {
       mcpsToDisplay = Object.entries(userConfig.mcp).map(([name, config]) => ({
         name,
         config: config as McpServerConfig,
@@ -164,7 +165,8 @@ async function loadMcpServersToDisplay(
     const userConfig = await configLoader.loadUserConfig();
     const projectConfig = await configLoader.loadProjectConfig(process.cwd());
 
-    if (userConfig?.mcp) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (userConfig?.mcp && Object.keys(userConfig.mcp).length > 0) {
       mcpsToDisplay.push(
         ...Object.entries(userConfig.mcp).map(([name, config]) => ({
           name,
@@ -220,8 +222,7 @@ function displayMcpList(
 
   // Display each MCP with scope indicator (if not filtered)
   for (const { name, config, scope } of mcpsToDisplay) {
-    const commandStr =
-      `${config.command} ${config.args?.join(' ') || ''}`.trim();
+    const commandStr = `${config.command} ${config.args.join(' ')}`.trim();
     const scopeLabel = options.scope ? '' : ` (${scope})`;
     output.info(`  ${name}${scopeLabel}`);
     output.info(`    Command: ${commandStr}`);
@@ -288,21 +289,19 @@ async function tryEnableFromUserConfig(
   output: OutputPort,
 ): Promise<ExtendedOvertureConfig | null> {
   const userConfig = await configLoader.loadUserConfig();
-  if (userConfig?.mcp && Object.hasOwn(userConfig.mcp, name)) {
+  if (Object.hasOwn(userConfig.mcp, name)) {
     // Copy from user config to project config
     if (!config.mcp) {
       config.mcp = {};
     }
     // eslint-disable-next-line security/detect-object-injection
     const userMcpConfig = userConfig.mcp[name];
-    if (userMcpConfig) {
-      // eslint-disable-next-line security/detect-object-injection
-      config.mcp[name] = {
-        ...userMcpConfig,
-        enabled: true,
-      };
-      return config;
-    }
+    // eslint-disable-next-line security/detect-object-injection
+    config.mcp[name] = {
+      ...userMcpConfig,
+      enabled: true,
+    };
+    return config;
   }
 
   // MCP not found in any config

@@ -152,6 +152,7 @@ function validateMcpConfigs(config: OvertureConfig, errors: string[]): void {
       errors.push(`MCP "${mcpName}": command is required and cannot be empty`);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!mcpConfig.transport) {
       errors.push(`MCP "${mcpName}": transport is required`);
     }
@@ -260,7 +261,6 @@ function determineClientsToValidate(
   } else if (config.clients) {
     for (const [clientName, clientConfig] of Object.entries(config.clients)) {
       if (
-        clientConfig &&
         typeof clientConfig === 'object' &&
         (!('enabled' in clientConfig) || clientConfig.enabled === true)
       ) {
@@ -413,6 +413,7 @@ export function createValidateCommand(deps: AppDependencies): Command {
         // Load configuration (throws ConfigLoadError or ConfigValidationError)
         const config = await configLoader.loadConfig(process.cwd());
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!config) {
           output.error('No configuration found');
           process.exit(2);
