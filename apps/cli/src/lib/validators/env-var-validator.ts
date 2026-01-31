@@ -118,14 +118,13 @@ export function validateEnvVarReferences(
   const issues: string[] = [];
 
   // Iterate through all MCP server configurations
-  for (const [mcpName, mcpConfig] of Object.entries(config.mcp || {})) {
-    if (!mcpConfig.env) {
-      continue;
-    }
-
-    // Check each environment variable
-    for (const [key, value] of Object.entries(mcpConfig.env)) {
-      validateEnvValue(value as string, mcpName, key, issues);
+  for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
+    // Check each environment variable (env may be undefined before schema validation)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (mcpConfig.env) {
+      for (const [key, value] of Object.entries(mcpConfig.env)) {
+        validateEnvValue(value as string, mcpName, key, issues);
+      }
     }
   }
 
