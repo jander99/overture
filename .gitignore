@@ -51,6 +51,9 @@ performance-report.txt
 .mcp.json
 .cursor/
 
+# Sisyphus work directory
+.sisyphus/
+
 vitest.config.*.timestamp*
 vite.config.*.timestamp*graph.json
 
