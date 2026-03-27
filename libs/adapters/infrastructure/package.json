@@ -26,7 +26,7 @@
     "@overture/ports-process": "*",
     "@overture/ports-output": "*",
     "@overture/errors": "*",
-    "handlebars": "^4.7.8",
+    "handlebars": "^4.7.9",
     "execa": "^9.6.1",
     "tslib": "^2.3.0"
   },
