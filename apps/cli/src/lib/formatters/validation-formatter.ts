@@ -5,10 +5,9 @@
  * Handles display and formatting of validation results.
  */
 
-import type { OvertureConfig } from '@overture/config-types';
+import type { OvertureConfig, ClientName } from '@overture/config-types';
 import type { OutputPort } from '@overture/ports-output';
 import type { AdapterRegistry } from '@overture/client-adapters';
-import type { ClientName } from '@overture/config-types';
 import {
   getTransportValidationSummary,
   type TransportWarning,
