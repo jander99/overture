@@ -106,7 +106,9 @@ describe('SummaryFormatter', () => {
 
       formatter.formatSummary(result, 3);
 
-      expect(output.info).toHaveBeenCalledWith(expect.stringContaining('Summary:'));
+      expect(output.info).toHaveBeenCalledWith(
+        expect.stringContaining('Summary:'),
+      );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Config repo:'),
       );

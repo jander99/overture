@@ -2,10 +2,7 @@
   "mcpServers": {
     "nx-mcp": {
       "command": "npx",
-      "args": [
-        "nx",
-        "mcp"
-      ]
+      "args": ["nx", "mcp"]
     }
   }
 }

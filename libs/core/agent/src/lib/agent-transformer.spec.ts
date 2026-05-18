@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AgentTransformer } from './agent-transformer.js';
-import {
-  AgentDefinition,
-  ModelMapping,
-} from '@overture/config-types';
+import { AgentDefinition, ModelMapping } from '@overture/config-types';
 
 describe('AgentTransformer', () => {
   const transformer = new AgentTransformer();
