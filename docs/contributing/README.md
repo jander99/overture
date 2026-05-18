@@ -5,7 +5,9 @@ This directory contains documentation for Overture contributors and developers.
 ## Contents
 
 ### [architecture.md](./architecture.md)
+
 Comprehensive architecture documentation covering:
+
 - Claude Code ecosystem research
 - Multi-platform MCP synchronization architecture
 - Component design and patterns
@@ -14,6 +16,7 @@ Comprehensive architecture documentation covering:
 **Audience:** Developers who want to understand Overture's internal architecture
 
 ### [add-new-cli-client.md](./add-new-cli-client.md)
+
 Step-by-step guide for adding support for a new AI coding CLI client to Overture.
 
 **Audience:** Contributors adding support for new AI development tools

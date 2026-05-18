@@ -40,7 +40,8 @@ describe('AgentSyncService', () => {
     });
 
     filesystem.readFile.mockImplementation(async (path) => {
-      if (path === `${xdgConfigHome}/overture/models.yaml`) return 'smart: { "claude-code": "sonnet" }';
+      if (path === `${xdgConfigHome}/overture/models.yaml`)
+        return 'smart: { "claude-code": "sonnet" }';
       if (path === `${xdgConfigHome}/overture/agents/test.yaml`) {
         return 'name: test\ndescription: test agent';
       }
@@ -58,7 +59,7 @@ describe('AgentSyncService', () => {
     expect(summary.synced).toBe(1);
     expect(filesystem.writeFile).toHaveBeenCalledWith(
       `${homeDir}/.claude/agents/test.md`,
-      expect.stringContaining('test body')
+      expect.stringContaining('test body'),
     );
   });
 
