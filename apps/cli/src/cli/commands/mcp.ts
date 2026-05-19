@@ -254,7 +254,7 @@ async function findAndEnableMcp(
 
   // Initialize or use existing config
   const config: ExtendedOvertureConfig =
-    projectConfig || ({ version: '1.0' as const, mcp: {} } as const);
+    projectConfig ?? ({ version: '1.0' as const, mcp: {} } as const);
 
   // Check if MCP exists in project config
   if (config.mcp && Object.hasOwn(config.mcp, name)) {
@@ -301,9 +301,7 @@ async function tryEnableFromUserConfig(
   const userConfig = await configLoader.loadUserConfig();
   if (Object.hasOwn(userConfig.mcp, name)) {
     // Copy from user config to project config
-    if (!config.mcp) {
-      config.mcp = {};
-    }
+    config.mcp ??= {};
     // eslint-disable-next-line security/detect-object-injection
     const userMcpConfig = userConfig.mcp[name];
     // eslint-disable-next-line security/detect-object-injection
