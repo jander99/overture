@@ -1,6 +1,6 @@
 import * as yaml from 'js-yaml';
 import { Command } from 'commander';
-import { CONFIG_PATH } from '@overture/config-core';
+import { CONFIG_FILE, CONFIG_PATH, OVERTURE_DIR } from '@overture/config-core';
 import { ErrorHandler, YAML_FORMATTING } from '@overture/utils';
 import type { OvertureConfig } from '@overture/config-types';
 import type { AppDependencies } from '../../composition-root.js';
@@ -23,11 +23,11 @@ export function createInitCommand(deps: AppDependencies): Command {
     .action(async (options) => {
       try {
         const projectDir = process.cwd();
-        const configPath = pathResolver.resolveProjectConfig(projectDir);
-        const overtureDir = pathResolver.getProjectOvertureDir(projectDir);
+        const overtureDir = pathResolver.joinPaths(projectDir, OVERTURE_DIR);
+        const configPath = pathResolver.joinPaths(overtureDir, CONFIG_FILE);
 
         // Check if config already exists
-        if (filesystem.fileExists(configPath) && !options.force) {
+        if ((await filesystem.exists(configPath)) && !options.force) {
           output.error('Configuration already exists');
           output.info(`Use --force to overwrite or edit ${CONFIG_PATH}`);
           process.exit(1);
@@ -55,8 +55,8 @@ export function createInitCommand(deps: AppDependencies): Command {
         };
 
         // Ensure .overture directory exists
-        if (!filesystem.directoryExists(overtureDir)) {
-          filesystem.createDirectory(overtureDir);
+        if (!(await filesystem.exists(overtureDir))) {
+          await filesystem.mkdir(overtureDir, { recursive: true });
         }
 
         const yamlContent = yaml.dump(config, {
