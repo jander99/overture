@@ -188,7 +188,6 @@ export class ConfigLoader {
       if (
         isYmlExtension &&
         typeof process !== 'undefined' &&
-        process.stderr &&
         !ConfigLoader.shownWarnings.has(ymlWarningKey)
       ) {
         const preferredPath = yamlPath.replace(
@@ -214,7 +213,6 @@ export class ConfigLoader {
       if (
         isLegacyPath &&
         typeof process !== 'undefined' &&
-        process.stderr &&
         !ConfigLoader.shownWarnings.has(legacyWarningKey)
       ) {
         const newPath = yamlPath.replace(this.pathResolver.getHomeDir(), '~');
@@ -315,7 +313,6 @@ export class ConfigLoader {
       if (
         isYmlExtension &&
         typeof process !== 'undefined' &&
-        process.stderr &&
         !ConfigLoader.shownWarnings.has(ymlWarningKey)
       ) {
         process.stderr.write(
@@ -439,7 +436,7 @@ export class ConfigLoader {
     };
 
     return {
-      version: projectConfig.version || userConfig.version,
+      version: projectConfig.version,
       clients:
         Object.keys(mergedClients).length > 0 ? mergedClients : undefined,
       mcp: mergedMcp,
@@ -482,7 +479,7 @@ export class ConfigLoader {
   async loadConfig(projectRoot?: string): Promise<OvertureConfig> {
     // Auto-detect project root if not provided
     const detectedProjectRoot =
-      projectRoot || (await this.pathResolver.findProjectRoot());
+      projectRoot ?? (await this.pathResolver.findProjectRoot());
 
     // Try to load user config (optional)
     let userConfig: OvertureConfig | null = null;
@@ -505,7 +502,7 @@ export class ConfigLoader {
     if (!userConfig && !projectConfig) {
       throw new ConfigError(
         'No configuration found. Run "overture user init" to create user config or "overture init" for project config.',
-        detectedProjectRoot || '/',
+        detectedProjectRoot ?? '/',
       );
     }
 
@@ -514,7 +511,7 @@ export class ConfigLoader {
       if (!userConfig) {
         throw new ConfigError(
           'No configuration found after validation',
-          detectedProjectRoot || '/',
+          detectedProjectRoot ?? '/',
         );
       }
       return userConfig;
