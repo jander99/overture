@@ -89,7 +89,7 @@ export class PluginDetector {
     const includeDisabled = options.includeDisabled ?? true;
 
     // Determine settings path
-    const settingsPath = options.settingsPath || this.getUserSettingsPath();
+    const settingsPath = options.settingsPath ?? this.getUserSettingsPath();
 
     // Validate settings path for security
     if (options.settingsPath) {

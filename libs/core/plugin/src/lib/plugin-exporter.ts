@@ -258,19 +258,29 @@ export class PluginExporter {
         [key: string]: unknown;
       } = {
         ...existingConfig,
-        plugins: existingConfig.plugins || {},
+        plugins: existingConfig.plugins ?? {},
       };
 
       // Add selected plugins to config
       for (const plugin of selectedPlugins) {
+        const existingPluginEntry = Object.entries(updatedConfig.plugins).find(
+          ([pluginName]) => pluginName === plugin.name,
+        )?.[1];
         const existingPluginConfig =
-          (updatedConfig.plugins[plugin.name] as Record<string, unknown>) || {};
+          typeof existingPluginEntry === 'object' && existingPluginEntry !== null
+            ? (existingPluginEntry as Record<string, unknown>)
+            : {};
 
-        updatedConfig.plugins[plugin.name] = {
-          marketplace: plugin.marketplace,
-          enabled: plugin.enabled,
-          // Preserve existing mcps array if present, otherwise empty
-          mcps: (existingPluginConfig.mcps as unknown[]) || [],
+        updatedConfig.plugins = {
+          ...updatedConfig.plugins,
+          [plugin.name]: {
+            marketplace: plugin.marketplace,
+            enabled: plugin.enabled,
+            // Preserve existing mcps array if present, otherwise empty
+            mcps: Array.isArray(existingPluginConfig.mcps)
+              ? existingPluginConfig.mcps
+              : [],
+          },
         };
       }
 
