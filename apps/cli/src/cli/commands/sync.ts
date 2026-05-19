@@ -14,7 +14,7 @@ async function loadSyncConfig(
   let detailMode = parsedOptions.detail;
   try {
     const overtureConfig = await loadMergedConfig(pathResolver, configLoader);
-    detailMode = parsedOptions.detail ?? overtureConfig.sync?.detail ?? false;
+    detailMode = parsedOptions.detail ? true : overtureConfig.sync?.detail === true;
   } catch {
     // Config load failed, use CLI flag or false
   }
