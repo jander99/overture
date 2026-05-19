@@ -108,7 +108,7 @@ function handleUnrecognizedKeysSuggestion(issue: ZodIssue): string | undefined {
 function handleEnumSuggestion(issue: ZodIssue): string | undefined {
   if ('options' in issue) {
     const validOptions =
-      (issue as unknown as Record<string, unknown>).options || [];
+      (issue as unknown as Record<string, unknown>).options ?? [];
     return `Use one of: ${(validOptions as string[]).join(', ')}`;
   }
   return undefined;

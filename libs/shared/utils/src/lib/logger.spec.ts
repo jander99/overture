@@ -16,6 +16,13 @@ import {
 import { Logger, logger } from './logger.js';
 import type { OutputPort } from '@overture/ports-output';
 
+function useOutput(output: OutputPort) {
+  output.info('test');
+  output.success('test');
+  output.warn('test');
+  output.error('test');
+}
+
 describe('Logger', () => {
   let consoleSpy: MockInstance;
   let consoleErrorSpy: MockInstance;
@@ -44,13 +51,6 @@ describe('Logger', () => {
     });
 
     it('should be usable as OutputPort in dependency injection', () => {
-      function useOutput(output: OutputPort) {
-        output.info('test');
-        output.success('test');
-        output.warn('test');
-        output.error('test');
-      }
-
       // Should not throw
       expect(() => useOutput(new Logger())).not.toThrow();
       expect(consoleSpy).toHaveBeenCalledTimes(3);
