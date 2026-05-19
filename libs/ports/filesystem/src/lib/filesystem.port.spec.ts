@@ -63,7 +63,7 @@ describe('FilesystemPort', () => {
       ).resolves.toBeUndefined();
       await expect(mockFilesystem.exists('/test')).resolves.toBe(true);
       await expect(mockFilesystem.mkdir('/test')).resolves.toBeUndefined();
-      await expect(mockFilesystem.readdir('/test')).resolves.toEqual([]);
+      await expect(mockFilesystem.readdir('/test')).resolves.toStrictEqual([]);
       await expect(mockFilesystem.stat('/test')).resolves.toBeDefined();
       await expect(mockFilesystem.rm('/test')).resolves.toBeUndefined();
     });
@@ -189,7 +189,7 @@ describe('FilesystemPort', () => {
       };
 
       const result = await mockFilesystem.readdir('/path/to/dir');
-      expect(result).toEqual(['file1.txt', 'file2.txt', 'subdir']);
+      expect(result).toStrictEqual(['file1.txt', 'file2.txt', 'subdir']);
       expect(mockFilesystem.readdir).toHaveBeenCalledWith('/path/to/dir');
     });
 
@@ -205,7 +205,7 @@ describe('FilesystemPort', () => {
       };
 
       const result = await mockFilesystem.readdir('/empty/dir');
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
   });
 
@@ -233,7 +233,7 @@ describe('FilesystemPort', () => {
       expect(result.isFile()).toBe(true);
       expect(result.isDirectory()).toBe(false);
       expect(result.size).toBe(2048);
-      expect(result.mtime).toEqual(new Date('2025-01-15T12:00:00Z'));
+      expect(result.mtime).toStrictEqual(new Date('2025-01-15T12:00:00Z'));
     });
 
     it('should work for directories', async () => {
@@ -307,7 +307,7 @@ describe('Stats', () => {
     expect(stats.isFile()).toBe(true);
     expect(stats.isDirectory()).toBe(false);
     expect(stats.size).toBe(1024);
-    expect(stats.mtime).toEqual(new Date('2025-01-01'));
+    expect(stats.mtime).toStrictEqual(new Date('2025-01-01'));
   });
 
   it('should enforce required properties', () => {

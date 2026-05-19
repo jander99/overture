@@ -42,7 +42,7 @@ describe('ProcessPort', () => {
       };
 
       const result = await mockPort.exec('npm');
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         stdout: 'npm',
         stderr: '',
         exitCode: 0,
@@ -62,7 +62,7 @@ describe('ProcessPort', () => {
       };
 
       const result = await mockPort.exec('npm', ['install', 'lodash']);
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         stdout: 'npm install lodash',
         stderr: '',
         exitCode: 0,
@@ -151,8 +151,8 @@ describe('ProcessPort', () => {
       await mockPort.exec('git', ['status']);
 
       expect(commandHistory).toHaveLength(2);
-      expect(commandHistory[0]).toEqual({ command: 'npm', args: ['install'] });
-      expect(commandHistory[1]).toEqual({ command: 'git', args: ['status'] });
+      expect(commandHistory[0]).toStrictEqual({ command: 'npm', args: ['install'] });
+      expect(commandHistory[1]).toStrictEqual({ command: 'git', args: ['status'] });
 
       expect(await mockPort.commandExists('npm')).toBe(true);
       expect(await mockPort.commandExists('invalid')).toBe(false);

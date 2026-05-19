@@ -310,7 +310,7 @@ describe('Domain: Error Classes', () => {
 
         // Assert
         expect(error.message).toBe(message);
-        expect(error.issues).toEqual(issues);
+        expect(error.issues).toStrictEqual(issues);
       });
 
       it('should default issues to empty array', () => {
@@ -321,7 +321,7 @@ describe('Domain: Error Classes', () => {
         const issues = error.issues;
 
         // Assert
-        expect(issues).toEqual([]);
+        expect(issues).toStrictEqual([]);
         expect(Array.isArray(issues)).toBe(true);
       });
 
@@ -366,7 +366,7 @@ describe('Domain: Error Classes', () => {
 
         // Assert
         expect(Array.isArray(retrieved)).toBe(true);
-        expect(retrieved).toEqual(issues);
+        expect(retrieved).toStrictEqual(issues);
       });
 
       it('should allow modifying issues array', () => {
@@ -433,7 +433,7 @@ describe('Domain: Error Classes', () => {
         const issues = error.issues;
 
         // Assert
-        expect(issues).toEqual([]);
+        expect(issues).toStrictEqual([]);
       });
     });
   });
@@ -836,7 +836,7 @@ describe('Domain: Error Classes', () => {
         const json = error.toJSON();
 
         // Assert
-        expect(json).toEqual({
+        expect(json).toStrictEqual({
           name: 'OvertureError',
           message: 'test message',
           code: 'TEST_CODE',
@@ -1044,7 +1044,7 @@ describe('Domain: Error Classes', () => {
         const parsed = JSON.parse(jsonString);
 
         // Assert
-        expect(parsed.issues).toEqual(['Issue 1', 'Issue 2']);
+        expect(parsed.issues).toStrictEqual(['Issue 1', 'Issue 2']);
       });
 
       it('should work with JSON.stringify for PluginError', () => {
