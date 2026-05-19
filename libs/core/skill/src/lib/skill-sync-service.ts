@@ -153,7 +153,7 @@ export class SkillSyncService {
     skill: DiscoveredSkill,
     options: SkillSyncOptions = {},
   ): Promise<SkillSyncResult[]> {
-    const targetClients = options.clients || ALL_CLIENTS;
+    const targetClients = options.clients ?? ALL_CLIENTS;
     const results: SkillSyncResult[] = [];
 
     for (const client of targetClients) {

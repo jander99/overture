@@ -207,7 +207,7 @@ describe('SkillSyncService', () => {
       expect(summary.synced).toBe(0);
       expect(summary.skipped).toBe(0);
       expect(summary.failed).toBe(0);
-      expect(summary.results).toEqual([]);
+      expect(summary.results).toStrictEqual([]);
     });
 
     it('should sync only to specified clients', async () => {

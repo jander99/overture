@@ -77,7 +77,7 @@ export class SkillDiscovery {
   async discoverSkills(
     options: SkillDiscoveryOptions = {},
   ): Promise<DiscoveredSkill[]> {
-    const skillsDir = options.skillsDir || this.getDefaultSkillsDirectoryPath();
+    const skillsDir = options.skillsDir ?? this.getDefaultSkillsDirectoryPath();
 
     // Check if skills directory exists
     const exists = await this.hasSkillsDirectory(options);
@@ -147,7 +147,7 @@ export class SkillDiscovery {
     name: string,
     options: SkillDiscoveryOptions = {},
   ): Promise<DiscoveredSkill | null> {
-    const skillsDir = options.skillsDir || this.getDefaultSkillsDirectoryPath();
+    const skillsDir = options.skillsDir ?? this.getDefaultSkillsDirectoryPath();
     const skillDirectoryPath = `${skillsDir}/${name}`;
     const skillPath = `${skillDirectoryPath}/SKILL.md`;
 
@@ -183,7 +183,7 @@ export class SkillDiscovery {
   async hasSkillsDirectory(
     options: SkillDiscoveryOptions = {},
   ): Promise<boolean> {
-    const skillsDir = options.skillsDir || this.getDefaultSkillsDirectoryPath();
+    const skillsDir = options.skillsDir ?? this.getDefaultSkillsDirectoryPath();
     return this.filesystem.exists(skillsDir);
   }
 
