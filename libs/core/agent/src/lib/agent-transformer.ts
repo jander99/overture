@@ -14,6 +14,14 @@ import {
  * 3. Generating client-specific Markdown frontmatter.
  * 4. Standardizing tool lists and permissions.
  */
+/**
+ * O(1) safe property lookup on a plain record.
+ * Uses Object.hasOwn to guard against prototype-chain access.
+ */
+function safeGet<T>(record: Record<string, T>, key: string): T | undefined {
+  // eslint-disable-next-line security/detect-object-injection -- Object.hasOwn guards the dynamic property access
+  return Object.hasOwn(record, key) ? record[key] : undefined;
+}
 export class AgentTransformer {
   /**
    * Transforms an agent definition for a specific client.
@@ -57,9 +65,10 @@ export class AgentTransformer {
    * Merges client-specific overrides into the base config.
    */
   private mergeOverrides(config: AgentConfig, client: ClientName): AgentConfig {
-    const overrides = Object.entries(config.overrides ?? {}).find(
-      ([overrideClient]) => overrideClient === client,
-    )?.[1];
+    const overrides = safeGet(
+      (config.overrides ?? {}) as Record<string, Partial<AgentConfig>>,
+      client,
+    );
     if (!overrides) return config;
 
     return {
@@ -82,12 +91,10 @@ export class AgentTransformer {
   ): string | undefined {
     if (!modelName) return undefined;
 
-    const modelEntry = Object.entries(modelMapping).find(
-      ([logicalName]) => logicalName === modelName,
-    )?.[1];
-    const mappedModel = Object.entries(modelEntry ?? {}).find(
-      ([mappedClient]) => mappedClient === client,
-    )?.[1];
+    const modelEntry = safeGet(modelMapping, modelName);
+    const mappedModel = modelEntry
+      ? safeGet(modelEntry as Record<string, string>, client)
+      : undefined;
 
     return mappedModel ?? modelName;
   }
