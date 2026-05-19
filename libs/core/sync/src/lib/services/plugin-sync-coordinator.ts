@@ -30,7 +30,7 @@ export class PluginSyncCoordinator {
   async buildPluginSyncDetails(
     userConfig: OvertureConfig | null,
   ): Promise<PluginSyncDetails> {
-    const configuredPlugins = userConfig?.plugins || {};
+    const configuredPlugins = userConfig?.plugins ?? {};
     const pluginNames = Object.keys(configuredPlugins);
 
     if (pluginNames.length === 0) {
@@ -51,16 +51,13 @@ export class PluginSyncCoordinator {
     const toInstall: Array<{ name: string; marketplace: string }> = [];
     let installedCount = 0;
 
-    for (const name of pluginNames) {
-      if (Object.hasOwn(configuredPlugins, name)) {
-        const config = configuredPlugins[name];
-        const key = `${name}@${config.marketplace}`;
+    for (const [name, config] of Object.entries(configuredPlugins)) {
+      const key = `${name}@${config.marketplace}`;
 
-        if (installedSet.has(key)) {
-          installedCount++;
-        } else {
-          toInstall.push({ name, marketplace: config.marketplace });
-        }
+      if (installedSet.has(key)) {
+        installedCount++;
+      } else {
+        toInstall.push({ name, marketplace: config.marketplace });
       }
     }
 
@@ -80,7 +77,7 @@ export class PluginSyncCoordinator {
 
     this.warnAboutProjectPlugins(projectConfig);
 
-    const configuredPlugins = userConfig?.plugins || {};
+    const configuredPlugins = userConfig?.plugins ?? {};
     const pluginNames = Object.keys(configuredPlugins);
 
     if (pluginNames.length === 0) {
@@ -156,16 +153,13 @@ export class PluginSyncCoordinator {
     const missingPlugins: Array<{ name: string; marketplace: string }> = [];
     const skippedPlugins: string[] = [];
 
-    for (const name of pluginNames) {
-      if (Object.hasOwn(configuredPlugins, name)) {
-        const config = configuredPlugins[name];
-        const key = `${name}@${config.marketplace}`;
+    for (const [name, config] of Object.entries(configuredPlugins)) {
+      const key = `${name}@${config.marketplace}`;
 
-        if (installedSet.has(key)) {
-          skippedPlugins.push(key);
-        } else {
-          missingPlugins.push({ name, marketplace: config.marketplace });
-        }
+      if (installedSet.has(key)) {
+        skippedPlugins.push(key);
+      } else {
+        missingPlugins.push({ name, marketplace: config.marketplace });
       }
     }
 

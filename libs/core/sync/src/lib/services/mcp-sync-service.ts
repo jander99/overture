@@ -23,6 +23,33 @@ import { generateDiff } from '../config-diff.js';
 import { getUnmanagedMcps } from '../mcp-detector.js';
 import type { SyncOptions, ClientSyncResult } from '../sync-engine.js';
 
+function getRecordEntry(
+  record: Record<string, unknown>,
+  targetKey: string,
+): unknown {
+  return Object.entries(record).find(([key]) => key === targetKey)?.[1];
+}
+
+function getConfigRootRecord(
+  config: ClientMcpConfig,
+  rootKey: string,
+): Record<string, unknown> {
+  const rootValue = getRecordEntry(config, rootKey);
+
+  return rootValue && typeof rootValue === 'object' && !Array.isArray(rootValue)
+    ? (rootValue as Record<string, unknown>)
+    : {};
+}
+
+function getMcpSource(
+  sources: Record<string, 'global' | 'project'> | undefined,
+  mcpName: string,
+): 'global' | 'project' | undefined {
+  return sources
+    ? (getRecordEntry(sources, mcpName) as 'global' | 'project' | undefined)
+    : undefined;
+}
+
 export interface McpSyncServiceDeps {
   filesystem: FilesystemPort;
   environment: EnvironmentPort;
@@ -71,7 +98,7 @@ export class McpSyncService {
     const results: ClientSyncResult[] = [];
     const warnings: string[] = [];
     const errors: string[] = [];
-    const platform = options.platform || this.deps.environment.platform();
+    const platform = options.platform ?? this.deps.environment.platform();
 
     for (const client of clients) {
       const inProject = !!options.projectRoot;
@@ -136,7 +163,7 @@ export class McpSyncService {
     options: SyncOptions,
     mcpSources?: Record<string, 'global' | 'project'>,
   ): Promise<ClientSyncResult> {
-    const platform = options.platform || this.deps.environment.platform();
+    const platform = options.platform ?? this.deps.environment.platform();
     const warnings: string[] = [];
     let binaryDetection: BinaryDetectionResult | undefined;
 
@@ -291,7 +318,7 @@ export class McpSyncService {
     warnings: string[],
   ): Promise<BinaryDetectionResult | undefined> {
     const skipDetection =
-      options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
+      options.skipBinaryDetection ?? overtureConfig.sync?.skipBinaryDetection;
 
     if (!skipDetection) {
       const detection = await this.deps.binaryDetector.detectClient(
@@ -427,10 +454,7 @@ export class McpSyncService {
     if (inProject && projectPath && configPath === projectPath) {
       return Object.fromEntries(
         Object.entries(overtureConfig.mcp).filter(
-          ([mcpName]) =>
-            mcpSources &&
-            Object.hasOwn(mcpSources, mcpName) &&
-            mcpSources[mcpName] === 'project',
+          ([mcpName]) => getMcpSource(mcpSources, mcpName) === 'project',
         ),
       );
     }
@@ -438,10 +462,7 @@ export class McpSyncService {
     if (!inProject || configPath === userPath) {
       return Object.fromEntries(
         Object.entries(overtureConfig.mcp).filter(
-          ([mcpName]) =>
-            mcpSources &&
-            Object.hasOwn(mcpSources, mcpName) &&
-            mcpSources[mcpName] === 'global',
+          ([mcpName]) => getMcpSource(mcpSources, mcpName) === 'global',
         ),
       );
     }
@@ -458,17 +479,17 @@ export class McpSyncService {
   ): void {
     const rootKey = client.schemaRootKey;
 
-    const oldMcps =
-      (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
+    const oldMcps = getConfigRootRecord(oldConfig, rootKey);
     const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
 
     if (Object.keys(unmanagedMcps).length > 0) {
-      // eslint-disable-next-line security/detect-object-injection
-      newConfig[rootKey] = {
-        ...(unmanagedMcps as Record<string, ClientMcpServerDef>),
-        // eslint-disable-next-line security/detect-object-injection
-        ...(newConfig[rootKey] as Record<string, ClientMcpServerDef>),
-      };
+      const managedMcps = getConfigRootRecord(newConfig, rootKey);
+      Object.assign(newConfig, {
+        [rootKey]: {
+          ...(unmanagedMcps as Record<string, ClientMcpServerDef>),
+          ...(managedMcps as Record<string, ClientMcpServerDef>),
+        },
+      });
 
       const unmanagedNames = Object.keys(unmanagedMcps);
       warnings.push(
