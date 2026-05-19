@@ -436,7 +436,8 @@ export class ConfigLoader {
     };
 
     return {
-      version: projectConfig.version,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive fallback: schema validation guarantees version, but yaml parsing may produce undefined at runtime
+      version: projectConfig.version ?? userConfig.version,
       clients:
         Object.keys(mergedClients).length > 0 ? mergedClients : undefined,
       mcp: mergedMcp,
