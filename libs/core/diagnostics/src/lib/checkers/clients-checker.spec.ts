@@ -84,7 +84,7 @@ describe('ClientsChecker', () => {
         source: 'native',
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 1,
         clientsMissing: 0,
         wsl2Detections: 0,
@@ -133,7 +133,7 @@ describe('ClientsChecker', () => {
         configValid: false,
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 0,
         clientsMissing: 1,
         wsl2Detections: 0,
@@ -187,7 +187,7 @@ describe('ClientsChecker', () => {
         windowsPath: 'C:\\Program Files\\Claude\\claude.exe',
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 1,
         clientsMissing: 0,
         wsl2Detections: 1,
@@ -270,7 +270,7 @@ describe('ClientsChecker', () => {
       );
 
       expect(result.clients).toHaveLength(3);
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 2,
         clientsMissing: 1,
         wsl2Detections: 0,
@@ -318,7 +318,7 @@ describe('ClientsChecker', () => {
         configValid: false,
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 1,
         clientsMissing: 0,
         wsl2Detections: 0,
@@ -447,7 +447,7 @@ describe('ClientsChecker', () => {
         status: 'skipped',
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         clientsDetected: 0,
         clientsMissing: 0,
         wsl2Detections: 0,
@@ -491,7 +491,7 @@ describe('ClientsChecker', () => {
         projectRoot,
       );
 
-      expect(result.clients[0].warnings).toEqual([
+      expect(result.clients[0].warnings).toStrictEqual([
         'Version mismatch',
         'Config needs update',
       ]);

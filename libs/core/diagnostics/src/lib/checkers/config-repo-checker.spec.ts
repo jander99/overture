@@ -58,7 +58,7 @@ describe('ConfigRepoChecker', () => {
 
       const result = await checker.checkConfigRepository();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         configRepoPath: '/home/testuser/.config/overture',
         skillsPath: '/home/testuser/.config/overture/skills',
         configRepoExists: true,
@@ -78,7 +78,7 @@ describe('ConfigRepoChecker', () => {
 
       const result = await checker.checkConfigRepository();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         configRepoPath: '/home/testuser/.config/overture',
         skillsPath: '/home/testuser/.config/overture/skills',
         configRepoExists: false,
@@ -92,7 +92,7 @@ describe('ConfigRepoChecker', () => {
 
       const result = await checker.checkConfigRepository();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         configRepoPath: '/home/testuser/.config/overture',
         skillsPath: '/home/testuser/.config/overture/skills',
         configRepoExists: true,
@@ -107,7 +107,7 @@ describe('ConfigRepoChecker', () => {
 
       const result = await checker.checkConfigRepository();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         configRepoPath: '/home/testuser/.config/overture',
         skillsPath: '/home/testuser/.config/overture/skills',
         configRepoExists: false,
@@ -133,7 +133,7 @@ describe('ConfigRepoChecker', () => {
         false,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: false,
         gitRemote: null,
         localHash: null,
@@ -151,7 +151,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: false,
         gitRemote: null,
         localHash: null,
@@ -194,7 +194,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: 'https://github.com/user/config.git',
         localHash: 'abc123def456',
@@ -234,7 +234,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: 'https://github.com/user/config.git',
         localHash: 'abc123def456',
@@ -267,7 +267,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: null,
         localHash: 'abc123def456',
@@ -288,7 +288,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: null,
         localHash: null,
@@ -321,7 +321,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: 'https://github.com/user/config.git',
         localHash: null,
@@ -383,7 +383,7 @@ describe('ConfigRepoChecker', () => {
         true,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         isGitRepo: true,
         gitRemote: 'https://github.com/user/config.git',
         localHash: 'abc123def456',
