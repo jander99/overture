@@ -57,7 +57,9 @@ export class AgentTransformer {
    * Merges client-specific overrides into the base config.
    */
   private mergeOverrides(config: AgentConfig, client: ClientName): AgentConfig {
-    const overrides = config.overrides?.[client];
+    const overrides = Object.entries(config.overrides ?? {}).find(
+      ([overrideClient]) => overrideClient === client,
+    )?.[1];
     if (!overrides) return config;
 
     return {
@@ -80,13 +82,14 @@ export class AgentTransformer {
   ): string | undefined {
     if (!modelName) return undefined;
 
-    // If it's a logical name in the mapping, resolve it
-    if (modelMapping[modelName]?.[client]) {
-      return modelMapping[modelName]![client];
-    }
+    const modelEntry = Object.entries(modelMapping).find(
+      ([logicalName]) => logicalName === modelName,
+    )?.[1];
+    const mappedModel = Object.entries(modelEntry ?? {}).find(
+      ([mappedClient]) => mappedClient === client,
+    )?.[1];
 
-    // Otherwise return as-is (might be a direct model ID)
-    return modelName;
+    return mappedModel ?? modelName;
   }
 
   /**

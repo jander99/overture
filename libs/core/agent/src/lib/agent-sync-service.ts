@@ -47,7 +47,7 @@ export class AgentSyncService {
     const agents = await this.discoverAgents(options.projectRoot);
 
     const targetClients =
-      options.clients ||
+      options.clients ??
       (['claude-code', 'copilot-cli', 'opencode'] as ClientName[]);
 
     // 3. Sync each agent
@@ -83,16 +83,22 @@ export class AgentSyncService {
               await this.filesystem.mkdir(targetDir, { recursive: true });
               await this.filesystem.writeFile(targetPath, content);
             }
-            agentResult.clientResults[client] = {
-              success: true,
-              path: targetPath,
+            agentResult.clientResults = {
+              ...agentResult.clientResults,
+              [client]: {
+                success: true,
+                path: targetPath,
+              },
             };
           }
         } catch (error) {
           agentResult.success = false;
-          agentResult.clientResults[client] = {
-            success: false,
-            error: (error as Error).message,
+          agentResult.clientResults = {
+            ...agentResult.clientResults,
+            [client]: {
+              success: false,
+              error: (error as Error).message,
+            },
           };
         }
       }
