@@ -328,7 +328,7 @@ describe('WSL2Detector', () => {
         '/mnt/c/Users/jeff',
       );
 
-      expect(paths).toEqual([]);
+      expect(paths).toStrictEqual([]);
     });
   });
 
