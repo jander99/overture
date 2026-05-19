@@ -69,7 +69,7 @@ export function createMockSyncEngineDeps(): any {
     configLoader: {
       loadUserConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       loadProjectConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
-      mergeConfigs: vi.fn((user, project) => project || user),
+      mergeConfigs: vi.fn((user, project) => project ?? user),
       loadConfig: vi.fn().mockResolvedValue({ version: '1.0', mcp: {} }),
       getMcpSources: vi.fn(() => ({})),
     } as any,

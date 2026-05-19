@@ -115,7 +115,7 @@ describe('@overture/testing', () => {
     it('should build exec result', () => {
       const result = buildExecResult('stdout', 'stderr', 1);
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         stdout: 'stdout',
         stderr: 'stderr',
         exitCode: 1,
@@ -197,7 +197,7 @@ describe('@overture/testing', () => {
 
       expect(adapter.name).toBe('test-client');
       expect(await adapter.detect()).toBe(true);
-      expect(await adapter.readConfig()).toEqual({ test: 'value' });
+      expect(await adapter.readConfig()).toStrictEqual({ test: 'value' });
     });
 
     it('should create detected adapter', async () => {
@@ -229,7 +229,7 @@ describe('@overture/testing', () => {
       await adapter.writeConfig({ test: 'value2' });
 
       expect(adapter.writeHistory).toHaveLength(2);
-      expect(getLastWrittenConfig(adapter)).toEqual({ test: 'value2' });
+      expect(getLastWrittenConfig(adapter)).toStrictEqual({ test: 'value2' });
     });
 
     it('should reset adapter history', async () => {
@@ -298,7 +298,7 @@ describe('@overture/testing', () => {
 
     it('should provide minimal config', () => {
       expect(minimalConfig.version).toBe('2.0');
-      expect(minimalConfig.mcp).toEqual({});
+      expect(minimalConfig.mcp).toStrictEqual({});
     });
   });
 
@@ -309,7 +309,7 @@ describe('@overture/testing', () => {
       });
 
       expect(mcp.command).toBe('npx');
-      expect(mcp.args).toEqual(['-y', 'package']);
+      expect(mcp.args).toStrictEqual(['-y', 'package']);
       expect(mcp.transport).toBe('stdio');
       expect(mcp.version).toBe('1.0.0');
     });
@@ -328,7 +328,7 @@ describe('@overture/testing', () => {
 
       expect(plugin.marketplace).toBe('claude-code-workflows');
       expect(plugin.enabled).toBe(true);
-      expect(plugin.mcps).toEqual(['python-repl']);
+      expect(plugin.mcps).toStrictEqual(['python-repl']);
     });
 
     it('should build sync options', () => {
@@ -434,8 +434,8 @@ describe('@overture/testing', () => {
       const result = buildClientSyncResult(true, ['github'], ['copilot']);
 
       expect(result.success).toBe(true);
-      expect(result.synced).toEqual(['github']);
-      expect(result.skipped).toEqual(['copilot']);
+      expect(result.synced).toStrictEqual(['github']);
+      expect(result.skipped).toStrictEqual(['copilot']);
     });
   });
 
