@@ -208,8 +208,14 @@ describe('Port: OutputPort Interface', () => {
 
         // Assert
         expect(buffer).toHaveLength(3);
-        expect(buffer[0]).toStrictEqual({ level: 'info', message: 'First message' });
-        expect(buffer[1]).toStrictEqual({ level: 'warn', message: 'Second message' });
+        expect(buffer[0]).toStrictEqual({
+          level: 'info',
+          message: 'First message',
+        });
+        expect(buffer[1]).toStrictEqual({
+          level: 'warn',
+          message: 'Second message',
+        });
         expect(buffer[2]).toStrictEqual({
           level: 'error',
           message: 'Third message',

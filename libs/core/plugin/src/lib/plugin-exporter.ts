@@ -267,7 +267,8 @@ export class PluginExporter {
           ([pluginName]) => pluginName === plugin.name,
         )?.[1];
         const existingPluginConfig =
-          typeof existingPluginEntry === 'object' && existingPluginEntry !== null
+          typeof existingPluginEntry === 'object' &&
+          existingPluginEntry !== null
             ? (existingPluginEntry as Record<string, unknown>)
             : {};
 

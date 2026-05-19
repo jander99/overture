@@ -276,7 +276,9 @@ describe('CopilotCliAdapter', () => {
 
       const result = adapter.convertFromOverture(config, 'linux');
       expect(result.mcpServers.python?.command).toBe('uvx');
-      expect(result.mcpServers.python?.args).toStrictEqual(['mcp-server-python']);
+      expect(result.mcpServers.python?.args).toStrictEqual([
+        'mcp-server-python',
+      ]);
     });
 
     it('should handle empty config', () => {

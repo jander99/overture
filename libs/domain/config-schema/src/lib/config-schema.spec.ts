@@ -169,7 +169,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withExclusions);
-      expect(result.clients?.exclude).toStrictEqual(['copilot-cli', 'opencode']);
+      expect(result.clients?.exclude).toStrictEqual([
+        'copilot-cli',
+        'opencode',
+      ]);
     });
 
     it('should accept client inclusions', () => {
@@ -181,7 +184,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withInclusions);
-      expect(result.clients?.include).toStrictEqual(['claude-code', 'opencode']);
+      expect(result.clients?.include).toStrictEqual([
+        'claude-code',
+        'opencode',
+      ]);
     });
 
     it('should reject both exclude and include', () => {

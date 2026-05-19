@@ -151,8 +151,14 @@ describe('ProcessPort', () => {
       await mockPort.exec('git', ['status']);
 
       expect(commandHistory).toHaveLength(2);
-      expect(commandHistory[0]).toStrictEqual({ command: 'npm', args: ['install'] });
-      expect(commandHistory[1]).toStrictEqual({ command: 'git', args: ['status'] });
+      expect(commandHistory[0]).toStrictEqual({
+        command: 'npm',
+        args: ['install'],
+      });
+      expect(commandHistory[1]).toStrictEqual({
+        command: 'git',
+        args: ['status'],
+      });
 
       expect(await mockPort.commandExists('npm')).toBe(true);
       expect(await mockPort.commandExists('invalid')).toBe(false);

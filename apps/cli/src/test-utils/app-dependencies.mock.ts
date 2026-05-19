@@ -114,18 +114,12 @@ export function createMockAppDependencies(): AppDependencies {
       resolveUserConfigPath: vi
         .fn()
         .mockReturnValue('/home/user/.config/overture.yml'),
-      resolveProjectConfigPath: vi
-        .fn()
-        .mockReturnValue(PROJECT_CONFIG_PATH),
-      resolveProjectConfig: vi
-        .fn()
-        .mockReturnValue(PROJECT_CONFIG_PATH),
+      resolveProjectConfigPath: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
+      resolveProjectConfig: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
       getProjectOvertureDir: vi
         .fn()
         .mockReturnValue('/home/user/project/.overture'),
-      getProjectConfigPath: vi
-        .fn()
-        .mockReturnValue(PROJECT_CONFIG_PATH),
+      getProjectConfigPath: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
       joinPaths: vi.fn((...segments: string[]) => segments.join('/')),
       resolveGlobalMcpPath: vi.fn().mockReturnValue(TEST_PATHS.CLAUDE_CONFIG),
       resolveProjectMcpPath: vi

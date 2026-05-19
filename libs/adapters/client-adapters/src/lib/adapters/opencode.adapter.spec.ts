@@ -657,7 +657,9 @@ describe('OpenCodeAdapter', () => {
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
       expect(clientConfig.mcp['test-server'].command).toBe('opencode-cmd');
-      expect(clientConfig.mcp['test-server'].args).toStrictEqual(['opencode-arg']);
+      expect(clientConfig.mcp['test-server'].args).toStrictEqual([
+        'opencode-arg',
+      ]);
       expect(clientConfig.mcp['test-server'].env).toStrictEqual({
         DEFAULT: 'value',
         OVERRIDE: 'overridden',
