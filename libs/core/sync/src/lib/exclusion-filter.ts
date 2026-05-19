@@ -211,11 +211,7 @@ export function validateRequiredMcps(
     }
 
     // Check if MCP would be excluded
-    const result = shouldIncludeMcp(
-      availableMcp,
-      client,
-      platform,
-    );
+    const result = shouldIncludeMcp(availableMcp, client, platform);
     if (!result.included && result.reason) {
       excludedMcps.push({ name: requiredName, reason: result.reason });
     }

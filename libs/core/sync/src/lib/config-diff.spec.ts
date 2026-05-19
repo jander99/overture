@@ -115,8 +115,12 @@ describe('generateDiff', () => {
 
     expect(result.modified[0].fieldChanges).toHaveLength(1);
     expect(result.modified[0].fieldChanges?.[0].field).toBe('args');
-    expect(result.modified[0].fieldChanges?.[0].oldValue).toStrictEqual(['--old']);
-    expect(result.modified[0].fieldChanges?.[0].newValue).toStrictEqual(['--new']);
+    expect(result.modified[0].fieldChanges?.[0].oldValue).toStrictEqual([
+      '--old',
+    ]);
+    expect(result.modified[0].fieldChanges?.[0].newValue).toStrictEqual([
+      '--new',
+    ]);
   });
 
   it('should handle empty configs', () => {

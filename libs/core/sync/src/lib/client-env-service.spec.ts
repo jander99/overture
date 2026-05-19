@@ -147,7 +147,10 @@ describe('expandEnvVarsInClientConfig', () => {
     const result = expandEnvVarsInClientConfig(config, adapter, testEnv);
 
     expect(result.mcpServers['github'].command).toBe('/home/user/mcp-github');
-    expect(result.mcpServers['github'].args).toStrictEqual(['--token', 'secret123']);
+    expect(result.mcpServers['github'].args).toStrictEqual([
+      '--token',
+      'secret123',
+    ]);
     expect(result.mcpServers['filesystem'].args).toContain('/home/user');
   });
 

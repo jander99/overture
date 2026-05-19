@@ -69,7 +69,9 @@ export class AuditService {
     // Collect all MCP names from client configs
     const clientMcps = new Set<string>();
     const collectMcpNames = (config: Record<string, unknown>): void => {
-      for (const name of Object.keys(getRootServers(config, adapter.schemaRootKey))) {
+      for (const name of Object.keys(
+        getRootServers(config, adapter.schemaRootKey),
+      )) {
         clientMcps.add(name);
       }
     };

@@ -138,7 +138,10 @@ export function expandEnvVarsInObject<T extends Record<string, unknown>>(
     }
 
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      return [key, expandEnvVarsInObject(value as Record<string, unknown>, env)] as const;
+      return [
+        key,
+        expandEnvVarsInObject(value as Record<string, unknown>, env),
+      ] as const;
     }
 
     return [key, value] as const;
