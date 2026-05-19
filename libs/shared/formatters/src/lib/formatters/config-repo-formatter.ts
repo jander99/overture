@@ -7,6 +7,8 @@ import type {
 } from '@overture/diagnostics-types';
 import chalk from 'chalk';
 
+type AgentSyncStatus = NonNullable<AgentsCheckResult['syncStatus']>;
+
 /**
  * ConfigRepoFormatter - Formats config repository status
  *
@@ -168,73 +170,94 @@ export class ConfigRepoFormatter {
     scope: string,
     verbose: boolean,
   ): void {
-    // Handle global agents
-    if (agents.globalAgentsDirExists) {
-      if (agents.globalAgentCount > 0) {
-        const hasErrors = agents.globalAgentErrors.length > 0;
-        if (hasErrors) {
-          this.output.warn(
-            `  ${chalk.yellow('⚠')} ${scope} Agents - ${chalk.cyan(agents.globalAgentCount.toString())} valid, ${chalk.red(agents.globalAgentErrors.length.toString())} errors`,
-          );
-        } else {
-          this.output.success(
-            `  ${chalk.green('✓')} ${scope} Agents - ${chalk.cyan(agents.globalAgentCount.toString())} ${agents.globalAgentCount === 1 ? 'agent' : 'agents'} found`,
-          );
-        }
+    this.formatGlobalAgentsStatus(agents, scope, verbose);
+    this.formatProjectAgentsStatus(agents, verbose);
 
-        // Show errors in verbose mode
-        if (verbose && hasErrors) {
-          console.log(`    ${chalk.dim('Validation errors:')}`);
-          for (const error of agents.globalAgentErrors) {
-            console.log(`      ${chalk.red('✗')} ${chalk.dim(error)}`);
-          }
-        }
-      } else {
-        this.output.warn(
-          `  ${chalk.yellow('⚠')} ${scope} Agents directory exists but is empty`,
-        );
-        console.log(
-          `    ${chalk.dim('→')} ${chalk.dim('Add agent YAML files to ' + agents.globalAgentsPath)}`,
-        );
-      }
-    } else {
+    if (agents.syncStatus) {
+      this.formatAgentSyncStatus(agents.syncStatus, verbose);
+    }
+  }
+
+  private formatGlobalAgentsStatus(
+    agents: AgentsCheckResult,
+    scope: string,
+    verbose: boolean,
+  ): void {
+    if (!agents.globalAgentsDirExists) {
       this.output.warn(
         `  ${chalk.yellow('⚠')} ${scope} Agents directory not found`,
       );
       console.log(
         `    ${chalk.dim('→')} ${chalk.dim('Run: mkdir -p ' + agents.globalAgentsPath)}`,
       );
+      return;
     }
 
-    // Handle project agents if they exist
+    if (agents.globalAgentCount === 0) {
+      this.output.warn(
+        `  ${chalk.yellow('⚠')} ${scope} Agents directory exists but is empty`,
+      );
+      console.log(
+        `    ${chalk.dim('→')} ${chalk.dim('Add agent YAML files to ' + agents.globalAgentsPath)}`,
+      );
+      return;
+    }
+
+    this.formatAgentCountStatus(
+      scope,
+      agents.globalAgentCount,
+      agents.globalAgentErrors,
+      verbose,
+    );
+  }
+
+  private formatProjectAgentsStatus(
+    agents: AgentsCheckResult,
+    verbose: boolean,
+  ): void {
     if (
-      agents.projectAgentsPath &&
-      agents.projectAgentsDirExists &&
-      agents.projectAgentCount > 0
+      !agents.projectAgentsPath ||
+      !agents.projectAgentsDirExists ||
+      agents.projectAgentCount === 0
     ) {
-      const hasErrors = agents.projectAgentErrors.length > 0;
-      if (hasErrors) {
-        this.output.warn(
-          `  ${chalk.yellow('⚠')} Project Agents - ${chalk.cyan(agents.projectAgentCount.toString())} valid, ${chalk.red(agents.projectAgentErrors.length.toString())} errors`,
-        );
-      } else {
-        this.output.success(
-          `  ${chalk.green('✓')} Project Agents - ${chalk.cyan(agents.projectAgentCount.toString())} ${agents.projectAgentCount === 1 ? 'agent' : 'agents'} found`,
-        );
-      }
-
-      // Show errors in verbose mode
-      if (verbose && hasErrors) {
-        console.log(`    ${chalk.dim('Validation errors:')}`);
-        for (const error of agents.projectAgentErrors) {
-          console.log(`      ${chalk.red('✗')} ${chalk.dim(error)}`);
-        }
-      }
+      return;
     }
 
-    // Display sync status if available
-    if (agents.syncStatus) {
-      this.formatAgentSyncStatus(agents.syncStatus, verbose);
+    this.formatAgentCountStatus(
+      'Project',
+      agents.projectAgentCount,
+      agents.projectAgentErrors,
+      verbose,
+    );
+  }
+
+  private formatAgentCountStatus(
+    scope: string,
+    count: number,
+    errors: string[],
+    verbose: boolean,
+  ): void {
+    if (errors.length > 0) {
+      this.output.warn(
+        `  ${chalk.yellow('⚠')} ${scope} Agents - ${chalk.cyan(count.toString())} valid, ${chalk.red(errors.length.toString())} errors`,
+      );
+      this.formatAgentValidationErrors(errors, verbose);
+      return;
+    }
+
+    this.output.success(
+      `  ${chalk.green('✓')} ${scope} Agents - ${chalk.cyan(count.toString())} ${count === 1 ? 'agent' : 'agents'} found`,
+    );
+  }
+
+  private formatAgentValidationErrors(errors: string[], verbose: boolean): void {
+    if (!verbose || errors.length === 0) {
+      return;
+    }
+
+    console.log(`    ${chalk.dim('Validation errors:')}`);
+    for (const error of errors) {
+      console.log(`      ${chalk.red('✗')} ${chalk.dim(error)}`);
     }
   }
 
@@ -251,91 +274,136 @@ export class ConfigRepoFormatter {
     syncStatus: AgentsCheckResult['syncStatus'],
     verbose: boolean,
   ): void {
-    if (!syncStatus) return;
-
-    const totalAgents = new Set([
-      ...syncStatus.globalAgents,
-      ...syncStatus.projectAgents,
-    ]).size;
-
-    // Overall sync status
-    if (totalAgents === 0) {
-      return; // No agents to sync
-    }
-
-    if (!syncStatus.isInitialized) {
-      this.output.warn(
-        `  ${chalk.yellow('⚠')} Agent Sync - ${chalk.dim('not initialized')}`,
-      );
-      console.log(
-        `    ${chalk.dim('→')} ${chalk.dim('Run: overture sync --skip-skills to sync agents')}`,
-      );
+    if (!syncStatus || this.getAgentSyncTotal(syncStatus) === 0) {
       return;
     }
 
+    if (!syncStatus.isInitialized) {
+      this.formatAgentSyncNotInitialized();
+      return;
+    }
+
+    if (this.hasAgentsNeedingSync(syncStatus)) {
+      this.formatAgentsNeedingSync(syncStatus, verbose);
+      return;
+    }
+
+    this.formatAgentsInSync(syncStatus, verbose);
+  }
+
+  private getAgentSyncTotal(syncStatus: AgentSyncStatus): number {
+    return new Set([...syncStatus.globalAgents, ...syncStatus.projectAgents]).size;
+  }
+
+  private formatAgentSyncNotInitialized(): void {
+    this.output.warn(
+      `  ${chalk.yellow('⚠')} Agent Sync - ${chalk.dim('not initialized')}`,
+    );
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Run: overture sync --skip-skills to sync agents')}`,
+    );
+  }
+
+  private hasAgentsNeedingSync(syncStatus: AgentSyncStatus): boolean {
+    return syncStatus.outOfSync.length > 0 || syncStatus.onlyInGlobal.length > 0;
+  }
+
+  private formatAgentsNeedingSync(
+    syncStatus: AgentSyncStatus,
+    verbose: boolean,
+  ): void {
     const inSyncCount = syncStatus.inSync.length;
-    const outOfSyncCount = syncStatus.outOfSync.length;
-    const onlyGlobalCount = syncStatus.onlyInGlobal.length;
+    const needSyncCount = syncStatus.outOfSync.length + syncStatus.onlyInGlobal.length;
 
-    // Determine overall status
-    if (outOfSyncCount > 0 || onlyGlobalCount > 0) {
-      this.output.warn(
-        `  ${chalk.yellow('⚠')} Agent Sync - ${chalk.cyan(inSyncCount.toString())} in sync, ${chalk.yellow((outOfSyncCount + onlyGlobalCount).toString())} need sync`,
-      );
+    this.output.warn(
+      `  ${chalk.yellow('⚠')} Agent Sync - ${chalk.cyan(inSyncCount.toString())} in sync, ${chalk.yellow(needSyncCount.toString())} need sync`,
+    );
 
-      // Show details in verbose mode
-      if (verbose) {
-        if (syncStatus.inSync.length > 0) {
-          console.log(`    ${chalk.dim('In sync:')}`);
-          for (const agent of syncStatus.inSync) {
-            console.log(`      ${chalk.green('✓')} ${chalk.dim(agent)}`);
-          }
-        }
+    this.formatAgentSyncDetails(syncStatus, verbose, 'pending');
+    console.log(
+      `    ${chalk.dim('→')} ${chalk.dim('Run: overture sync --skip-skills to update agents')}`,
+    );
+  }
 
-        if (syncStatus.outOfSync.length > 0) {
-          console.log(`    ${chalk.dim('Out of sync (modified):')}`);
-          for (const agent of syncStatus.outOfSync) {
-            console.log(`      ${chalk.yellow('⚠')} ${chalk.dim(agent)}`);
-          }
-        }
+  private formatAgentsInSync(
+    syncStatus: AgentSyncStatus,
+    verbose: boolean,
+  ): void {
+    const inSyncCount = syncStatus.inSync.length;
 
-        if (syncStatus.onlyInGlobal.length > 0) {
-          console.log(`    ${chalk.dim('Not synced yet:')}`);
-          for (const agent of syncStatus.onlyInGlobal) {
-            console.log(`      ${chalk.yellow('○')} ${chalk.dim(agent)}`);
-          }
-        }
+    this.output.success(
+      `  ${chalk.green('✓')} Agent Sync - ${chalk.cyan(inSyncCount.toString())} ${inSyncCount === 1 ? 'agent' : 'agents'} in sync`,
+    );
+    this.formatAgentSyncDetails(syncStatus, verbose, 'synced');
+  }
 
-        if (syncStatus.onlyInProject.length > 0) {
-          console.log(`    ${chalk.dim('Project-only (custom):')}`);
-          for (const agent of syncStatus.onlyInProject) {
-            console.log(`      ${chalk.blue('•')} ${chalk.dim(agent)}`);
-          }
-        }
-      }
+  private formatAgentSyncDetails(
+    syncStatus: AgentSyncStatus,
+    verbose: boolean,
+    mode: 'pending' | 'synced',
+  ): void {
+    if (!verbose) {
+      return;
+    }
 
-      console.log(
-        `    ${chalk.dim('→')} ${chalk.dim('Run: overture sync --skip-skills to update agents')}`,
-      );
-    } else {
-      this.output.success(
-        `  ${chalk.green('✓')} Agent Sync - ${chalk.cyan(inSyncCount.toString())} ${inSyncCount === 1 ? 'agent' : 'agents'} in sync`,
-      );
+    const lists =
+      mode === 'pending'
+        ? this.getPendingAgentSyncLists(syncStatus)
+        : this.getSyncedAgentSyncLists(syncStatus);
 
-      // Show agent list in verbose mode
-      if (verbose && syncStatus.inSync.length > 0) {
-        console.log(`    ${chalk.dim('Synced agents:')}`);
-        for (const agent of syncStatus.inSync) {
-          console.log(`      ${chalk.green('✓')} ${chalk.dim(agent)}`);
-        }
-      }
+    for (const list of lists) {
+      this.formatAgentList(list.title, list.marker, list.agents);
+    }
+  }
 
-      if (verbose && syncStatus.onlyInProject.length > 0) {
-        console.log(`    ${chalk.dim('Project-only (custom):')}`);
-        for (const agent of syncStatus.onlyInProject) {
-          console.log(`      ${chalk.blue('•')} ${chalk.dim(agent)}`);
-        }
-      }
+  private getPendingAgentSyncLists(syncStatus: AgentSyncStatus) {
+    return [
+      { title: 'In sync:', marker: chalk.green('✓'), agents: syncStatus.inSync },
+      {
+        title: 'Out of sync (modified):',
+        marker: chalk.yellow('⚠'),
+        agents: syncStatus.outOfSync,
+      },
+      {
+        title: 'Not synced yet:',
+        marker: chalk.yellow('○'),
+        agents: syncStatus.onlyInGlobal,
+      },
+      {
+        title: 'Project-only (custom):',
+        marker: chalk.blue('•'),
+        agents: syncStatus.onlyInProject,
+      },
+    ];
+  }
+
+  private getSyncedAgentSyncLists(syncStatus: AgentSyncStatus) {
+    return [
+      {
+        title: 'Synced agents:',
+        marker: chalk.green('✓'),
+        agents: syncStatus.inSync,
+      },
+      {
+        title: 'Project-only (custom):',
+        marker: chalk.blue('•'),
+        agents: syncStatus.onlyInProject,
+      },
+    ];
+  }
+
+  private formatAgentList(
+    title: string,
+    marker: string,
+    agents: string[],
+  ): void {
+    if (agents.length === 0) {
+      return;
+    }
+
+    console.log(`    ${chalk.dim(title)}`);
+    for (const agent of agents) {
+      console.log(`      ${marker} ${chalk.dim(agent)}`);
     }
   }
 

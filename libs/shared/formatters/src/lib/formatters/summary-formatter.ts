@@ -114,75 +114,99 @@ export class SummaryFormatter {
    */
   private formatAgentsSummary(result: DiagnosticsResult): void {
     const { agents } = result.configRepo;
-    const { summary } = result;
 
-    // Global agents with count (similar to skills display)
-    const globalAgentsStatus = agents.globalAgentsDirExists
-      ? chalk.green('exists')
-      : chalk.yellow('not found');
-    const globalAgentCountStr =
-      agents.globalAgentsDirExists && agents.globalAgentCount > 0
-        ? chalk.dim(
-            ` (${agents.globalAgentCount} agent${agents.globalAgentCount === 1 ? '' : 's'})`,
-          )
-        : '';
-    const globalErrorsStr =
-      agents.globalAgentErrors.length > 0
-        ? chalk.yellow(
-            ` - ${agents.globalAgentErrors.length} error${agents.globalAgentErrors.length === 1 ? '' : 's'}`,
-          )
-        : '';
-    console.log(
-      `  Global agents:    ${globalAgentsStatus}${globalAgentCountStr}${globalErrorsStr}`,
-    );
+    this.formatAgentDirectorySummary('Global agents', {
+      dirExists: agents.globalAgentsDirExists,
+      count: agents.globalAgentCount,
+      errors: agents.globalAgentErrors,
+    });
 
-    // Project agents (if present)
     if (agents.projectAgentsDirExists || agents.projectAgentCount > 0) {
-      const projectAgentsStatus = agents.projectAgentsDirExists
-        ? chalk.green('exists')
-        : chalk.yellow('not found');
-      const projectAgentCountStr =
-        agents.projectAgentsDirExists && agents.projectAgentCount > 0
-          ? chalk.dim(
-              ` (${agents.projectAgentCount} agent${agents.projectAgentCount === 1 ? '' : 's'})`,
-            )
-          : '';
-      const projectErrorsStr =
-        agents.projectAgentErrors.length > 0
-          ? chalk.yellow(
-              ` - ${agents.projectAgentErrors.length} error${agents.projectAgentErrors.length === 1 ? '' : 's'}`,
-            )
-          : '';
-      console.log(
-        `  Project agents:   ${projectAgentsStatus}${projectAgentCountStr}${projectErrorsStr}`,
-      );
+      this.formatAgentDirectorySummary('Project agents', {
+        dirExists: agents.projectAgentsDirExists,
+        count: agents.projectAgentCount,
+        errors: agents.projectAgentErrors,
+      });
     }
 
-    // Agent sync status (compact summary line)
+    this.formatAgentSyncSummary(result);
+    this.formatModelMappingsSummary(agents);
+  }
+
+  private formatAgentDirectorySummary(
+    label: 'Global agents' | 'Project agents',
+    agentStatus: { dirExists: boolean; count: number; errors: string[] },
+  ): void {
+    const directoryStatus = agentStatus.dirExists
+      ? chalk.green('exists')
+      : chalk.yellow('not found');
+    const countStatus = this.formatAgentCount(agentStatus.dirExists, agentStatus.count);
+    const errorsStatus = this.formatAgentErrors(agentStatus.errors);
+    const labelText = label === 'Global agents' ? 'Global agents:   ' : 'Project agents:  ';
+
+    console.log(`  ${labelText} ${directoryStatus}${countStatus}${errorsStatus}`);
+  }
+
+  private formatAgentCount(dirExists: boolean, count: number): string {
+    if (!dirExists || count === 0) {
+      return '';
+    }
+
+    return chalk.dim(` (${count} agent${count === 1 ? '' : 's'})`);
+  }
+
+  private formatAgentErrors(errors: string[]): string {
+    if (errors.length === 0) {
+      return '';
+    }
+
+    return chalk.yellow(
+      ` - ${errors.length} error${errors.length === 1 ? '' : 's'}`,
+    );
+  }
+
+  private formatAgentSyncSummary(result: DiagnosticsResult): void {
+    const { agents } = result.configRepo;
+    const { summary } = result;
+
     if (
       summary.agentsInSync !== undefined &&
       summary.agentsNeedSync !== undefined
     ) {
-      if (summary.agentsNeedSync > 0) {
-        const syncStatusStr = chalk.yellow(
-          `${summary.agentsInSync} synced, ${summary.agentsNeedSync} need sync`,
-        );
-        console.log(`  Agent sync:       ${syncStatusStr}`);
-      } else if (summary.agentsInSync > 0) {
-        const syncStatusStr = chalk.green(`${summary.agentsInSync} in sync`);
-        console.log(`  Agent sync:       ${syncStatusStr}`);
-      }
-    } else if (agents.syncStatus && !agents.syncStatus.isInitialized) {
-      console.log(`  Agent sync:       ${chalk.yellow('not initialized')}`);
+      this.formatAgentSyncCounts(summary.agentsInSync, summary.agentsNeedSync);
+      return;
     }
 
-    // Model mappings
+    if (agents.syncStatus && !agents.syncStatus.isInitialized) {
+      console.log(`  Agent sync:       ${chalk.yellow('not initialized')}`);
+    }
+  }
+
+  private formatAgentSyncCounts(inSync: number, needSync: number): void {
+    if (needSync > 0) {
+      console.log(
+        `  Agent sync:       ${chalk.yellow(`${inSync} synced, ${needSync} need sync`)}`,
+      );
+      return;
+    }
+
+    if (inSync > 0) {
+      console.log(`  Agent sync:       ${chalk.green(`${inSync} in sync`)}`);
+    }
+  }
+
+  private formatModelMappingsSummary(
+    agents: DiagnosticsResult['configRepo']['agents'],
+  ): void {
     const modelsStatus = agents.modelsConfigExists
-      ? agents.modelsConfigValid
-        ? chalk.green('valid')
-        : chalk.yellow('invalid')
+      ? this.formatExistingModelMappingsStatus(agents.modelsConfigValid)
       : chalk.dim('not configured');
+
     console.log(`  Model mappings:   ${modelsStatus}`);
+  }
+
+  private formatExistingModelMappingsStatus(isValid: boolean): string {
+    return isValid ? chalk.green('valid') : chalk.yellow('invalid');
   }
 
   /**
