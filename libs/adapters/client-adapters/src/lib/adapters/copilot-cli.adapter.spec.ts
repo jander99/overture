@@ -110,13 +110,13 @@ describe('CopilotCliAdapter', () => {
       );
 
       const result = await adapter.readConfig('/test.json');
-      expect(result).toEqual(mockConfig);
+      expect(result).toStrictEqual(mockConfig);
     });
 
     it('should return empty when file missing', async () => {
       vi.mocked(filesystem.exists).mockResolvedValue(false);
       const result = await adapter.readConfig('/missing.json');
-      expect(result).toEqual({ mcpServers: {} });
+      expect(result).toStrictEqual({ mcpServers: {} });
     });
 
     it('should throw on malformed JSON', async () => {
@@ -131,7 +131,7 @@ describe('CopilotCliAdapter', () => {
       vi.mocked(filesystem.exists).mockResolvedValue(true);
       vi.mocked(filesystem.readFile).mockResolvedValue('{}');
       const result = await adapter.readConfig('/test.json');
-      expect(result).toEqual({ mcpServers: {} });
+      expect(result).toStrictEqual({ mcpServers: {} });
     });
 
     it('should handle read errors', async () => {
@@ -146,7 +146,7 @@ describe('CopilotCliAdapter', () => {
       vi.mocked(filesystem.exists).mockResolvedValue(true);
       vi.mocked(filesystem.readFile).mockResolvedValue('{"mcpServers":{}}');
       const result = await adapter.readConfig('/test.json');
-      expect(result).toEqual({ mcpServers: {} });
+      expect(result).toStrictEqual({ mcpServers: {} });
     });
   });
 
@@ -258,7 +258,7 @@ describe('CopilotCliAdapter', () => {
       };
 
       const result = adapter.convertFromOverture(config, 'linux');
-      expect(result.mcpServers.test?.env).toEqual({ KEY: '${VALUE}' });
+      expect(result.mcpServers.test?.env).toStrictEqual({ KEY: '${VALUE}' });
     });
 
     it('should map command and args', () => {
@@ -276,13 +276,13 @@ describe('CopilotCliAdapter', () => {
 
       const result = adapter.convertFromOverture(config, 'linux');
       expect(result.mcpServers.python?.command).toBe('uvx');
-      expect(result.mcpServers.python?.args).toEqual(['mcp-server-python']);
+      expect(result.mcpServers.python?.args).toStrictEqual(['mcp-server-python']);
     });
 
     it('should handle empty config', () => {
       const config: OvertureConfig = { version: '1.0', mcp: {} };
       const result = adapter.convertFromOverture(config, 'linux');
-      expect(result).toEqual({ mcpServers: {} });
+      expect(result).toStrictEqual({ mcpServers: {} });
     });
 
     it('should convert multiple MCPs', () => {
@@ -372,7 +372,7 @@ describe('CopilotCliAdapter', () => {
 
   describe('getBinaryNames', () => {
     it('should return binary names', () => {
-      expect(adapter.getBinaryNames()).toEqual([
+      expect(adapter.getBinaryNames()).toStrictEqual([
         'copilot',
         'github-copilot-cli',
       ]);
@@ -385,12 +385,12 @@ describe('CopilotCliAdapter', () => {
 
   describe('getAppBundlePaths', () => {
     it('should return empty (CLI-only)', () => {
-      expect(adapter.getAppBundlePaths('darwin')).toEqual([]);
+      expect(adapter.getAppBundlePaths('darwin')).toStrictEqual([]);
     });
 
     it('should be empty for all platforms', () => {
-      expect(adapter.getAppBundlePaths('linux')).toEqual([]);
-      expect(adapter.getAppBundlePaths('win32')).toEqual([]);
+      expect(adapter.getAppBundlePaths('linux')).toStrictEqual([]);
+      expect(adapter.getAppBundlePaths('win32')).toStrictEqual([]);
     });
   });
 
