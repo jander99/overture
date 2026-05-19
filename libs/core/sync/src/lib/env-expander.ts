@@ -132,26 +132,19 @@ export function expandEnvVarsInObject<T extends Record<string, unknown>>(
   obj: T,
   env: Record<string, string | undefined> = process.env,
 ): T {
-  const result: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(obj)) {
+  const expandedEntries = Object.entries(obj).map(([key, value]) => {
     if (typeof value === 'string') {
-      result[key] = expandEnvVars(value, env);
-    } else if (
-      typeof value === 'object' &&
-      value !== null &&
-      !Array.isArray(value)
-    ) {
-      result[key] = expandEnvVarsInObject(
-        value as Record<string, unknown>,
-        env,
-      );
-    } else {
-      result[key] = value;
+      return [key, expandEnvVars(value, env)] as const;
     }
-  }
 
-  return result as T;
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return [key, expandEnvVarsInObject(value as Record<string, unknown>, env)] as const;
+    }
+
+    return [key, value] as const;
+  });
+
+  return Object.fromEntries(expandedEntries) as T;
 }
 
 /**

@@ -26,7 +26,7 @@ describe('compareMcpConfigs', () => {
     expect(result.managed).toHaveLength(2);
     expect(result.unmanaged).toHaveLength(0);
     expect(result.all).toHaveLength(2);
-    expect(result.managed.map((m) => m.name).sort()).toEqual([
+    expect(result.managed.map((m) => m.name).sort()).toStrictEqual([
       'filesystem',
       'github',
     ]);
@@ -44,7 +44,7 @@ describe('compareMcpConfigs', () => {
     expect(result.managed).toHaveLength(0);
     expect(result.unmanaged).toHaveLength(2);
     expect(result.all).toHaveLength(2);
-    expect(result.unmanaged.map((m) => m.name).sort()).toEqual([
+    expect(result.unmanaged.map((m) => m.name).sort()).toStrictEqual([
       'custom',
       'slack',
     ]);
@@ -104,17 +104,17 @@ describe('compareMcpConfigs', () => {
     const mcp = result.managed[0];
 
     expect(mcp.command).toBe('mcp-github');
-    expect(mcp.args).toEqual(['--token', '${TOKEN}']);
-    expect(mcp.env).toEqual({ GITHUB_TOKEN: '${GITHUB_TOKEN}' });
+    expect(mcp.args).toStrictEqual(['--token', '${TOKEN}']);
+    expect(mcp.env).toStrictEqual({ GITHUB_TOKEN: '${GITHUB_TOKEN}' });
     expect(mcp.transport).toBe('stdio');
   });
 
   it('should handle empty inputs', () => {
     const result = compareMcpConfigs({}, {});
 
-    expect(result.all).toEqual([]);
-    expect(result.managed).toEqual([]);
-    expect(result.unmanaged).toEqual([]);
+    expect(result.all).toStrictEqual([]);
+    expect(result.managed).toStrictEqual([]);
+    expect(result.unmanaged).toStrictEqual([]);
   });
 
   it('should use default transport for client MCPs using "type" field', () => {
@@ -144,7 +144,7 @@ describe('compareMcpConfigs', () => {
 
     const result = compareMcpConfigs({}, clientMcps);
 
-    expect(result.unmanaged[0].args).toEqual([]);
+    expect(result.unmanaged[0].args).toStrictEqual([]);
   });
 });
 
@@ -161,7 +161,7 @@ describe('getUnmanagedMcps', () => {
 
     const result = getUnmanagedMcps(clientConfig, overtureMcps);
 
-    expect(Object.keys(result).sort()).toEqual(['custom', 'slack']);
+    expect(Object.keys(result).sort()).toStrictEqual(['custom', 'slack']);
     expect(result['github']).toBeUndefined();
   });
 
@@ -186,7 +186,7 @@ describe('getUnmanagedMcps', () => {
 
     const result = getUnmanagedMcps(clientConfig, {});
 
-    expect(Object.keys(result).sort()).toEqual(['custom', 'slack']);
+    expect(Object.keys(result).sort()).toStrictEqual(['custom', 'slack']);
   });
 
   it('should preserve original client config for unmanaged MCPs', () => {
@@ -200,7 +200,7 @@ describe('getUnmanagedMcps', () => {
 
     const result = getUnmanagedMcps(clientConfig, {});
 
-    expect(result['slack']).toEqual(clientConfig['slack']);
+    expect(result['slack']).toStrictEqual(clientConfig['slack']);
   });
 
   it('should handle empty client config', () => {

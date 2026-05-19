@@ -154,7 +154,7 @@ describe('expandEnvVarsInObject', () => {
       },
       { HOME: '/home/user', USER: 'jeff' },
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       path: '/home/user/.config',
       user: 'jeff',
     });
@@ -169,7 +169,7 @@ describe('expandEnvVarsInObject', () => {
       },
       { HOME: '/home' },
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       count: 42,
       enabled: true,
       path: '/home',
@@ -185,7 +185,7 @@ describe('expandEnvVarsInObject', () => {
       },
       { TOKEN: 'secret' },
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       outer: {
         inner: 'secret',
       },
@@ -199,14 +199,14 @@ describe('expandEnvVarsInObject', () => {
       },
       {},
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       items: ['a', 'b', 'c'],
     });
   });
 
   it('should handle empty objects', () => {
     const result = expandEnvVarsInObject({}, { HOME: '/home' });
-    expect(result).toEqual({});
+    expect(result).toStrictEqual({});
   });
 
   it('should handle null values', () => {
@@ -217,7 +217,7 @@ describe('expandEnvVarsInObject', () => {
       } as Record<string, string | null>,
       { HOME: '/home' },
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       value: null,
       path: '/home',
     });
@@ -247,27 +247,27 @@ describe('hasEnvVars', () => {
 describe('extractEnvVarNames', () => {
   it('should extract single env var name', () => {
     const result = extractEnvVarNames('${HOME}');
-    expect(result).toEqual(['HOME']);
+    expect(result).toStrictEqual(['HOME']);
   });
 
   it('should extract multiple env var names', () => {
     const result = extractEnvVarNames('${HOME}/.config/${USER}');
-    expect(result).toEqual(['HOME', 'USER']);
+    expect(result).toStrictEqual(['HOME', 'USER']);
   });
 
   it('should extract names from vars with defaults', () => {
     const result = extractEnvVarNames('${TOKEN:-default}');
-    expect(result).toEqual(['TOKEN']);
+    expect(result).toStrictEqual(['TOKEN']);
   });
 
   it('should return empty array for no env vars', () => {
     const result = extractEnvVarNames('plain string');
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should handle duplicate variable references', () => {
     const result = extractEnvVarNames('${HOME}${HOME}');
-    expect(result).toEqual(['HOME', 'HOME']);
+    expect(result).toStrictEqual(['HOME', 'HOME']);
   });
 });
 
@@ -277,32 +277,32 @@ describe('validateEnvVars', () => {
       HOME: '/home',
       USER: 'jeff',
     });
-    expect(result).toEqual({ valid: true, missing: [] });
+    expect(result).toStrictEqual({ valid: true, missing: [] });
   });
 
   it('should report missing vars', () => {
     const result = validateEnvVars('${HOME}/${MISSING}', { HOME: '/home' });
-    expect(result).toEqual({ valid: false, missing: ['MISSING'] });
+    expect(result).toStrictEqual({ valid: false, missing: ['MISSING'] });
   });
 
   it('should not report vars with defaults as missing', () => {
     const result = validateEnvVars('${MISSING:-default}', {});
-    expect(result).toEqual({ valid: true, missing: [] });
+    expect(result).toStrictEqual({ valid: true, missing: [] });
   });
 
   it('should report multiple missing vars', () => {
     const result = validateEnvVars('${A}${B}${C}', { B: 'value' });
-    expect(result).toEqual({ valid: false, missing: ['A', 'C'] });
+    expect(result).toStrictEqual({ valid: false, missing: ['A', 'C'] });
   });
 
   it('should return valid for strings without env vars', () => {
     const result = validateEnvVars('plain string', {});
-    expect(result).toEqual({ valid: true, missing: [] });
+    expect(result).toStrictEqual({ valid: true, missing: [] });
   });
 
   it('should handle mix of missing and defaulted vars', () => {
     const result = validateEnvVars('${MISSING}${DEFAULTED:-value}', {});
-    expect(result).toEqual({ valid: false, missing: ['MISSING'] });
+    expect(result).toStrictEqual({ valid: false, missing: ['MISSING'] });
   });
 });
 
@@ -315,21 +315,21 @@ describe('expandEnvVarsInArgs', () => {
         HOME: '/home/user',
       },
     );
-    expect(result).toEqual(['--token', 'secret', '--home', '/home/user']);
+    expect(result).toStrictEqual(['--token', 'secret', '--home', '/home/user']);
   });
 
   it('should handle empty array', () => {
     const result = expandEnvVarsInArgs([], { TOKEN: 'value' });
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should preserve args without env vars', () => {
     const result = expandEnvVarsInArgs(['--verbose', 'true'], {});
-    expect(result).toEqual(['--verbose', 'true']);
+    expect(result).toStrictEqual(['--verbose', 'true']);
   });
 
   it('should handle args with defaults', () => {
     const result = expandEnvVarsInArgs(['${PORT:-8080}'], {});
-    expect(result).toEqual(['8080']);
+    expect(result).toStrictEqual(['8080']);
   });
 });
