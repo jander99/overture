@@ -147,8 +147,7 @@ mcp:
       expect(output).toMatch(/valid|success|ok/i);
     });
 
-    it.skip('should successfully run init command', () => {
-      // TODO: Fix init command bug - pathResolver.resolveProjectConfig is not a function
+    it('should successfully run init command', () => {
       const output = runCli('init --force');
 
       expect(output).toMatch(/initialized|created/i);
@@ -232,8 +231,7 @@ mcp:
       expect(output).toMatch(/config|not found|missing|error/i);
     });
 
-    it.skip('should error on init in directory with existing config', () => {
-      // TODO: Fix init command bug - pathResolver.resolveProjectConfig is not a function
+    it('should error on init in directory with existing config', () => {
       runCli('init --force');
 
       const output = runCli('init', { expectError: true });

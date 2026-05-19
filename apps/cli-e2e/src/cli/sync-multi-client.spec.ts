@@ -30,6 +30,19 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 
+function readJsonFile(path: string): unknown {
+  const content = readFileSync(path, 'utf8');
+  return JSON.parse(content);
+}
+
+function _hasBackup(dir: string, client: string): boolean {
+  if (!existsSync(dir)) return false;
+  const files = readdirSync(dir);
+  return files.some(
+    (file) => file.startsWith(`${client}-backup-`) && file.endsWith('.json'),
+  );
+}
+
 describe('Sync Multi-Client E2E Tests', () => {
   let testDir: string;
   let cliPath: string;
@@ -147,25 +160,6 @@ describe('Sync Multi-Client E2E Tests', () => {
   }
 
   /**
-   * Helper: Read and parse JSON file
-   */
-  function readJsonFile(path: string): unknown {
-    const content = readFileSync(path, 'utf8');
-    return JSON.parse(content);
-  }
-
-  /**
-   * Helper: Check if backup exists
-   */
-  function _hasBackup(dir: string, client: string): boolean {
-    if (!existsSync(dir)) return false;
-    const files = readdirSync(dir);
-    return files.some(
-      (f) => f.startsWith(`${client}-backup-`) && f.endsWith('.json'),
-    );
-  }
-
-  /**
    * TEST 1: Full Sync Workflow
    *
    * Tests complete sync with user and project configs:
@@ -176,6 +170,7 @@ describe('Sync Multi-Client E2E Tests', () => {
    * - Verifies backups created
    */
   describe('Test 1: Full Sync Workflow', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- pending update for current sync output and client detection behavior
     it.skip('should sync user + project configs to all clients', () => {
       // Create user config with 3 global MCPs
       const userConfig = `
@@ -325,6 +320,7 @@ mcp:
    * - Does not create backups
    */
   describe('Test 3: Dry-Run Mode', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- pending update for current dry-run output contract
     it.skip('should preview changes without applying', () => {
       // Setup config
       const config = `
@@ -393,6 +389,7 @@ mcp:
    * - Verifies correct filtering
    */
   describe('Test 4: Scope Filtering', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- --scope is not implemented by the current sync command
     it.skip('should filter by scope when requested', () => {
       // Create user config with global MCP
       const userConfig = `
@@ -460,6 +457,7 @@ mcp:
    * - Verifies correct filtering
    */
   describe('Test 5: Platform-Specific Sync', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- --platform is not implemented by the current sync command
     it.skip('should filter MCPs by platform', () => {
       // Create config with platform exclusions
       const config = `
@@ -610,6 +608,7 @@ mcp:
    * - Verify only changes applied
    */
   describe('Test 8: Incremental Updates', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- pending update for current multi-client sync behavior
     it.skip('should apply only changed MCPs', () => {
       // Initial config with 2 MCPs
       const initialConfig = `
@@ -683,6 +682,7 @@ mcp:
    * - Verify expanded in client config
    */
   describe('Test 10: Environment Variable Expansion', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests -- generated client configs currently preserve env references
     it.skip('should expand environment variables in client configs', () => {
       // Create config with env var reference
       const config = `
