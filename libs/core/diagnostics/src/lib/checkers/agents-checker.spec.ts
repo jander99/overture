@@ -512,8 +512,8 @@ describe('AgentsChecker', () => {
     });
 
     it('should validate complex models.yaml structure', async () => {
-      mockFilesystem.exists.mockImplementation(
-        async (path: string) => path.includes('models.yaml'),
+      mockFilesystem.exists.mockImplementation(async (path: string) =>
+        path.includes('models.yaml'),
       );
       mockFilesystem.readFile.mockResolvedValue(`
 default_model: claude-3-opus
@@ -536,8 +536,8 @@ models:
     });
 
     it('should reject models.yaml with primitive value', async () => {
-      mockFilesystem.exists.mockImplementation(
-        async (path: string) => path.includes('models.yaml'),
+      mockFilesystem.exists.mockImplementation(async (path: string) =>
+        path.includes('models.yaml'),
       );
       mockFilesystem.readFile.mockResolvedValue('just a string');
 
@@ -555,8 +555,8 @@ models:
     });
 
     it('should handle empty models.yaml file', async () => {
-      mockFilesystem.exists.mockImplementation(
-        async (path: string) => path.includes('models.yaml'),
+      mockFilesystem.exists.mockImplementation(async (path: string) =>
+        path.includes('models.yaml'),
       );
       mockFilesystem.readFile.mockResolvedValue('');
 
@@ -574,8 +574,8 @@ models:
     });
 
     it('should handle models.yaml with null content', async () => {
-      mockFilesystem.exists.mockImplementation(
-        async (path: string) => path.includes('models.yaml'),
+      mockFilesystem.exists.mockImplementation(async (path: string) =>
+        path.includes('models.yaml'),
       );
       mockFilesystem.readFile.mockResolvedValue('null');
 
@@ -627,8 +627,14 @@ models:
 
         expect(result.syncStatus).toBeDefined();
         expect(result.syncStatus?.isInitialized).toBe(true);
-        expect(result.syncStatus?.globalAgents).toStrictEqual(['agent1', 'agent2']);
-        expect(result.syncStatus?.projectAgents).toStrictEqual(['agent1', 'agent2']);
+        expect(result.syncStatus?.globalAgents).toStrictEqual([
+          'agent1',
+          'agent2',
+        ]);
+        expect(result.syncStatus?.projectAgents).toStrictEqual([
+          'agent1',
+          'agent2',
+        ]);
         expect(result.syncStatus?.inSync).toStrictEqual(['agent1', 'agent2']);
         expect(result.syncStatus?.outOfSync).toStrictEqual([]);
         expect(result.syncStatus?.onlyInGlobal).toStrictEqual([]);
@@ -723,7 +729,9 @@ models:
         );
 
         expect(result.syncStatus).toBeDefined();
-        expect(result.syncStatus?.onlyInProject).toStrictEqual(['custom-agent']);
+        expect(result.syncStatus?.onlyInProject).toStrictEqual([
+          'custom-agent',
+        ]);
       });
 
       it('should handle .yml extension in sync detection', async () => {

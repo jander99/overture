@@ -63,7 +63,7 @@ export class ClientsChecker {
         typeof configPath === 'string'
           ? configPath
           : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (configPath as any)?.user ?? undefined;
+            ((configPath as any)?.user ?? undefined);
 
       const configValid = configPathStr
         ? await this.validateConfigFile(configPathStr)
