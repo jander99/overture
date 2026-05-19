@@ -250,7 +250,10 @@ export class ConfigRepoFormatter {
     );
   }
 
-  private formatAgentValidationErrors(errors: string[], verbose: boolean): void {
+  private formatAgentValidationErrors(
+    errors: string[],
+    verbose: boolean,
+  ): void {
     if (!verbose || errors.length === 0) {
       return;
     }
@@ -292,7 +295,8 @@ export class ConfigRepoFormatter {
   }
 
   private getAgentSyncTotal(syncStatus: AgentSyncStatus): number {
-    return new Set([...syncStatus.globalAgents, ...syncStatus.projectAgents]).size;
+    return new Set([...syncStatus.globalAgents, ...syncStatus.projectAgents])
+      .size;
   }
 
   private formatAgentSyncNotInitialized(): void {
@@ -305,7 +309,9 @@ export class ConfigRepoFormatter {
   }
 
   private hasAgentsNeedingSync(syncStatus: AgentSyncStatus): boolean {
-    return syncStatus.outOfSync.length > 0 || syncStatus.onlyInGlobal.length > 0;
+    return (
+      syncStatus.outOfSync.length > 0 || syncStatus.onlyInGlobal.length > 0
+    );
   }
 
   private formatAgentsNeedingSync(
@@ -313,7 +319,8 @@ export class ConfigRepoFormatter {
     verbose: boolean,
   ): void {
     const inSyncCount = syncStatus.inSync.length;
-    const needSyncCount = syncStatus.outOfSync.length + syncStatus.onlyInGlobal.length;
+    const needSyncCount =
+      syncStatus.outOfSync.length + syncStatus.onlyInGlobal.length;
 
     this.output.warn(
       `  ${chalk.yellow('⚠')} Agent Sync - ${chalk.cyan(inSyncCount.toString())} in sync, ${chalk.yellow(needSyncCount.toString())} need sync`,
@@ -358,7 +365,11 @@ export class ConfigRepoFormatter {
 
   private getPendingAgentSyncLists(syncStatus: AgentSyncStatus) {
     return [
-      { title: 'In sync:', marker: chalk.green('✓'), agents: syncStatus.inSync },
+      {
+        title: 'In sync:',
+        marker: chalk.green('✓'),
+        agents: syncStatus.inSync,
+      },
       {
         title: 'Out of sync (modified):',
         marker: chalk.yellow('⚠'),

@@ -140,11 +140,17 @@ export class SummaryFormatter {
     const directoryStatus = agentStatus.dirExists
       ? chalk.green('exists')
       : chalk.yellow('not found');
-    const countStatus = this.formatAgentCount(agentStatus.dirExists, agentStatus.count);
+    const countStatus = this.formatAgentCount(
+      agentStatus.dirExists,
+      agentStatus.count,
+    );
     const errorsStatus = this.formatAgentErrors(agentStatus.errors);
-    const labelText = label === 'Global agents' ? 'Global agents:   ' : 'Project agents:  ';
+    const labelText =
+      label === 'Global agents' ? 'Global agents:   ' : 'Project agents:  ';
 
-    console.log(`  ${labelText} ${directoryStatus}${countStatus}${errorsStatus}`);
+    console.log(
+      `  ${labelText} ${directoryStatus}${countStatus}${errorsStatus}`,
+    );
   }
 
   private formatAgentCount(dirExists: boolean, count: number): string {
