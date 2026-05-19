@@ -268,7 +268,7 @@ export function createUserCommand(deps: AppDependencies): Command {
         const configDir = pathResolver.getUserConfigDir();
 
         // Check if config already exists
-        if (filesystem.fileExists(userConfigPath) && !options.force) {
+        if ((await filesystem.exists(userConfigPath)) && !options.force) {
           throw Object.assign(
             new Error(
               `User configuration already exists at ${userConfigPath}. Use --force to overwrite or edit the file directly`,
@@ -324,8 +324,8 @@ export function createUserCommand(deps: AppDependencies): Command {
         }
 
         // Step 7: Create config directory if needed
-        if (!filesystem.directoryExists(configDir)) {
-          filesystem.createDirectory(configDir);
+        if (!(await filesystem.exists(configDir))) {
+          await filesystem.mkdir(configDir, { recursive: true });
           output.debug(`Created directory: ${configDir}`);
         }
 

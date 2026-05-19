@@ -96,8 +96,9 @@ describe('user command', () => {
       vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue(
         '/home/user/.config',
       );
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('overture.yml'),
+      );
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
     });
 
@@ -131,7 +132,7 @@ describe('user command', () => {
 
     it('should not overwrite existing config without --force', async () => {
       // Arrange
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
 
       const command = createUserCommand(deps);
 
@@ -145,7 +146,7 @@ describe('user command', () => {
 
     it('should overwrite existing config with --force flag', async () => {
       // Arrange
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
       vi.mocked(Prompts.multiSelect).mockResolvedValue(['filesystem']);
       vi.mocked(Prompts.confirm).mockResolvedValue(true);
 
@@ -213,8 +214,7 @@ describe('user command', () => {
 
     it('should create config directory if it does not exist', async () => {
       // Arrange
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.createDirectory).mockReturnValue(undefined);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(false);
       vi.mocked(Prompts.multiSelect).mockResolvedValue(['filesystem']);
       vi.mocked(Prompts.confirm).mockResolvedValue(true);
 
@@ -224,9 +224,9 @@ describe('user command', () => {
       await command.parseAsync(['node', 'user', 'init']);
 
       // Assert
-      expect(deps.filesystem.createDirectory).toHaveBeenCalledWith(
-        '/home/user/.config',
-      );
+      expect(deps.filesystem.mkdir).toHaveBeenCalledWith('/home/user/.config', {
+        recursive: true,
+      });
     });
 
     it('should handle validation errors gracefully', async () => {
@@ -503,8 +503,9 @@ describe('user command', () => {
       vi.mocked(deps.pathResolver.getUserConfigDir).mockReturnValue(
         '/home/user/.config',
       );
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('overture.yml'),
+      );
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
     });
 
