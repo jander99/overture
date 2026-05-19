@@ -377,7 +377,7 @@ describe('NodeProcessAdapter', () => {
       const results = await adapter.commandExistsBatch(commands);
 
       const resultKeys = Array.from(results.keys());
-      expect(resultKeys).toEqual(commands);
+      expect(resultKeys).toStrictEqual(commands);
     });
   });
 

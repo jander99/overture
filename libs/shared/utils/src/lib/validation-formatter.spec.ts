@@ -232,7 +232,7 @@ describe('Validation Formatter', () => {
       expect(summary.totalErrors).toBe(1);
       expect(summary.totalWarnings).toBe(0);
       expect(summary.isValid).toBe(false);
-      expect(summary.errors).toEqual(errors);
+      expect(summary.errors).toStrictEqual(errors);
     });
 
     it('should create summary with warnings', () => {
@@ -245,7 +245,7 @@ describe('Validation Formatter', () => {
       expect(summary.totalErrors).toBe(0);
       expect(summary.totalWarnings).toBe(1);
       expect(summary.isValid).toBe(true);
-      expect(summary.warnings).toEqual(warnings);
+      expect(summary.warnings).toStrictEqual(warnings);
     });
 
     it('should create summary with passed checks', () => {
@@ -253,7 +253,7 @@ describe('Validation Formatter', () => {
 
       const summary = createValidationSummary([], [], passed);
 
-      expect(summary.passed).toEqual(passed);
+      expect(summary.passed).toStrictEqual(passed);
       expect(summary.isValid).toBe(true);
     });
   });

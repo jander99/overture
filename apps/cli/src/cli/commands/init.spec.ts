@@ -67,14 +67,9 @@ describe('init command', () => {
 
   describe('config initialization', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml',
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('config.yaml'),
       );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture',
-      );
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
     });
 
@@ -83,8 +78,13 @@ describe('init command', () => {
 
       await command.parseAsync(['node', 'init']);
 
-      expect(deps.pathResolver.resolveProjectConfig).toHaveBeenCalledWith(
+      expect(deps.pathResolver.joinPaths).toHaveBeenCalledWith(
         '/home/user/project',
+        '.overture',
+      );
+      expect(deps.pathResolver.joinPaths).toHaveBeenCalledWith(
+        '/home/user/project/.overture',
+        'config.yaml',
       );
       expect(deps.filesystem.writeFile).toHaveBeenCalledWith(
         '/home/user/project/.overture/config.yaml',
@@ -122,25 +122,28 @@ describe('init command', () => {
     });
 
     it('should create .overture directory if missing', async () => {
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(false);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(false);
 
       const command = createInitCommand(deps);
 
       await command.parseAsync(['node', 'init']);
 
-      expect(deps.filesystem.createDirectory).toHaveBeenCalledWith(
+      expect(deps.filesystem.mkdir).toHaveBeenCalledWith(
         '/home/user/project/.overture',
+        { recursive: true },
       );
     });
 
     it('should not create directory if it exists', async () => {
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
 
       const command = createInitCommand(deps);
 
       await command.parseAsync(['node', 'init']);
 
-      expect(deps.filesystem.createDirectory).not.toHaveBeenCalled();
+      expect(deps.filesystem.mkdir).not.toHaveBeenCalled();
     });
 
     it('should display next steps after creation', async () => {
@@ -170,17 +173,11 @@ describe('init command', () => {
 
   describe('existing config handling', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml',
-      );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture',
-      );
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
     });
 
     it('should not overwrite existing config without --force', async () => {
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
 
       const command = createInitCommand(deps);
 
@@ -198,7 +195,7 @@ describe('init command', () => {
     });
 
     it('should overwrite existing config with --force flag', async () => {
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(true);
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
 
       const command = createInitCommand(deps);
@@ -214,14 +211,9 @@ describe('init command', () => {
 
   describe('error handling', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml',
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('config.yaml'),
       );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture',
-      );
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
     });
 
     it('should handle write errors gracefully', async () => {
@@ -238,10 +230,10 @@ describe('init command', () => {
     });
 
     it('should handle directory creation errors', async () => {
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.createDirectory).mockImplementation(() => {
-        throw new Error('Cannot create directory');
-      });
+      vi.mocked(deps.filesystem.exists).mockResolvedValue(false);
+      vi.mocked(deps.filesystem.mkdir).mockRejectedValue(
+        new Error('Cannot create directory'),
+      );
 
       const command = createInitCommand(deps);
 
@@ -254,14 +246,9 @@ describe('init command', () => {
 
   describe('config structure validation', () => {
     beforeEach(() => {
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        '/home/user/project/.overture/config.yaml',
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('config.yaml'),
       );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/project/.overture',
-      );
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
     });
 
@@ -298,8 +285,9 @@ describe('init command', () => {
 
   describe('edge cases - special characters in paths', () => {
     beforeEach(() => {
-      vi.mocked(deps.filesystem.fileExists).mockReturnValue(false);
-      vi.mocked(deps.filesystem.directoryExists).mockReturnValue(true);
+      vi.mocked(deps.filesystem.exists).mockImplementation(
+        async (path) => !path.endsWith('config.yaml'),
+      );
       vi.mocked(deps.filesystem.writeFile).mockResolvedValue(undefined);
     });
 
@@ -307,12 +295,6 @@ describe('init command', () => {
       // Arrange
       const pathWithSpaces =
         '/home/user/my project folder/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        pathWithSpaces,
-      );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my project folder/.overture',
-      );
       cwdSpy.mockReturnValue('/home/user/my project folder');
 
       const command = createInitCommand(deps);
@@ -336,12 +318,6 @@ describe('init command', () => {
     it('should handle project paths with Unicode characters', async () => {
       // Arrange
       const unicodePath = '/home/user/プロジェクト/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        unicodePath,
-      );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/プロジェクト/.overture',
-      );
       cwdSpy.mockReturnValue('/home/user/プロジェクト');
 
       const command = createInitCommand(deps);
@@ -362,12 +338,6 @@ describe('init command', () => {
     it('should handle project paths with emoji characters', async () => {
       // Arrange
       const emojiPath = '/home/user/my-app-🚀/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        emojiPath,
-      );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my-app-🚀/.overture',
-      );
       cwdSpy.mockReturnValue('/home/user/my-app-🚀');
 
       const command = createInitCommand(deps);
@@ -388,12 +358,6 @@ describe('init command', () => {
     it('should handle paths with special characters (dashes, underscores, dots)', async () => {
       // Arrange
       const specialPath = '/home/user/my-app_v1.2.3/.overture/config.yaml';
-      vi.mocked(deps.pathResolver.resolveProjectConfig).mockReturnValue(
-        specialPath,
-      );
-      vi.mocked(deps.pathResolver.getProjectOvertureDir).mockReturnValue(
-        '/home/user/my-app_v1.2.3/.overture',
-      );
       cwdSpy.mockReturnValue('/home/user/my-app_v1.2.3');
 
       const command = createInitCommand(deps);

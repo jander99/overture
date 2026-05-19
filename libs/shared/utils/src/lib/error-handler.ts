@@ -466,21 +466,25 @@ export class ErrorHandler {
     }
 
     // Try each suggestion strategy in order of specificity
+    const suggestions = [
+      this.suggestConfigNotFound(error, context),
+      this.suggestYamlError(error),
+      this.suggestPermissionError(error),
+      this.suggestValidationError(error),
+      this.suggestTransportError(error),
+      this.suggestDependencyError(error),
+      this.suggestDiskError(error),
+      this.suggestFileError(error, context),
+      this.suggestNetworkError(error),
+      this.suggestLockError(error),
+      this.suggestClientError(error),
+      this.suggestProjectTypeError(error),
+      this.suggestMcpError(error),
+      this.suggestCommandError(context, error),
+    ];
+
     return (
-      this.suggestConfigNotFound(error, context) ||
-      this.suggestYamlError(error) ||
-      this.suggestPermissionError(error) ||
-      this.suggestValidationError(error) ||
-      this.suggestTransportError(error) ||
-      this.suggestDependencyError(error) ||
-      this.suggestDiskError(error) ||
-      this.suggestFileError(error, context) ||
-      this.suggestNetworkError(error) ||
-      this.suggestLockError(error) ||
-      this.suggestClientError(error) ||
-      this.suggestProjectTypeError(error) ||
-      this.suggestMcpError(error) ||
-      this.suggestCommandError(context, error) ||
+      suggestions.find((suggestion) => suggestion !== undefined) ??
       'For detailed troubleshooting, see docs/error-messages.md\nRun with DEBUG=1 for verbose output: DEBUG=1 overture <command>'
     );
   }

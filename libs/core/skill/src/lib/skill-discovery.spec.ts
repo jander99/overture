@@ -72,13 +72,13 @@ describe('SkillDiscovery', () => {
       const skills = await discovery.discoverSkills();
 
       expect(skills).toHaveLength(2);
-      expect(skills[0]).toEqual({
+      expect(skills[0]).toStrictEqual({
         name: 'debugging',
         path: `${skillsDir}/debugging/SKILL.md`,
         directoryPath: `${skillsDir}/debugging`,
         description: 'Advanced debugging techniques.',
       });
-      expect(skills[1]).toEqual({
+      expect(skills[1]).toStrictEqual({
         name: 'code-review',
         path: `${skillsDir}/code-review/SKILL.md`,
         directoryPath: `${skillsDir}/code-review`,
@@ -91,7 +91,7 @@ describe('SkillDiscovery', () => {
 
       const skills = await discovery.discoverSkills();
 
-      expect(skills).toEqual([]);
+      expect(skills).toStrictEqual([]);
     });
 
     it('should return empty array when skills directory is empty', async () => {
@@ -100,7 +100,7 @@ describe('SkillDiscovery', () => {
 
       const skills = await discovery.discoverSkills();
 
-      expect(skills).toEqual([]);
+      expect(skills).toStrictEqual([]);
     });
 
     it('should extract description from frontmatter if present', async () => {
@@ -253,7 +253,7 @@ This is the second paragraph.`;
 
       const skill = await discovery.getSkill('debugging');
 
-      expect(skill).toEqual({
+      expect(skill).toStrictEqual({
         name: 'debugging',
         path: skillPath,
         directoryPath: skillDir,

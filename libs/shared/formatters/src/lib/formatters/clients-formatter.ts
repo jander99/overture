@@ -65,7 +65,7 @@ export class ClientsFormatter {
    */
   private formatFoundClient(client: ClientCheckResult, verbose: boolean): void {
     const versionStr = client.version ? chalk.dim(` (${client.version})`) : '';
-    const pathStr = client.binaryPath || client.appBundlePath || '';
+    const pathStr = client.binaryPath ?? client.appBundlePath ?? '';
     const wsl2Tag =
       client.source === 'wsl2-fallback' ? chalk.cyan(' [WSL2: Windows]') : '';
 

@@ -57,6 +57,26 @@ export interface ConfigDiff {
 /**
  * Categorize keys into added, removed, and common
  */
+function getRecordEntry(
+  record: Record<string, unknown>,
+  targetKey: string,
+): unknown {
+  return Object.entries(record).find(([key]) => key === targetKey)?.[1];
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getRootRecord(
+  config: ClientMcpConfig,
+  rootKey: 'mcpServers' | 'servers' | 'mcp',
+): Record<string, unknown> {
+  return toRecord(getRecordEntry(config, rootKey));
+}
+
 function categorizeKeys(
   oldKeys: Set<string>,
   newKeys: Set<string>,
@@ -87,13 +107,8 @@ export function generateDiff(
   newConfig: ClientMcpConfig,
   rootKey: 'mcpServers' | 'servers' | 'mcp' = 'mcpServers',
 ): ConfigDiff {
-  // rootKey comes from method parameters - validated with Object.hasOwn
-
-  const oldServers =
-    (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
-
-  const newServers =
-    (Object.hasOwn(newConfig, rootKey) ? newConfig[rootKey] : {}) || {};
+  const oldServers = getRootRecord(oldConfig, rootKey);
+  const newServers = getRootRecord(newConfig, rootKey);
 
   const oldKeys = new Set(Object.keys(oldServers));
   const newKeys = new Set(Object.keys(newServers));
@@ -104,15 +119,8 @@ export function generateDiff(
 
   // Check common keys for modifications
   for (const key of common) {
-    // key comes from categorizeKeys() - safe to check in servers objects
-
-    const oldValue = Object.hasOwn(oldServers, key)
-      ? oldServers[key]
-      : undefined;
-
-    const newValue = Object.hasOwn(newServers, key)
-      ? newServers[key]
-      : undefined;
+    const oldValue = getRecordEntry(oldServers, key);
+    const newValue = getRecordEntry(newServers, key);
 
     if (isEqual(oldValue, newValue)) {
       unchanged.push(key);
@@ -147,14 +155,8 @@ export function generateDiff(
 function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
   const changes: FieldChange[] = [];
 
-  const oldRecord =
-    oldObj && typeof oldObj === 'object'
-      ? (oldObj as Record<string, unknown>)
-      : {};
-  const newRecord =
-    newObj && typeof newObj === 'object'
-      ? (newObj as Record<string, unknown>)
-      : {};
+  const oldRecord = toRecord(oldObj);
+  const newRecord = toRecord(newObj);
 
   const allFields = new Set([
     ...Object.keys(oldRecord),
@@ -162,15 +164,8 @@ function detectFieldChanges(oldObj: unknown, newObj: unknown): FieldChange[] {
   ]);
 
   for (const field of allFields) {
-    // field comes from Object.keys() - safe to check in record objects
-
-    const oldValue = Object.hasOwn(oldRecord, field)
-      ? oldRecord[field]
-      : undefined;
-
-    const newValue = Object.hasOwn(newRecord, field)
-      ? newRecord[field]
-      : undefined;
+    const oldValue = getRecordEntry(oldRecord, field);
+    const newValue = getRecordEntry(newRecord, field);
 
     if (!isEqual(oldValue, newValue)) {
       changes.push({ field, oldValue, newValue });
@@ -194,7 +189,7 @@ function isEqual(a: unknown, b: unknown): boolean {
 
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
-    return a.every((val, idx) => isEqual(val, b[idx]));
+    return a.every((val, idx) => isEqual(val, b.at(idx)));
   }
 
   if (typeof a === 'object' && typeof b === 'object') {
@@ -203,14 +198,9 @@ function isEqual(a: unknown, b: unknown): boolean {
     const keysA = Object.keys(objA);
     const keysB = Object.keys(objB);
     if (keysA.length !== keysB.length) return false;
-    return keysA.every((key) => {
-      // key comes from Object.keys(objA) - safe to check in both objects
-
-      return isEqual(
-        Object.hasOwn(objA, key) ? objA[key] : undefined,
-        Object.hasOwn(objB, key) ? objB[key] : undefined,
-      );
-    });
+    return keysA.every((key) =>
+      isEqual(getRecordEntry(objA, key), getRecordEntry(objB, key)),
+    );
   }
 
   return false;

@@ -65,7 +65,7 @@ describe('validateMcpTransport', () => {
     const adapter = createMockAdapter('claude-code', ['stdio', 'sse']);
     const result = validateMcpTransport('github', 'stdio', adapter);
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       mcpName: 'github',
       transport: 'stdio',
       supported: true,
@@ -77,7 +77,7 @@ describe('validateMcpTransport', () => {
     const adapter = createMockAdapter('claude-code', ['stdio']);
     const result = validateMcpTransport('api-server', 'http', adapter);
 
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       mcpName: 'api-server',
       transport: 'http',
       supported: false,
@@ -105,7 +105,7 @@ describe('validateAllTransports', () => {
     const adapter = createMockAdapter('claude-code', ['stdio']);
     const results = validateAllTransports({}, adapter);
 
-    expect(results).toEqual([]);
+    expect(results).toStrictEqual([]);
   });
 });
 
@@ -135,14 +135,14 @@ describe('getTransportWarnings', () => {
 
     const warnings = getTransportWarnings(mcps, adapter);
 
-    expect(warnings).toEqual([]);
+    expect(warnings).toStrictEqual([]);
   });
 
   it('should return empty array for empty MCPs', () => {
     const adapter = createMockAdapter('claude-code', ['stdio']);
     const warnings = getTransportWarnings({}, adapter);
 
-    expect(warnings).toEqual([]);
+    expect(warnings).toStrictEqual([]);
   });
 });
 
@@ -157,7 +157,7 @@ describe('filterByTransport', () => {
 
     const filtered = filterByTransport(mcps, adapter);
 
-    expect(Object.keys(filtered)).toEqual(['github', 'memory']);
+    expect(Object.keys(filtered)).toStrictEqual(['github', 'memory']);
     expect(filtered['api']).toBeUndefined();
   });
 
@@ -182,7 +182,7 @@ describe('filterByTransport', () => {
 
     const filtered = filterByTransport(mcps, adapter);
 
-    expect(Object.keys(filtered)).toEqual(['github', 'api']);
+    expect(Object.keys(filtered)).toStrictEqual(['github', 'api']);
   });
 });
 
@@ -210,7 +210,7 @@ describe('getTransportValidationSummary', () => {
     expect(summary.total).toBe(0);
     expect(summary.supported).toBe(0);
     expect(summary.unsupported).toBe(0);
-    expect(summary.warnings).toEqual([]);
+    expect(summary.warnings).toStrictEqual([]);
   });
 });
 

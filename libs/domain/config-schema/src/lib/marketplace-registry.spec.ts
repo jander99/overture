@@ -211,7 +211,7 @@ describe('MarketplaceRegistry', () => {
       const marketplaces2 = MarketplaceRegistry.getAllKnown();
 
       expect(marketplaces1).not.toBe(marketplaces2);
-      expect(marketplaces1).toEqual(marketplaces2);
+      expect(marketplaces1).toStrictEqual(marketplaces2);
     });
   });
 

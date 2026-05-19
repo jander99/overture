@@ -68,8 +68,8 @@ describe('expandEnvVarsInMcpConfig', () => {
     const result = expandEnvVarsInMcpConfig(mcpConfig, adapter, testEnv);
 
     expect(result.command).toBe('/home/user/bin/mcp-server');
-    expect(result.args).toEqual(['--token', 'ghp_test123']);
-    expect(result.env).toEqual({ API: 'https://api.example.com' });
+    expect(result.args).toStrictEqual(['--token', 'ghp_test123']);
+    expect(result.env).toStrictEqual({ API: 'https://api.example.com' });
   });
 
   it('should not expand env vars when client has native support', () => {
@@ -96,7 +96,7 @@ describe('expandEnvVarsInMcpConfig', () => {
     const result = expandEnvVarsInMcpConfig(mcpConfig, adapter, testEnv);
 
     expect(result.command).toBe('mcp-server');
-    expect(result.args).toEqual(['--verbose']);
+    expect(result.args).toStrictEqual(['--verbose']);
   });
 
   it('should handle MCP config without args', () => {
@@ -119,7 +119,7 @@ describe('expandEnvVarsInMcpConfig', () => {
 
     const result = expandEnvVarsInMcpConfig(mcpConfig, adapter, testEnv);
 
-    expect(result.args).toEqual(['default-value']);
+    expect(result.args).toStrictEqual(['default-value']);
   });
 });
 
@@ -147,7 +147,10 @@ describe('expandEnvVarsInClientConfig', () => {
     const result = expandEnvVarsInClientConfig(config, adapter, testEnv);
 
     expect(result.mcpServers['github'].command).toBe('/home/user/mcp-github');
-    expect(result.mcpServers['github'].args).toEqual(['--token', 'secret123']);
+    expect(result.mcpServers['github'].args).toStrictEqual([
+      '--token',
+      'secret123',
+    ]);
     expect(result.mcpServers['filesystem'].args).toContain('/home/user');
   });
 
@@ -191,7 +194,7 @@ describe('expandEnvVarsInClientConfig', () => {
 
     const result = expandEnvVarsInClientConfig(config, adapter, testEnv);
 
-    expect(result.mcpServers).toEqual({});
+    expect(result.mcpServers).toStrictEqual({});
   });
 
   it('should handle missing root key in config', () => {
@@ -200,7 +203,7 @@ describe('expandEnvVarsInClientConfig', () => {
 
     const result = expandEnvVarsInClientConfig(config, adapter, testEnv);
 
-    expect(result.mcpServers).toEqual({});
+    expect(result.mcpServers).toStrictEqual({});
   });
 });
 
@@ -214,7 +217,7 @@ describe('getClientsNeedingExpansion', () => {
 
     const result = getClientsNeedingExpansion(clients);
 
-    expect(result).toEqual(['vscode', 'jetbrains']);
+    expect(result).toStrictEqual(['vscode', 'jetbrains']);
   });
 
   it('should return empty array when no clients need expansion', () => {
@@ -225,12 +228,12 @@ describe('getClientsNeedingExpansion', () => {
 
     const result = getClientsNeedingExpansion(clients);
 
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should handle empty client list', () => {
     const result = getClientsNeedingExpansion([]);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 });
 
@@ -244,7 +247,7 @@ describe('getClientsWithNativeSupport', () => {
 
     const result = getClientsWithNativeSupport(clients);
 
-    expect(result).toEqual(['claude-code', 'cursor']);
+    expect(result).toStrictEqual(['claude-code', 'cursor']);
   });
 
   it('should return empty array when all clients need expansion', () => {
@@ -255,11 +258,11 @@ describe('getClientsWithNativeSupport', () => {
 
     const result = getClientsWithNativeSupport(clients);
 
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should handle empty client list', () => {
     const result = getClientsWithNativeSupport([]);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 });

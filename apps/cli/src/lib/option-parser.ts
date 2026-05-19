@@ -72,23 +72,19 @@ export function parseOptions<T>(
 function coerceOptions(
   options: Record<string, unknown>,
 ): Record<string, unknown> {
-  const coerced: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(options)) {
-    if (typeof value === 'string') {
+  return Object.fromEntries(
+    Object.entries(options).map(([key, value]) => {
       if (value === 'true') {
-        coerced[key] = true;
-      } else if (value === 'false') {
-        coerced[key] = false;
-      } else {
-        coerced[key] = value;
+        return [key, true];
       }
-    } else {
-      coerced[key] = value;
-    }
-  }
 
-  return coerced;
+      if (value === 'false') {
+        return [key, false];
+      }
+
+      return [key, value];
+    }),
+  );
 }
 
 /**

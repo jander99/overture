@@ -142,7 +142,7 @@ describe('NodeFilesystemAdapter', () => {
 
       const result = await adapter.readdir('/path/to/dir');
 
-      expect(result).toEqual(entries);
+      expect(result).toStrictEqual(entries);
       expect(fs.readdir).toHaveBeenCalledWith('/path/to/dir');
     });
 
@@ -153,7 +153,7 @@ describe('NodeFilesystemAdapter', () => {
 
       const result = await adapter.readdir('/empty/dir');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should throw error if path is not a directory', async () => {
@@ -181,7 +181,7 @@ describe('NodeFilesystemAdapter', () => {
       expect(result.isFile()).toBe(true);
       expect(result.isDirectory()).toBe(false);
       expect(result.size).toBe(1024);
-      expect(result.mtime).toEqual(new Date('2025-01-01'));
+      expect(result.mtime).toStrictEqual(new Date('2025-01-01'));
     });
 
     it('should return directory stats', async () => {

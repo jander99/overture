@@ -48,7 +48,7 @@ export function createSkillCommand(deps: AppDependencies): Command {
 
         for (const skill of skills) {
           const name = skill.name.padEnd(18);
-          const description = skill.description || '(no description)';
+          const description = skill.description ?? '(no description)';
           console.log(`${name}${description}`);
 
           if (options.source) {

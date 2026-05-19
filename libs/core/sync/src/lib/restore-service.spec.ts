@@ -241,7 +241,7 @@ describe('RestoreService', () => {
         '2025-01-15T10-00-00-000Z',
       );
 
-      expect(result).toEqual(backupData);
+      expect(result).toStrictEqual(backupData);
     });
 
     it('should return null if backup not found', async () => {
@@ -325,8 +325,8 @@ describe('RestoreService', () => {
       );
 
       expect(result.hasChanges).toBe(false);
-      expect(result.added).toEqual([]);
-      expect(result.removed).toEqual([]);
+      expect(result.added).toStrictEqual([]);
+      expect(result.removed).toStrictEqual([]);
     });
 
     it('should handle missing current config', async () => {
@@ -350,7 +350,7 @@ describe('RestoreService', () => {
 
       expect(result.hasChanges).toBe(true);
       expect(result.added).toContain('github');
-      expect(result.currentMcps).toEqual([]);
+      expect(result.currentMcps).toStrictEqual([]);
     });
 
     it('should return error if backup not found', async () => {

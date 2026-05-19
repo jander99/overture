@@ -394,8 +394,8 @@ export function buildSyncResult(
   const successfulClients = clients.filter((c) => c.success).length;
   const failedClients = clients.length - successfulClients;
 
-  const allSynced = clients.flatMap((c) => c.synced || []);
-  const allSkipped = clients.flatMap((c) => c.skipped || []);
+  const allSynced = clients.flatMap((c) => c.synced);
+  const allSkipped = clients.flatMap((c) => c.skipped);
 
   return {
     success,

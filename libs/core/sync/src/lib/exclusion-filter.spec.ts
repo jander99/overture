@@ -164,7 +164,7 @@ describe('filterMcpsForClient', () => {
 
     const filtered = filterMcpsForClient(mcps, adapter, 'linux');
 
-    expect(Object.keys(filtered)).toEqual(['allowed']);
+    expect(Object.keys(filtered)).toStrictEqual(['allowed']);
   });
 
   it('should return empty object when all MCPs filtered', () => {
@@ -188,7 +188,7 @@ describe('filterMcpsForClient', () => {
 
     const filtered = filterMcpsForClient(mcps, adapter, 'linux');
 
-    expect(Object.keys(filtered)).toEqual(['github', 'api']);
+    expect(Object.keys(filtered)).toStrictEqual(['github', 'api']);
   });
 });
 
@@ -204,7 +204,7 @@ describe('getExcludedMcps', () => {
     const excluded = getExcludedMcps(mcps, adapter, 'linux');
 
     expect(excluded).toHaveLength(2);
-    expect(excluded.map((e) => e.name).sort()).toEqual([
+    expect(excluded.map((e) => e.name).sort()).toStrictEqual([
       'excludedClient',
       'excludedTransport',
     ]);
@@ -219,7 +219,7 @@ describe('getExcludedMcps', () => {
 
     const excluded = getExcludedMcps(mcps, adapter, 'linux');
 
-    expect(excluded).toEqual([]);
+    expect(excluded).toStrictEqual([]);
   });
 });
 
@@ -269,8 +269,8 @@ describe('validateRequiredMcps', () => {
     );
 
     expect(result.valid).toBe(true);
-    expect(result.missingMcps).toEqual([]);
-    expect(result.excludedMcps).toEqual([]);
+    expect(result.missingMcps).toStrictEqual([]);
+    expect(result.excludedMcps).toStrictEqual([]);
   });
 
   it('should report missing MCPs', () => {
@@ -287,7 +287,7 @@ describe('validateRequiredMcps', () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.missingMcps).toEqual(['missing']);
+    expect(result.missingMcps).toStrictEqual(['missing']);
   });
 
   it('should report excluded required MCPs', () => {

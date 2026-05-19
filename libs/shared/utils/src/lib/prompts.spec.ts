@@ -113,7 +113,7 @@ describe('Prompts', () => {
         { name: 'Option C', value: 'option-c', checked: true },
       ]);
 
-      expect(result).toEqual(['option-a', 'option-c']);
+      expect(result).toStrictEqual(['option-a', 'option-c']);
       expect(mockPrompt).toHaveBeenCalledWith([
         expect.objectContaining({
           type: 'checkbox',
@@ -135,7 +135,7 @@ describe('Prompts', () => {
         { name: 'Option A', value: 'option-a' },
       ]);
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
   });
 

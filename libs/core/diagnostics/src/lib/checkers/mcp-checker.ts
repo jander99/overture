@@ -24,7 +24,7 @@ export class McpChecker {
     mergedConfig: OvertureConfig | null,
     mcpSources: Record<string, string>,
   ): Promise<McpCheckResult> {
-    const mcpConfig = mergedConfig?.mcp || {};
+    const mcpConfig = mergedConfig?.mcp ?? {};
     const mcpEntries = Object.entries(mcpConfig);
 
     // Extract all commands for batch checking

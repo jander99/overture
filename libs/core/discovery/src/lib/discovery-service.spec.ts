@@ -17,27 +17,27 @@ import {
   expandTilde,
 } from './test-helpers.js';
 
+function createTestDeps(
+  overrides: Partial<DiscoveryServiceDeps> = {},
+): DiscoveryServiceDeps {
+  const fs = createMockFilesystem();
+  const { fileExists, readFile, readDir, isDirectory } =
+    createFilesystemFunctions(fs);
+
+  return {
+    processPort: createMockProcessPort(),
+    environmentPort: createMockEnvironmentPort('linux'),
+    fileExists,
+    readFile,
+    readDir,
+    isDirectory,
+    joinPath,
+    expandTilde,
+    ...overrides,
+  };
+}
+
 describe('DiscoveryService', () => {
-  function createTestDeps(
-    overrides: Partial<DiscoveryServiceDeps> = {},
-  ): DiscoveryServiceDeps {
-    const fs = createMockFilesystem();
-    const { fileExists, readFile, readDir, isDirectory } =
-      createFilesystemFunctions(fs);
-
-    return {
-      processPort: createMockProcessPort(),
-      environmentPort: createMockEnvironmentPort('linux'),
-      fileExists,
-      readFile,
-      readDir,
-      isDirectory,
-      joinPath,
-      expandTilde,
-      ...overrides,
-    };
-  }
-
   describe('discoverAll', () => {
     it('should discover all clients and return report', async () => {
       const execResults = new Map([
@@ -297,7 +297,7 @@ describe('DiscoveryService', () => {
       const newConfig = { enabled: false };
       service.updateConfig(newConfig);
 
-      expect(service.getConfig()).toEqual(newConfig);
+      expect(service.getConfig()).toStrictEqual(newConfig);
     });
   });
 });

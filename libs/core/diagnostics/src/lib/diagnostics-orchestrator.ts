@@ -68,7 +68,7 @@ export class DiagnosticsOrchestrator {
    * @returns Complete diagnostics result (never throws)
    */
   async runDiagnostics(
-    options: DiagnosticsOptions = {},
+    _options: DiagnosticsOptions = {},
   ): Promise<DiagnosticsResult> {
     try {
       // Step 1: Get platform and project root

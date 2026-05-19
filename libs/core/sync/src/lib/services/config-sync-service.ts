@@ -38,7 +38,7 @@ export class ConfigSyncService {
     const warnings: string[] = [];
 
     const detectedProjectRoot =
-      projectRoot || this.deps.pathResolver.findProjectRoot();
+      projectRoot ?? this.deps.pathResolver.findProjectRoot();
 
     const userConfig = await this.deps.configLoader.loadUserConfig();
     const projectConfig = detectedProjectRoot

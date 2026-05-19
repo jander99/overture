@@ -214,7 +214,7 @@ mcp:
 
       const merged = loader.mergeConfigs(userConfig, null);
 
-      expect(merged).toEqual(userConfig);
+      expect(merged).toStrictEqual(userConfig);
     });
 
     it('should merge MCP servers with project overriding user', () => {
@@ -277,7 +277,7 @@ mcp:
       const merged = loader.mergeConfigs(userConfig, projectConfig);
 
       expect(merged.mcp?.github?.command).toBe('project-github-server');
-      expect(merged.mcp?.github?.args).toEqual(['--project']);
+      expect(merged.mcp?.github?.args).toStrictEqual(['--project']);
     });
 
     it('should merge client settings', () => {

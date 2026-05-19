@@ -66,7 +66,7 @@ describe('AuditService', () => {
 
       const result = await service.auditClient(adapter, config, 'linux');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should return unmanaged MCPs from single config path', async () => {
@@ -79,7 +79,7 @@ describe('AuditService', () => {
 
       const result = await service.auditClient(adapter, config, 'linux');
 
-      expect(result.sort()).toEqual(['custom', 'slack']);
+      expect(result.sort()).toStrictEqual(['custom', 'slack']);
     });
 
     it('should return unmanaged MCPs from user/project config paths', async () => {
@@ -107,7 +107,7 @@ describe('AuditService', () => {
 
       const result = await service.auditClient(adapter, config, 'linux');
 
-      expect(result.sort()).toEqual(['memory', 'slack']);
+      expect(result.sort()).toStrictEqual(['memory', 'slack']);
     });
 
     it('should return empty array when all MCPs are managed', async () => {
@@ -119,7 +119,7 @@ describe('AuditService', () => {
 
       const result = await service.auditClient(adapter, config, 'linux');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should return empty array when client has no MCPs', async () => {
@@ -128,7 +128,7 @@ describe('AuditService', () => {
 
       const result = await service.auditClient(adapter, config, 'linux');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
   });
 
@@ -150,8 +150,8 @@ describe('AuditService', () => {
         'linux',
       );
 
-      expect(result['claude-code']).toEqual(['slack']);
-      expect(result['copilot-cli']).toEqual(['custom']);
+      expect(result['claude-code']).toStrictEqual(['slack']);
+      expect(result['copilot-cli']).toStrictEqual(['custom']);
     });
 
     it('should skip clients with no unmanaged MCPs', async () => {
@@ -171,7 +171,7 @@ describe('AuditService', () => {
       );
 
       expect(result['claude-code']).toBeUndefined();
-      expect(result['copilot-cli']).toEqual(['custom']);
+      expect(result['copilot-cli']).toStrictEqual(['custom']);
     });
 
     it('should return empty object when all clients are fully managed', async () => {
@@ -197,7 +197,7 @@ describe('AuditService', () => {
 
       const result = service.compareConfigs(clientMcps, overtureMcps);
 
-      expect(result.sort()).toEqual(['custom', 'slack']);
+      expect(result.sort()).toStrictEqual(['custom', 'slack']);
     });
 
     it('should return empty array when all MCPs managed', () => {
@@ -206,7 +206,7 @@ describe('AuditService', () => {
 
       const result = service.compareConfigs(clientMcps, overtureMcps);
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should handle empty client MCPs', () => {
@@ -215,7 +215,7 @@ describe('AuditService', () => {
 
       const result = service.compareConfigs(clientMcps, overtureMcps);
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should handle empty Overture MCPs', () => {
@@ -224,7 +224,7 @@ describe('AuditService', () => {
 
       const result = service.compareConfigs(clientMcps, overtureMcps);
 
-      expect(result.sort()).toEqual(['github', 'slack']);
+      expect(result.sort()).toStrictEqual(['github', 'slack']);
     });
   });
 
@@ -238,7 +238,7 @@ describe('AuditService', () => {
 
       const result = service.generateSuggestions(unmanagedByClient);
 
-      expect(result).toEqual([
+      expect(result).toStrictEqual([
         'overture user add mcp custom',
         'overture user add mcp github',
         'overture user add mcp slack',
@@ -254,7 +254,7 @@ describe('AuditService', () => {
 
       const result = service.generateSuggestions(unmanagedByClient);
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should deduplicate MCPs across clients', () => {
@@ -266,7 +266,7 @@ describe('AuditService', () => {
 
       const result = service.generateSuggestions(unmanagedByClient);
 
-      expect(result).toEqual(['overture user add mcp slack']);
+      expect(result).toStrictEqual(['overture user add mcp slack']);
     });
   });
 });

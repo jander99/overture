@@ -15,6 +15,8 @@ import {
   TEST_ALL_CLIENTS,
 } from './test-constants.js';
 
+const PROJECT_CONFIG_PATH = '/home/user/project/.overture/config.yaml';
+
 /**
  * Create a mock AppDependencies container for testing
  *
@@ -112,18 +114,13 @@ export function createMockAppDependencies(): AppDependencies {
       resolveUserConfigPath: vi
         .fn()
         .mockReturnValue('/home/user/.config/overture.yml'),
-      resolveProjectConfigPath: vi
-        .fn()
-        .mockReturnValue('/home/user/project/.overture/config.yaml'),
-      resolveProjectConfig: vi
-        .fn()
-        .mockReturnValue('/home/user/project/.overture/config.yaml'),
+      resolveProjectConfigPath: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
+      resolveProjectConfig: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
       getProjectOvertureDir: vi
         .fn()
         .mockReturnValue('/home/user/project/.overture'),
-      getProjectConfigPath: vi
-        .fn()
-        .mockReturnValue('/home/user/project/.overture/config.yaml'),
+      getProjectConfigPath: vi.fn().mockReturnValue(PROJECT_CONFIG_PATH),
+      joinPaths: vi.fn((...segments: string[]) => segments.join('/')),
       resolveGlobalMcpPath: vi.fn().mockReturnValue(TEST_PATHS.CLAUDE_CONFIG),
       resolveProjectMcpPath: vi
         .fn()

@@ -155,7 +155,7 @@ describe('Port: OutputPort Interface', () => {
         consoleOutput.error('Critical failure');
 
         // Assert
-        expect(messages).toEqual([
+        expect(messages).toStrictEqual([
           'INFO: Starting operation',
           'SUCCESS: Operation completed',
           'WARN: Minor issue detected',
@@ -180,7 +180,7 @@ describe('Port: OutputPort Interface', () => {
         prefixedOutput.error('Error message');
 
         // Assert
-        expect(messages).toEqual([
+        expect(messages).toStrictEqual([
           '[i] Info message',
           '[✓] Success message',
           '[!] Warning message',
@@ -208,9 +208,15 @@ describe('Port: OutputPort Interface', () => {
 
         // Assert
         expect(buffer).toHaveLength(3);
-        expect(buffer[0]).toEqual({ level: 'info', message: 'First message' });
-        expect(buffer[1]).toEqual({ level: 'warn', message: 'Second message' });
-        expect(buffer[2]).toEqual({
+        expect(buffer[0]).toStrictEqual({
+          level: 'info',
+          message: 'First message',
+        });
+        expect(buffer[1]).toStrictEqual({
+          level: 'warn',
+          message: 'Second message',
+        });
+        expect(buffer[2]).toStrictEqual({
           level: 'error',
           message: 'Third message',
         });
@@ -240,7 +246,7 @@ describe('Port: OutputPort Interface', () => {
         expect(errors).toHaveLength(1);
         expect(errors[0].message).toBe('Error 1');
         expect(infos).toHaveLength(2);
-        expect(infos.map((e) => e.message)).toEqual(['Info 1', 'Info 2']);
+        expect(infos.map((e) => e.message)).toStrictEqual(['Info 1', 'Info 2']);
       });
     });
 
@@ -374,7 +380,7 @@ describe('Port: OutputPort Interface', () => {
         output.info('ℹ Information');
 
         // Assert
-        expect(messages).toEqual([
+        expect(messages).toStrictEqual([
           '✓ Operation successful',
           '✗ Operation failed',
           'ℹ Information',
@@ -467,7 +473,7 @@ describe('Port: OutputPort Interface', () => {
         mockOutput.success('Recovered');
 
         // Assert
-        expect(calls).toEqual([
+        expect(calls).toStrictEqual([
           'info:Starting',
           'warn:Warning detected',
           'error:Error occurred',

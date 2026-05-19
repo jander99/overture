@@ -30,7 +30,7 @@ async function findBackupToRestore(
   }
 
   const backups = await backupService.listBackups(client);
-  const backup = backups.find((b) => b.timestamp === timestamp) || null;
+  const backup = backups.find((b) => b.timestamp === timestamp) ?? null;
 
   if (!backup) {
     output.error(`Backup not found: ${client} at ${timestamp}`);

@@ -60,18 +60,14 @@ export function createAuditCommand(deps: AppDependencies): Command {
         const platform = pathResolver.getPlatform();
 
         // Determine which clients to audit
-        if (parsedOptions.client) {
-          // Audit specific client
-          await auditSingleClient(
-            deps,
-            parsedOptions.client,
-            overtureConfig,
-            platform,
-          );
-        } else {
-          // Audit all installed clients
-          await auditAllInstalledClients(deps, overtureConfig, platform);
-        }
+        await (parsedOptions.client
+          ? auditSingleClient(
+              deps,
+              parsedOptions.client,
+              overtureConfig,
+              platform,
+            )
+          : auditAllInstalledClients(deps, overtureConfig, platform));
       } catch (error) {
         const verbose =
           process.env.DEBUG === '1' || process.env.DEBUG === 'true';

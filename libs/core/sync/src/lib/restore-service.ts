@@ -162,7 +162,7 @@ export class RestoreService {
       }
 
       // Check for valid MCP server structure
-      const servers = parsed.mcpServers || parsed.servers;
+      const servers = parsed.mcpServers ?? parsed.servers;
       if (typeof servers !== 'object' || servers === null) {
         return 'Invalid backup: MCP servers must be an object';
       }
@@ -245,7 +245,7 @@ export class RestoreService {
         await this.deps.filesystem.readFile(backup.path),
       );
       const backupServers =
-        backupContent.mcpServers || backupContent.servers || {};
+        backupContent.mcpServers ?? backupContent.servers ?? {};
       const backupMcps = Object.keys(backupServers);
 
       // Read current config (if exists)
@@ -255,7 +255,7 @@ export class RestoreService {
           await this.deps.filesystem.readFile(currentPath),
         );
         const currentServers =
-          currentContent.mcpServers || currentContent.servers || {};
+          currentContent.mcpServers ?? currentContent.servers ?? {};
         currentMcps = Object.keys(currentServers);
       }
 

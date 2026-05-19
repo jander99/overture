@@ -297,7 +297,7 @@ describe('Process Lock', () => {
 
       const info = getLockInfo(mockGetLockFilePath);
 
-      expect(info).toEqual(lockData);
+      expect(info).toStrictEqual(lockData);
     });
 
     it('should return null if lock does not exist', () => {

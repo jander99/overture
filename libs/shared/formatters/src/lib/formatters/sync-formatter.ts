@@ -51,8 +51,8 @@ export class SyncFormatter {
     }
 
     const sortedMcpNames = Array.from(allMcpNames).sort((a, b) => {
-      const sourceA = mcpSourceMap.get(a) || 'project';
-      const sourceB = mcpSourceMap.get(b) || 'project';
+      const sourceA = mcpSourceMap.get(a) ?? 'project';
+      const sourceB = mcpSourceMap.get(b) ?? 'project';
       if (sourceA === sourceB) {
         return a.localeCompare(b);
       }
@@ -81,7 +81,7 @@ export class SyncFormatter {
 
     const rows: string[] = [];
     for (const mcpName of sortedMcpNames) {
-      const source = mcpSourceMap.get(mcpName) || 'project';
+      const source = mcpSourceMap.get(mcpName) ?? 'project';
       const sourceDisplay = source === 'global' ? 'Global' : 'Project';
 
       const row = [
@@ -151,7 +151,7 @@ export class SyncFormatter {
         continue;
       }
       const versionStr = detection.version ? ` (v${detection.version})` : '';
-      const configPath = detection.configPath || clientResult.configPath;
+      const configPath = detection.configPath ?? clientResult.configPath;
       this.output.success(
         `${clientResult.client}${versionStr} → ${configPath}`,
       );

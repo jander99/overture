@@ -296,7 +296,7 @@ describe('skill command', () => {
       );
       // Path should not be printed when --source is not provided
       // (the path is part of the skill object but not printed in table format)
-      expect(pathCalls.length).toBe(0);
+      expect(pathCalls).toHaveLength(0);
     });
   });
 

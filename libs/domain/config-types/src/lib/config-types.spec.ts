@@ -25,7 +25,7 @@ describe('config-types', () => {
 
       expect(config).toBeDefined();
       expect(config.version).toBe('1.0');
-      expect(config.mcp).toEqual({});
+      expect(config.mcp).toStrictEqual({});
     });
 
     it('should accept configuration with MCP servers', () => {

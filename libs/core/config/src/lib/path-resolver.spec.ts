@@ -287,7 +287,7 @@ describe('PathResolver', () => {
   describe('getClientConfigPath', () => {
     it('should return paths for claude-code', () => {
       const result = resolver.getClientConfigPath('claude-code');
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         user: '/home/user/.claude.json',
         project: '/home/user/project/.mcp.json',
       });

@@ -102,10 +102,12 @@ export function extractEnvVars(value: string): Array<{
     // Parse variable name and optional default value
     const validMatch = content.match(VALID_VAR_NAME_PATTERN);
     if (validMatch) {
+      const defaultValue = validMatch.at(2);
+
       vars.push({
         name: validMatch[1],
-        hasDefault: validMatch[2] !== undefined,
-        defaultValue: validMatch[2],
+        hasDefault: content.includes(':-'),
+        defaultValue,
       });
     } else {
       // Invalid syntax - still extract for error reporting
@@ -142,8 +144,8 @@ export function validateEnvVarSyntax(value: string): {
   error?: string;
 } {
   // Check for unclosed ${
-  const openCount = (value.match(/\$\{/g) || []).length;
-  const closeCount = (value.match(/\}/g) || []).length;
+  const openCount = (value.match(/\$\{/g) ?? []).length;
+  const closeCount = (value.match(/\}/g) ?? []).length;
 
   if (openCount > closeCount) {
     return {
@@ -444,9 +446,7 @@ export function getEnvVarValidationSummary(
   // Count total env vars
   let total = 0;
   for (const mcpConfig of Object.values(config.mcp)) {
-    if (mcpConfig.env) {
-      total += Object.keys(mcpConfig.env).length;
-    }
+    total += Object.keys(mcpConfig.env).length;
     if (mcpConfig.clients?.overrides) {
       for (const override of Object.values(mcpConfig.clients.overrides)) {
         if (override.env) {

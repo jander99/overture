@@ -118,7 +118,7 @@ describe('@overture/client-adapters', () => {
       registry.register(adapter);
 
       const names = registry.getAllNames();
-      expect(names).toEqual(['claude-code']);
+      expect(names).toStrictEqual(['claude-code']);
     });
 
     it('should clear all adapters', () => {
@@ -193,7 +193,7 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should have claude binary name', () => {
-      expect(adapter.getBinaryNames()).toEqual(['claude']);
+      expect(adapter.getBinaryNames()).toStrictEqual(['claude']);
     });
 
     it('should require binary', () => {
@@ -201,9 +201,9 @@ describe('@overture/client-adapters', () => {
     });
 
     it('should not have app bundle paths', () => {
-      expect(adapter.getAppBundlePaths('linux')).toEqual([]);
-      expect(adapter.getAppBundlePaths('darwin')).toEqual([]);
-      expect(adapter.getAppBundlePaths('win32')).toEqual([]);
+      expect(adapter.getAppBundlePaths('linux')).toStrictEqual([]);
+      expect(adapter.getAppBundlePaths('darwin')).toStrictEqual([]);
+      expect(adapter.getAppBundlePaths('win32')).toStrictEqual([]);
     });
 
     describe('readConfig', () => {
@@ -212,7 +212,7 @@ describe('@overture/client-adapters', () => {
 
         const config = await adapter.readConfig('/test/path.json');
 
-        expect(config).toEqual({ mcpServers: {} });
+        expect(config).toStrictEqual({ mcpServers: {} });
         expect(filesystem.exists).toHaveBeenCalledWith('/test/path.json');
       });
 
@@ -227,7 +227,7 @@ describe('@overture/client-adapters', () => {
 
         const config = await adapter.readConfig('/test/path.json');
 
-        expect(config).toEqual(mockConfig);
+        expect(config).toStrictEqual(mockConfig);
         expect(filesystem.readFile).toHaveBeenCalledWith('/test/path.json');
       });
 
@@ -237,7 +237,7 @@ describe('@overture/client-adapters', () => {
 
         const config = await adapter.readConfig('/test/path.json');
 
-        expect(config).toEqual({ mcpServers: {} });
+        expect(config).toStrictEqual({ mcpServers: {} });
       });
 
       it('should throw on parse error', async () => {
@@ -303,7 +303,7 @@ describe('@overture/client-adapters', () => {
           'linux',
         );
 
-        expect(clientConfig).toEqual({
+        expect(clientConfig).toStrictEqual({
           mcpServers: {
             'test-server': {
               command: 'test-cmd',
@@ -335,7 +335,7 @@ describe('@overture/client-adapters', () => {
           'linux',
         );
 
-        expect(clientConfig).toEqual({ mcpServers: {} });
+        expect(clientConfig).toStrictEqual({ mcpServers: {} });
       });
 
       it('should exclude MCPs based on client exclusion', () => {
@@ -359,7 +359,7 @@ describe('@overture/client-adapters', () => {
           'linux',
         );
 
-        expect(clientConfig).toEqual({ mcpServers: {} });
+        expect(clientConfig).toStrictEqual({ mcpServers: {} });
       });
     });
   });

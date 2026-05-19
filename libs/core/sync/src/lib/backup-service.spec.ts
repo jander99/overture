@@ -160,7 +160,7 @@ describe('BackupService', () => {
 
       const result = await service.listBackups();
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should skip non-JSON files', async () => {

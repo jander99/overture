@@ -52,20 +52,20 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
       expect(result.mcpServers).toHaveLength(2);
-      expect(result.mcpServers[0]).toEqual({
+      expect(result.mcpServers[0]).toStrictEqual({
         name: 'filesystem',
         command: 'npx',
         available: true,
         source: 'user',
       });
-      expect(result.mcpServers[1]).toEqual({
+      expect(result.mcpServers[1]).toStrictEqual({
         name: 'github',
         command: 'mcp-server-github',
         available: true,
         source: 'project',
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 2,
         mcpCommandsMissing: 0,
       });
@@ -105,20 +105,20 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
       expect(result.mcpServers).toHaveLength(2);
-      expect(result.mcpServers[0]).toEqual({
+      expect(result.mcpServers[0]).toStrictEqual({
         name: 'filesystem',
         command: 'npx',
         available: false,
         source: 'user',
       });
-      expect(result.mcpServers[1]).toEqual({
+      expect(result.mcpServers[1]).toStrictEqual({
         name: 'github',
         command: 'mcp-server-github',
         available: false,
         source: 'project',
       });
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 0,
         mcpCommandsMissing: 2,
       });
@@ -170,7 +170,7 @@ describe('McpChecker', () => {
       expect(result.mcpServers[1].available).toBe(false);
       expect(result.mcpServers[2].available).toBe(true);
 
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 2,
         mcpCommandsMissing: 1,
       });
@@ -180,7 +180,7 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(null, {});
 
       expect(result.mcpServers).toHaveLength(0);
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 0,
         mcpCommandsMissing: 0,
       });
@@ -195,7 +195,7 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(mergedConfig, {});
 
       expect(result.mcpServers).toHaveLength(0);
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 0,
         mcpCommandsMissing: 0,
       });
@@ -209,7 +209,7 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(mergedConfig, {});
 
       expect(result.mcpServers).toHaveLength(0);
-      expect(result.summary).toEqual({
+      expect(result.summary).toStrictEqual({
         mcpCommandsAvailable: 0,
         mcpCommandsMissing: 0,
       });
@@ -236,7 +236,7 @@ describe('McpChecker', () => {
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
-      expect(result.mcpServers[0]).toEqual({
+      expect(result.mcpServers[0]).toStrictEqual({
         name: 'filesystem',
         command: 'npx',
         available: true,
@@ -280,13 +280,13 @@ describe('McpChecker', () => {
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
       expect(result.mcpServers).toHaveLength(2);
-      expect(result.mcpServers[0]).toEqual({
+      expect(result.mcpServers[0]).toStrictEqual({
         name: 'python-repl',
         command: 'uvx',
         available: true,
         source: 'project',
       });
-      expect(result.mcpServers[1]).toEqual({
+      expect(result.mcpServers[1]).toStrictEqual({
         name: 'custom-http-server',
         command: 'node',
         available: true,
@@ -358,7 +358,7 @@ describe('McpChecker', () => {
 
       const result = await mcpChecker.checkMcpServers(mergedConfig, mcpSources);
 
-      expect(result.mcpServers.map((s) => s.name)).toEqual([
+      expect(result.mcpServers.map((s) => s.name)).toStrictEqual([
         'alpha',
         'beta',
         'gamma',

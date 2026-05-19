@@ -200,24 +200,18 @@ export function validateRequiredMcps(
   const excludedMcps: Array<{ name: string; reason: string }> = [];
 
   for (const requiredName of requiredMcps) {
-    // Check if MCP exists
-    // requiredName from requiredMcps parameter - safe to check in availableMcps
-    if (
-      !Object.hasOwn(availableMcps, requiredName) ||
-      // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
-      !availableMcps[requiredName]
-    ) {
+    const availableEntry = Object.entries(availableMcps).find(
+      ([name]) => name === requiredName,
+    );
+    const availableMcp = availableEntry?.[1];
+
+    if (!availableMcp) {
       missingMcps.push(requiredName);
       continue;
     }
 
     // Check if MCP would be excluded
-    const result = shouldIncludeMcp(
-      // eslint-disable-next-line security/detect-object-injection -- requiredName from parameters
-      availableMcps[requiredName],
-      client,
-      platform,
-    );
+    const result = shouldIncludeMcp(availableMcp, client, platform);
     if (!result.included && result.reason) {
       excludedMcps.push({ name: requiredName, reason: result.reason });
     }

@@ -136,7 +136,7 @@ export class BackupService {
     timestamp: string,
   ): Promise<BackupMetadata | null> {
     const backups = await this.listBackups(client);
-    return backups.find((b) => b.timestamp === timestamp) || null;
+    return backups.find((b) => b.timestamp === timestamp) ?? null;
   }
 
   /**

@@ -99,7 +99,7 @@ export class PathResolver {
    */
   getXdgConfigHome(): string {
     return (
-      this.environment.env.XDG_CONFIG_HOME ||
+      this.environment.env.XDG_CONFIG_HOME ??
       this.joinPaths(this.getHomeDir(), '.config')
     );
   }
@@ -114,7 +114,7 @@ export class PathResolver {
    */
   getXdgDataHome(): string {
     return (
-      this.environment.env.XDG_DATA_HOME ||
+      this.environment.env.XDG_DATA_HOME ??
       this.joinPaths(this.getHomeDir(), '.local', 'share')
     );
   }
@@ -128,7 +128,7 @@ export class PathResolver {
    * @returns Home directory path
    */
   getHomeDir(): string {
-    return this.environment.env.HOME || this.environment.homedir();
+    return this.environment.env.HOME ?? this.environment.homedir();
   }
 
   /**
@@ -197,7 +197,7 @@ export class PathResolver {
    * @returns Project config file path (primary .yaml extension)
    */
   getProjectConfigPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.overture', CONFIG_YAML);
   }
 
@@ -208,7 +208,7 @@ export class PathResolver {
    * @returns Project config file path with .yml extension (fallback)
    */
   getProjectConfigPathYml(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.overture', CONFIG_YML);
   }
 
@@ -234,7 +234,7 @@ export class PathResolver {
    * @returns Claude Code project config path
    */
   getClaudeCodeProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.mcp.json');
   }
 
@@ -250,7 +250,7 @@ export class PathResolver {
    * @returns Claude Desktop config path
    */
   getClaudeDesktopPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
 
     switch (targetPlatform) {
       case 'darwin':
@@ -269,7 +269,7 @@ export class PathResolver {
         );
       case 'win32':
         return this.joinPaths(
-          this.environment.env.APPDATA ||
+          this.environment.env.APPDATA ??
             this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
           'Claude',
           CLAUDE_DESKTOP_CONFIG,
@@ -286,7 +286,7 @@ export class PathResolver {
    * @returns VS Code global config path
    */
   getVSCodeGlobalPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
 
     switch (targetPlatform) {
       case 'darwin':
@@ -307,7 +307,7 @@ export class PathResolver {
         );
       case 'win32':
         return this.joinPaths(
-          this.environment.env.APPDATA ||
+          this.environment.env.APPDATA ??
             this.joinPaths(this.getHomeDir(), 'AppData', 'Roaming'),
           'Code',
           'User',
@@ -325,7 +325,7 @@ export class PathResolver {
    * @returns VS Code workspace config path
    */
   getVSCodeWorkspacePath(workspaceRoot?: string): string {
-    const root = workspaceRoot || this.environment.env.PWD || '/';
+    const root = workspaceRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.vscode', 'mcp.json');
   }
 
@@ -336,7 +336,7 @@ export class PathResolver {
    * @returns Cursor global config path
    */
   getCursorGlobalPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
     const homeDir = this.getHomeDir();
 
     // Cursor uses ~/.cursor/mcp.json for global configuration on all platforms
@@ -357,7 +357,7 @@ export class PathResolver {
    * @returns Cursor project config path
    */
   getCursorProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.cursor', 'mcp.json');
   }
 
@@ -368,7 +368,7 @@ export class PathResolver {
    * @returns Windsurf config path
    */
   getWindsurfPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
     const homeDir = this.getHomeDir();
 
     switch (targetPlatform) {
@@ -393,7 +393,7 @@ export class PathResolver {
    * @returns Copilot CLI config path
    */
   getCopilotCliPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
     const homeDir = this.getHomeDir();
 
     // Copilot CLI uses ~/.copilot/mcp-config.json by default
@@ -403,7 +403,7 @@ export class PathResolver {
       case 'linux': {
         // On Linux/macOS, when XDG_CONFIG_HOME is not set, use ~/.copilot directly
         // When XDG_CONFIG_HOME is set, use $XDG_CONFIG_HOME/.copilot
-        const configBase = this.environment.env.XDG_CONFIG_HOME || homeDir;
+        const configBase = this.environment.env.XDG_CONFIG_HOME ?? homeDir;
         return this.joinPaths(configBase, '.copilot', MCP_CONFIG_JSON);
       }
       case 'win32':
@@ -421,7 +421,7 @@ export class PathResolver {
    * @returns Codex CLI config path
    */
   getCodexPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
     const homeDir = this.getHomeDir();
 
     // Codex CLI uses ~/.codex/mcp-config.json on all platforms
@@ -442,7 +442,7 @@ export class PathResolver {
    * @returns Gemini CLI config path
    */
   getGeminiCliPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
     const homeDir = this.getHomeDir();
 
     // Gemini CLI uses ~/.gemini/mcp-config.json on all platforms
@@ -463,7 +463,7 @@ export class PathResolver {
    * @returns JetBrains Copilot config path
    */
   getJetBrainsCopilotPath(platform?: Platform): string {
-    const targetPlatform = platform || this.getPlatform();
+    const targetPlatform = platform ?? this.getPlatform();
 
     switch (targetPlatform) {
       case 'darwin':
@@ -489,7 +489,7 @@ export class PathResolver {
       case 'win32':
         // Confirmed path from user
         return this.joinPaths(
-          this.environment.env.LOCALAPPDATA ||
+          this.environment.env.LOCALAPPDATA ??
             this.joinPaths(this.getHomeDir(), 'AppData', 'Local'),
           GITHUB_COPILOT,
           'intellij',
@@ -509,7 +509,7 @@ export class PathResolver {
    * @returns JetBrains Copilot workspace config path
    */
   getJetBrainsCopilotWorkspacePath(workspaceRoot?: string): string {
-    const root = workspaceRoot || this.environment.env.PWD || '/';
+    const root = workspaceRoot ?? this.environment.env.PWD ?? '/';
     return this.joinPaths(root, '.vscode', 'mcp.json');
   }
 
@@ -581,7 +581,7 @@ export class PathResolver {
    */
   async findProjectRoot(startDir?: string): Promise<string | null> {
     let currentDir = this.resolvePath(
-      startDir || this.environment.env.PWD || '/',
+      startDir ?? this.environment.env.PWD ?? '/',
     );
     const root = this.parsePathRoot(currentDir);
 
@@ -711,7 +711,7 @@ export class PathResolver {
    * Simple path joining that works across platforms.
    * Uses forward slash as separator and normalizes separators.
    */
-  private joinPaths(...segments: string[]): string {
+  joinPaths(...segments: string[]): string {
     return segments
       .join('/')
       .replace(/\/+/g, '/') // normalize multiple slashes
@@ -725,7 +725,7 @@ export class PathResolver {
     if (p.startsWith('/')) return p;
     if (p.startsWith('~')) return this.expandTilde(p);
     // For relative paths, join with PWD
-    const cwd = this.environment.env.PWD || '/';
+    const cwd = this.environment.env.PWD ?? '/';
     return this.joinPaths(cwd, p);
   }
 

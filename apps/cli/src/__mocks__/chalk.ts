@@ -4,8 +4,11 @@
  * All color/style methods return the input string unchanged
  */
 
+type ChalkMock = ((str?: string | number) => string) &
+  Record<string, (str?: string | number) => string>;
+
 // Create a simple passthrough function
-const passThroughFn = (str?: string | number) => String(str || '');
+const passThroughFn = (str?: string | number) => String(str ?? '');
 
 // Color and style methods
 const methods = [
@@ -56,25 +59,25 @@ const methods = [
   'bgWhiteBright',
 ];
 
-// Create the main chalk function
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const chalk: any = (str?: string | number) => String(str || '');
-
-// Add all methods to chalk, where each method is a function that can also be chained
-methods.forEach((method) => {
-  // Create a function for this method
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const methodFn: any = (str?: string | number) => String(str || '');
+const createChainableMethod = (): ChalkMock => {
+  const methodFn = ((str?: string | number) => String(str ?? '')) as ChalkMock;
 
   // Add all methods to this function too (for chaining like chalk.blue.bold())
   methods.forEach((m) => {
-    // eslint-disable-next-line security/detect-object-injection
+    // eslint-disable-next-line security/detect-object-injection -- methods are static chalk style names defined above
     methodFn[m] = passThroughFn;
   });
 
-  // Assign to chalk
-  // eslint-disable-next-line security/detect-object-injection
-  chalk[method] = methodFn;
+  return methodFn;
+};
+
+// Create the main chalk function
+const chalk = ((str?: string | number) => String(str ?? '')) as ChalkMock;
+
+// Add all methods to chalk, where each method is a function that can also be chained
+methods.forEach((method) => {
+  // eslint-disable-next-line security/detect-object-injection -- methods are static chalk style names defined above
+  chalk[method] = createChainableMethod();
 });
 
 export default chalk;

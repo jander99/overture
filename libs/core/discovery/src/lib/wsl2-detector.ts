@@ -315,28 +315,7 @@ export class WSL2Detector {
     windowsUserProfile: string,
   ): string[] {
     const paths: string[] = [];
-
-    // Use explicit property access to avoid object injection warning
-    let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
-
-    switch (client) {
-      case 'claude-code': {
-        defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-
-        break;
-      }
-      case 'copilot-cli': {
-        defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-
-        break;
-      }
-      case 'opencode': {
-        defaults = WINDOWS_DEFAULT_PATHS.opencode;
-
-        break;
-      }
-      // No default
-    }
+    const defaults = this.getWindowsDefaults(client);
 
     if (!defaults) {
       return paths;
@@ -371,33 +350,32 @@ export class WSL2Detector {
     client: ClientName,
     windowsUserProfile: string,
   ): string | undefined {
-    // Use explicit property access to avoid object injection warning
-    let defaults: { binaryPaths: string[]; configPath?: string } | undefined;
-
-    switch (client) {
-      case 'claude-code': {
-        defaults = WINDOWS_DEFAULT_PATHS['claude-code'];
-
-        break;
-      }
-      case 'copilot-cli': {
-        defaults = WINDOWS_DEFAULT_PATHS['copilot-cli'];
-
-        break;
-      }
-      case 'opencode': {
-        defaults = WINDOWS_DEFAULT_PATHS.opencode;
-
-        break;
-      }
-      // No default
-    }
+    const defaults = this.getWindowsDefaults(client);
 
     if (!defaults?.configPath) {
       return undefined;
     }
 
     return this.joinPath(windowsUserProfile, defaults.configPath);
+  }
+
+  private getWindowsDefaults(
+    client: ClientName,
+  ): { binaryPaths: string[]; configPath?: string } | undefined {
+    switch (client) {
+      case 'claude-code': {
+        return WINDOWS_DEFAULT_PATHS['claude-code'];
+      }
+      case 'copilot-cli': {
+        return WINDOWS_DEFAULT_PATHS['copilot-cli'];
+      }
+      case 'opencode': {
+        return WINDOWS_DEFAULT_PATHS.opencode;
+      }
+      default: {
+        return undefined;
+      }
+    }
   }
 
   /**

@@ -181,12 +181,12 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
     // According to official Claude Code docs (https://code.claude.com/docs/en/mcp.md),
     // Claude Code reads MCP configuration from ~/.claude.json on all platforms
     const env = this.environment.env;
-    const homeDir = env.HOME || env.USERPROFILE || '/';
+    const homeDir = env.HOME ?? env.USERPROFILE ?? '/';
     return `${homeDir}/.claude.json`;
   }
 
   private getClaudeCodeProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return `${root}/.mcp.json`;
   }
 
@@ -209,8 +209,8 @@ export class ClaudeCodeAdapter extends BaseClientAdapter {
       const parsed = JSON.parse(content) as ClaudeCodeFullConfig;
 
       return {
-        mcpServers: parsed.mcpServers || {},
-        projects: parsed.projects || {},
+        mcpServers: parsed.mcpServers ?? {},
+        projects: parsed.projects ?? {},
         ...parsed, // Include all other settings
       };
     } catch (error) {

@@ -19,7 +19,7 @@ describe('skill-paths', () => {
       it('should return correct global and project paths', () => {
         const paths = getSkillPaths('claude-code', homeDir);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.claude/skills',
           project: '.claude/skills',
         });
@@ -28,7 +28,7 @@ describe('skill-paths', () => {
       it('should return correct paths with projectRoot', () => {
         const paths = getSkillPaths('claude-code', homeDir, projectRoot);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.claude/skills',
           project: '/home/user/my-project/.claude/skills',
         });
@@ -39,7 +39,7 @@ describe('skill-paths', () => {
       it('should return correct global and project paths', () => {
         const paths = getSkillPaths('copilot-cli', homeDir);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.github/skills',
           project: '.github/skills',
         });
@@ -48,7 +48,7 @@ describe('skill-paths', () => {
       it('should return correct paths with projectRoot', () => {
         const paths = getSkillPaths('copilot-cli', homeDir, projectRoot);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.github/skills',
           project: '/home/user/my-project/.github/skills',
         });
@@ -59,7 +59,7 @@ describe('skill-paths', () => {
       it('should return correct global and project paths with singular skill/', () => {
         const paths = getSkillPaths('opencode', homeDir);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.opencode/skill', // Note: singular
           project: '.opencode/skill', // Note: singular
         });
@@ -68,7 +68,7 @@ describe('skill-paths', () => {
       it('should return correct paths with projectRoot', () => {
         const paths = getSkillPaths('opencode', homeDir, projectRoot);
 
-        expect(paths).toEqual({
+        expect(paths).toStrictEqual({
           global: '/home/user/.opencode/skill',
           project: '/home/user/my-project/.opencode/skill',
         });

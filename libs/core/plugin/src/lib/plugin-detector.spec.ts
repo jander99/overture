@@ -213,7 +213,7 @@ describe('PluginDetector', () => {
         const plugins = await detector.detectInstalledPlugins();
 
         // Assert
-        expect(plugins).toEqual([]);
+        expect(plugins).toStrictEqual([]);
         expect(consoleWarnSpy).toHaveBeenCalled();
 
         consoleWarnSpy.mockRestore();
@@ -235,7 +235,7 @@ describe('PluginDetector', () => {
         const plugins = await detector.detectInstalledPlugins();
 
         // Assert
-        expect(plugins).toEqual([]);
+        expect(plugins).toStrictEqual([]);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Malformed'),
         );
@@ -255,7 +255,7 @@ describe('PluginDetector', () => {
         const plugins = await detector.detectInstalledPlugins();
 
         // Assert
-        expect(plugins).toEqual([]);
+        expect(plugins).toStrictEqual([]);
       });
 
       it('should handle plugins with unknown marketplace', async () => {

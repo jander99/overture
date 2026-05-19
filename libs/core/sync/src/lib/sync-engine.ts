@@ -47,6 +47,33 @@ import {
   formatEnvVarWarnings,
 } from './env-var-validator.js';
 
+function getRecordEntry(
+  record: Record<string, unknown>,
+  targetKey: string,
+): unknown {
+  return Object.entries(record).find(([key]) => key === targetKey)?.[1];
+}
+
+function getConfigRootRecord(
+  config: ClientMcpConfig,
+  rootKey: string,
+): Record<string, unknown> {
+  const rootValue = getRecordEntry(config, rootKey);
+
+  return rootValue && typeof rootValue === 'object' && !Array.isArray(rootValue)
+    ? (rootValue as Record<string, unknown>)
+    : {};
+}
+
+function getMcpSource(
+  sources: Record<string, 'global' | 'project'> | undefined,
+  mcpName: string,
+): 'global' | 'project' | undefined {
+  return sources
+    ? (getRecordEntry(sources, mcpName) as 'global' | 'project' | undefined)
+    : undefined;
+}
+
 /**
  * Sync options
  */
@@ -197,7 +224,7 @@ export class SyncEngine {
 
     // Auto-detect project root if not provided
     const detectedProjectRoot =
-      options.projectRoot || this.deps.pathResolver.findProjectRoot();
+      options.projectRoot ?? this.deps.pathResolver.findProjectRoot();
 
     // Load configurations
     const userConfig = await this.deps.configLoader.loadUserConfig();
@@ -401,7 +428,7 @@ export class SyncEngine {
     const results: ClientSyncResult[] = [];
     const warnings: string[] = [];
     const errors: string[] = [];
-    const platform = options.platform || this.deps.environment.platform();
+    const platform = options.platform ?? this.deps.environment.platform();
 
     for (const client of clients) {
       const inProject = !!options.projectRoot;
@@ -473,7 +500,7 @@ export class SyncEngine {
     pluginSyncResult: PluginSyncResult,
   ): Promise<SyncResult['pluginSyncDetails']> {
     // Get plugins from user config to calculate "to install"
-    const configuredPlugins = userConfig?.plugins || {};
+    const configuredPlugins = userConfig?.plugins ?? {};
     const pluginNames = Object.keys(configuredPlugins);
 
     // Calculate plugins to install
@@ -484,14 +511,10 @@ export class SyncEngine {
     );
     const toInstall: Array<{ name: string; marketplace: string }> = [];
 
-    for (const name of pluginNames) {
-      if (Object.hasOwn(configuredPlugins, name)) {
-        // eslint-disable-next-line security/detect-object-injection -- name from pluginNames, safe iteration
-        const config = configuredPlugins[name];
-        const key = `${name}@${config.marketplace}`;
-        if (!installedSet.has(key)) {
-          toInstall.push({ name, marketplace: config.marketplace });
-        }
+    for (const [name, config] of Object.entries(configuredPlugins)) {
+      const key = `${name}@${config.marketplace}`;
+      if (!installedSet.has(key)) {
+        toInstall.push({ name, marketplace: config.marketplace });
       }
     }
 
@@ -526,11 +549,11 @@ export class SyncEngine {
       // Prepare sync options with detected project root
       const syncOptionsWithProject: SyncOptions = {
         ...options,
-        projectRoot: detectedProjectRoot || undefined,
+        projectRoot: detectedProjectRoot ?? undefined,
       };
 
       // Determine which clients to sync
-      const targetClients = options.clients || SyncEngine.DEFAULT_CLIENTS;
+      const targetClients = options.clients ?? SyncEngine.DEFAULT_CLIENTS;
 
       // Step 2: Sync plugins, skills, and agents
       const {
@@ -632,7 +655,7 @@ export class SyncEngine {
     warnings: string[],
   ): Promise<BinaryDetectionResult | undefined> {
     const skipDetection =
-      options.skipBinaryDetection || overtureConfig.sync?.skipBinaryDetection;
+      options.skipBinaryDetection ?? overtureConfig.sync?.skipBinaryDetection;
 
     if (!skipDetection) {
       const detection = await this.deps.binaryDetector.detectClient(
@@ -713,15 +736,18 @@ export class SyncEngine {
       typeof configPathResult === 'object'
         ? configPathResult.user
         : configPathResult;
+    const hasSourceInfo =
+      mcpSources !== undefined && Object.keys(mcpSources).length > 0;
+
+    if (!hasSourceInfo) {
+      return overtureConfig.mcp;
+    }
 
     if (inProject && projectPath && configPath === projectPath) {
       // Project config: only include MCPs from project source
       return Object.fromEntries(
         Object.entries(overtureConfig.mcp).filter(
-          ([mcpName]) =>
-            mcpSources &&
-            Object.hasOwn(mcpSources, mcpName) &&
-            mcpSources[mcpName] === 'project',
+          ([mcpName]) => getMcpSource(mcpSources, mcpName) === 'project',
         ),
       );
     }
@@ -730,10 +756,7 @@ export class SyncEngine {
       // User config: only include MCPs from global source
       return Object.fromEntries(
         Object.entries(overtureConfig.mcp).filter(
-          ([mcpName]) =>
-            mcpSources &&
-            Object.hasOwn(mcpSources, mcpName) &&
-            mcpSources[mcpName] === 'global',
+          ([mcpName]) => getMcpSource(mcpSources, mcpName) === 'global',
         ),
       );
     }
@@ -752,20 +775,18 @@ export class SyncEngine {
     warnings: string[],
   ): void {
     const rootKey = client.schemaRootKey;
-    // rootKey comes from client.schemaRootKey - validated with Object.hasOwn
-
-    const oldMcps =
-      (Object.hasOwn(oldConfig, rootKey) ? oldConfig[rootKey] : {}) || {};
+    const oldMcps = getConfigRootRecord(oldConfig, rootKey);
     const unmanagedMcps = getUnmanagedMcps(oldMcps, overtureConfig.mcp);
 
     if (Object.keys(unmanagedMcps).length > 0) {
+      const managedMcps = getConfigRootRecord(newConfig, rootKey);
       // Merge: Overture-managed MCPs + preserved manually-added MCPs
-      // eslint-disable-next-line security/detect-object-injection -- rootKey from client schema
-      newConfig[rootKey] = {
-        ...(unmanagedMcps as Record<string, ClientMcpServerDef>),
-        // eslint-disable-next-line security/detect-object-injection -- rootKey from client schema
-        ...(newConfig[rootKey] as Record<string, ClientMcpServerDef>),
-      };
+      Object.assign(newConfig, {
+        [rootKey]: {
+          ...(unmanagedMcps as Record<string, ClientMcpServerDef>),
+          ...(managedMcps as Record<string, ClientMcpServerDef>),
+        },
+      });
 
       // Warn user about preserved MCPs
       const unmanagedNames = Object.keys(unmanagedMcps);
@@ -879,7 +900,7 @@ export class SyncEngine {
     options: SyncOptions,
     mcpSources?: Record<string, 'global' | 'project'>,
   ): Promise<ClientSyncResult> {
-    const platform = options.platform || this.deps.environment.platform();
+    const platform = options.platform ?? this.deps.environment.platform();
     const warnings: string[] = [];
     let binaryDetection: BinaryDetectionResult | undefined;
 
@@ -1065,7 +1086,7 @@ export class SyncEngine {
     }
 
     // Get plugins from user config only
-    const configuredPlugins = userConfig?.plugins || {};
+    const configuredPlugins = userConfig?.plugins ?? {};
     const pluginNames = Object.keys(configuredPlugins);
 
     // No plugins configured - skip
@@ -1093,16 +1114,13 @@ export class SyncEngine {
     const missingPlugins: Array<{ name: string; marketplace: string }> = [];
     const skippedPlugins: string[] = [];
 
-    for (const name of pluginNames) {
-      if (Object.hasOwn(configuredPlugins, name)) {
-        const config = configuredPlugins[name];
-        const key = `${name}@${config.marketplace}`;
+    for (const [name, config] of Object.entries(configuredPlugins)) {
+      const key = `${name}@${config.marketplace}`;
 
-        if (installedSet.has(key)) {
-          skippedPlugins.push(key);
-        } else {
-          missingPlugins.push({ name, marketplace: config.marketplace });
-        }
+      if (installedSet.has(key)) {
+        skippedPlugins.push(key);
+      } else {
+        missingPlugins.push({ name, marketplace: config.marketplace });
       }
     }
 

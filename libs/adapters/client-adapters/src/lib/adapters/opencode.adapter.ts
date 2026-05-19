@@ -94,7 +94,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
       for (const [name, serverDef] of Object.entries(config.mcp)) {
         // eslint-disable-next-line security/detect-object-injection -- name comes from Object.entries() of config.mcp, safe
         transformedMcp[name] = {
-          type: serverDef.type || 'local',
+          type: serverDef.type ?? 'local',
           enabled: true,
           // Combine command and args into single array
           command: [serverDef.command, ...serverDef.args],
@@ -246,7 +246,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
 
     switch (platform) {
       case 'linux':
-        return `${env.XDG_CONFIG_HOME || `${env.HOME}/.config`}/opencode/opencode.json`;
+        return `${env.XDG_CONFIG_HOME ?? `${env.HOME}/.config`}/opencode/opencode.json`;
       case 'darwin':
         return `${env.HOME}/.config/opencode/opencode.json`;
       case 'win32':
@@ -257,7 +257,7 @@ export class OpenCodeAdapter extends BaseClientAdapter {
   }
 
   private getOpenCodeProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return `${root}/opencode.json`;
   }
 }

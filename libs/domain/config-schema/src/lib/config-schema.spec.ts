@@ -129,7 +129,7 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withArgs);
-      expect(result.args).toEqual([
+      expect(result.args).toStrictEqual([
         '-y',
         '@modelcontextprotocol/server-filesystem',
       ]);
@@ -169,7 +169,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withExclusions);
-      expect(result.clients?.exclude).toEqual(['copilot-cli', 'opencode']);
+      expect(result.clients?.exclude).toStrictEqual([
+        'copilot-cli',
+        'opencode',
+      ]);
     });
 
     it('should accept client inclusions', () => {
@@ -181,7 +184,10 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withInclusions);
-      expect(result.clients?.include).toEqual(['claude-code', 'opencode']);
+      expect(result.clients?.include).toStrictEqual([
+        'claude-code',
+        'opencode',
+      ]);
     });
 
     it('should reject both exclude and include', () => {
@@ -231,7 +237,7 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withPlatformExclusions);
-      expect(result.platforms?.exclude).toEqual(['win32']);
+      expect(result.platforms?.exclude).toStrictEqual(['win32']);
     });
 
     it('should accept platform command overrides', () => {
@@ -260,7 +266,7 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(withArgsOverrides);
-      expect(result.platforms?.argsOverrides?.win32).toEqual([
+      expect(result.platforms?.argsOverrides?.win32).toStrictEqual([
         '-m',
         'mcp_server',
       ]);
@@ -278,7 +284,7 @@ describe('Zod Schema Validators', () => {
 
       const result = McpServerConfigSchema.parse(withMetadata);
       expect(result.metadata?.description).toBe('GitHub MCP server');
-      expect(result.metadata?.tags).toEqual(['git', 'github', 'vcs']);
+      expect(result.metadata?.tags).toStrictEqual(['git', 'github', 'vcs']);
     });
 
     it('should validate homepage URL in metadata', () => {
@@ -299,8 +305,8 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = McpServerConfigSchema.parse(minimal);
-      expect(result.args).toEqual([]);
-      expect(result.env).toEqual({});
+      expect(result.args).toStrictEqual([]);
+      expect(result.env).toStrictEqual({});
     });
 
     it('should require command to be non-empty', () => {
@@ -379,7 +385,7 @@ describe('Zod Schema Validators', () => {
       };
 
       const result = ClientConfigSchema.parse(config);
-      expect(result.settings).toEqual({ theme: 'dark', fontSize: 14 });
+      expect(result.settings).toStrictEqual({ theme: 'dark', fontSize: 14 });
     });
   });
 
@@ -558,7 +564,7 @@ describe('Zod Schema Validators', () => {
 
       const result = ClientMcpServerDefSchema.parse(def);
       expect(result.command).toBe('mcp-server-github');
-      expect(result.args).toEqual([]); // Default
+      expect(result.args).toStrictEqual([]); // Default
     });
 
     it('should accept type field for VS Code', () => {

@@ -63,7 +63,7 @@ export class DiscoveryService {
    */
   constructor(deps: DiscoveryServiceDeps, config?: DiscoveryConfig) {
     this.deps = deps;
-    this.config = config || { enabled: true };
+    this.config = config ?? { enabled: true };
 
     this.binaryDetector = new BinaryDetector(
       deps.processPort,
@@ -329,7 +329,7 @@ export class DiscoveryService {
       detection: {
         status: 'not-found',
         warnings: [
-          `Override path not found: ${binaryPath || appBundlePath || 'no path specified'}`,
+          `Override path not found: ${binaryPath ?? appBundlePath ?? 'no path specified'}`,
         ],
       },
       source: 'config-override',
@@ -385,7 +385,7 @@ export class DiscoveryService {
     for (const searchPath of windowsPaths) {
       if (this.deps.fileExists(searchPath)) {
         const configPath =
-          wsl2ConfigPath ||
+          wsl2ConfigPath ??
           this.wsl2Detector.getWindowsConfigPath(adapter.name, windowsProfile);
 
         return {
@@ -425,10 +425,8 @@ export class DiscoveryService {
     if (this.config.wsl2?.windows_binary_paths) {
       for (const basePath of this.config.wsl2.windows_binary_paths) {
         const defaults = WINDOWS_DEFAULT_PATHS[adapter.name];
-        if (defaults) {
-          for (const relativePath of defaults.binaryPaths) {
-            windowsPaths.push(`${basePath}/${relativePath.split('/').pop()}`);
-          }
+        for (const relativePath of defaults.binaryPaths) {
+          windowsPaths.push(`${basePath}/${relativePath.split('/').pop()}`);
         }
       }
     }
@@ -452,7 +450,7 @@ export class DiscoveryService {
     for (const appPath of appBundlePaths) {
       if (this.deps.fileExists(appPath)) {
         const configPath =
-          wsl2ConfigPath ||
+          wsl2ConfigPath ??
           this.wsl2Detector.getWindowsConfigPath(adapter.name, windowsProfile);
 
         return {

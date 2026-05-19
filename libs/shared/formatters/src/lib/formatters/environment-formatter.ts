@@ -26,7 +26,7 @@ export class EnvironmentFormatter {
     if (environment.isWSL2) {
       this.output.info(chalk.bold('\nEnvironment:\n'));
       console.log(
-        `  Platform: ${chalk.cyan('WSL2')} (${environment.wsl2Info?.distroName || 'Unknown'})`,
+        `  Platform: ${chalk.cyan('WSL2')} (${environment.wsl2Info?.distroName ?? 'Unknown'})`,
       );
       if (environment.wsl2Info?.windowsUserProfile) {
         console.log(

@@ -189,7 +189,7 @@ export function createAppDependencies(): AppDependencies {
   const pathResolverAdapter = {
     findProjectRoot: (): string | null => {
       // Synchronous version of findProjectRoot
-      let currentDir = environment.env.PWD || '/';
+      let currentDir = environment.env.PWD ?? '/';
       const root = '/';
 
       while (currentDir !== root) {

@@ -67,7 +67,7 @@ describe('OpenCodeAdapter', () => {
     it('should detect Linux user path correctly', () => {
       const paths = adapter.detectConfigPath('linux');
 
-      expect(paths).toEqual({
+      expect(paths).toStrictEqual({
         user: '/home/user/.config/opencode/opencode.json',
         project: '/home/user/project/opencode.json',
       });
@@ -76,7 +76,7 @@ describe('OpenCodeAdapter', () => {
     it('should detect macOS user path correctly', () => {
       const paths = adapter.detectConfigPath('darwin');
 
-      expect(paths).toEqual({
+      expect(paths).toStrictEqual({
         user: '/home/user/.config/opencode/opencode.json',
         project: '/home/user/project/opencode.json',
       });
@@ -85,7 +85,7 @@ describe('OpenCodeAdapter', () => {
     it('should detect Windows user path correctly', () => {
       const paths = adapter.detectConfigPath('win32');
 
-      expect(paths).toEqual({
+      expect(paths).toStrictEqual({
         user: 'C:\\Users\\user\\AppData\\Roaming/opencode/opencode.json',
         project: '/home/user/project/opencode.json',
       });
@@ -94,7 +94,7 @@ describe('OpenCodeAdapter', () => {
     it('should use custom project root when provided', () => {
       const paths = adapter.detectConfigPath('linux', '/custom/project');
 
-      expect(paths).toEqual({
+      expect(paths).toStrictEqual({
         user: '/home/user/.config/opencode/opencode.json',
         project: '/custom/project/opencode.json',
       });
@@ -115,7 +115,7 @@ describe('OpenCodeAdapter', () => {
 
       const config = await adapter.readConfig('/test/path.json');
 
-      expect(config).toEqual({ mcp: {} });
+      expect(config).toStrictEqual({ mcp: {} });
       expect(filesystem.exists).toHaveBeenCalledWith('/test/path.json');
     });
 
@@ -137,7 +137,7 @@ describe('OpenCodeAdapter', () => {
 
       const config = await adapter.readConfig('/test/path.json');
 
-      expect(config).toEqual(mockConfig);
+      expect(config).toStrictEqual(mockConfig);
       expect(filesystem.readFile).toHaveBeenCalledWith('/test/path.json');
     });
 
@@ -147,7 +147,7 @@ describe('OpenCodeAdapter', () => {
 
       const config = await adapter.readConfig('/test/path.json');
 
-      expect(config).toEqual({ mcp: {} });
+      expect(config).toStrictEqual({ mcp: {} });
     });
 
     it('should throw McpError on parse error', async () => {
@@ -173,7 +173,7 @@ describe('OpenCodeAdapter', () => {
 
       const config = await adapter.readConfig('/test/path.json');
 
-      expect(config).toEqual(mockConfig);
+      expect(config).toStrictEqual(mockConfig);
       expect(config.mcp).toBeDefined();
     });
   });
@@ -245,8 +245,8 @@ describe('OpenCodeAdapter', () => {
       const written = JSON.parse(writtenContent);
 
       expect(written.model).toBe('anthropic/claude-sonnet-4-5');
-      expect(written.agent).toEqual(existingConfig.agent);
-      expect(written.mcp['new-server'].command).toEqual(['new']);
+      expect(written.agent).toStrictEqual(existingConfig.agent);
+      expect(written.mcp['new-server'].command).toStrictEqual(['new']);
       expect(written.mcp['old-server']).toBeUndefined();
     });
 
@@ -277,7 +277,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.command).toEqual(existingConfig.command);
+      expect(written.command).toStrictEqual(existingConfig.command);
     });
 
     it('should preserve permissions when merging', async () => {
@@ -305,7 +305,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.permission).toEqual(existingConfig.permission);
+      expect(written.permission).toStrictEqual(existingConfig.permission);
     });
 
     it('should preserve theme when merging', async () => {
@@ -360,7 +360,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['new-server'].command).toEqual(['new']);
+      expect(written.mcp['new-server'].command).toStrictEqual(['new']);
       expect(written.mcp['old-server']).toBeUndefined();
     });
 
@@ -379,7 +379,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['test'].command).toEqual(['test-cmd', 'arg1']);
+      expect(written.mcp['test'].command).toStrictEqual(['test-cmd', 'arg1']);
       expect(written.mcp['test'].enabled).toBe(true);
     });
 
@@ -404,7 +404,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['python-repl'].command).toEqual([
+      expect(written.mcp['python-repl'].command).toStrictEqual([
         'uvx',
         'mcp-server-python',
       ]);
@@ -432,7 +432,7 @@ describe('OpenCodeAdapter', () => {
       const writtenContent = vi.mocked(filesystem.writeFile).mock.calls[0][1];
       const written = JSON.parse(writtenContent);
 
-      expect(written.mcp['test-server'].environment).toEqual({
+      expect(written.mcp['test-server'].environment).toStrictEqual({
         API_KEY: '{env:MY_KEY}',
       });
       expect(written.mcp['test-server'].env).toBeUndefined();
@@ -480,7 +480,7 @@ describe('OpenCodeAdapter', () => {
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
       expect(clientConfig.mcp['python-repl'].command).toBe('uvx');
-      expect(clientConfig.mcp['python-repl'].args).toEqual([
+      expect(clientConfig.mcp['python-repl'].args).toStrictEqual([
         'mcp-server-python',
       ]);
     });
@@ -501,7 +501,7 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({
+      expect(clientConfig.mcp['test-server'].env).toStrictEqual({
         API_KEY: '{env:MY_KEY}',
       });
     });
@@ -540,7 +540,7 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({
+      expect(clientConfig.mcp['test-server'].env).toStrictEqual({
         API_KEY: '{env:MY_KEY}',
       });
     });
@@ -561,7 +561,7 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig.mcp['test-server'].env).toEqual({
+      expect(clientConfig.mcp['test-server'].env).toStrictEqual({
         API_KEY: '{env:MY_KEY}',
       });
     });
@@ -584,7 +584,7 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig).toEqual({ mcp: {} });
+      expect(clientConfig).toStrictEqual({ mcp: {} });
     });
 
     it('should filter MCPs by client exclusions', () => {
@@ -605,7 +605,7 @@ describe('OpenCodeAdapter', () => {
 
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
-      expect(clientConfig).toEqual({ mcp: {} });
+      expect(clientConfig).toStrictEqual({ mcp: {} });
     });
 
     it('should apply platform overrides', () => {
@@ -628,7 +628,7 @@ describe('OpenCodeAdapter', () => {
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
       expect(clientConfig.mcp['test-server'].command).toBe('linux-cmd');
-      expect(clientConfig.mcp['test-server'].args).toEqual(['linux-arg']);
+      expect(clientConfig.mcp['test-server'].args).toStrictEqual(['linux-arg']);
     });
 
     it('should apply client overrides', () => {
@@ -657,8 +657,10 @@ describe('OpenCodeAdapter', () => {
       const clientConfig = adapter.convertFromOverture(overtureConfig, 'linux');
 
       expect(clientConfig.mcp['test-server'].command).toBe('opencode-cmd');
-      expect(clientConfig.mcp['test-server'].args).toEqual(['opencode-arg']);
-      expect(clientConfig.mcp['test-server'].env).toEqual({
+      expect(clientConfig.mcp['test-server'].args).toStrictEqual([
+        'opencode-arg',
+      ]);
+      expect(clientConfig.mcp['test-server'].env).toStrictEqual({
         DEFAULT: 'value',
         OVERRIDE: 'overridden',
       });
@@ -686,9 +688,9 @@ describe('OpenCodeAdapter', () => {
 
       expect(Object.keys(clientConfig.mcp)).toHaveLength(2);
       expect(clientConfig.mcp['server1'].command).toBe('cmd1');
-      expect(clientConfig.mcp['server1'].args).toEqual(['arg1']);
+      expect(clientConfig.mcp['server1'].args).toStrictEqual(['arg1']);
       expect(clientConfig.mcp['server2'].command).toBe('cmd2');
-      expect(clientConfig.mcp['server2'].args).toEqual(['arg2']);
+      expect(clientConfig.mcp['server2'].args).toStrictEqual(['arg2']);
     });
 
     it('should handle empty env correctly', () => {
@@ -722,7 +724,7 @@ describe('OpenCodeAdapter', () => {
     });
 
     it('should have opencode binary name', () => {
-      expect(adapter.getBinaryNames()).toEqual(['opencode']);
+      expect(adapter.getBinaryNames()).toStrictEqual(['opencode']);
     });
 
     it('should require binary', () => {
@@ -730,9 +732,9 @@ describe('OpenCodeAdapter', () => {
     });
 
     it('should not have app bundle paths', () => {
-      expect(adapter.getAppBundlePaths('linux')).toEqual([]);
-      expect(adapter.getAppBundlePaths('darwin')).toEqual([]);
-      expect(adapter.getAppBundlePaths('win32')).toEqual([]);
+      expect(adapter.getAppBundlePaths('linux')).toStrictEqual([]);
+      expect(adapter.getAppBundlePaths('darwin')).toStrictEqual([]);
+      expect(adapter.getAppBundlePaths('win32')).toStrictEqual([]);
     });
   });
 });
