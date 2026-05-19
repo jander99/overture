@@ -15,6 +15,18 @@ import type {
   Platform,
 } from '@overture/config-types';
 
+function getRootServers(
+  config: Record<string, unknown>,
+  rootKey: string,
+): Record<string, unknown> {
+  const rootEntry = Object.entries(config).find(([key]) => key === rootKey);
+  const rootValue = rootEntry?.[1];
+
+  return rootValue && typeof rootValue === 'object' && !Array.isArray(rootValue)
+    ? (rootValue as Record<string, unknown>)
+    : {};
+}
+
 /**
  * Audit service for detecting unmanaged MCPs
  *
@@ -56,42 +68,20 @@ export class AuditService {
 
     // Collect all MCP names from client configs
     const clientMcps = new Set<string>();
+    const collectMcpNames = (config: Record<string, unknown>): void => {
+      for (const name of Object.keys(getRootServers(config, adapter.schemaRootKey))) {
+        clientMcps.add(name);
+      }
+    };
 
     // Handle different config path formats
     if (typeof configPath === 'string') {
       // Single config path (e.g., Claude Desktop)
-      const config = await adapter.readConfig(configPath);
-      const rootKey = adapter.schemaRootKey;
-
-      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
-      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
-      if (Object.hasOwn(config, rootKey) && config[rootKey]) {
-        Object.keys(config[rootKey] as Record<string, unknown>).forEach(
-          (name) => clientMcps.add(name),
-        );
-      }
+      collectMcpNames(await adapter.readConfig(configPath));
     } else {
       // User + project config paths (e.g., Claude Code)
-      const userConfig = await adapter.readConfig(configPath.user);
-      const projectConfig = await adapter.readConfig(configPath.project);
-
-      const rootKey = adapter.schemaRootKey;
-
-      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
-      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
-      if (Object.hasOwn(userConfig, rootKey) && userConfig[rootKey]) {
-        Object.keys(userConfig[rootKey] as Record<string, unknown>).forEach(
-          (name) => clientMcps.add(name),
-        );
-      }
-
-      // rootKey comes from adapter.schemaRootKey - validated with Object.hasOwn
-      // eslint-disable-next-line security/detect-object-injection -- rootKey from adapter schema
-      if (Object.hasOwn(projectConfig, rootKey) && projectConfig[rootKey]) {
-        Object.keys(projectConfig[rootKey] as Record<string, unknown>).forEach(
-          (name) => clientMcps.add(name),
-        );
-      }
+      collectMcpNames(await adapter.readConfig(configPath.user));
+      collectMcpNames(await adapter.readConfig(configPath.project));
     }
 
     // Get Overture managed MCPs

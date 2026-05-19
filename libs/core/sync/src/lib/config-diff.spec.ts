@@ -41,9 +41,9 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig);
 
-    expect(result.added).toEqual(['github']);
-    expect(result.modified).toEqual([]);
-    expect(result.removed).toEqual([]);
+    expect(result.added).toStrictEqual(['github']);
+    expect(result.modified).toStrictEqual([]);
+    expect(result.removed).toStrictEqual([]);
     expect(result.hasChanges).toBe(true);
   });
 
@@ -53,8 +53,8 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig);
 
-    expect(result.added).toEqual([]);
-    expect(result.removed).toEqual(['github']);
+    expect(result.added).toStrictEqual([]);
+    expect(result.removed).toStrictEqual(['github']);
     expect(result.hasChanges).toBe(true);
   });
 
@@ -64,8 +64,8 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig);
 
-    expect(result.added).toEqual([]);
-    expect(result.removed).toEqual([]);
+    expect(result.added).toStrictEqual([]);
+    expect(result.removed).toStrictEqual([]);
     expect(result.modified).toHaveLength(1);
     expect(result.modified[0].name).toBe('github');
     expect(result.modified[0].type).toBe('modified');
@@ -77,7 +77,7 @@ describe('generateDiff', () => {
 
     const result = generateDiff(config, config);
 
-    expect(result.unchanged).toEqual(['github']);
+    expect(result.unchanged).toStrictEqual(['github']);
     expect(result.hasChanges).toBe(false);
   });
 
@@ -95,9 +95,9 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig);
 
-    expect(result.added).toEqual(['add']);
-    expect(result.removed).toEqual(['remove']);
-    expect(result.unchanged).toEqual(['keep']);
+    expect(result.added).toStrictEqual(['add']);
+    expect(result.removed).toStrictEqual(['remove']);
+    expect(result.unchanged).toStrictEqual(['keep']);
     expect(result.modified).toHaveLength(1);
     expect(result.modified[0].name).toBe('modify');
     expect(result.hasChanges).toBe(true);
@@ -115,17 +115,17 @@ describe('generateDiff', () => {
 
     expect(result.modified[0].fieldChanges).toHaveLength(1);
     expect(result.modified[0].fieldChanges?.[0].field).toBe('args');
-    expect(result.modified[0].fieldChanges?.[0].oldValue).toEqual(['--old']);
-    expect(result.modified[0].fieldChanges?.[0].newValue).toEqual(['--new']);
+    expect(result.modified[0].fieldChanges?.[0].oldValue).toStrictEqual(['--old']);
+    expect(result.modified[0].fieldChanges?.[0].newValue).toStrictEqual(['--new']);
   });
 
   it('should handle empty configs', () => {
     const result = generateDiff(createConfig({}), createConfig({}));
 
-    expect(result.added).toEqual([]);
-    expect(result.removed).toEqual([]);
-    expect(result.modified).toEqual([]);
-    expect(result.unchanged).toEqual([]);
+    expect(result.added).toStrictEqual([]);
+    expect(result.removed).toStrictEqual([]);
+    expect(result.modified).toStrictEqual([]);
+    expect(result.unchanged).toStrictEqual([]);
     expect(result.hasChanges).toBe(false);
   });
 
@@ -145,8 +145,8 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig, 'servers');
 
-    expect(result.added).toEqual(['mcp2']);
-    expect(result.removed).toEqual(['mcp1']);
+    expect(result.added).toStrictEqual(['mcp2']);
+    expect(result.removed).toStrictEqual(['mcp1']);
   });
 
   it('should sort results alphabetically', () => {
@@ -159,7 +159,7 @@ describe('generateDiff', () => {
 
     const result = generateDiff(oldConfig, newConfig);
 
-    expect(result.added).toEqual(['alpha', 'middle', 'zebra']);
+    expect(result.added).toStrictEqual(['alpha', 'middle', 'zebra']);
   });
 
   it('should handle nested object changes', () => {
