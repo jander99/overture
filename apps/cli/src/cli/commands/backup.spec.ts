@@ -15,9 +15,12 @@ import {
 import type { AppDependencies } from '../../composition-root.js';
 import type { BackupMetadata } from '@overture/sync-core';
 
+const { identity } = vi.hoisted(() => ({
+  identity: (s: string) => s,
+}));
+
 // Mock chalk to avoid ANSI codes in test assertions
 vi.mock('chalk', () => {
-  const identity = (s: string) => s;
   const bold = Object.assign(identity, {
     cyan: identity,
     red: identity,
