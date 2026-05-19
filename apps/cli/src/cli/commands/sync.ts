@@ -4,22 +4,6 @@ import type { ClientName } from '@overture/config-types';
 import { SyncFormatter } from '@overture/formatters';
 import { ErrorHandler } from '@overture/utils';
 import { parseSyncOptions } from '../../lib/option-parser.js';
-import { loadMergedConfig } from '../../lib/config-loader.js';
-
-async function loadSyncConfig(
-  parsedOptions: ReturnType<typeof parseSyncOptions>,
-  pathResolver: AppDependencies['pathResolver'],
-  configLoader: AppDependencies['configLoader'],
-): Promise<boolean> {
-  let detailMode = parsedOptions.detail;
-  try {
-    const overtureConfig = await loadMergedConfig(pathResolver, configLoader);
-    detailMode = parsedOptions.detail ? true : overtureConfig.sync?.detail === true;
-  } catch {
-    // Config load failed, use CLI flag or false
-  }
-  return detailMode;
-}
 
 function buildSyncOptions(
   parsedOptions: ReturnType<typeof parseSyncOptions>,
@@ -47,7 +31,7 @@ function buildSyncOptions(
 }
 
 export function createSyncCommand(deps: AppDependencies): Command {
-  const { syncEngine, output, configLoader, pathResolver } = deps;
+  const { syncEngine, output } = deps;
   const formatter = new SyncFormatter(output);
   const command = new Command('sync');
 
@@ -75,11 +59,7 @@ export function createSyncCommand(deps: AppDependencies): Command {
     .action(async (options) => {
       try {
         const parsedOptions = parseSyncOptions(options);
-        const detailMode = await loadSyncConfig(
-          parsedOptions,
-          pathResolver,
-          configLoader,
-        );
+        const detailMode = parsedOptions.detail;
 
         if (parsedOptions.dryRun) {
           output.info('Running in dry-run mode - no changes will be made');
