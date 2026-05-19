@@ -2,14 +2,6 @@
  * @module config.types
  */
 
-export * from './base-types.js';
-export * from './mcp-types.js';
-export * from './client-types.js';
-export * from './sync-types.js';
-export * from './validation-types.js';
-export * from './utility-types.js';
-export * from './agent-types.js';
-
 import type { ClientName } from './base-types.js';
 import type { McpServerConfig, ClientMcpConfig } from './mcp-types.js';
 import type {
@@ -18,6 +10,14 @@ import type {
   SyncOptions,
   DiscoveryConfig,
 } from './client-types.js';
+
+export * from './base-types.js';
+export * from './mcp-types.js';
+export * from './client-types.js';
+export * from './sync-types.js';
+export * from './validation-types.js';
+export * from './utility-types.js';
+export * from './agent-types.js';
 
 /**
  * Overture v2.0 Configuration (User Global)
