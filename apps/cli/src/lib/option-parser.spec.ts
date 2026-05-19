@@ -23,7 +23,7 @@ describe('parseOptions', () => {
         count: 42,
       });
 
-      expect(result).toEqual({ name: 'test', count: 42 });
+      expect(result).toStrictEqual({ name: 'test', count: 42 });
     });
 
     it('should apply default values for missing options', () => {
@@ -34,7 +34,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, {});
 
-      expect(result).toEqual({ enabled: false, name: 'default-name' });
+      expect(result).toStrictEqual({ enabled: false, name: 'default-name' });
     });
 
     it('should override defaults with provided values', () => {
@@ -44,7 +44,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, { enabled: true });
 
-      expect(result).toEqual({ enabled: true });
+      expect(result).toStrictEqual({ enabled: true });
     });
   });
 
@@ -98,7 +98,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, { items: ['a', 'b', 'c'] });
 
-      expect(result.items).toEqual(['a', 'b', 'c']);
+      expect(result.items).toStrictEqual(['a', 'b', 'c']);
     });
 
     it('should apply empty array default when missing', () => {
@@ -108,7 +108,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, {});
 
-      expect(result.items).toEqual([]);
+      expect(result.items).toStrictEqual([]);
     });
 
     it('should reject single string as array (not coerced)', () => {
@@ -192,7 +192,7 @@ describe('parseOptions', () => {
         detail: false,
       });
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         dryRun: true,
         force: false,
         skipPlugins: false,
@@ -356,7 +356,7 @@ describe('parseOptions', () => {
         extra: 'ignored',
       });
 
-      expect(result).toEqual({ name: 'test' });
+      expect(result).toStrictEqual({ name: 'test' });
       expect('extra' in result).toBe(false);
     });
 
@@ -367,7 +367,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, {});
 
-      expect(result).toEqual({ flag: false });
+      expect(result).toStrictEqual({ flag: false });
     });
 
     it('should reject null for required boolean', () => {
@@ -547,7 +547,7 @@ describe('parseOptions', () => {
       const result = parseOptions(schema, {});
 
       expect(result.flag).toBe(false);
-      expect(result.flag).not.toBeUndefined();
+      expect(result.flag).toBeDefined();
     });
 
     it('should use .default(true) for custom defaults', () => {
@@ -567,7 +567,7 @@ describe('parseOptions', () => {
 
       const result = parseOptions(schema, {});
 
-      expect(result.items).toEqual([]);
+      expect(result.items).toStrictEqual([]);
       expect(Array.isArray(result.items)).toBe(true);
     });
 
@@ -609,7 +609,7 @@ describe('parseOptions', () => {
         client: 'claude-code',
       });
 
-      expect(result.clients).toEqual(['claude-code']);
+      expect(result.clients).toStrictEqual(['claude-code']);
     });
 
     it('should return undefined clients when no client provided', () => {
@@ -627,7 +627,7 @@ describe('parseOptions', () => {
 
       expect(result.dryRun).toBe(true);
       expect(result.force).toBe(false);
-      expect(result.clients).toEqual(['copilot-cli']);
+      expect(result.clients).toStrictEqual(['copilot-cli']);
     });
 
     it('should apply defaults for missing sync options', () => {
