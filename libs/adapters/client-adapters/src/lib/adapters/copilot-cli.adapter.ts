@@ -137,12 +137,12 @@ export class CopilotCliAdapter extends BaseClientAdapter {
 
   private getCopilotCliGlobalPath(platform: Platform): string {
     const env = this.environment.env;
-    const homeDir = env.HOME || env.USERPROFILE || '/';
+    const homeDir = env.HOME ?? env.USERPROFILE ?? '/';
 
     switch (platform) {
       case 'darwin':
       case 'linux': {
-        const configBase = env.XDG_CONFIG_HOME || `${homeDir}/.config`;
+        const configBase = env.XDG_CONFIG_HOME ?? `${homeDir}/.config`;
         return `${configBase}/github-copilot/mcp.json`;
       }
       case 'win32': {
@@ -154,7 +154,7 @@ export class CopilotCliAdapter extends BaseClientAdapter {
   }
 
   private getCopilotCliProjectPath(projectRoot?: string): string {
-    const root = projectRoot || this.environment.env.PWD || '/';
+    const root = projectRoot ?? this.environment.env.PWD ?? '/';
     return `${root}/.github/mcp.json`;
   }
 }
