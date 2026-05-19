@@ -413,7 +413,7 @@ describe('doctor command', () => {
       const output = consoleLogSpy.mock.calls[0][0];
       expect(() => JSON.parse(output)).not.toThrow();
       const parsed = JSON.parse(output);
-      expect(parsed).toEqual(mockResult);
+      expect(parsed).toStrictEqual(mockResult);
     });
 
     it('should include summary metrics in JSON output', async () => {
@@ -496,7 +496,7 @@ describe('doctor command', () => {
       const output = consoleLogSpy.mock.calls[0][0];
       const parsed = JSON.parse(output);
 
-      expect(parsed.summary).toEqual(mockResult.summary);
+      expect(parsed.summary).toStrictEqual(mockResult.summary);
       expect(parsed.summary.clientsDetected).toBe(1);
     });
 
