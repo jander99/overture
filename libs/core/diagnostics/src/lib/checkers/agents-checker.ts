@@ -270,11 +270,11 @@ export class AgentsChecker {
       const globalYamlFile =
         globalFiles.find(
           (f) => f === `${agentName}.yaml` || f === `${agentName}.yml`,
-        ) || '';
+        ) ?? '';
       const projectYamlFile =
         projectFiles.find(
           (f) => f === `${agentName}.yaml` || f === `${agentName}.yml`,
-        ) || '';
+        ) ?? '';
 
       if (!globalYamlFile || !projectYamlFile) {
         return false;

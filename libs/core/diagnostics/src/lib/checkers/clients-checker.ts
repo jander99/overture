@@ -57,13 +57,13 @@ export class ClientsChecker {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const configPath = (adapter as any)?.detectConfigPath?.(
         platform,
-        projectRoot || undefined,
+        projectRoot ?? undefined,
       );
       const configPathStr =
         typeof configPath === 'string'
           ? configPath
           : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (configPath as any)?.user || undefined;
+            (configPath as any)?.user ?? undefined;
 
       const configValid = configPathStr
         ? await this.validateConfigFile(configPathStr)

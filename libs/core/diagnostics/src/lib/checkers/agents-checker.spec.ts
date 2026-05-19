@@ -35,7 +35,7 @@ describe('AgentsChecker', () => {
         null,
       );
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         globalAgentsPath: '/home/user/.config/overture/agents',
         globalAgentsDirExists: false,
         globalAgentCount: 0,
@@ -48,6 +48,7 @@ describe('AgentsChecker', () => {
         modelsConfigExists: false,
         modelsConfigValid: false,
         modelsConfigError: null,
+        syncStatus: undefined,
       });
 
       expect(mockFilesystem.exists).not.toHaveBeenCalled();
@@ -66,7 +67,7 @@ describe('AgentsChecker', () => {
 
       expect(result.globalAgentsDirExists).toBe(true);
       expect(result.globalAgentCount).toBe(1);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
       expect(result.projectAgentsPath).toBeNull();
       expect(result.projectAgentsDirExists).toBe(false);
       expect(result.projectAgentCount).toBe(0);
@@ -95,16 +96,13 @@ describe('AgentsChecker', () => {
       expect(result.projectAgentsPath).toBe('/project/.overture/agents');
       expect(result.projectAgentsDirExists).toBe(true);
       expect(result.projectAgentCount).toBe(1);
-      expect(result.projectAgentErrors).toEqual([]);
+      expect(result.projectAgentErrors).toStrictEqual([]);
     });
 
     it('should handle project agents directory not existing', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.includes('/project/.overture/agents')) {
-          return false;
-        }
-        return true;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => !path.includes('/project/.overture/agents'),
+      );
       mockFilesystem.readdir.mockResolvedValue(['agent.yaml', 'agent.md']);
       mockFilesystem.readFile.mockResolvedValue('name: TestAgent');
 
@@ -116,7 +114,7 @@ describe('AgentsChecker', () => {
 
       expect(result.projectAgentsDirExists).toBe(false);
       expect(result.projectAgentCount).toBe(0);
-      expect(result.projectAgentErrors).toEqual([]);
+      expect(result.projectAgentErrors).toStrictEqual([]);
     });
 
     it('should validate models.yaml when it exists and is valid', async () => {
@@ -202,7 +200,7 @@ describe('AgentsChecker', () => {
       mockFilesystem.exists.mockResolvedValue(false);
 
       expect(result.globalAgentCount).toBe(0);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should successfully validate agent with valid YAML and MD pair', async () => {
@@ -219,16 +217,13 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(1);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should detect missing MD file', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.endsWith('.md')) {
-          return false;
-        }
-        return true;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => !path.endsWith('.md'),
+      );
       mockFilesystem.readdir.mockResolvedValue(['test-agent.yaml']);
 
       const result = await checker.checkAgents(
@@ -323,7 +318,7 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(3);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should handle both .yaml and .yml extensions', async () => {
@@ -343,7 +338,7 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(2);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should ignore non-YAML files in agents directory', async () => {
@@ -364,7 +359,7 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(1);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should handle readdir errors gracefully', async () => {
@@ -424,7 +419,7 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(0);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should handle agents directory with only MD files', async () => {
@@ -442,7 +437,7 @@ describe('AgentsChecker', () => {
       );
 
       expect(result.globalAgentCount).toBe(0);
-      expect(result.globalAgentErrors).toEqual([]);
+      expect(result.globalAgentErrors).toStrictEqual([]);
     });
 
     it('should handle null parsed YAML', async () => {
@@ -481,12 +476,9 @@ describe('AgentsChecker', () => {
     });
 
     it('should handle multiple errors in same agent file', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.endsWith('.md')) {
-          return false;
-        }
-        return true;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => !path.endsWith('.md'),
+      );
       mockFilesystem.readdir.mockResolvedValue(['problematic.yaml']);
 
       const result = await checker.checkAgents(
@@ -520,12 +512,9 @@ describe('AgentsChecker', () => {
     });
 
     it('should validate complex models.yaml structure', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.includes('models.yaml')) {
-          return true;
-        }
-        return false;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => path.includes('models.yaml'),
+      );
       mockFilesystem.readFile.mockResolvedValue(`
 default_model: claude-3-opus
 models:
@@ -547,12 +536,9 @@ models:
     });
 
     it('should reject models.yaml with primitive value', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.includes('models.yaml')) {
-          return true;
-        }
-        return false;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => path.includes('models.yaml'),
+      );
       mockFilesystem.readFile.mockResolvedValue('just a string');
 
       const result = await checker.checkAgents(
@@ -569,12 +555,9 @@ models:
     });
 
     it('should handle empty models.yaml file', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.includes('models.yaml')) {
-          return true;
-        }
-        return false;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => path.includes('models.yaml'),
+      );
       mockFilesystem.readFile.mockResolvedValue('');
 
       const result = await checker.checkAgents(
@@ -591,12 +574,9 @@ models:
     });
 
     it('should handle models.yaml with null content', async () => {
-      mockFilesystem.exists.mockImplementation(async (path: string) => {
-        if (path.includes('models.yaml')) {
-          return true;
-        }
-        return false;
-      });
+      mockFilesystem.exists.mockImplementation(
+        async (path: string) => path.includes('models.yaml'),
+      );
       mockFilesystem.readFile.mockResolvedValue('null');
 
       const result = await checker.checkAgents(
@@ -647,12 +627,12 @@ models:
 
         expect(result.syncStatus).toBeDefined();
         expect(result.syncStatus?.isInitialized).toBe(true);
-        expect(result.syncStatus?.globalAgents).toEqual(['agent1', 'agent2']);
-        expect(result.syncStatus?.projectAgents).toEqual(['agent1', 'agent2']);
-        expect(result.syncStatus?.inSync).toEqual(['agent1', 'agent2']);
-        expect(result.syncStatus?.outOfSync).toEqual([]);
-        expect(result.syncStatus?.onlyInGlobal).toEqual([]);
-        expect(result.syncStatus?.onlyInProject).toEqual([]);
+        expect(result.syncStatus?.globalAgents).toStrictEqual(['agent1', 'agent2']);
+        expect(result.syncStatus?.projectAgents).toStrictEqual(['agent1', 'agent2']);
+        expect(result.syncStatus?.inSync).toStrictEqual(['agent1', 'agent2']);
+        expect(result.syncStatus?.outOfSync).toStrictEqual([]);
+        expect(result.syncStatus?.onlyInGlobal).toStrictEqual([]);
+        expect(result.syncStatus?.onlyInProject).toStrictEqual([]);
       });
 
       it('should detect agents that are out of sync (modified)', async () => {
@@ -687,10 +667,10 @@ models:
 
         expect(result.syncStatus).toBeDefined();
         expect(result.syncStatus?.isInitialized).toBe(true);
-        expect(result.syncStatus?.inSync).toEqual([]);
-        expect(result.syncStatus?.outOfSync).toEqual(['agent1']);
-        expect(result.syncStatus?.onlyInGlobal).toEqual([]);
-        expect(result.syncStatus?.onlyInProject).toEqual([]);
+        expect(result.syncStatus?.inSync).toStrictEqual([]);
+        expect(result.syncStatus?.outOfSync).toStrictEqual(['agent1']);
+        expect(result.syncStatus?.onlyInGlobal).toStrictEqual([]);
+        expect(result.syncStatus?.onlyInProject).toStrictEqual([]);
       });
 
       it('should detect agents only in global (not yet synced)', async () => {
@@ -713,12 +693,12 @@ models:
         );
 
         expect(result.syncStatus).toBeDefined();
-        expect(result.syncStatus?.globalAgents).toEqual([
+        expect(result.syncStatus?.globalAgents).toStrictEqual([
           'agent1',
           'agent2',
           'agent3',
         ]);
-        expect(result.syncStatus?.projectAgents).toEqual(['agent1']);
+        expect(result.syncStatus?.projectAgents).toStrictEqual(['agent1']);
         expect(result.syncStatus?.onlyInGlobal).toContain('agent2');
         expect(result.syncStatus?.onlyInGlobal).toContain('agent3');
       });
@@ -743,7 +723,7 @@ models:
         );
 
         expect(result.syncStatus).toBeDefined();
-        expect(result.syncStatus?.onlyInProject).toEqual(['custom-agent']);
+        expect(result.syncStatus?.onlyInProject).toStrictEqual(['custom-agent']);
       });
 
       it('should handle .yml extension in sync detection', async () => {
@@ -776,7 +756,7 @@ models:
           '/project',
         );
 
-        expect(result.syncStatus?.inSync).toEqual(['agent1']);
+        expect(result.syncStatus?.inSync).toStrictEqual(['agent1']);
       });
 
       it('should detect MD file differences even with same YAML', async () => {
@@ -809,7 +789,7 @@ models:
           '/project',
         );
 
-        expect(result.syncStatus?.outOfSync).toEqual(['agent1']);
+        expect(result.syncStatus?.outOfSync).toStrictEqual(['agent1']);
       });
     });
 
@@ -829,12 +809,10 @@ models:
       });
 
       it('should not detect sync when global agents directory does not exist', async () => {
-        mockFilesystem.exists.mockImplementation(async (path: string) => {
-          if (path.includes('/home/user/.config/overture/agents')) {
-            return false;
-          }
-          return true;
-        });
+        mockFilesystem.exists.mockImplementation(
+          async (path: string) =>
+            !path.includes('/home/user/.config/overture/agents'),
+        );
         mockFilesystem.readdir.mockResolvedValue(['agent1.yaml']);
         mockFilesystem.readFile.mockResolvedValue('name: TestAgent');
 
@@ -848,12 +826,9 @@ models:
       });
 
       it('should not detect sync when project agents directory does not exist', async () => {
-        mockFilesystem.exists.mockImplementation(async (path: string) => {
-          if (path.includes('/project/.overture/agents')) {
-            return false;
-          }
-          return true;
-        });
+        mockFilesystem.exists.mockImplementation(
+          async (path: string) => !path.includes('/project/.overture/agents'),
+        );
         mockFilesystem.readdir.mockResolvedValue(['agent1.yaml']);
         mockFilesystem.readFile.mockResolvedValue('name: TestAgent');
 
@@ -887,8 +862,8 @@ models:
 
         expect(result.syncStatus).toBeDefined();
         expect(result.syncStatus?.isInitialized).toBe(false);
-        expect(result.syncStatus?.projectAgents).toEqual([]);
-        expect(result.syncStatus?.onlyInGlobal).toEqual(['agent1']);
+        expect(result.syncStatus?.projectAgents).toStrictEqual([]);
+        expect(result.syncStatus?.onlyInGlobal).toStrictEqual(['agent1']);
       });
     });
 
@@ -915,10 +890,10 @@ models:
         // When project readdir fails, getAgentNames returns [] for project
         // but global readdir succeeds, so we get partial data
         expect(result.syncStatus).toBeDefined();
-        expect(result.syncStatus?.globalAgents).toEqual(['agent1']);
-        expect(result.syncStatus?.projectAgents).toEqual([]);
+        expect(result.syncStatus?.globalAgents).toStrictEqual(['agent1']);
+        expect(result.syncStatus?.projectAgents).toStrictEqual([]);
         expect(result.syncStatus?.isInitialized).toBe(false); // No project agents
-        expect(result.syncStatus?.onlyInGlobal).toEqual(['agent1']);
+        expect(result.syncStatus?.onlyInGlobal).toStrictEqual(['agent1']);
       });
 
       it('should handle comparison errors gracefully', async () => {
@@ -943,8 +918,8 @@ models:
         // Should not crash - agents exist but comparison fails
         // Comparison failure means they're treated as out of sync
         expect(result.syncStatus).toBeDefined();
-        expect(result.syncStatus?.globalAgents).toEqual(['agent1']);
-        expect(result.syncStatus?.projectAgents).toEqual(['agent1']);
+        expect(result.syncStatus?.globalAgents).toStrictEqual(['agent1']);
+        expect(result.syncStatus?.projectAgents).toStrictEqual(['agent1']);
       });
     });
   });
