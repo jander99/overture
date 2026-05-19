@@ -40,14 +40,14 @@ function createMockAdapter(needsExpansion: boolean): ClientAdapter {
 describe('extractEnvVars', () => {
   it('should extract simple env var', () => {
     const result = extractEnvVars('${TOKEN}');
-    expect(result).toEqual([
+    expect(result).toStrictEqual([
       { name: 'TOKEN', hasDefault: false, defaultValue: undefined },
     ]);
   });
 
   it('should extract env var with default value', () => {
     const result = extractEnvVars('${API_URL:-https://api.example.com}');
-    expect(result).toEqual([
+    expect(result).toStrictEqual([
       {
         name: 'API_URL',
         hasDefault: true,
@@ -58,7 +58,7 @@ describe('extractEnvVars', () => {
 
   it('should extract multiple env vars', () => {
     const result = extractEnvVars('${HOST}:${PORT}');
-    expect(result).toEqual([
+    expect(result).toStrictEqual([
       { name: 'HOST', hasDefault: false, defaultValue: undefined },
       { name: 'PORT', hasDefault: false, defaultValue: undefined },
     ]);
@@ -66,7 +66,7 @@ describe('extractEnvVars', () => {
 
   it('should extract mix of vars with and without defaults', () => {
     const result = extractEnvVars('${TOKEN} at ${URL:-http://localhost}');
-    expect(result).toEqual([
+    expect(result).toStrictEqual([
       { name: 'TOKEN', hasDefault: false, defaultValue: undefined },
       { name: 'URL', hasDefault: true, defaultValue: 'http://localhost' },
     ]);
@@ -74,19 +74,19 @@ describe('extractEnvVars', () => {
 
   it('should return empty array for string without env vars', () => {
     const result = extractEnvVars('plain string');
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 });
 
 describe('validateEnvVarSyntax', () => {
   it('should validate correct syntax', () => {
-    expect(validateEnvVarSyntax('${API_TOKEN}')).toEqual({ valid: true });
-    expect(validateEnvVarSyntax('${TOKEN_123}')).toEqual({ valid: true });
-    expect(validateEnvVarSyntax('${_PRIVATE}')).toEqual({ valid: true });
+    expect(validateEnvVarSyntax('${API_TOKEN}')).toStrictEqual({ valid: true });
+    expect(validateEnvVarSyntax('${TOKEN_123}')).toStrictEqual({ valid: true });
+    expect(validateEnvVarSyntax('${_PRIVATE}')).toStrictEqual({ valid: true });
   });
 
   it('should validate syntax with defaults', () => {
-    expect(validateEnvVarSyntax('${URL:-http://localhost}')).toEqual({
+    expect(validateEnvVarSyntax('${URL:-http://localhost}')).toStrictEqual({
       valid: true,
     });
   });

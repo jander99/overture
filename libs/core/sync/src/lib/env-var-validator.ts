@@ -33,10 +33,14 @@ function trackMissingVars(
  */
 function validateMcpEnvVars(
   mcpName: string,
-  mcpEnv: Record<string, string>,
+  mcpEnv: Record<string, string> | undefined,
   currentEnv: Record<string, string | undefined>,
   missingByVar: Map<string, string[]>,
 ): void {
+  if (!mcpEnv) {
+    return;
+  }
+
   for (const [_key, value] of Object.entries(mcpEnv)) {
     const result = validateEnvVarString(value, currentEnv);
     if (!result.valid) {
@@ -73,9 +77,7 @@ export function validateConfigEnvVars(
   const missingByVar = new Map<string, string[]>(); // varName -> [mcpNames]
 
   for (const [mcpName, mcpConfig] of Object.entries(config.mcp)) {
-    if (mcpConfig.env) {
-      validateMcpEnvVars(mcpName, mcpConfig.env, currentEnv, missingByVar);
-    }
+    validateMcpEnvVars(mcpName, mcpConfig.env, currentEnv, missingByVar);
   }
 
   return generateMissingVarWarnings(missingByVar);
