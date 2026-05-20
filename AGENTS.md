@@ -1,378 +1,233 @@
-# AGENTS.md
+# AGENTS.md — Overture Codebase Guide
 
-This file provides guidance for AI agents (GitHub Copilot, Cursor, Windsurf, etc.) working with the Overture codebase.
+AI agent guidance for GitHub Copilot, Cursor, OpenCode, and other tools working in this codebase.
 
-## Project Overview
+## What Overture Does
 
-**Overture** is a multi-platform MCP configuration orchestrator that manages Model Context Protocol (MCP) server configurations across all AI development tools from a single source of truth.
+Overture is a multi-platform MCP configuration orchestrator. It manages Model Context Protocol (MCP) server configurations and AI agents across **3 AI clients** (Claude Code, GitHub Copilot CLI, OpenCode) from a single `config.yaml` source of truth.
 
-**Current Version:** v0.3.0
-**Status:** Production-ready with 384 passing tests, 83%+ code coverage
-**Repository:** https://github.com/overture-stack/overture
+Key responsibilities: config loading/merging, client detection, config generation (`.mcp.json`, `opencode.json`, `.github/mcp.json`), agent sync, plugin management, skill sync, and diagnostics.
 
-### What It Does
-
-1. **Multi-Platform Sync** - Generates MCP configs for 3 AI clients (Claude Code, GitHub Copilot CLI, OpenCode)
-2. **Binary Detection** - Automatically detects installed AI clients, versions, and validates configs
-3. **User/Project Config** - Supports global (`~/.config/overture/config.yaml`) and project-specific (`.overture/config.yaml`) configurations
-4. **Documentation Generation** - Creates CLAUDE.md with plugin→MCP usage guidance
-5. **System Diagnostics** - `overture doctor` command for health checks and troubleshooting
-
-## Module System
-
-**Overture is a Pure ESM Project** (as of the ESM migration PR)
-
-All packages use ECMAScript Modules (ESM):
-
-- ✅ All packages have `"type": "module"`
-- ✅ TypeScript configured with `"module": "nodenext"`
-- ✅ Build outputs ESM format
-- ✅ Relative imports require `.js` extensions
-
-### ESM Patterns Used
-
-**Import Syntax:**
-
-```typescript
-// Relative imports need .js extension (even for .ts files)
-import { foo } from './utils.js';
-import { bar } from '../helpers.js';
-import { baz } from './directory/index.js'; // Explicit index required
-
-// Package imports don't need extension
-import { qux } from '@overture/utils';
-```
-
-**\_\_dirname Equivalent:**
-
-```typescript
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-```
-
-**Dynamic Imports:**
-
-```typescript
-const module = await import('./plugin.js'); // Note: .js extension required
-```
-
-### Requirements
-
-- **Node.js 18+** (required for full ESM support)
-- Modern package managers (npm 10+, pnpm 8+, yarn 4+)
-
-## Architecture
-
-### Tech Stack
-
-- **Language:** TypeScript 5.x (Pure ESM)
-- **Build System:** Nx 22.0.3 monorepo
-- **CLI Framework:** Commander.js
-- **Schema Validation:** Zod
-- **Config Parsing:** js-yaml
-- **Testing:** Vitest (918+ tests, 83%+ coverage)
-- **Bundler:** esbuild
-
-### Project Structure
+## Architecture: Hexagonal (Ports & Adapters)
 
 ```
-overture/
-├── apps/
-│   ├── cli/              # CLI application (@overture/cli)
-│   │   ├── src/
-│   │   │   ├── commands/     # CLI command implementations
-│   │   │   ├── core/         # Core business logic
-│   │   │   ├── domain/       # Domain models and constants
-│   │   │   ├── services/     # Services (detection, validation, etc.)
-│   │   │   └── main.ts       # CLI entry point
-│   │   └── project.json      # Nx project configuration
-│   └── cli-e2e/          # End-to-end tests
-├── docs/                 # Documentation
-│   ├── user-guide.md
-│   ├── QUICKSTART.md
-│   ├── examples.md
-│   ├── overture-schema.md
-│   └── archive/          # Historical docs
-└── dist/                 # Build output (git-ignored)
+libs/ports/        Pure TypeScript interfaces (no implementation)
+libs/domain/       Types + Zod schemas (zero Node.js deps, only zod)
+libs/core/         Business logic (depends on ports + domain only)
+libs/adapters/     Node.js implementations + AI client adapters
+libs/shared/       Cross-cutting utilities, formatters, test helpers
+apps/cli/          CLI commands + DI composition root
 ```
 
-### Core Modules
+**Critical invariant**: `libs/core/**` and `libs/domain/**` MUST NOT import `node:*` or `libs/adapters/infrastructure`. The ONLY place where infrastructure is instantiated is `apps/cli/src/composition-root.ts`.
 
-**Commands** (`apps/cli/src/commands/`)
+## Package Alias Map
 
-- `init.ts` - Initialize project configuration
-- `sync.ts` - Sync MCP configs to all clients
-- `doctor.ts` - System diagnostics
-- `mcp-commands.ts` - MCP management (list, enable)
-- `validate.ts` - Configuration validation
+Use these aliases (defined in `tsconfig.base.json`) — never use relative paths across package boundaries.
 
-**Services** (`apps/cli/src/services/`)
+| Alias                               | Package                         | Key Contents                                                                                                                |
+| ----------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@overture/config-types`            | `libs/domain/config-types`      | 15 type files: adapter, agent, base, client, config, discovery, import, mcp, plugin, skill, sync, utility, validation types |
+| `@overture/config-schema`           | `libs/domain/config-schema`     | Zod schemas (434L), marketplace registry (349L)                                                                             |
+| `@overture/errors`                  | `libs/domain/errors`            | OvertureError hierarchy + exit codes                                                                                        |
+| `@overture/config-core`             | `libs/core/config`              | ConfigLoader (548L), PathResolver (748L)                                                                                    |
+| `@overture/discovery-core`          | `libs/core/discovery`           | DiscoveryService (563L), WSL2Detector, BinaryDetector                                                                       |
+| `@overture/sync-core`               | `libs/core/sync`                | SyncEngine (1299L), McpSyncService (554L), BackupService                                                                    |
+| `@overture/plugin-core`             | `libs/core/plugin`              | PluginDetector (425L), Installer (387L), Exporter (424L)                                                                    |
+| `@overture/diagnostics-core`        | `libs/core/diagnostics`         | 5 checkers: agents, clients, config-repo, mcp, skills                                                                       |
+| `@overture/agent-core`              | `libs/core/agent`               | AgentSyncService                                                                                                            |
+| `@overture/skill`                   | `libs/core/skill`               | SkillDiscovery, SkillSyncService                                                                                            |
+| `@overture/client-adapters`         | `libs/adapters/client-adapters` | 3 adapters + registry + factory + BaseClientAdapter                                                                         |
+| `@overture/adapters-infrastructure` | `libs/adapters/infrastructure`  | Node.js FilesystemAdapter, ProcessAdapter, OutputAdapter                                                                    |
+| `@overture/ports-filesystem`        | `libs/ports/filesystem`         | FilesystemPort interface                                                                                                    |
+| `@overture/ports-process`           | `libs/ports/process`            | ProcessPort interface                                                                                                       |
+| `@overture/ports-output`            | `libs/ports/output`             | OutputPort interface                                                                                                        |
+| `@overture/utils`                   | `libs/shared/utils`             | error-handler (787L), validation-formatter (404L), 12 more                                                                  |
+| `@overture/testing`                 | `libs/shared/testing`           | builders, fixtures, mocks; config.builder.ts (441L)                                                                         |
 
-- `binary-detector.ts` - Detect installed AI clients and versions
-- `config-loader.ts` - Load and merge user/project configs
-- `validator.ts` - Validate configuration schema
-- `backup-manager.ts` - Backup/restore configs
+## Where to Look
 
-**Core** (`apps/cli/src/core/`)
+| Task                    | Location                                                               |
+| ----------------------- | ---------------------------------------------------------------------- |
+| Add a CLI command       | `apps/cli/src/cli/commands/` + register in `apps/cli/src/cli/index.ts` |
+| Change DI wiring        | `apps/cli/src/composition-root.ts` (ONLY infra instantiation point)    |
+| Modify sync behavior    | `libs/core/sync/src/lib/sync-engine.ts` (1299L)                        |
+| Add a diagnostic check  | `libs/core/diagnostics/src/lib/checkers/`                              |
+| Add/change config types | `libs/domain/config-types/src/lib/`                                    |
+| Add/change Zod schemas  | `libs/domain/config-schema/src/lib/config-schema.ts`                   |
+| Add a client adapter    | `libs/adapters/client-adapters/src/lib/adapters/`                      |
+| Change path resolution  | `libs/core/config/src/lib/path-resolver.ts`                            |
+| Add error type          | `libs/domain/errors/src/lib/`                                          |
+| Add test helper/mock    | `libs/shared/testing/src/lib/`                                         |
+| Add a utility           | `libs/shared/utils/src/lib/`                                           |
+| Format output           | `libs/shared/formatters/src/lib/formatters/`                           |
 
-- `generator.ts` - Generate .mcp.json and CLAUDE.md files
-- `sync-engine.ts` - Multi-client sync orchestration
-- `client-adapters/` - Platform-specific adapters (7 clients)
+## Conventions
 
-**Domain** (`apps/cli/src/domain/`)
+### ESM (Pure ESM Project)
 
-- `config.types.ts` - TypeScript configuration types
-- `schemas.ts` - Zod validation schemas
-- `constants.ts` - Project constants
+- All imports use `.js` extension (even when importing `.ts` files)
+- `import { foo } from './utils.js'` — always `.js`
+- No `require()` anywhere
+- `__dirname` equivalent: `const __dirname = dirname(fileURLToPath(import.meta.url))`
 
-## Development Workflow
+### TypeScript Strict
 
-### Prerequisites
+- `noUnusedLocals`, `noImplicitReturns`, `noImplicitOverride` all enabled
+- **NEVER** use `as any`, `@ts-ignore`, or `@ts-expect-error`
+- Exception: `// eslint-disable-next-line security/detect-object-injection` when index is a validated `Platform` type
 
-- Node.js 20+
-- npm 10+
-- Nx CLI (installed globally or via npx)
+### Testing (Vitest)
 
-### Common Commands
+- `globals: true` → no need to import `describe`, `it`, `expect`, `beforeEach`, `vi`
+- `environment: 'node'`, v8 coverage provider
+- Tests co-located with source: `foo.ts` → `foo.spec.ts`
+- Use `@overture/testing` builders/fixtures for config objects — never construct them inline
+- Mock all filesystem/process operations — no real I/O in unit tests
+
+### Diagnostic Pattern
+
+- Diagnostic checkers **never throw** — always return results with error messages
+- Return type: `DiagnosticResult[]` or similar typed result
+- Pattern: collect errors into array, return at end
+
+### Dependency Injection
+
+- All services use constructor injection
+- Dependencies flow: `composition-root.ts` → commands → services → ports
+- Never instantiate `Node*Adapter` classes outside `composition-root.ts`
+
+## Anti-Patterns (NEVER do these)
+
+- **Import `node:*` in `libs/core/` or `libs/domain/`** — use ports interfaces instead
+- **Import `@overture/adapters-infrastructure` in `libs/core/` or `libs/domain/`**
+- **Use relative paths across package boundaries** — use `@overture/*` aliases
+- **Suppress TypeScript errors** — fix the type, don't hide it
+- **Throw inside diagnostic checkers** — always return results
+- **Skip `.js` extension on relative imports** — ESM requires it
+- **Instantiate adapters outside composition-root.ts**
+
+## Directory Structure
+
+```
+apps/
+├── cli/src/
+│   ├── cli/commands/     # 10 commands: init, sync, validate, doctor, mcp, plugin, user, audit, backup, skill
+│   ├── cli/index.ts      # createProgram() — registers all commands
+│   ├── lib/              # option-parser.ts, config-loader.ts, formatters/, validators/
+│   ├── core/             # process-lock.ts (prevents concurrent runs)
+│   ├── test-utils/       # app-dependencies.mock.ts (373L), test-fixtures.ts (303L)
+│   ├── composition-root.ts  # DI wiring (307L) — ONLY infra instantiation point
+│   └── main.ts           # CLI entry point
+└── cli-e2e/              # End-to-end tests
+
+libs/
+├── domain/               # Types + schemas — no Node.js deps
+│   ├── config-types/     # 15 TypeScript interface files
+│   ├── config-schema/    # Zod schemas + marketplace registry
+│   ├── diagnostics-types/ # Diagnostic result types
+│   └── errors/           # OvertureError hierarchy + exit codes
+├── ports/                # Pure interfaces
+│   ├── filesystem/       # FilesystemPort
+│   ├── process/          # ProcessPort
+│   └── output/           # OutputPort
+├── adapters/             # Node.js implementations
+│   ├── client-adapters/  # 3 adapters (claude-code, copilot-cli, opencode) + registry + factory
+│   └── infrastructure/   # NodeFilesystemAdapter, NodeProcessAdapter, etc.
+├── core/                 # Business logic
+│   ├── sync/             # SyncEngine (1299L), McpSyncService, BackupService
+│   ├── config/           # ConfigLoader (548L), PathResolver (748L)
+│   ├── discovery/        # DiscoveryService, BinaryDetector, WSL2Detector
+│   ├── diagnostics/      # 5 checkers (agents, clients, config-repo, mcp, skills)
+│   ├── plugin/           # PluginDetector, Installer, Exporter
+│   ├── agent/            # AgentSyncService
+│   └── skill/            # SkillDiscovery, SkillSyncService
+└── shared/               # Cross-cutting
+    ├── utils/            # error-handler (787L), validation-formatter, 12 more
+    ├── formatters/       # sync-formatter (601L), config-repo-formatter, 11 more
+    ├── testing/          # builders, fixtures, mocks
+    └── cli-utils/        # verbose-mode.ts
+```
+
+## CLI Commands
+
+| Command             | File                 | Description                                |
+| ------------------- | -------------------- | ------------------------------------------ |
+| `overture init`     | `init.ts`            | Initialize `.overture/config.yaml`         |
+| `overture sync`     | `sync.ts`            | Sync MCPs + agents + skills to all clients |
+| `overture validate` | `validate.ts`        | Validate config files                      |
+| `overture doctor`   | `doctor.ts`          | System diagnostics                         |
+| `overture mcp`      | `mcp-commands.ts`    | MCP server management                      |
+| `overture plugin`   | `plugin-commands.ts` | Plugin management                          |
+| `overture user`     | `user-commands.ts`   | User global config management              |
+| `overture audit`    | `audit-commands.ts`  | Find unmanaged MCPs                        |
+| `overture backup`   | `backup-commands.ts` | Backup/restore configs                     |
+| `overture skill`    | `skill-commands.ts`  | Skill management                           |
+
+## Development Commands
+
+**Always use `nx` commands, never run underlying tools directly.**
 
 ```bash
-# Install dependencies
+# Install
 npm install
 
-# Run all tests
+# Test
 nx test @overture/cli
-
-# Run tests in watch mode
 nx test @overture/cli --watch
-
-# Run tests with coverage
 nx test @overture/cli --coverage
 
-# Build the CLI
-nx build @overture/cli
+# Lint + format (must pass before commit)
+nx run-many -t lint --all
+npx prettier --check .
+npx prettier --write .
 
-# Run the CLI locally
+# Build
+nx build @overture/cli
 node dist/apps/cli/main.js --help
 
-# Lint code
-nx lint @overture/cli
-
-# Show workspace structure
-nx graph
+# Nx utilities
+nx graph                    # visualize dependency graph
+nx reset                    # clear cache
+npx tsc --noEmit            # type check without build
 ```
 
-### Testing Strategy
+## CI Pipeline
 
-**Test Framework:** Vitest with TypeScript support
+`.github/workflows/ci.yml` runs two jobs:
 
-- **Total Tests:** 384+ passing
-- **Coverage:** 83%+ (branches, functions, lines)
-- **Test Files:** Located alongside source files (\*.spec.ts)
+1. **quality**: `nx run-many -t lint --all` + `prettier --check .`
+2. **test** (requires quality): `nx test @overture/cli` on Node.js 20
 
-**Test Categories:**
+## Git Workflow
 
-1. **Unit Tests** - Individual functions and classes
-2. **Integration Tests** - Service interactions
-3. **Command Tests** - CLI command execution
-4. **Generator Tests** - Config and documentation generation
-5. **Validation Tests** - Schema and MCP validation
+- Default branch: `main`
+- Feature branches: `feat/*`, `fix/*`, `docs/*`, `refactor/*`, `test/*`
+- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `chore:`
+- **Pull `main` before starting work. Work on a branch. Create a PR.**
 
-**Key Test Patterns:**
-
-- Use `vi.mock()` for external dependencies (Vitest)
-- Test both success and error paths
-- Validate generated outputs (JSON, Markdown)
-- Mock file system operations
-- Test platform-specific behavior
-
-### Code Style
-
-**Conventions:**
-
-- Use descriptive variable names
-- Prefer `async/await` over promises
-- Use TypeScript strict mode
-- Validate inputs with Zod schemas
-- Handle errors gracefully with user-friendly messages
-
-**File Organization:**
-
-- One class/major function per file
-- Co-locate tests with source (`*.spec.ts`)
-- Group related functionality in directories
-- Use barrel exports (`index.ts`) sparingly
-
-### Git Workflow
-
-**Branch Strategy:**
-
-- `main` - Production-ready code
-- `feat/*` - New features
-- `fix/*` - Bug fixes
-- `docs/*` - Documentation updates
-
-**Commit Conventions:**
-
-```
-feat: add new feature
-fix: resolve bug
-docs: update documentation
-refactor: restructure code
-test: add/update tests
-build: build system changes
-chore: maintenance tasks
-```
-
-**Before Committing:**
-
-1. Run linter: `nx run-many -t lint --all`
-2. Run formatter: `npx prettier --write .`
-3. Run tests: `nx test @overture/cli`
-4. Run build: `nx build @overture/cli`
-5. Review changes: `git diff`
-6. Write descriptive commit message with body
-
-## Key Configuration Patterns
-
-### User Global Config (`~/.config/overture/config.yaml`)
-
-```yaml
-version: '1.0'
-
-mcp:
-  filesystem:
-    command: 'npx'
-    args: ['-y', '@modelcontextprotocol/server-filesystem', '${HOME}']
-
-  memory:
-    command: 'npx'
-    args: ['-y', 'mcp-server-memory']
-
-  github:
-    command: 'mcp-server-github'
-    env:
-      GITHUB_TOKEN: '${GITHUB_TOKEN}'
-```
-
-### Project Config (`.overture/config.yaml`)
-
-```yaml
-version: '1.0'
-
-project:
-  name: my-project
-  type: python-backend
-
-mcp:
-  python-repl:
-    command: 'uvx'
-    args: ['mcp-server-python-repl']
-
-  ruff:
-    command: 'uvx'
-    args: ['mcp-server-ruff']
-```
-
-### Generated Outputs
-
-**`.mcp.json`** - Claude Code project MCP configuration
-**`~/.claude.json`** - Claude Code user MCP configuration
-**`.github/mcp.json`** - GitHub Copilot CLI project MCP configuration
-**`~/.config/github-copilot/mcp.json`** - Copilot CLI user MCP configuration
-**`opencode.json`** - OpenCode project MCP configuration
-**`~/.config/opencode/opencode.json`** - OpenCode user MCP configuration
-**`CLAUDE.md`** - Project guidance with plugin→MCP mappings
-
-All configs generated from single `config.yaml` source of truth (3 clients).
-
-**Note:** Both `.yaml` and `.yml` extensions are supported, with `.yaml` as the preferred extension. Using `.yml` will show a deprecation warning.
-
-## Important Notes
-
-### Always Use Nx Commands
+### Pre-PR Checklist (REQUIRED — must pass before opening a PR)
 
 ```bash
-# ✅ Correct
+# 1. Format
+npx prettier --write .
+
+# 2. Lint
+nx run-many -t lint --all
+
+# 3. Test
 nx test @overture/cli
-nx build @overture/cli
-
-# ❌ Wrong
-npm test
-npm run build
-vitest
 ```
 
-### Nx Dependency Updates
+All three must pass. Do not open a PR if any step fails.
 
-Always use `nx migrate` for Nx package updates:
+## Notes
 
-```bash
-nx migrate latest
-npm install
-nx migrate --run-migrations
-rm migrations.json
-```
-
-### Environment Variables
-
-The CLI supports environment variable expansion in config files:
-
-```yaml
-env:
-  GITHUB_TOKEN: '${GITHUB_TOKEN}' # Required, fails if not set
-  DATABASE_URL: '${DATABASE_URL:-postgresql://localhost:5432/dev}' # With default
-```
-
-### Platform Detection
-
-The binary detector service automatically detects installed clients:
-
-- **CLI Detection:** Uses `which`/`where` commands
-- **GUI Detection:** Checks platform-specific application paths
-- **Version Extraction:** Runs `--version` flags with 5-second timeout
-- **Config Validation:** Verifies JSON syntax
-
-## Troubleshooting
-
-### Common Issues
-
-**Tests failing:**
-
-- Ensure all dependencies installed: `npm install`
-- Clear Nx cache: `nx reset`
-- Check for TypeScript errors: `npx tsc --noEmit`
-
-**Build failing:**
-
-- Clear dist directory: `rm -rf dist/`
-- Rebuild: `nx build @overture/cli`
-
-**Binary detection not working:**
-
-- Check PATH environment variable
-- Verify client is actually installed
-- Try with `skipBinaryDetection: true` in config
-
-## Documentation
-
-- **User Guide:** `docs/user-guide.md` - Comprehensive how-to
-- **Quick Start:** `docs/QUICKSTART.md` - 5-minute setup
-- **Examples:** `docs/examples.md` - Real-world scenarios
-- **Schema:** `docs/overture-schema.md` - Configuration reference
-- **Purpose:** `docs/PURPOSE.md` - Vision and roadmap
-
-## Related Projects
-
-- **Claude Code Workflows** (wshobson/agents) - Plugin marketplace
-- **Claude Code Flow** (ruvnet/claude-code-flow) - Multi-agent execution
-- **CCMem** (adestefa/ccmem) - Persistent memory MCP
-
-See `docs/related-projects.md` for detailed analysis.
-
----
+- `apps/cli/src/cli/commands/doctor.ts.backup` — leftover file, ignore
+- Version string lives in `apps/cli/src/cli/index.ts` as `CLI_VERSION`
+- Config supports both `.yaml` and `.yml` extensions; `.yaml` preferred; `.yml` shows deprecation warning
+- Environment variable expansion: `${VAR}` (required) and `${VAR:-default}` (with fallback)
+- WSL2 detection handles path translation between Windows/Linux file systems
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
