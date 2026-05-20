@@ -205,6 +205,20 @@ npx tsc --noEmit            # type check without build
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `chore:`
 - **Pull `main` before starting work. Work on a branch. Create a PR.**
 
+### Pre-PR Checklist (REQUIRED — must pass before opening a PR)
+
+```bash
+# 1. Format
+npx prettier --write .
+
+# 2. Lint
+nx run-many -t lint --all
+
+# 3. Test
+nx test @overture/cli
+```
+
+All three must pass. Do not open a PR if any step fails.
 ## Notes
 
 - `apps/cli/src/cli/commands/doctor.ts.backup` — leftover file, ignore
