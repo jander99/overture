@@ -21,18 +21,23 @@ client-adapters/src/lib/
 ```typescript
 interface ClientAdapter {
   readonly clientName: ClientName;
-  
+
   // Check if this adapter should handle MCP for the given server config
   shouldSyncMcp(serverConfig: McpServerConfig): boolean;
-  
+
   // Transform Overture MCP config → client-specific server config object
-  buildServerConfig(name: string, serverConfig: McpServerConfig): Record<string, unknown>;
-  
+  buildServerConfig(
+    name: string,
+    serverConfig: McpServerConfig,
+  ): Record<string, unknown>;
+
   // Write the final config file(s) for this client
   writeConfig(config: OvertureConfig, projectDir: string): Promise<void>;
-  
+
   // Read existing client config (for merge strategy)
-  readExistingConfig(projectDir: string): Promise<Record<string, unknown> | null>;
+  readExistingConfig(
+    projectDir: string,
+  ): Promise<Record<string, unknown> | null>;
 }
 ```
 
@@ -48,11 +53,11 @@ interface ClientAdapter {
 
 ## Per-Client Config Locations
 
-| Client | Project Config | User Config |
-| --- | --- | --- |
-| claude-code | `.mcp.json` | `~/.claude.json` |
-| copilot-cli | `.github/mcp.json` | — |
-| opencode | `opencode.json` | `~/.config/opencode/config.json` |
+| Client      | Project Config     | User Config                      |
+| ----------- | ------------------ | -------------------------------- |
+| claude-code | `.mcp.json`        | `~/.claude.json`                 |
+| copilot-cli | `.github/mcp.json` | —                                |
+| opencode    | `opencode.json`    | `~/.config/opencode/config.json` |
 
 ## shouldSyncMcp Logic
 

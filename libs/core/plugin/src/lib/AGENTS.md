@@ -19,6 +19,7 @@ Scans Claude Code's plugin directories to find installed plugins. Returns list o
 ## PluginInstaller
 
 Installs plugins defined in `config.yaml` under `plugins:` section. Handles:
+
 - npm package plugins (installs via process execution)
 - Local path plugins (copies or symlinks)
 - Version conflict detection
@@ -34,7 +35,7 @@ Reads currently installed plugins and generates config YAML snippet. Used by `ov
 plugins:
   - name: my-plugin
     source: npm:@scope/my-plugin
-    version: "^1.0.0"
+    version: '^1.0.0'
 ```
 
 ## Invariants

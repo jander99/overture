@@ -4,18 +4,18 @@ All 10 CLI command handlers. Each file registers subcommands onto Commander.js `
 
 ## Command Files
 
-| File | Command | Key Behavior |
-| --- | --- | --- |
-| `init.ts` | `overture init` | Scaffold `.overture/config.yaml` in cwd |
-| `sync.ts` | `overture sync` | Run full sync: MCPs + agents + skills to all clients |
-| `validate.ts` | `overture validate` | Validate config YAML against Zod schema |
-| `doctor.ts` | `overture doctor` | Run all 5 diagnostic checkers, display results |
-| `mcp-commands.ts` | `overture mcp` | MCP server add/remove/list |
-| `plugin-commands.ts` | `overture plugin` | Claude Code plugin install/list/export |
-| `user-commands.ts` | `overture user` | User global config management |
-| `audit-commands.ts` | `overture audit` | Scan client configs for unmanaged MCPs |
-| `backup-commands.ts` | `overture backup` | Backup/restore client configs |
-| `skill-commands.ts` | `overture skill` | Agent skill sync/list/validate |
+| File                 | Command             | Key Behavior                                         |
+| -------------------- | ------------------- | ---------------------------------------------------- |
+| `init.ts`            | `overture init`     | Scaffold `.overture/config.yaml` in cwd              |
+| `sync.ts`            | `overture sync`     | Run full sync: MCPs + agents + skills to all clients |
+| `validate.ts`        | `overture validate` | Validate config YAML against Zod schema              |
+| `doctor.ts`          | `overture doctor`   | Run all 5 diagnostic checkers, display results       |
+| `mcp-commands.ts`    | `overture mcp`      | MCP server add/remove/list                           |
+| `plugin-commands.ts` | `overture plugin`   | Claude Code plugin install/list/export               |
+| `user-commands.ts`   | `overture user`     | User global config management                        |
+| `audit-commands.ts`  | `overture audit`    | Scan client configs for unmanaged MCPs               |
+| `backup-commands.ts` | `overture backup`   | Backup/restore client configs                        |
+| `skill-commands.ts`  | `overture skill`    | Agent skill sync/list/validate                       |
 
 `doctor.ts.backup` — leftover file, ignore entirely.
 
@@ -23,7 +23,10 @@ All 10 CLI command handlers. Each file registers subcommands onto Commander.js `
 
 ```typescript
 // Every command follows this pattern:
-export function registerMyCommand(program: Command, deps: AppDependencies): void {
+export function registerMyCommand(
+  program: Command,
+  deps: AppDependencies,
+): void {
   program
     .command('my-command')
     .description('...')

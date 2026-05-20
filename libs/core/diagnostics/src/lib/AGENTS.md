@@ -40,6 +40,7 @@ async check(): Promise<DiagnosticResult[]> {
 ## AgentsChecker
 
 Validates that every agent has both a `.yaml` and `.md` file (paired). Checks:
+
 - YAML schema validity
 - Markdown file presence
 - Agent sync status (in-sync vs needs-update) across all 3 clients
@@ -51,6 +52,7 @@ Detects Claude Code, Copilot CLI, OpenCode installation. Returns version info an
 ## McpChecker
 
 Reads each client's MCP config files and validates:
+
 - JSON/YAML parse success
 - Required fields present
 - No duplicate server names

@@ -27,6 +27,7 @@ class ConfigLoader {
 ```
 
 Key behaviors:
+
 - Supports both `.yaml` and `.yml` (`.yml` logs deprecation warning)
 - Expands `${VAR}` and `${VAR:-default}` environment variables
 - Throws `OvertureError` with `CONFIG_NOT_FOUND` exit code when no config found
@@ -49,6 +50,7 @@ class PathResolver {
 ```
 
 Key behaviors:
+
 - All paths computed from `process.env.HOME`, `process.cwd()` via `ProcessPort`
 - WSL2 detection: if running in WSL2 and target is Windows path, translates via `/mnt/c/...`
 - No hardcoded paths — all derived from environment

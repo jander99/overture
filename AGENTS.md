@@ -25,42 +25,42 @@ apps/cli/          CLI commands + DI composition root
 
 Use these aliases (defined in `tsconfig.base.json`) — never use relative paths across package boundaries.
 
-| Alias | Package | Key Contents |
-| --- | --- | --- |
-| `@overture/config-types` | `libs/domain/config-types` | 15 type files: adapter, agent, base, client, config, discovery, import, mcp, plugin, skill, sync, utility, validation types |
-| `@overture/config-schema` | `libs/domain/config-schema` | Zod schemas (434L), marketplace registry (349L) |
-| `@overture/errors` | `libs/domain/errors` | OvertureError hierarchy + exit codes |
-| `@overture/config-core` | `libs/core/config` | ConfigLoader (548L), PathResolver (748L) |
-| `@overture/discovery-core` | `libs/core/discovery` | DiscoveryService (563L), WSL2Detector, BinaryDetector |
-| `@overture/sync-core` | `libs/core/sync` | SyncEngine (1299L), McpSyncService (554L), BackupService |
-| `@overture/plugin-core` | `libs/core/plugin` | PluginDetector (425L), Installer (387L), Exporter (424L) |
-| `@overture/diagnostics-core` | `libs/core/diagnostics` | 5 checkers: agents, clients, config-repo, mcp, skills |
-| `@overture/agent-core` | `libs/core/agent` | AgentSyncService |
-| `@overture/skill` | `libs/core/skill` | SkillDiscovery, SkillSyncService |
-| `@overture/client-adapters` | `libs/adapters/client-adapters` | 3 adapters + registry + factory + BaseClientAdapter |
-| `@overture/adapters-infrastructure` | `libs/adapters/infrastructure` | Node.js FilesystemAdapter, ProcessAdapter, OutputAdapter |
-| `@overture/ports-filesystem` | `libs/ports/filesystem` | FilesystemPort interface |
-| `@overture/ports-process` | `libs/ports/process` | ProcessPort interface |
-| `@overture/ports-output` | `libs/ports/output` | OutputPort interface |
-| `@overture/utils` | `libs/shared/utils` | error-handler (787L), validation-formatter (404L), 12 more |
-| `@overture/testing` | `libs/shared/testing` | builders, fixtures, mocks; config.builder.ts (441L) |
+| Alias                               | Package                         | Key Contents                                                                                                                |
+| ----------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@overture/config-types`            | `libs/domain/config-types`      | 15 type files: adapter, agent, base, client, config, discovery, import, mcp, plugin, skill, sync, utility, validation types |
+| `@overture/config-schema`           | `libs/domain/config-schema`     | Zod schemas (434L), marketplace registry (349L)                                                                             |
+| `@overture/errors`                  | `libs/domain/errors`            | OvertureError hierarchy + exit codes                                                                                        |
+| `@overture/config-core`             | `libs/core/config`              | ConfigLoader (548L), PathResolver (748L)                                                                                    |
+| `@overture/discovery-core`          | `libs/core/discovery`           | DiscoveryService (563L), WSL2Detector, BinaryDetector                                                                       |
+| `@overture/sync-core`               | `libs/core/sync`                | SyncEngine (1299L), McpSyncService (554L), BackupService                                                                    |
+| `@overture/plugin-core`             | `libs/core/plugin`              | PluginDetector (425L), Installer (387L), Exporter (424L)                                                                    |
+| `@overture/diagnostics-core`        | `libs/core/diagnostics`         | 5 checkers: agents, clients, config-repo, mcp, skills                                                                       |
+| `@overture/agent-core`              | `libs/core/agent`               | AgentSyncService                                                                                                            |
+| `@overture/skill`                   | `libs/core/skill`               | SkillDiscovery, SkillSyncService                                                                                            |
+| `@overture/client-adapters`         | `libs/adapters/client-adapters` | 3 adapters + registry + factory + BaseClientAdapter                                                                         |
+| `@overture/adapters-infrastructure` | `libs/adapters/infrastructure`  | Node.js FilesystemAdapter, ProcessAdapter, OutputAdapter                                                                    |
+| `@overture/ports-filesystem`        | `libs/ports/filesystem`         | FilesystemPort interface                                                                                                    |
+| `@overture/ports-process`           | `libs/ports/process`            | ProcessPort interface                                                                                                       |
+| `@overture/ports-output`            | `libs/ports/output`             | OutputPort interface                                                                                                        |
+| `@overture/utils`                   | `libs/shared/utils`             | error-handler (787L), validation-formatter (404L), 12 more                                                                  |
+| `@overture/testing`                 | `libs/shared/testing`           | builders, fixtures, mocks; config.builder.ts (441L)                                                                         |
 
 ## Where to Look
 
-| Task | Location |
-| --- | --- |
-| Add a CLI command | `apps/cli/src/cli/commands/` + register in `apps/cli/src/cli/index.ts` |
-| Change DI wiring | `apps/cli/src/composition-root.ts` (ONLY infra instantiation point) |
-| Modify sync behavior | `libs/core/sync/src/lib/sync-engine.ts` (1299L) |
-| Add a diagnostic check | `libs/core/diagnostics/src/lib/checkers/` |
-| Add/change config types | `libs/domain/config-types/src/lib/` |
-| Add/change Zod schemas | `libs/domain/config-schema/src/lib/config-schema.ts` |
-| Add a client adapter | `libs/adapters/client-adapters/src/lib/adapters/` |
-| Change path resolution | `libs/core/config/src/lib/path-resolver.ts` |
-| Add error type | `libs/domain/errors/src/lib/` |
-| Add test helper/mock | `libs/shared/testing/src/lib/` |
-| Add a utility | `libs/shared/utils/src/lib/` |
-| Format output | `libs/shared/formatters/src/lib/formatters/` |
+| Task                    | Location                                                               |
+| ----------------------- | ---------------------------------------------------------------------- |
+| Add a CLI command       | `apps/cli/src/cli/commands/` + register in `apps/cli/src/cli/index.ts` |
+| Change DI wiring        | `apps/cli/src/composition-root.ts` (ONLY infra instantiation point)    |
+| Modify sync behavior    | `libs/core/sync/src/lib/sync-engine.ts` (1299L)                        |
+| Add a diagnostic check  | `libs/core/diagnostics/src/lib/checkers/`                              |
+| Add/change config types | `libs/domain/config-types/src/lib/`                                    |
+| Add/change Zod schemas  | `libs/domain/config-schema/src/lib/config-schema.ts`                   |
+| Add a client adapter    | `libs/adapters/client-adapters/src/lib/adapters/`                      |
+| Change path resolution  | `libs/core/config/src/lib/path-resolver.ts`                            |
+| Add error type          | `libs/domain/errors/src/lib/`                                          |
+| Add test helper/mock    | `libs/shared/testing/src/lib/`                                         |
+| Add a utility           | `libs/shared/utils/src/lib/`                                           |
+| Format output           | `libs/shared/formatters/src/lib/formatters/`                           |
 
 ## Conventions
 
@@ -151,18 +151,18 @@ libs/
 
 ## CLI Commands
 
-| Command | File | Description |
-| --- | --- | --- |
-| `overture init` | `init.ts` | Initialize `.overture/config.yaml` |
-| `overture sync` | `sync.ts` | Sync MCPs + agents + skills to all clients |
-| `overture validate` | `validate.ts` | Validate config files |
-| `overture doctor` | `doctor.ts` | System diagnostics |
-| `overture mcp` | `mcp-commands.ts` | MCP server management |
-| `overture plugin` | `plugin-commands.ts` | Plugin management |
-| `overture user` | `user-commands.ts` | User global config management |
-| `overture audit` | `audit-commands.ts` | Find unmanaged MCPs |
-| `overture backup` | `backup-commands.ts` | Backup/restore configs |
-| `overture skill` | `skill-commands.ts` | Skill management |
+| Command             | File                 | Description                                |
+| ------------------- | -------------------- | ------------------------------------------ |
+| `overture init`     | `init.ts`            | Initialize `.overture/config.yaml`         |
+| `overture sync`     | `sync.ts`            | Sync MCPs + agents + skills to all clients |
+| `overture validate` | `validate.ts`        | Validate config files                      |
+| `overture doctor`   | `doctor.ts`          | System diagnostics                         |
+| `overture mcp`      | `mcp-commands.ts`    | MCP server management                      |
+| `overture plugin`   | `plugin-commands.ts` | Plugin management                          |
+| `overture user`     | `user-commands.ts`   | User global config management              |
+| `overture audit`    | `audit-commands.ts`  | Find unmanaged MCPs                        |
+| `overture backup`   | `backup-commands.ts` | Backup/restore configs                     |
+| `overture skill`    | `skill-commands.ts`  | Skill management                           |
 
 ## Development Commands
 
@@ -195,6 +195,7 @@ npx tsc --noEmit            # type check without build
 ## CI Pipeline
 
 `.github/workflows/ci.yml` runs two jobs:
+
 1. **quality**: `nx run-many -t lint --all` + `prettier --check .`
 2. **test** (requires quality): `nx test @overture/cli` on Node.js 20
 
@@ -219,6 +220,7 @@ nx test @overture/cli
 ```
 
 All three must pass. Do not open a PR if any step fails.
+
 ## Notes
 
 - `apps/cli/src/cli/commands/doctor.ts.backup` — leftover file, ignore

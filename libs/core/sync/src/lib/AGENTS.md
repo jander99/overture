@@ -19,6 +19,7 @@ sync/src/lib/
 ## SyncEngine (sync-engine.ts)
 
 The main entry point for `overture sync`. Coordinates:
+
 1. Load config (via `ConfigLoader`)
 2. Detect clients (via `DiscoveryService`)
 3. Sync MCPs to each client adapter
@@ -27,6 +28,7 @@ The main entry point for `overture sync`. Coordinates:
 6. Sync plugins
 
 **Method signature pattern:**
+
 ```typescript
 class SyncEngine {
   constructor(
@@ -44,6 +46,7 @@ class SyncEngine {
 ## McpSyncService (services/mcp-sync-service.ts)
 
 Handles per-client MCP config generation. For each detected client:
+
 1. Load existing client config
 2. Merge/append MCP entries from Overture config
 3. Write back via `FilesystemPort`

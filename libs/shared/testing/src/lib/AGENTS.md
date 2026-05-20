@@ -29,7 +29,10 @@ const config = buildConfig();
 // With customizations:
 const config = buildConfig({
   mcp: {
-    'my-server': buildMcpServer({ command: 'my-cmd', args: ['--port', '3000'] }),
+    'my-server': buildMcpServer({
+      command: 'my-cmd',
+      args: ['--port', '3000'],
+    }),
   },
   sync: { backup: false },
 });
@@ -43,7 +46,11 @@ const config = buildConfig({
 ## Port Mocks
 
 ```typescript
-import { createFilesystemMock, createProcessMock, createOutputMock } from '@overture/testing';
+import {
+  createFilesystemMock,
+  createProcessMock,
+  createOutputMock,
+} from '@overture/testing';
 
 const fs = createFilesystemMock({
   '/path/to/config.yaml': 'version: "2.0"\n...',
@@ -52,7 +59,9 @@ const proc = createProcessMock({ HOME: '/home/user', cwd: '/project' });
 const output = createOutputMock();
 
 // After test:
-expect(output.info).toHaveBeenCalledWith(expect.stringContaining('Sync complete'));
+expect(output.info).toHaveBeenCalledWith(
+  expect.stringContaining('Sync complete'),
+);
 ```
 
 ## Fixtures
@@ -60,11 +69,11 @@ expect(output.info).toHaveBeenCalledWith(expect.stringContaining('Sync complete'
 Pre-built objects for common scenarios:
 
 ```typescript
-import { 
-  MINIMAL_CONFIG,        // bare minimum valid OvertureConfig
-  FULL_CONFIG,           // config with all features enabled
-  CLAUDE_CODE_CLIENT,    // DetectedClient for claude-code
-  SYNC_SUCCESS_RESULT,   // SyncResult with all success statuses
+import {
+  MINIMAL_CONFIG, // bare minimum valid OvertureConfig
+  FULL_CONFIG, // config with all features enabled
+  CLAUDE_CODE_CLIENT, // DetectedClient for claude-code
+  SYNC_SUCCESS_RESULT, // SyncResult with all success statuses
 } from '@overture/testing';
 ```
 
