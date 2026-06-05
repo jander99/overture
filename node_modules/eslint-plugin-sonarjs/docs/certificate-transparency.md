@@ -1,0 +1,7 @@
+# Disabling Certificate Transparency monitoring is security-sensitive (`sonarjs/certificate-transparency`)
+
+❌ This rule is deprecated.
+
+🚫 This rule is _disabled_ in the ✅ `recommended` config.
+
+<!-- end auto-generated rule header -->

@@ -1,0 +1,37 @@
+{
+  "name": "eslint-plugin-sonarjs",
+  "description": "SonarJS rules for ESLint",
+  "version": "3.0.5",
+  "main": "./cjs/plugin.js",
+  "types": "./types/plugin.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SonarSource/SonarJS.git"
+  },
+  "author": "SonarSource",
+  "license": "LGPL-3.0-only",
+  "keywords": [
+    "sonarjs",
+    "eslint",
+    "eslintplugin"
+  ],
+  "bugs": {
+    "url": "https://community.sonarsource.com/"
+  },
+  "homepage": "https://github.com/SonarSource/SonarJS/blob/master/packages/jsts/src/rules/README.md",
+  "dependencies": {
+    "@eslint-community/regexpp": "4.12.1",
+    "builtin-modules": "3.3.0",
+    "bytes": "3.1.2",
+    "functional-red-black-tree": "1.0.1",
+    "jsx-ast-utils-x": "0.1.0",
+    "lodash.merge": "4.6.2",
+    "minimatch": "9.0.5",
+    "scslre": "0.3.0",
+    "semver": "7.7.2",
+    "typescript": ">=5"
+  },
+  "peerDependencies": {
+    "eslint": "^8.0.0 || ^9.0.0"
+  }
+}

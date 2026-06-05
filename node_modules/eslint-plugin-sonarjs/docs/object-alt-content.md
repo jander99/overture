@@ -1,0 +1,5 @@
+# "<object>" tags should provide an alternative content (`sonarjs/object-alt-content`)
+
+💼 This rule is enabled in the ✅ `recommended` config.
+
+<!-- end auto-generated rule header -->

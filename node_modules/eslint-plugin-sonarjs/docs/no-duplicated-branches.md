@@ -1,0 +1,5 @@
+# Two branches in a conditional structure should not have exactly the same implementation (`sonarjs/no-duplicated-branches`)
+
+💼 This rule is enabled in the ✅ `recommended` config.
+
+<!-- end auto-generated rule header -->

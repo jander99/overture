@@ -1,0 +1,5 @@
+# Expanding archive files without controlling resource consumption is security-sensitive (`sonarjs/no-unsafe-unzip`)
+
+💼 This rule is enabled in the ✅ `recommended` config.
+
+<!-- end auto-generated rule header -->

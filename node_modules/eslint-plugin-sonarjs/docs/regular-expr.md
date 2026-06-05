@@ -1,0 +1,7 @@
+# Using regular expressions is security-sensitive (`sonarjs/regular-expr`)
+
+❌ This rule is deprecated.
+
+🚫 This rule is _disabled_ in the ✅ `recommended` config.
+
+<!-- end auto-generated rule header -->
