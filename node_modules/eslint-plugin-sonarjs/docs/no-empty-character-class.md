@@ -1,7 +1,0 @@
-# Empty character classes should not be used (`sonarjs/no-empty-character-class`)
-
-💼 This rule is enabled in the ✅ `recommended` config.
-
-💭 This rule requires [type information](https://typescript-eslint.io/linting/typed-linting).
-
-<!-- end auto-generated rule header -->
