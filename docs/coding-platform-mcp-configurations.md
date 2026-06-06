@@ -42,14 +42,14 @@ That convention is common, but it is not universal. A detector should not infer
 support solely from a file named `mcp.json`; it should parse the platform-specific
 top-level key and transport fields.
 
-| Top-level shape | Platforms |
-| --- | --- |
-| `mcpServers` JSON object | Claude Desktop, Claude Code project config, Cursor, Windsurf, Cline, Roo Code, GitHub Copilot CLI/cloud |
-| `servers` JSON object | VS Code / GitHub Copilot Chat MCP |
-| `mcp` JSON object | OpenCode |
-| `context_servers` JSON object | Zed |
-| YAML document with `mcpServers` list | Continue |
-| TOML `[mcp_servers.<name>]` tables | OpenAI Codex |
+| Top-level shape                      | Platforms                                                                                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `mcpServers` JSON object             | Claude Desktop, Claude Code project config, Cursor, Windsurf, Cline, Roo Code, GitHub Copilot CLI/cloud |
+| `servers` JSON object                | VS Code / GitHub Copilot Chat MCP                                                                       |
+| `mcp` JSON object                    | OpenCode                                                                                                |
+| `context_servers` JSON object        | Zed                                                                                                     |
+| YAML document with `mcpServers` list | Continue                                                                                                |
+| TOML `[mcp_servers.<name>]` tables   | OpenAI Codex                                                                                            |
 
 Common transport fields:
 
@@ -106,24 +106,24 @@ Suggested probe paths are listed in the catalog below.
 This machine had the following coding/agentic tools available on PATH during the
 research pass:
 
-| Tool | Path |
-| --- | --- |
-| `claude` | `/home/jeff/.local/bin/claude` |
-| `opencode` | `/home/linuxbrew/.linuxbrew/bin/opencode` |
-| `gh` | `/home/linuxbrew/.linuxbrew/bin/gh` |
-| `code` | `/mnt/c/Program Files/Microsoft VS Code/bin/code` |
-| `codex` | `/home/jeff/.nvm/versions/node/v25.2.1/bin/codex` |
-| `aider` | `/home/jeff/.local/bin/aider` |
+| Tool       | Path                                              |
+| ---------- | ------------------------------------------------- |
+| `claude`   | `/home/jeff/.local/bin/claude`                    |
+| `opencode` | `/home/linuxbrew/.linuxbrew/bin/opencode`         |
+| `gh`       | `/home/linuxbrew/.linuxbrew/bin/gh`               |
+| `code`     | `/mnt/c/Program Files/Microsoft VS Code/bin/code` |
+| `codex`    | `/home/jeff/.nvm/versions/node/v25.2.1/bin/codex` |
+| `aider`    | `/home/jeff/.local/bin/aider`                     |
 
 The following MCP-related config files were present:
 
-| File | Platform interpretation |
-| --- | --- |
-| `~/.claude.json` | Claude Code local/user MCP scopes |
-| `.mcp.json` | Claude Code project MCP config convention |
-| `opencode.json` | OpenCode project config with top-level `mcp` |
-| `.github/mcp.json` | GitHub Copilot repository/workspace MCP convention; verify against current Copilot CLI behavior before relying on it |
-| `~/.codeium/windsurf/mcp_config.json` | Windsurf MCP config |
+| File                                  | Platform interpretation                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `~/.claude.json`                      | Claude Code local/user MCP scopes                                                                                    |
+| `.mcp.json`                           | Claude Code project MCP config convention                                                                            |
+| `opencode.json`                       | OpenCode project config with top-level `mcp`                                                                         |
+| `.github/mcp.json`                    | GitHub Copilot repository/workspace MCP convention; verify against current Copilot CLI behavior before relying on it |
+| `~/.codeium/windsurf/mcp_config.json` | Windsurf MCP config                                                                                                  |
 
 The VS Code extension list included `anthropic.claude-code`, but no Cline, Roo,
 Continue, or Copilot extension was visible in the checked output.
@@ -141,12 +141,12 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Project | `<project>/.mcp.json` |
-| Local project-private | `~/.claude.json`, keyed under the current project |
-| User global | `~/.claude.json` |
-| Managed enterprise | Enterprise-managed policy/configuration, outside normal user files |
+| Scope                 | Location                                                           |
+| --------------------- | ------------------------------------------------------------------ |
+| Project               | `<project>/.mcp.json`                                              |
+| Local project-private | `~/.claude.json`, keyed under the current project                  |
+| User global           | `~/.claude.json`                                                   |
+| Managed enterprise    | Enterprise-managed policy/configuration, outside normal user files |
 
 Project format:
 
@@ -195,11 +195,11 @@ Detection:
 
 Configuration locations:
 
-| OS | Location |
-| --- | --- |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Linux | No stable first-party desktop path was confirmed during research |
+| OS      | Location                                                          |
+| ------- | ----------------------------------------------------------------- |
+| macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json`                     |
+| Linux   | No stable first-party desktop path was confirmed during research  |
 
 Format:
 
@@ -226,10 +226,10 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Project | `<project>/opencode.json` or `<project>/opencode.jsonc`; check `.opencode.json` for host/version variants |
-| User global | `~/.config/opencode/opencode.json` or `~/.opencode.json`; check `.jsonc` variants by version |
+| Scope       | Location                                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| Project     | `<project>/opencode.json` or `<project>/opencode.jsonc`; check `.opencode.json` for host/version variants |
+| User global | `~/.config/opencode/opencode.json` or `~/.opencode.json`; check `.jsonc` variants by version              |
 
 Format uses top-level `mcp`, not `mcpServers`:
 
@@ -277,9 +277,9 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Workspace | `<workspace>/.vscode/mcp.json` |
+| Scope        | Location                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| Workspace    | `<workspace>/.vscode/mcp.json`                                                                          |
 | User/profile | Open with VS Code command `MCP: Open User Configuration`; stored in the active profile/user config area |
 
 Format uses top-level `servers`, not `mcpServers`:
@@ -312,10 +312,10 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| User | `~/.copilot/mcp-config.json`; relocatable with `COPILOT_HOME` |
-| Interactive management | `/mcp add` inside Copilot CLI |
+| Scope                  | Location                                                      |
+| ---------------------- | ------------------------------------------------------------- |
+| User                   | `~/.copilot/mcp-config.json`; relocatable with `COPILOT_HOME` |
+| Interactive management | `/mcp add` inside Copilot CLI                                 |
 
 Format:
 
@@ -355,8 +355,8 @@ Detection:
 
 Configuration location:
 
-| Scope | Location |
-| --- | --- |
+| Scope      | Location                                                                          |
+| ---------- | --------------------------------------------------------------------------------- |
 | Repository | GitHub.com repository settings under Copilot coding/cloud agent MCP configuration |
 
 Format:
@@ -394,10 +394,10 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Project | `<project>/.cursor/mcp.json` |
-| User global | `~/.cursor/mcp.json` |
+| Scope       | Location                     |
+| ----------- | ---------------------------- |
+| Project     | `<project>/.cursor/mcp.json` |
+| User global | `~/.cursor/mcp.json`         |
 
 Format:
 
@@ -427,8 +427,8 @@ Detection:
 
 Configuration location:
 
-| Scope | Location |
-| --- | --- |
+| Scope       | Location                              |
+| ----------- | ------------------------------------- |
 | User global | `~/.codeium/windsurf/mcp_config.json` |
 
 Format follows the Claude Desktop-style `mcpServers` schema:
@@ -465,13 +465,13 @@ Detection:
 
 Configuration locations:
 
-| Scope | Common location |
-| --- | --- |
-| Current Cline user config | `~/.cline/mcp.json` |
-| Legacy Cline CLI/user data | `~/.cline/data/settings/cline_mcp_settings.json` |
-| Legacy VS Code on Linux | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
-| Legacy VS Code on macOS | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
-| Legacy VS Code on Windows | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json` |
+| Scope                      | Common location                                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Current Cline user config  | `~/.cline/mcp.json`                                                                                             |
+| Legacy Cline CLI/user data | `~/.cline/data/settings/cline_mcp_settings.json`                                                                |
+| Legacy VS Code on Linux    | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`                     |
+| Legacy VS Code on macOS    | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
+| Legacy VS Code on Windows  | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`                     |
 
 Format:
 
@@ -502,9 +502,9 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Project | `<project>/.roo/mcp.json` |
+| Scope       | Location                                                                 |
+| ----------- | ------------------------------------------------------------------------ |
+| Project     | `<project>/.roo/mcp.json`                                                |
 | User global | Roo Code global `mcp_settings.json`, opened from the Roo MCP settings UI |
 
 Format:
@@ -555,9 +555,9 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| Workspace YAML | `<workspace>/.continue/mcpServers/*.yaml` |
+| Scope                   | Location                                  |
+| ----------------------- | ----------------------------------------- |
+| Workspace YAML          | `<workspace>/.continue/mcpServers/*.yaml` |
 | Workspace imported JSON | `<workspace>/.continue/mcpServers/*.json` |
 
 Continue can import JSON files copied from supported clients into this directory;
@@ -603,10 +603,10 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| User settings | Zed `settings.json`; commonly `~/.config/zed/settings.json` on Linux |
-| Folder settings | `<project>/.zed/settings.json` |
+| Scope           | Location                                                             |
+| --------------- | -------------------------------------------------------------------- |
+| User settings   | Zed `settings.json`; commonly `~/.config/zed/settings.json` on Linux |
+| Folder settings | `<project>/.zed/settings.json`                                       |
 
 Format uses top-level `context_servers`:
 
@@ -643,9 +643,9 @@ Detection:
 
 Configuration locations:
 
-| Scope | Location |
-| --- | --- |
-| User global | `~/.codex/config.toml` |
+| Scope           | Location                       |
+| --------------- | ------------------------------ |
+| User global     | `~/.codex/config.toml`         |
 | Trusted project | `<project>/.codex/config.toml` |
 
 Format uses TOML tables:

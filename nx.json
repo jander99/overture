@@ -9,37 +9,26 @@
     },
     "test": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "lint": {
       "cache": true
     },
     "@nx/esbuild:esbuild": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "inputs": [
         "default",
         "^default",
         {
           "json": "{workspaceRoot}/tsconfig.json",
-          "fields": [
-            "extends",
-            "files",
-            "include"
-          ]
+          "fields": ["extends", "files", "include"]
         }
       ]
     },
     "@nx/vitest:test": {
       "cache": true,
-      "inputs": [
-        "default",
-        "^default"
-      ]
+      "inputs": ["default", "^default"]
     }
   },
   "plugins": [
