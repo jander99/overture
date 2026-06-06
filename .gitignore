@@ -1,3 +1,13 @@
 # Overture workspace
 .omo/
 .sisyphus/
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/self-healing
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
+vitest.config.*.timestamp*
+
+node_modules
