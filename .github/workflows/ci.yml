@@ -22,10 +22,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Lint
         run: npx nx run-many -t lint --all
@@ -45,10 +57,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Test
         run: npx nx test @overture/cli
