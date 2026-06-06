@@ -1,3 +1,10 @@
 #!/usr/bin/env node
+import { run } from './cli.js';
 
-console.log('Hello World');
+(async () => {
+  const code = await run(process.argv.slice(2));
+  process.exit(code);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
