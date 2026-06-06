@@ -4137,6 +4137,8 @@ __metadata:
 "cli@workspace:apps/cli":
   version: 0.0.0-use.local
   resolution: "cli@workspace:apps/cli"
+  bin:
+    overture: ./dist/main.js
   languageName: unknown
   linkType: soft
 

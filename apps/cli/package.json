@@ -2,6 +2,13 @@
   "name": "cli",
   "version": "0.0.1",
   "private": true,
+  "bin": {
+    "overture": "./dist/main.js"
+  },
+  "scripts": {
+    "link": "yarn nx build cli && npm link",
+    "unlink": "npm unlink -g overture"
+  },
   "nx": {
     "targets": {
       "build": {
@@ -16,14 +23,13 @@
           "format": [
             "cjs"
           ],
-          "bundle": false,
+          "bundle": true,
           "main": "apps/cli/src/main.ts",
           "tsConfig": "apps/cli/tsconfig.app.json",
           "assets": [
             "apps/cli/src/assets"
           ],
           "esbuildOptions": {
-            "sourcemap": true,
             "outExtension": {
               ".js": ".js"
             }
