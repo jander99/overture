@@ -4,70 +4,7 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/cli-e2e"
-    },
-    {
       "path": "./apps/cli"
-    },
-    {
-      "path": "./libs/shared/testing"
-    },
-    {
-      "path": "./libs/domain/config-types"
-    },
-    {
-      "path": "./libs/domain/config-schema"
-    },
-    {
-      "path": "./libs/domain/errors"
-    },
-    {
-      "path": "./libs/ports/output"
-    },
-    {
-      "path": "./libs/ports/process"
-    },
-    {
-      "path": "./libs/ports/filesystem"
-    },
-    {
-      "path": "./libs/core/discovery"
-    },
-    {
-      "path": "./libs/adapters/infrastructure"
-    },
-    {
-      "path": "./libs/core/config"
-    },
-    {
-      "path": "./libs/adapters/client-adapters"
-    },
-    {
-      "path": "./libs/core/plugin"
-    },
-    {
-      "path": "./libs/shared/utils"
-    },
-    {
-      "path": "./libs/core/sync"
-    },
-    {
-      "path": "./libs/core/skill"
-    },
-    {
-      "path": "./libs/core/agent"
-    },
-    {
-      "path": "./libs/core/diagnostics"
-    },
-    {
-      "path": "./libs/shared/formatters"
-    },
-    {
-      "path": "./libs/domain/diagnostics-types"
-    },
-    {
-      "path": "./libs/shared/cli-utils"
     }
   ]
 }

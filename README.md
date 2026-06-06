@@ -1,616 +1,119 @@
-# Overture
+# overture
 
-[![Tests](https://img.shields.io/badge/tests-273%20passing-brightgreen)](https://github.com/overture-stack/overture)
-[![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)](https://github.com/overture-stack/overture)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue)](CHANGELOG.md)
+`overture` is a CLI utility that keeps your MCP (Model Context Protocol) server
+configurations in sync across every installed LLM coding platform on your
+machine. Define your MCP servers once, and `overture` propagates them to the
+configuration files of every detected client — Claude Code, OpenCode, VS Code /
+GitHub Copilot, Cursor, Windsurf, Cline, Roo Code, Continue, Codex, Zed, Aider,
+and friends.
 
-> **Multi-platform MCP and Agent orchestrator** - Manage Model Context Protocol (MCP) servers and AI agents across all AI development tools from a single source of truth.
+It is the MCP analog of the "npx skills" workflow: just as `skills` syncs Agent
+Skills across coding agents, `overture` syncs MCP servers.
 
-Overture synchronizes MCP configurations and AI agents to **Claude Code**, **GitHub Copilot CLI**, and **OpenCode** from one unified config file, with automatic client detection, version tracking, intelligent merging, and sync status monitoring.
+## What it does
 
----
+- **Detects** which MCP-capable LLM platforms are installed on the host by
+  probing executables, IDE extensions, and configuration files.
+- **Reads** your canonical MCP server definitions from a single source of
+  truth.
+- **Writes** equivalent entries into each platform's native configuration
+  location, respecting that platform's schema and transport conventions
+  (`mcpServers`, `servers`, `mcp`, `context_servers`, YAML lists, TOML
+  tables, etc.).
+- **Reports** drift, conflicts, and unsupported fields so you can resolve
+  them explicitly instead of silently losing configuration.
 
-## ✨ Features
+See [`docs/coding-platform-mcp-configurations.md`](docs/coding-platform-mcp-configurations.md)
+for the per-platform catalog that drives detection and writing logic.
 
-### MCP Server Management
+## Repository layout
 
-- 🎯 **Single Source of Truth** - Manage all MCP servers in one `config.yaml` file
-- 🔄 **Multi-Platform Sync** - Generates configs for 3+ AI clients automatically
-- 🔍 **Auto-Detection** - Finds installed clients, versions, and validates configs
-- 📊 **Smart Merging** - Preserves user settings while updating MCP configurations
+```
+overture/
+├── apps/
+│   └── cli/              # The `overture` CLI (entry point: src/main.ts)
+├── docs/
+│   └── coding-platform-mcp-configurations.md
+├── nx.json               # NX workspace configuration
+└── package.json          # Yarn 4 workspaces root
+```
 
-### AI Agent Management
+The workspace is a Yarn 4 monorepo orchestrated by NX 22. Today only `apps/cli`
+exists; additional apps and shared packages will land under `packages/`.
 
-- 🤖 **Universal Agent Sync** - Write agents once, sync to all clients (Claude Code, OpenCode, Copilot CLI)
-- 🔄 **Agent Sync Status** - Track which agents are in sync vs need updating
-- ✅ **Agent Validation** - Automatic YAML schema and Markdown validation
-- 🎨 **Client-Specific Formats** - Automatic transformation to each client's agent format
+## Build & execute
 
-### Developer Experience
+The CLI lives in `apps/cli`. It is built with the `@nx/esbuild` executor and
+shipped as a CommonJS Node bundle.
 
-- 🩺 **Comprehensive Diagnostics** - `doctor` command shows system health and sync status
-- 🛡️ **Type-Safe** - Zod schema validation with helpful error messages
-- 🧪 **Well-Tested** - 273 tests with 83% code coverage
-- 🏗️ **Production-Ready** - Zero security vulnerabilities, TypeScript strict mode
-
----
-
-## 🚀 Quick Start
-
-### Installation
+### Run in dev (one-shot)
 
 ```bash
-npm install -g @overture/cli
+yarn nx serve cli
 ```
 
-### Check System Health
+This builds the project and runs the output through Node.
+
+### Build only
 
 ```bash
-overture doctor
+yarn nx build cli
+# Output: apps/cli/dist/main.js
 ```
 
-Shows installed AI clients, versions, configuration status, and agent sync status.
-
-Example output:
-
-```
-Summary:
-  Config repo:      exists
-  Global agents:    exists (5 agents)
-  Project agents:   exists (3 agents)
-  Agent sync:       2 in sync, 3 need sync
-  Clients detected: 3 / 3
-  MCP commands available: 6 / 6
-```
-
-### Initialize Project
+### Test
 
 ```bash
-cd your-project
-overture init
+yarn nx test cli
 ```
 
-Creates `.overture/config.yaml` with starter configuration.
+### Make `overture` runnable as `npx overture` locally
 
-### Sync to All Clients
+The CLI exposes a `bin` entry so you can run it via `npx overture` from
+anywhere on your machine without publishing to npm. The workflow is:
 
 ```bash
-overture sync
+# 1. Build and create a global symlink
+yarn nx run cli:link
+
+# 2. Run it
+npx overture
+# or simply
+overture
+
+# 3. When you're done, remove the global symlink
+yarn nx run cli:unlink
 ```
 
-Synchronizes MCPs and agents to all detected clients.
+The `link` script in `apps/cli/package.json` wraps both steps:
 
-**MCP Configs Generated:**
+```json
+{
+  "scripts": {
+    "link": "yarn nx build cli && npm link",
+    "unlink": "npm unlink -g overture"
+  }
+}
+```
 
-- `.mcp.json` (Claude Code project config)
-- `~/.claude.json` (Claude Code user config)
-- `.github/mcp.json` (GitHub Copilot CLI project)
-- `opencode.json` (OpenCode project config)
-
-**Agent Files Synced:**
-
-- `~/.claude/agents/<name>.md` (Claude Code)
-- `~/.config/opencode/agent/<name>.md` (OpenCode)
-- `.github/agents/<name>.agent.md` (GitHub Copilot CLI)
-
-Skip specific sync types:
+After editing `apps/cli/src/main.ts`, rebuild and re-link:
 
 ```bash
-overture sync --skip-agents    # Sync only MCPs
-overture sync --skip-skills    # Sync MCPs and agents, skip skills
+yarn nx run cli:link
 ```
 
----
+### Build configuration notes
 
-## 📖 Documentation
+`apps/cli/package.json` builds with `bundle: true` so esbuild preserves the
+`#!/usr/bin/env node` shebang defined in `src/main.ts`. The compiled
+`dist/main.js` is what `npm link` registers as the `overture` command.
 
-- **[User Guide](docs/user-guide.md)** - Complete walkthrough with examples
-- **[Architecture](docs/contributing/architecture.md)** - Technical design and patterns
-- **[Configuration Schema](docs/overture-schema.md)** - Full YAML reference
-- **[Examples](docs/examples.md)** - Real-world configurations
-- **[Roadmap](docs/roadmap.md)** - Upcoming features
+## Requirements
 
-### How-To Guides
+- Node 20+ (matches `@types/node@20.19.9` in this workspace)
+- Yarn 4 (this repo uses Corepack via `.yarnrc.yml`)
+- A POSIX shell for the `npm link` workflow
 
-- [Add Support for New AI Client](docs/contributing/add-new-cli-client.md)
-- [Set Up Shared Config Repository](docs/howtos/setting-up-config-repo.md)
-- [Test MCP Server Changes](docs/howtos/testing-mcp-changes.md)
+## License
 
----
-
-## 💡 Example Configuration
-
-**`.overture/config.yaml`** (Project-level):
-
-```yaml
-version: '2.0'
-
-# Project metadata
-project:
-  name: my-python-api
-  type: python-backend
-
-# MCP server definitions
-mcp:
-  # Python REPL for code execution
-  python-repl:
-    command: uvx
-    args: [mcp-server-python-repl]
-    transport: stdio
-
-  # Ruff linter integration
-  ruff:
-    command: uvx
-    args: [mcp-server-ruff]
-    transport: stdio
-
-  # GitHub integration (exclude from Copilot CLI - it's built-in)
-  github:
-    command: mcp-server-github
-    args: []
-    env:
-      GITHUB_TOKEN: '${GITHUB_TOKEN}'
-    transport: stdio
-    clients:
-      exclude: [copilot-cli]
-
-# Sync settings
-sync:
-  backup: true
-  backupRetention: 10
-  mergeStrategy: append
-```
-
-**`~/.config/overture/config.yaml`** (User global):
-
-```yaml
-version: '2.0'
-
-# Global MCP servers (available everywhere)
-mcp:
-  filesystem:
-    command: npx
-    args: [-y, '@modelcontextprotocol/server-filesystem', '${HOME}']
-    transport: stdio
-
-  memory:
-    command: npx
-    args: [-y, mcp-server-memory]
-    transport: stdio
-
-  brave-search:
-    command: npx
-    args: [-y, '@modelcontextprotocol/server-brave-search']
-    env:
-      BRAVE_API_KEY: '${BRAVE_API_KEY}'
-    transport: stdio
-```
-
-Run `overture sync` and both configs merge intelligently!
-
-### AI Agent Configuration
-
-**`~/.config/overture/agents/coding-assistant.yaml`**:
-
-```yaml
-name: coding-assistant
-model: claude-3-5-sonnet
-description: Expert coding assistant for Python and TypeScript
-tools:
-  - filesystem
-  - memory
-  - github
-```
-
-**`~/.config/overture/agents/coding-assistant.md`**:
-
-```markdown
-# Coding Assistant
-
-You are an expert software engineer specializing in Python and TypeScript.
-
-## Guidelines
-
-- Write clean, maintainable code following best practices
-- Include comprehensive tests and documentation
-- Consider performance and security implications
-- Explain your reasoning for architectural decisions
-```
-
-**Model Mapping** (`~/.config/overture/models.yaml`):
-
-```yaml
-# Map logical names to client-specific model identifiers
-claude-3-5-sonnet:
-  claude-code: claude-3-5-sonnet-20241022
-  opencode: claude-3-5-sonnet-20241022
-  copilot-cli: claude-3.5-sonnet
-```
-
-Run `overture sync` to deploy agents to all clients with automatic format transformation!
-
----
-
-## 🎯 Use Cases
-
-### 1. Project-Specific Tooling
-
-```bash
-# Python project gets Python MCP servers
-cd python-api && overture sync
-# → Syncs python-repl, ruff, pytest
-
-# React project gets JavaScript tooling
-cd react-app && overture sync
-# → Syncs eslint, prettier, typescript
-```
-
-### 2. Team Standardization
-
-```bash
-# Share .overture/config.yaml in Git
-# Team members sync automatically
-overture sync --no-backup
-```
-
-### 3. Multi-Client Development
-
-```bash
-# Use Claude Code for coding
-# Use Copilot CLI for terminal
-# Use OpenCode for exploration
-# → All clients get same MCP servers
-```
-
-### 4. Environment-Specific Configs
-
-```yaml
-mcp:
-  database:
-    command: psql-mcp
-    env:
-      DATABASE_URL: '${DATABASE_URL:-postgresql://localhost:5432/dev}'
-    platforms:
-      exclude: [win32] # Skip on Windows
-```
-
-### 5. Multi-Agent Workflows
-
-```bash
-# Define specialized agents for different tasks
-~/.config/overture/agents/
-├── code-reviewer.yaml    # Code review and best practices
-├── debugger.yaml         # Bug investigation and fixes
-├── architect.yaml        # System design and planning
-└── tester.yaml          # Test generation and coverage
-
-# Sync all agents to every AI client
-overture sync
-
-# Check agent sync status
-overture doctor --verbose
-# → Shows which agents are in sync across clients
-```
-
----
-
-## 🛠️ Core Commands
-
-| Command             | Description                                  |
-| ------------------- | -------------------------------------------- |
-| `overture init`     | Initialize project configuration             |
-| `overture sync`     | Sync MCPs, agents, and skills to all clients |
-| `overture doctor`   | System diagnostics with agent sync status    |
-| `overture validate` | Validate configuration files                 |
-| `overture mcp`      | Manage MCP server configurations             |
-| `overture plugin`   | Manage Claude Code plugins                   |
-| `overture skill`    | Manage Agent Skills                          |
-| `overture user`     | Manage user global configuration             |
-| `overture audit`    | Find unmanaged MCPs in client configs        |
-| `overture backup`   | Backup/restore client configurations         |
-
-**Sync Options:**
-
-```bash
-overture sync --skip-agents      # Skip agent synchronization
-overture sync --skip-skills      # Skip skill synchronization
-overture sync --skip-plugins     # Skip plugin installation
-overture sync --dry-run          # Preview without making changes
-overture sync --detail           # Show detailed output with diffs
-```
-
-Run `overture --help` for full command reference.
-
----
-
-## 🏗️ Architecture
-
-Overture uses **hexagonal architecture** with dependency injection:
-
-```
-apps/cli/              # CLI application
-├── src/
-│   ├── commands/      # CLI command handlers
-│   ├── core/          # Business logic
-│   └── main.ts        # Entry point
-
-libs/
-├── domain/               # Core types and schemas
-│   ├── config-types/     # TypeScript interfaces
-│   ├── config-schema/    # Zod validation schemas
-│   ├── diagnostics-types/# Diagnostic result types
-│   └── errors/           # Error hierarchy
-├── ports/                # Interface definitions
-│   ├── filesystem/       # File operations
-│   ├── process/          # Process execution
-│   └── output/           # Logging and output
-├── adapters/             # Infrastructure implementations
-│   ├── client-adapters/  # AI client adapters
-│   └── infrastructure/   # Node.js adapters
-├── core/                 # Domain logic
-│   ├── config/           # Config loading/merging
-│   ├── sync/             # Multi-client sync engine
-│   ├── discovery/        # Client detection
-│   ├── diagnostics/      # System health checks
-│   ├── agent/            # Agent sync and transformation
-│   ├── plugin/           # Plugin management
-│   └── skill/            # Agent Skills sync
-└── shared/               # Shared utilities
-    ├── formatters/       # Diagnostic output formatting
-    └── utils/            # Common utilities
-```
-
-**Technology Stack:**
-
-- **Language:** TypeScript 5.9 (strict mode)
-- **Build System:** Nx 22 monorepo
-- **CLI Framework:** Commander.js
-- **Validation:** Zod
-- **Testing:** Vitest (273 tests, 83% coverage)
-- **Bundler:** esbuild
-
----
-
-## 🧪 Development
-
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-- Nx CLI (optional, or use `npx nx`)
-
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/overture-stack/overture.git
-cd overture
-
-# Install dependencies
-npm install
-
-# Run tests
-nx test @overture/cli
-
-# Run tests with coverage
-nx test @overture/cli --coverage
-
-# Build CLI
-nx build @overture/cli
-
-# Run locally
-node dist/apps/cli/main.js --help
-```
-
-### Testing
-
-```bash
-# Run all tests
-nx test @overture/cli
-
-# Watch mode
-nx test @overture/cli --watch
-
-# Specific test file
-nx test @overture/cli --testFile=sync.spec.ts
-
-# E2E tests
-nx e2e @overture/cli-e2e
-```
-
-### Linting
-
-```bash
-# Lint all projects
-nx run-many -t lint --all
-
-# Fix auto-fixable issues
-nx run-many -t lint --all --fix
-```
-
-### Code Structure
-
-- Tests are co-located with source files (`*.spec.ts`)
-- One class/major function per file
-- Use dependency injection (constructor-based)
-- Follow Nx module boundaries (enforced by ESLint)
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our contributing guidelines:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feat/amazing-feature`)
-3. **Write** tests for your changes
-4. **Commit** with conventional commits (`feat:`, `fix:`, `docs:`, etc.)
-5. **Push** to your fork
-6. **Open** a Pull Request
-
-### Conventional Commits
-
-```
-feat: add support for Windsurf client
-fix: resolve path resolution on Windows
-docs: update installation instructions
-test: add tests for config merging
-refactor: simplify sync engine logic
-```
-
-### Code Quality Standards
-
-- ✅ TypeScript strict mode (no `any` types)
-- ✅ All tests passing (`nx test @overture/cli`)
-- ✅ No ESLint errors (`nx run-many -t lint --all`)
-- ✅ Code coverage maintained (>65%)
-- ✅ Documentation updated
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**"Config file not found"**
-
-```bash
-# Initialize config first
-overture init
-```
-
-**"Client not detected"**
-
-```bash
-# Check system status
-overture doctor
-
-# Force sync without detection
-overture sync --skip-binary-detection
-```
-
-**"Environment variable not set"**
-
-```yaml
-# Use defaults in config
-env:
-  GITHUB_TOKEN: '${GITHUB_TOKEN:-your-default-token}'
-```
-
-**"Permission denied" errors**
-
-```bash
-# Check file permissions
-ls -la ~/.config/overture/
-chmod 644 ~/.config/overture/config.yaml
-```
-
-**"Agents not syncing"**
-
-```bash
-# Check agent sync status
-overture doctor --verbose
-
-# Verify agent files exist
-ls -la ~/.config/overture/agents/
-
-# Force sync agents only
-overture sync --skip-skills
-
-# Validate agent YAML syntax
-overture validate
-```
-
-**"Agent model not found"**
-
-```yaml
-# Add model mapping to ~/.config/overture/models.yaml
-claude-3-5-sonnet:
-  claude-code: claude-3-5-sonnet-20241022
-  opencode: claude-3-5-sonnet-20241022
-  copilot-cli: claude-3.5-sonnet
-```
-
-### Debug Mode
-
-Enable verbose logging:
-
-```bash
-DEBUG=1 overture sync
-```
-
-Shows:
-
-- Stack traces for errors
-- Detailed validation messages
-- File operation logs
-
-See [Troubleshooting Guide](docs/user-guide.md#troubleshooting) for more solutions.
-
----
-
-## 📊 Project Status
-
-**Current Version:** v0.4.0 (Production Ready)
-
-**Test Coverage:**
-
-- 273 passing tests
-- 83% code coverage
-- Comprehensive agent sync and diagnostics testing
-
-**Security:**
-
-- ✅ Zero known vulnerabilities
-- ✅ Regular dependency updates
-- ✅ TypeScript strict mode
-
-**Roadmap Highlights:**
-
-- Multi-repository skill sharing
-- MCP marketplace integration
-- VS Code extension
-- Web UI for configuration
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
-
----
-
-## 📜 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **Claude Code Team** - For the amazing AI development platform
-- **Model Context Protocol** - For standardizing AI tool integrations
-- **Nx Team** - For the excellent monorepo tooling
-- **Community Contributors** - For feedback and bug reports
-
----
-
-## 🔗 Related Projects
-
-- [Claude Code Workflows](https://github.com/wshobson/agents) - Plugin marketplace
-- [Claude Code Flow](https://github.com/ruvnet/claude-code-flow) - Multi-agent execution
-- [MCP Servers](https://github.com/modelcontextprotocol/servers) - Official MCP server implementations
-
-See [docs/related-projects.md](docs/related-projects.md) for detailed comparisons.
-
----
-
-## 💬 Support
-
-- **Documentation:** [docs/user-guide.md](docs/user-guide.md)
-- **Issues:** [GitHub Issues](https://github.com/overture-stack/overture/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/overture-stack/overture/discussions)
-
----
-
-<p align="center">
-  Made with ❤️ by the Overture Team
-</p>
+TBD
