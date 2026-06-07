@@ -17,7 +17,6 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
   if (installed.length === 0 && totalOrphans === 0) {
     return 'No supported MCP-capable platforms detected.\n';
   }
-
   const sections: string[] = [];
 
   // Section 1: installed platforms with MCP support (or unknown status)
@@ -34,6 +33,16 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
         tag = '[mcp-not-configured]';
       }
       lines.push(`  - ${platform.displayName} (${platform.confidence}) ${tag}`);
+      const agentPath =
+        platform.matchedExecutables[0]?.resolvedPath ??
+        platform.matchedMarkers[0];
+      if (agentPath) {
+        lines.push(`    agent: ${agentPath}`);
+      }
+      const mcpPath = platform.mcpConfigured
+        ? platform.matchedMcpLocations[0]?.resolvedPath
+        : null;
+      lines.push(`    mcp:   ${mcpPath ?? '(not configured)'}`);
     }
     sections.push(lines.join('\n'));
   }
@@ -47,6 +56,12 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
     for (const platform of unsupported) {
       const label = platform.executableNames[0] ?? platform.id;
       lines.push(`    - ${platform.displayName} (${label})`);
+      const agentPath =
+        platform.matchedExecutables[0]?.resolvedPath ??
+        platform.matchedMarkers[0];
+      if (agentPath) {
+        lines.push(`        agent: ${agentPath}`);
+      }
     }
     sections.push(lines.join('\n'));
   }

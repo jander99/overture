@@ -259,6 +259,157 @@ describe('formatHumanOutput', () => {
   });
 });
 
+it('detected platform with matchedExecutables shows agent path subline', () => {
+  const platform: PlatformDetectionResult = {
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    confidence: 'high',
+    matchedMarkers: [],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['claude'],
+    matchedExecutables: [
+      {
+        name: 'claude',
+        resolvedPath: '/home/user/.local/share/claude/versions/2.1.138',
+        source: 'path',
+      },
+    ],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'binary-found',
+  };
+  const output: DetectJsonOutput = { platforms: [platform] };
+  const result = formatHumanOutput(output);
+  expect(result).toContain(
+    '    agent: /home/user/.local/share/claude/versions/2.1.138',
+  );
+  expect(result).toContain('    mcp:   (not configured)');
+});
+
+it('detected platform falls back to matchedMarkers[0] when no executable', () => {
+  const platform: PlatformDetectionResult = {
+    id: 'cursor',
+    displayName: 'Cursor',
+    installed: true,
+    confidence: 'high',
+    matchedMarkers: ['/home/user/.cursor-server'],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
+    matchedExecutables: [],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'marker-found',
+  };
+  const output: DetectJsonOutput = { platforms: [platform] };
+  const result = formatHumanOutput(output);
+  expect(result).toContain('    agent: /home/user/.cursor-server');
+  expect(result).toContain('    mcp:   (not configured)');
+});
+
+it('detected platform with mcpConfigured shows resolved mcp path', () => {
+  const platform: PlatformDetectionResult = {
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    confidence: 'high',
+    matchedMarkers: [],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['claude'],
+    matchedExecutables: [
+      {
+        name: 'claude',
+        resolvedPath: '/usr/bin/claude',
+        source: 'path',
+      },
+    ],
+    mcpConfigured: true,
+    matchedMcpLocations: [
+      {
+        id: 'claude-code-0',
+        resolvedPath: '/home/user/.claude.json',
+        format: 'json',
+        nonEmpty: true,
+      },
+    ],
+    orphanedMcpLocations: [],
+    reasonCode: 'mcp-configured',
+  };
+  const output: DetectJsonOutput = { platforms: [platform] };
+  const result = formatHumanOutput(output);
+  expect(result).toContain('    agent: /usr/bin/claude');
+  expect(result).toContain('    mcp:   /home/user/.claude.json');
+  expect(result).not.toContain('(not configured)');
+});
+
+it('unsupported inventory platform shows agent subline but no mcp subline', () => {
+  const platform: PlatformDetectionResult = {
+    id: 'aider',
+    displayName: 'Aider',
+    installed: true,
+    confidence: 'unsupported',
+    matchedMarkers: [],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'unsupported',
+    executableNames: ['aider'],
+    matchedExecutables: [
+      {
+        name: 'aider',
+        resolvedPath: '/home/user/.local/bin/aider',
+        source: 'path',
+      },
+    ],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'unsupported-no-mcp-client',
+  };
+  const output: DetectJsonOutput = { platforms: [platform] };
+  const result = formatHumanOutput(output);
+  expect(result).toContain('        agent: /home/user/.local/bin/aider');
+  expect(result).not.toContain('(not configured)');
+  const inventoryIdx = result.indexOf('Installed tools without MCP support');
+  const afterInventory = result.slice(inventoryIdx);
+  expect(afterInventory).not.toMatch(/\n\s+mcp:/);
+});
+
+it('detected platform with neither executable nor marker still emits (not configured) only', () => {
+  const platform: PlatformDetectionResult = {
+    id: 'github-copilot-cloud-agent',
+    displayName: 'GitHub Copilot Cloud Agent',
+    installed: true,
+    confidence: 'low',
+    matchedMarkers: [],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'unsupported',
+    executableNames: [],
+    matchedExecutables: [],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'unsupported-no-local-signal',
+  };
+  const output: DetectJsonOutput = { platforms: [platform] };
+  const result = formatHumanOutput(output);
+  expect(result).not.toMatch(/\n {4}agent:/);
+  expect(result).not.toMatch(/\n {4}mcp:/);
+});
+
 describe('formatJsonOutput', () => {
   it('returns parseable JSON with platforms key', () => {
     const output: DetectJsonOutput = { platforms: [] };
@@ -270,19 +421,24 @@ describe('formatJsonOutput', () => {
 });
 
 it('does not contain ANSI escape sequences', () => {
-  const output = {
-    platforms: [
-      {
-        id: 'claude-code',
-        displayName: 'Claude Code',
-        installed: true,
-        confidence: 'high',
-        matchedMarkers: ['/tmp/.claude.json'],
-        installMarkers: [],
-        mcpLocations: [],
-      },
-    ],
+  const platform: PlatformDetectionResult = {
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    confidence: 'high',
+    matchedMarkers: ['/tmp/.claude.json'],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
+    matchedExecutables: [],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'marker-found',
   };
+  const output: DetectJsonOutput = { platforms: [platform] };
   const json = formatJsonOutput(output);
   expect(json).not.toContain('');
   expect(json).not.toMatch(/\x1b\[/);
