@@ -30,17 +30,25 @@ describe('detectPlatforms', () => {
   let tempHomeDir: string;
   let tempConfigDir: string;
   let tempWorkspaceDir: string;
+  let originalPath: string | undefined;
 
   beforeEach(async () => {
     tempHomeDir = await mkdtemp(join(tmpdir(), 'overture-home-'));
     tempConfigDir = await mkdtemp(join(tmpdir(), 'overture-config-'));
     tempWorkspaceDir = await mkdtemp(join(tmpdir(), 'overture-workspace-'));
+    originalPath = process.env.PATH;
+    process.env.PATH = '';
   });
 
   afterEach(async () => {
     await rm(tempHomeDir, { recursive: true, force: true });
     await rm(tempConfigDir, { recursive: true, force: true });
     await rm(tempWorkspaceDir, { recursive: true, force: true });
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
   });
 
   it('happy path: detects cursor when both home and workspace markers exist', async () => {
@@ -184,6 +192,95 @@ describe('detectPlatforms', () => {
       }
     } finally {
       await chmod(restrictedDir, 0o755);
+    }
+  });
+});
+
+describe('PlatformDetectionResult schema (binary-first)', () => {
+  let tempHomeDir: string;
+  let tempConfigDir: string;
+  let tempWorkspaceDir: string;
+
+  beforeEach(async () => {
+    tempHomeDir = await mkdtemp(join(tmpdir(), 'overture-home-'));
+    tempConfigDir = await mkdtemp(join(tmpdir(), 'overture-config-'));
+    tempWorkspaceDir = await mkdtemp(join(tmpdir(), 'overture-workspace-'));
+  });
+
+  afterEach(async () => {
+    await rm(tempHomeDir, { recursive: true, force: true });
+    await rm(tempConfigDir, { recursive: true, force: true });
+    await rm(tempWorkspaceDir, { recursive: true, force: true });
+  });
+
+  it('every result has all additive fields present', async () => {
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+    const result = await detectPlatforms(ctx);
+    expect(result.platforms).toHaveLength(14);
+    for (const p of result.platforms) {
+      expect(p).toHaveProperty('detectionStrategy');
+      expect(p).toHaveProperty('mcpSupport');
+      expect(p).toHaveProperty('executableNames');
+      expect(p).toHaveProperty('matchedExecutables');
+      expect(p).toHaveProperty('mcpConfigured');
+      expect(p).toHaveProperty('matchedMcpLocations');
+      expect(p).toHaveProperty('orphanedMcpLocations');
+    }
+  });
+
+  it('arrays are always arrays, never undefined', async () => {
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+    const result = await detectPlatforms(ctx);
+    for (const p of result.platforms) {
+      expect(
+        Array.isArray(p.matchedExecutables) &&
+          Array.isArray(p.matchedMcpLocations) &&
+          Array.isArray(p.orphanedMcpLocations),
+      ).toBe(true);
+    }
+  });
+
+  it('mcpConfigured is a boolean', async () => {
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+    const result = await detectPlatforms(ctx);
+    for (const p of result.platforms) {
+      expect(typeof p.mcpConfigured).toBe('boolean');
+    }
+  });
+
+  it('detectionStrategy is the closed union', async () => {
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+    const result = await detectPlatforms(ctx);
+    for (const p of result.platforms) {
+      expect(['binary-first', 'marker-only']).toContain(p.detectionStrategy);
+    }
+  });
+
+  it('mcpSupport is the closed union', async () => {
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+    const result = await detectPlatforms(ctx);
+    for (const p of result.platforms) {
+      expect(['supported', 'unsupported', 'unknown']).toContain(p.mcpSupport);
     }
   });
 });

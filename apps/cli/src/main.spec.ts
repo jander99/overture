@@ -21,7 +21,10 @@ describe('main', () => {
     const callArg = stdoutSpy.mock.calls[0][0] as string;
     expect(
       callArg.includes('No supported MCP-capable platforms detected.') ||
-        callArg.includes('Detected MCP-capable platforms:'),
+        callArg.includes('Detected MCP-capable platforms:') ||
+        callArg.includes(
+          'Orphaned MCP configurations (no platform installed):',
+        ),
     ).toBe(true);
   });
 });

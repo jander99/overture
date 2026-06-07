@@ -62,6 +62,30 @@ describe('run', () => {
       expect.stringContaining('Unknown flag: --bogus'),
     );
   });
+
+  it('detect --help returns 0 and prints usage', async () => {
+    const code = await run(['detect', '--help']);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: overture detect'),
+    );
+  });
+
+  it('detect -h returns 0 and prints usage', async () => {
+    const code = await run(['detect', '-h']);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: overture detect'),
+    );
+  });
+
+  it('detect with unknown flag still returns 2', async () => {
+    const code = await run(['detect', '--bogus']);
+    expect(code).toBe(2);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Unknown flag: --bogus'),
+    );
+  });
 });
 
 describe('formatHumanOutput', () => {
@@ -81,11 +105,157 @@ describe('formatHumanOutput', () => {
       matchedMarkers: ['/home/user/.cursor/mcp.json'],
       installMarkers: [],
       mcpLocations: [],
+      detectionStrategy: 'marker-only',
+      mcpSupport: 'supported',
+      executableNames: [],
+      matchedExecutables: [],
+      mcpConfigured: false,
+      matchedMcpLocations: [],
+      orphanedMcpLocations: [],
+      reasonCode: 'marker-found',
     };
     const output: DetectJsonOutput = { platforms: [platform] };
     const result = formatHumanOutput(output);
     expect(result).toContain('Detected MCP-capable platforms:');
-    expect(result).toContain('  - Cursor (high) /home/user/.cursor/mcp.json');
+    expect(result).toContain('  - Cursor (high) [mcp-not-configured]');
+  });
+
+  it('installed supported with mcpConfigured true shows mcp-configured tag', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: ['/home/user/.claude.json'],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['claude'],
+      matchedExecutables: [],
+      mcpConfigured: true,
+      matchedMcpLocations: [
+        {
+          id: 'claude-code-0',
+          resolvedPath: '/home/user/.claude.json',
+          format: 'json',
+          nonEmpty: true,
+        },
+      ],
+      orphanedMcpLocations: [],
+      reasonCode: 'mcp-configured',
+    };
+    const output: DetectJsonOutput = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain('  - Claude Code (high) [mcp-configured]');
+  });
+
+  it('installed unsupported tool (aider) goes to inventory section', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'aider',
+      displayName: 'Aider',
+      installed: true,
+      confidence: 'unsupported',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'unsupported',
+      executableNames: ['aider'],
+      matchedExecutables: [],
+      mcpConfigured: false,
+      matchedMcpLocations: [],
+      orphanedMcpLocations: [],
+      reasonCode: 'unsupported-no-mcp-client',
+    };
+    const output: DetectJsonOutput = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain(
+      'Installed tools without MCP support (inventory):',
+    );
+    expect(result).toContain('    - Aider (aider)');
+  });
+
+  it('orphan location shows in warning section', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'windsurf',
+      displayName: 'Windsurf',
+      installed: false,
+      confidence: 'medium',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['windsurf'],
+      matchedExecutables: [],
+      mcpConfigured: false,
+      matchedMcpLocations: [],
+      orphanedMcpLocations: [
+        {
+          id: 'windsurf-0',
+          resolvedPath: '/home/x/.codeium/windsurf/mcp_config.json',
+          format: 'json',
+          nonEmpty: true,
+        },
+      ],
+      reasonCode: 'orphaned-mcp-config',
+    };
+    const output: DetectJsonOutput = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain(
+      'Orphaned MCP configurations (no platform installed):',
+    );
+    expect(result).toContain(
+      '    - /home/x/.codeium/windsurf/mcp_config.json (windsurf)',
+    );
+  });
+
+  it('no orphan section when orphans empty', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'cursor',
+      displayName: 'Cursor',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: ['/home/user/.cursor/mcp.json'],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'marker-only',
+      mcpSupport: 'supported',
+      executableNames: [],
+      matchedExecutables: [],
+      mcpConfigured: false,
+      matchedMcpLocations: [],
+      orphanedMcpLocations: [],
+      reasonCode: 'marker-found',
+    };
+    const output: DetectJsonOutput = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).not.toContain('Orphaned MCP configurations');
+  });
+
+  it('output has no ANSI escape sequences', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: ['/tmp/.claude.json'],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'marker-only',
+      mcpSupport: 'supported',
+      executableNames: [],
+      matchedExecutables: [],
+      mcpConfigured: false,
+      matchedMcpLocations: [],
+      orphanedMcpLocations: [],
+      reasonCode: 'marker-found',
+    };
+    const output: DetectJsonOutput = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).not.toMatch(/\x1b\[/);
+    expect(result).not.toContain('');
   });
 });
 
@@ -114,7 +284,7 @@ it('does not contain ANSI escape sequences', () => {
     ],
   };
   const json = formatJsonOutput(output);
-  expect(json).not.toContain('\u001b');
+  expect(json).not.toContain('');
   expect(json).not.toMatch(/\x1b\[/);
   expect(JSON.parse(json)).toEqual(output);
 });

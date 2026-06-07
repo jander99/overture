@@ -804,3 +804,74 @@ validated.
 - PATH lookup or subprocess probing for executable detection.
 - Extension ID or registry-based installation checks.
 - Reading the contents of MCP configuration files to validate schemas.
+
+## Detection strategy and parser-backed MCP state
+
+`overture detect` uses two complementary strategies:
+
+- **Binary-first** (e.g. Claude Code, OpenCode, OpenAI Codex, GitHub Copilot
+  CLI, Windsurf, Aider). The platform is installed when its canonical CLI is
+  found on the process `PATH`. Discovery is a pure filesystem scan — no
+  `child_process`, no `which`, no shell — that respects POSIX executable
+  bits, Windows `PATHEXT`, and WSL-visible `.exe` entries.
+- **Marker-only** (e.g. Claude Desktop, Cursor, Zed, Cline, Roo Code, Continue,
+  GitHub Copilot VS Code, GitHub Copilot Cloud Agent). The platform is
+  installed when a known config file, extension-storage path, or
+  settings directory is present.
+
+`detect` is **read-only**: it inspects configuration files but never writes,
+modifies, or syncs them. Future commands may add writing/sync surfaces, but
+this document and the CLI's current behavior only cover the inventory side.
+
+### Stale-config false positive guardrail
+
+A configuration file alone is not evidence of installation. If a user
+uninstalls a platform but the user's `~/.codeium/windsurf/mcp_config.json`
+(or equivalent) remains on disk, the file is reported as an **orphaned MCP
+configuration** rather than as evidence the platform is installed. The
+registry entry for Windsurf deliberately has zero `installMarkers` and lists
+`mcpServers` only as an `mcpLocation`; the platform is binary-first on the
+`windsurf` CLI.
+
+### Parser-backed key requirements
+
+`mcpConfigured` is determined by parsing the configuration file and checking
+that the expected top-level key/table is present and non-empty:
+
+- JSON and JSONC files use Microsoft `jsonc-parser` with
+  `{ allowTrailingComma: true, disallowComments: false }` so trailing commas
+  and `//` / `/* */` comments are tolerated. A UTF-8 BOM (`\uFEFF`) at the
+  start of the file is stripped before parsing.
+- TOML files use `smol-toml` (loaded via `createRequire` to keep the CJS
+  bundle synchronous). A UTF-8 BOM is stripped before parsing.
+- Empty files, missing keys, and parse errors all produce
+  `mcpConfigured: false` (with `parseError` set when parsing fails).
+- Web-settings format and other non-JSON/non-TOML formats are not yet
+  parsed and always report `mcpConfigured: false`.
+
+### Reason codes
+
+Each detection result carries a `reasonCode` so consumers can branch on the
+_why_ without re-deriving it from the field set. Precedence, first match
+wins:
+
+1. `orphaned-mcp-config` — non-empty MCP config, no install evidence.
+2. `mcp-configured` — installed, `mcpSupport: supported`, non-empty MCP key.
+3. `unsupported-no-mcp-client` — installed, `mcpSupport: unsupported`.
+4. `binary-found` — `detectionStrategy: binary-first`, installed,
+   `mcpSupport` is not `unsupported`.
+5. `marker-found` — `detectionStrategy: marker-only`, installed,
+   `mcpSupport` is not `unsupported`.
+6. `unsupported-no-local-signal` — `mcpSupport` is `unsupported`/`unknown`,
+   no install evidence.
+7. `parse-error` — a relevant config file could not be parsed and no
+   stronger evidence applies.
+8. `not-detected` — none of the above.
+
+### Inventory completeness
+
+The JSON output of `overture detect --json` always contains all 14 platform
+entries in registry order, including those not installed, so a UI or
+automation can render a complete status grid without needing to know the
+list of supported IDs separately. `installed: false` is a first-class
+result, not a missing entry.
