@@ -35,7 +35,10 @@ describe('platformRegistry', () => {
   it('has a non-empty displayName for every entry', () => {
     for (const entry of platformRegistry) {
       expect(entry.displayName, `displayName for ${entry.id}`).toBeTruthy();
-      expect(entry.displayName.trim().length, `displayName for ${entry.id}`).toBeGreaterThan(0);
+      expect(
+        entry.displayName.trim().length,
+        `displayName for ${entry.id}`,
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -47,7 +50,7 @@ describe('platformRegistry', () => {
     expect(aider!.reason!.trim().length).toBeGreaterThan(0);
 
     const cloudAgent = platformRegistry.find(
-      (e) => e.id === 'github-copilot-cloud-agent'
+      (e) => e.id === 'github-copilot-cloud-agent',
     );
     expect(cloudAgent).toBeDefined();
     expect(cloudAgent!.defaultConfidence).toBe('unsupported');
@@ -58,35 +61,45 @@ describe('platformRegistry', () => {
   it('gives claude-code at least one high-confidence install marker', () => {
     const entry = platformRegistry.find((e) => e.id === 'claude-code');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter((m) => m.confidence === 'high');
+    const highMarkers = entry!.installMarkers.filter(
+      (m) => m.confidence === 'high',
+    );
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 
   it('gives opencode at least one high-confidence install marker', () => {
     const entry = platformRegistry.find((e) => e.id === 'opencode');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter((m) => m.confidence === 'high');
+    const highMarkers = entry!.installMarkers.filter(
+      (m) => m.confidence === 'high',
+    );
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 
   it('gives cursor at least one high-confidence install marker', () => {
     const entry = platformRegistry.find((e) => e.id === 'cursor');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter((m) => m.confidence === 'high');
+    const highMarkers = entry!.installMarkers.filter(
+      (m) => m.confidence === 'high',
+    );
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 
   it('gives windsurf at least one high-confidence install marker', () => {
     const entry = platformRegistry.find((e) => e.id === 'windsurf');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter((m) => m.confidence === 'high');
+    const highMarkers = entry!.installMarkers.filter(
+      (m) => m.confidence === 'high',
+    );
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 
   it('gives openai-codex at least one high-confidence install marker', () => {
     const entry = platformRegistry.find((e) => e.id === 'openai-codex');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter((m) => m.confidence === 'high');
+    const highMarkers = entry!.installMarkers.filter(
+      (m) => m.confidence === 'high',
+    );
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 

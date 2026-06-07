@@ -13,7 +13,9 @@ import { join } from 'node:path';
 import { resolveMarkerPath, markerExists } from './paths.js';
 import type { InstallMarker, PathResolutionContext } from './types.js';
 
-function makeCtx(overrides?: Partial<PathResolutionContext>): PathResolutionContext {
+function makeCtx(
+  overrides?: Partial<PathResolutionContext>,
+): PathResolutionContext {
   return {
     homeDir: '/home/testuser',
     configDir: '/home/testuser/.config',
@@ -37,15 +39,25 @@ function makeMarker(overrides?: Partial<InstallMarker>): InstallMarker {
 
 describe('resolveMarkerPath', () => {
   it('expands home base to homeDir + relativePath', () => {
-    const marker = makeMarker({ base: 'home', relativePath: '.cursor/mcp.json' });
+    const marker = makeMarker({
+      base: 'home',
+      relativePath: '.cursor/mcp.json',
+    });
     const ctx = makeCtx();
-    expect(resolveMarkerPath(marker, ctx)).toBe('/home/testuser/.cursor/mcp.json');
+    expect(resolveMarkerPath(marker, ctx)).toBe(
+      '/home/testuser/.cursor/mcp.json',
+    );
   });
 
   it('expands config base to configDir + relativePath', () => {
-    const marker = makeMarker({ base: 'config', relativePath: 'Code/User/mcp.json' });
+    const marker = makeMarker({
+      base: 'config',
+      relativePath: 'Code/User/mcp.json',
+    });
     const ctx = makeCtx();
-    expect(resolveMarkerPath(marker, ctx)).toBe('/home/testuser/.config/Code/User/mcp.json');
+    expect(resolveMarkerPath(marker, ctx)).toBe(
+      '/home/testuser/.config/Code/User/mcp.json',
+    );
   });
 
   it('expands workspace base to workspaceDir + relativePath', () => {
@@ -55,7 +67,10 @@ describe('resolveMarkerPath', () => {
   });
 
   it('returns absolute path verbatim', () => {
-    const marker = makeMarker({ base: 'absolute', relativePath: '/etc/codex/config.toml' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: '/etc/codex/config.toml',
+    });
     const ctx = makeCtx();
     expect(resolveMarkerPath(marker, ctx)).toBe('/etc/codex/config.toml');
   });
@@ -75,7 +90,11 @@ describe('markerExists', () => {
   it('returns true for an existing regular file with kind=file', async () => {
     const filePath = join(tempDir, 'marker.txt');
     await writeFile(filePath, 'hello');
-    const marker = makeMarker({ base: 'absolute', relativePath: filePath, kind: 'file' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: filePath,
+      kind: 'file',
+    });
     const ctx = makeCtx();
     expect(await markerExists(marker, ctx)).toBe(true);
   });
@@ -83,7 +102,11 @@ describe('markerExists', () => {
   it('returns false when path is a directory but marker is kind=file', async () => {
     const dirPath = join(tempDir, 'marker-dir');
     await mkdir(dirPath);
-    const marker = makeMarker({ base: 'absolute', relativePath: dirPath, kind: 'file' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: dirPath,
+      kind: 'file',
+    });
     const ctx = makeCtx();
     expect(await markerExists(marker, ctx)).toBe(false);
   });
@@ -91,7 +114,11 @@ describe('markerExists', () => {
   it('returns true for a directory with kind=directory', async () => {
     const dirPath = join(tempDir, 'marker-dir');
     await mkdir(dirPath);
-    const marker = makeMarker({ base: 'absolute', relativePath: dirPath, kind: 'directory' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: dirPath,
+      kind: 'directory',
+    });
     const ctx = makeCtx();
     expect(await markerExists(marker, ctx)).toBe(true);
   });
@@ -102,8 +129,16 @@ describe('markerExists', () => {
     await writeFile(filePath, 'hello');
     await mkdir(dirPath);
 
-    const fileMarker = makeMarker({ base: 'absolute', relativePath: filePath, kind: 'file-or-directory' });
-    const dirMarker = makeMarker({ base: 'absolute', relativePath: dirPath, kind: 'file-or-directory' });
+    const fileMarker = makeMarker({
+      base: 'absolute',
+      relativePath: filePath,
+      kind: 'file-or-directory',
+    });
+    const dirMarker = makeMarker({
+      base: 'absolute',
+      relativePath: dirPath,
+      kind: 'file-or-directory',
+    });
     const ctx = makeCtx();
 
     expect(await markerExists(fileMarker, ctx)).toBe(true);
@@ -112,7 +147,11 @@ describe('markerExists', () => {
 
   it('returns false for a missing path and does not throw', async () => {
     const missingPath = join(tempDir, 'does-not-exist');
-    const marker = makeMarker({ base: 'absolute', relativePath: missingPath, kind: 'file' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: missingPath,
+      kind: 'file',
+    });
     const ctx = makeCtx();
     expect(await markerExists(marker, ctx)).toBe(false);
   });
@@ -124,7 +163,11 @@ describe('markerExists', () => {
     await symlink(targetPath, linkPath);
     await unlink(targetPath);
 
-    const marker = makeMarker({ base: 'absolute', relativePath: linkPath, kind: 'file' });
+    const marker = makeMarker({
+      base: 'absolute',
+      relativePath: linkPath,
+      kind: 'file',
+    });
     const ctx = makeCtx();
     expect(await markerExists(marker, ctx)).toBe(false);
   });
@@ -142,7 +185,11 @@ describe('markerExists', () => {
     await chmod(restrictedDir, 0o000);
 
     try {
-      const marker = makeMarker({ base: 'absolute', relativePath: filePath, kind: 'file' });
+      const marker = makeMarker({
+        base: 'absolute',
+        relativePath: filePath,
+        kind: 'file',
+      });
       const ctx = makeCtx();
       expect(await markerExists(marker, ctx)).toBe(false);
     } finally {

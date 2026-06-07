@@ -3,7 +3,7 @@ import type { InstallMarker, PathResolutionContext } from './types.js';
 
 export function resolveMarkerPath(
   marker: InstallMarker,
-  ctx: PathResolutionContext
+  ctx: PathResolutionContext,
 ): string {
   switch (marker.base) {
     case 'home':
@@ -23,7 +23,7 @@ export function resolveMarkerPath(
 
 export async function markerExists(
   marker: InstallMarker,
-  ctx: PathResolutionContext
+  ctx: PathResolutionContext,
 ): Promise<boolean> {
   const resolved = resolveMarkerPath(marker, ctx);
 

@@ -37,13 +37,13 @@ export function defaultPathResolutionContext(): PathResolutionContext {
 
 function buildResultForEntry(
   entry: PlatformRegistryEntry,
-  ctx: PathResolutionContext
+  ctx: PathResolutionContext,
 ): Promise<PlatformDetectionResult> {
   return (async () => {
     const applicableMarkers = entry.installMarkers.filter(
       (marker) =>
         marker.platforms === undefined ||
-        marker.platforms.includes(ctx.platform)
+        marker.platforms.includes(ctx.platform),
     );
 
     const markerChecks = await Promise.all(
@@ -51,7 +51,7 @@ function buildResultForEntry(
         marker,
         exists: await markerExists(marker, ctx),
         resolvedPath: resolveMarkerPath(marker, ctx),
-      }))
+      })),
     );
 
     const matched = markerChecks.filter((check) => check.exists);
@@ -116,10 +116,10 @@ function buildResultForEntry(
 }
 
 export async function detectPlatforms(
-  ctx: PathResolutionContext
+  ctx: PathResolutionContext,
 ): Promise<DetectJsonOutput> {
   const settled = await Promise.allSettled(
-    platformRegistry.map((entry) => buildResultForEntry(entry, ctx))
+    platformRegistry.map((entry) => buildResultForEntry(entry, ctx)),
   );
 
   const platforms = settled.map((result, index) => {

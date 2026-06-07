@@ -1,4 +1,7 @@
-import { detectPlatforms, defaultPathResolutionContext } from './platforms/detect.js';
+import {
+  detectPlatforms,
+  defaultPathResolutionContext,
+} from './platforms/detect.js';
 import type { DetectJsonOutput } from './platforms/types.js';
 
 export function formatJsonOutput(output: DetectJsonOutput): string {
@@ -30,7 +33,7 @@ export async function run(args: readonly string[]): Promise<number> {
     const unknownFlags = flags.filter((f) => f !== '--json');
     if (unknownFlags.length > 0) {
       process.stderr.write(
-        `Unknown flag: ${unknownFlags[0]}\nUsage: overture detect [--json]\n`
+        `Unknown flag: ${unknownFlags[0]}\nUsage: overture detect [--json]\n`,
       );
       return 2;
     }
@@ -47,7 +50,7 @@ export async function run(args: readonly string[]): Promise<number> {
   }
 
   process.stderr.write(
-    `Unknown command: ${args[0]}\nUsage: overture detect [--json]\n`
+    `Unknown command: ${args[0]}\nUsage: overture detect [--json]\n`,
   );
   return 2;
 }

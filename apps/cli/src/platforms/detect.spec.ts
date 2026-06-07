@@ -14,7 +14,9 @@ import { detectPlatforms, defaultPathResolutionContext } from './detect.js';
 import { platformRegistry } from './registry.js';
 import type { PathResolutionContext } from './types.js';
 
-function makeCtx(overrides?: Partial<PathResolutionContext>): PathResolutionContext {
+function makeCtx(
+  overrides?: Partial<PathResolutionContext>,
+): PathResolutionContext {
   return {
     homeDir: '/home/testuser',
     configDir: '/home/testuser/.config',
@@ -63,8 +65,12 @@ describe('detectPlatforms', () => {
     expect(cursorResult!.installed).toBe(true);
     expect(cursorResult!.confidence).toBe('high');
     expect(cursorResult!.matchedMarkers).toHaveLength(2);
-    expect(cursorResult!.matchedMarkers).toContain(join(tempHomeDir, '.cursor', 'mcp.json'));
-    expect(cursorResult!.matchedMarkers).toContain(join(tempWorkspaceDir, '.cursor', 'mcp.json'));
+    expect(cursorResult!.matchedMarkers).toContain(
+      join(tempHomeDir, '.cursor', 'mcp.json'),
+    );
+    expect(cursorResult!.matchedMarkers).toContain(
+      join(tempWorkspaceDir, '.cursor', 'mcp.json'),
+    );
     expect(cursorResult!.reason).toBe('User-global Cursor MCP configuration');
   });
 
@@ -107,13 +113,13 @@ describe('detectPlatforms', () => {
     const result = await detectPlatforms(ctx);
 
     const cloudAgent = result.platforms.find(
-      (p) => p.id === 'github-copilot-cloud-agent'
+      (p) => p.id === 'github-copilot-cloud-agent',
     );
     expect(cloudAgent).toBeDefined();
     expect(cloudAgent!.installed).toBe(false);
     expect(cloudAgent!.confidence).toBe('unsupported');
     expect(cloudAgent!.reason).toBe(
-      'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.'
+      'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
     );
 
     const aider = result.platforms.find((p) => p.id === 'aider');
@@ -121,7 +127,7 @@ describe('detectPlatforms', () => {
     expect(aider!.installed).toBe(false);
     expect(aider!.confidence).toBe('unsupported');
     expect(aider!.reason).toBe(
-      'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.'
+      'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
     );
   });
 

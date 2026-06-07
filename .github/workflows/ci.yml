@@ -49,8 +49,8 @@ jobs:
 
   test:
     name: Test
-    needs: [quality]
     runs-on: ubuntu-latest
+
     timeout-minutes: 15
 
     steps:

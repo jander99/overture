@@ -1,6 +1,5 @@
 import type { PlatformRegistryEntry } from './types.js';
 
-
 export const platformRegistry: readonly PlatformRegistryEntry[] = [
   {
     id: 'claude-code',
@@ -51,7 +50,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'claude-desktop-1-macos-config',
         kind: 'file',
         base: 'home',
-        relativePath: 'Library/Application Support/Claude/claude_desktop_config.json',
+        relativePath:
+          'Library/Application Support/Claude/claude_desktop_config.json',
         platforms: ['darwin'],
         confidence: 'high',
         reason: 'macOS Claude Desktop configuration file',
@@ -79,7 +79,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'home',
-        relativePath: 'Library/Application Support/Claude/claude_desktop_config.json',
+        relativePath:
+          'Library/Application Support/Claude/claude_desktop_config.json',
         platforms: ['darwin'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -227,7 +228,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
     installMarkers: [],
     mcpLocations: [],
     defaultConfidence: 'unsupported',
-    reason: 'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
+    reason:
+      'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
   },
   {
     id: 'cursor',
@@ -303,7 +305,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'cline-1-macos-global-storage',
         kind: 'file',
         base: 'home',
-        relativePath: 'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['darwin'],
         confidence: 'medium',
         reason: 'macOS VS Code extension global storage for Cline',
@@ -312,7 +315,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'cline-2-linux-global-storage',
         kind: 'file',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['linux'],
         confidence: 'medium',
         reason: 'Linux VS Code extension global storage for Cline',
@@ -321,7 +325,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'cline-3-windows-global-storage',
         kind: 'file',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['win32'],
         confidence: 'medium',
         reason: 'Windows VS Code extension global storage for Cline',
@@ -331,7 +336,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'home',
-        relativePath: 'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['darwin'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -340,7 +346,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['linux'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -349,7 +356,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
         platforms: ['win32'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -366,7 +374,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'roo-code-1-macos-global-storage',
         kind: 'file',
         base: 'home',
-        relativePath: 'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['darwin'],
         confidence: 'medium',
         reason: 'macOS VS Code extension global storage for Roo Code',
@@ -375,7 +384,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'roo-code-2-linux-global-storage',
         kind: 'file',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['linux'],
         confidence: 'medium',
         reason: 'Linux VS Code extension global storage for Roo Code',
@@ -384,7 +394,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         id: 'roo-code-3-windows-global-storage',
         kind: 'file',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['win32'],
         confidence: 'medium',
         reason: 'Windows VS Code extension global storage for Roo Code',
@@ -394,7 +405,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'home',
-        relativePath: 'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['darwin'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -403,7 +415,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['linux'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -412,7 +425,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       {
         scope: 'user',
         base: 'config',
-        relativePath: 'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
         platforms: ['win32'],
         format: 'json',
         topLevelKey: 'mcpServers',
@@ -466,7 +480,8 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         relativePath: 'zed/settings.json',
         format: 'json',
         topLevelKey: 'context_servers',
-        notes: 'User-global context servers (Zed refers to MCP as context servers)',
+        notes:
+          'User-global context servers (Zed refers to MCP as context servers)',
       },
     ],
     defaultConfidence: 'medium',
@@ -522,11 +537,13 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
         base: 'workspace',
         relativePath: '.aider.conf.yml',
         confidence: 'low',
-        reason: 'Project-level Aider configuration file (weak proxy for Aider presence, not MCP client support)',
+        reason:
+          'Project-level Aider configuration file (weak proxy for Aider presence, not MCP client support)',
       },
     ],
     mcpLocations: [],
     defaultConfidence: 'unsupported',
-    reason: 'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
+    reason:
+      'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
   },
 ] as const;

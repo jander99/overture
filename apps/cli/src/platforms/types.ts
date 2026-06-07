@@ -18,8 +18,18 @@ export type HostPlatform = 'linux' | 'darwin' | 'win32';
 export type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
 export type MarkerKind = 'file' | 'directory' | 'file-or-directory';
 export type PathBase = 'home' | 'config' | 'workspace' | 'absolute';
-export type McpLocationScope = 'project' | 'user' | 'profile' | 'repository' | 'managed';
-export type McpLocationFormat = 'json' | 'jsonc' | 'yaml' | 'toml' | 'web-settings';
+export type McpLocationScope =
+  | 'project'
+  | 'user'
+  | 'profile'
+  | 'repository'
+  | 'managed';
+export type McpLocationFormat =
+  | 'json'
+  | 'jsonc'
+  | 'yaml'
+  | 'toml'
+  | 'web-settings';
 
 export interface InstallMarker {
   id: string;

@@ -5,7 +5,9 @@ describe('main', () => {
   let stdoutSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -19,7 +21,7 @@ describe('main', () => {
     const callArg = stdoutSpy.mock.calls[0][0] as string;
     expect(
       callArg.includes('No supported MCP-capable platforms detected.') ||
-      callArg.includes('Detected MCP-capable platforms:')
+        callArg.includes('Detected MCP-capable platforms:'),
     ).toBe(true);
   });
 });

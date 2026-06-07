@@ -740,7 +740,12 @@ type HostPlatform = 'linux' | 'darwin' | 'win32';
 type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
 type MarkerKind = 'file' | 'directory' | 'file-or-directory';
 type PathBase = 'home' | 'config' | 'workspace' | 'absolute';
-type McpLocationScope = 'project' | 'user' | 'profile' | 'repository' | 'managed';
+type McpLocationScope =
+  | 'project'
+  | 'user'
+  | 'profile'
+  | 'repository'
+  | 'managed';
 type McpLocationFormat = 'json' | 'jsonc' | 'yaml' | 'toml' | 'web-settings';
 
 interface InstallMarker {
