@@ -8,17 +8,15 @@
   "enabledManagers": ["npm"],
   "prConcurrentLimit": 10,
   "schedule": [
-    "after 9pm",
-    "before 6am",
-    "weekends"
-
+    "21-23,0-5 * * 1-5",
+    "* * * * 0,6"
   ],
   "packageRules": [
     {
       "description": "Cap nx and vitest majors to weekly so the monorepo doesn't get flooded",
       "matchPackageNames": ["nx", "@nx/**", "vitest", "@vitest/**"],
       "matchUpdateTypes": ["major"],
-      "schedule": ["before 6am on monday"]
+      "schedule": ["0-5 * * 1"]
     }
   ]
 }
