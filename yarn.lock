@@ -1966,6 +1966,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jander99/overture@workspace:apps/cli":
+  version: 0.0.0-use.local
+  resolution: "@jander99/overture@workspace:apps/cli"
+  dependencies:
+    jsonc-parser: "npm:^3.3.1"
+    smol-toml: "npm:^1.6.1"
+  bin:
+    overture: ./dist/main.js
+  languageName: unknown
+  linkType: soft
+
 "@jest/console@npm:30.4.1":
   version: 30.4.1
   resolution: "@jest/console@npm:30.4.1"
@@ -4242,17 +4253,6 @@ __metadata:
   checksum: 10c0/907a1c227ddf0d7a101e7ab8b300affc742ead4b4ebe920a5bf1bc6d45dce2958fcd195eb28fa25275062fe6fa9b109b93b63bc8033396ed3bcb50297008b3a3
   languageName: node
   linkType: hard
-
-"cli@workspace:apps/cli":
-  version: 0.0.0-use.local
-  resolution: "cli@workspace:apps/cli"
-  dependencies:
-    jsonc-parser: "npm:^3.3.1"
-    smol-toml: "npm:^1.6.1"
-  bin:
-    overture: ./dist/main.js
-  languageName: unknown
-  linkType: soft
 
 "cliui@npm:8.0.1, cliui@npm:^8.0.1":
   version: 8.0.1

@@ -1,13 +1,43 @@
 {
-  "name": "cli",
+  "name": "@jander99/overture",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
+  "description": "Keep your MCP server configurations in sync across every installed LLM coding platform.",
+  "license": "MIT",
   "bin": {
     "overture": "./dist/main.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jander99/overture.git",
+    "directory": "apps/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/jander99/overture/issues"
+  },
+  "homepage": "https://github.com/jander99/overture#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "agent",
+    "sync"
+  ],
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.5.1"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "link": "yarn nx build cli --skip-nx-cache && npm link",
-    "unlink": "npm unlink -g overture"
+    "link": "yarn nx build @jander99/overture --skip-nx-cache && npm link",
+    "unlink": "npm unlink -g @jander99/overture"
   },
   "nx": {
     "targets": {
@@ -24,6 +54,8 @@
             "cjs"
           ],
           "bundle": true,
+          "thirdParty": true,
+          "generatePackageJson": false,
           "main": "apps/cli/src/main.ts",
           "tsConfig": "apps/cli/tsconfig.app.json",
           "assets": [
@@ -89,15 +121,15 @@
           "build"
         ],
         "options": {
-          "buildTarget": "cli:build",
+          "buildTarget": "@jander99/overture:build",
           "runBuildTargetDependencies": false
         },
         "configurations": {
           "development": {
-            "buildTarget": "cli:build:development"
+            "buildTarget": "@jander99/overture:build:development"
           },
           "production": {
-            "buildTarget": "cli:build:production"
+            "buildTarget": "@jander99/overture:build:production"
           }
         }
       },
