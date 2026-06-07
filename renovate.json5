@@ -8,9 +8,10 @@
   "enabledManagers": ["npm"],
   "prConcurrentLimit": 10,
   "schedule": [
-    "after 9pm on weekdays",
-    "before 6am on weekdays",
-    "any time on weekends"
+    "after 9pm",
+    "before 6am",
+    "weekends"
+
   ],
   "packageRules": [
     {
