@@ -153,7 +153,7 @@ The `link` script in `apps/cli/package.json` wraps both steps:
 ```json
 {
   "scripts": {
-    "link": "yarn nx build cli && npm link",
+    "link": "yarn nx build cli --skip-nx-cache && npm link",
     "unlink": "npm unlink -g overture"
   }
 }
