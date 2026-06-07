@@ -5,18 +5,16 @@
     ":automergeDisabled",
     ":dependencyDashboard"
   ],
+  "timezone": "America/New_York",
   "enabledManagers": ["npm"],
+  "prHourlyLimit": 5,
   "prConcurrentLimit": 10,
-  "schedule": [
-    "21-23,0-5 * * 1-5",
-    "* * * * 0,6"
-  ],
+  "schedule": ["before 6am on Monday"],
   "packageRules": [
     {
-      "description": "Cap nx and vitest majors to weekly so the monorepo doesn't get flooded",
-      "matchPackageNames": ["nx", "@nx/**", "vitest", "@vitest/**"],
-      "matchUpdateTypes": ["major"],
-      "schedule": ["0-5 * * 1"]
+      "description": "Require 7-day minimum release age for npm/yarn updates to guard against supply chain attacks",
+      "matchManagers": ["npm"],
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
