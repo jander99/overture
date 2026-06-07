@@ -421,19 +421,24 @@ describe('formatJsonOutput', () => {
 });
 
 it('does not contain ANSI escape sequences', () => {
-  const output = {
-    platforms: [
-      {
-        id: 'claude-code',
-        displayName: 'Claude Code',
-        installed: true,
-        confidence: 'high',
-        matchedMarkers: ['/tmp/.claude.json'],
-        installMarkers: [],
-        mcpLocations: [],
-      },
-    ],
+  const platform: PlatformDetectionResult = {
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    confidence: 'high',
+    matchedMarkers: ['/tmp/.claude.json'],
+    installMarkers: [],
+    mcpLocations: [],
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
+    matchedExecutables: [],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: 'marker-found',
   };
+  const output: DetectJsonOutput = { platforms: [platform] };
   const json = formatJsonOutput(output);
   expect(json).not.toContain('');
   expect(json).not.toMatch(/\x1b\[/);
