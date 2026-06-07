@@ -85,13 +85,19 @@ describe('platformRegistry', () => {
     expect(highMarkers.length).toBeGreaterThan(0);
   });
 
-  it('gives windsurf at least one high-confidence install marker', () => {
+  it('windsurf has no install markers (binary-first only; mcp-only locations)', () => {
     const entry = platformRegistry.find((e) => e.id === 'windsurf');
     expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter(
-      (m) => m.confidence === 'high',
-    );
-    expect(highMarkers.length).toBeGreaterThan(0);
+    expect(entry!.installMarkers).toHaveLength(0);
+    // executableNames must include the canonical 'windsurf' binary name
+    expect(entry!.executableNames).toContain('windsurf');
+    // The mcpLocations still references the same path so stale configs
+    // surface as orphan, not as install.
+    expect(
+      entry!.mcpLocations.some(
+        (l) => l.relativePath === '.codeium/windsurf/mcp_config.json',
+      ),
+    ).toBe(true);
   });
 
   it('gives openai-codex at least one high-confidence install marker', () => {
@@ -111,5 +117,20 @@ describe('platformRegistry', () => {
       }
     }
     expect(new Set(markerIds).size).toBe(markerIds.length);
+  });
+
+  it('marker-only entries with supplementary executables (cursor, zed) list them', () => {
+    const cursor = platformRegistry.find((e) => e.id === 'cursor');
+    expect(cursor).toBeDefined();
+    expect(cursor!.detectionStrategy).toBe('marker-only');
+    expect(cursor!.executableNames).toContain('cursor');
+    // Sanity: marker-only entries still have install markers
+    expect(cursor!.installMarkers.length).toBeGreaterThan(0);
+
+    const zed = platformRegistry.find((e) => e.id === 'zed');
+    expect(zed).toBeDefined();
+    expect(zed!.detectionStrategy).toBe('marker-only');
+    expect(zed!.executableNames).toContain('zed');
+    expect(zed!.installMarkers.length).toBeGreaterThan(0);
   });
 });

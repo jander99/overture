@@ -7,11 +7,20 @@ import {
   chmod,
   unlink,
   rm,
+  realpath,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveMarkerPath, markerExists } from './paths.js';
-import type { InstallMarker, PathResolutionContext } from './types.js';
+import {
+  resolveMarkerPath,
+  markerExists,
+  findExecutablesInPath,
+} from './paths.js';
+import type {
+  InstallMarker,
+  PathResolutionContext,
+  HostPlatform,
+} from './types.js';
 
 function makeCtx(
   overrides?: Partial<PathResolutionContext>,
@@ -195,5 +204,174 @@ describe('markerExists', () => {
     } finally {
       await chmod(restrictedDir, 0o755);
     }
+  });
+});
+
+describe('findExecutablesInPath', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'overture-path-'));
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns empty array for empty names', async () => {
+    const result = await findExecutablesInPath([], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array for empty pathString', async () => {
+    const result = await findExecutablesInPath(['x'], {
+      pathString: '',
+      platform: 'linux',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('POSIX: matches executable file (mode 0o755)', async () => {
+    const filePath = join(tempDir, 'x');
+    await writeFile(filePath, 'binary');
+    await chmod(filePath, 0o755);
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([
+      { name: 'x', resolvedPath: filePath, source: 'path' },
+    ]);
+  });
+
+  it('POSIX: skips non-executable file (mode 0o644)', async () => {
+    const filePath = join(tempDir, 'x');
+    await writeFile(filePath, 'binary');
+    await chmod(filePath, 0o644);
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('POSIX: skips directories named like the binary', async () => {
+    const dirPath = join(tempDir, 'x');
+    await mkdir(dirPath);
+    await chmod(dirPath, 0o755);
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('POSIX: matches symlink to executable via realpath', async () => {
+    const realPath = join(tempDir, 'real');
+    const linkPath = join(tempDir, 'link');
+    await writeFile(realPath, 'binary');
+    await chmod(realPath, 0o755);
+    await symlink(realPath, linkPath);
+    const expectedResolved = await realpath(realPath);
+    const result = await findExecutablesInPath(['link'], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([
+      { name: 'link', resolvedPath: expectedResolved, source: 'path' },
+    ]);
+  });
+
+  it('POSIX: does not match broken symlink', async () => {
+    const linkPath = join(tempDir, 'link');
+    await symlink(join(tempDir, 'does-not-exist'), linkPath);
+    const result = await findExecutablesInPath(['link'], {
+      pathString: tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('Windows: matches file with .EXE extension (case-insensitive)', async () => {
+    const filePath = join(tempDir, 'x.EXE');
+    await writeFile(filePath, 'binary');
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'win32',
+    });
+    expect(result).toEqual([
+      { name: 'x', resolvedPath: filePath, source: 'windows' },
+    ]);
+  });
+
+  it('Windows: matches file with .cmd when PATHEXT includes it', async () => {
+    const filePath = join(tempDir, 'x.cmd');
+    await writeFile(filePath, 'binary');
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'win32',
+      pathext: '.CMD',
+    });
+    expect(result).toEqual([
+      { name: 'x', resolvedPath: filePath, source: 'windows' },
+    ]);
+  });
+
+  it('Windows: ignores extension not in PATHEXT', async () => {
+    const filePath = join(tempDir, 'x.sh');
+    await writeFile(filePath, 'binary');
+    const result = await findExecutablesInPath(['x'], {
+      pathString: tempDir,
+      platform: 'win32',
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('WSL: matches both tool and tool.exe when on wslWindowsPath', async () => {
+    const linuxBin = join(tempDir, 'usr-bin', 'z');
+    await mkdir(join(tempDir, 'usr-bin'), { recursive: true });
+    await writeFile(linuxBin, 'linux');
+    await chmod(linuxBin, 0o755);
+
+    const windowsDir = await mkdtemp(join(tmpdir(), 'overture-wsl-'));
+    const windowsExe = join(windowsDir, 'z.exe');
+    await writeFile(windowsExe, 'windows');
+    try {
+      const result = await findExecutablesInPath(['z'], {
+        pathString: join(tempDir, 'usr-bin'),
+        platform: 'linux',
+        wslWindowsPath: windowsDir,
+      });
+      const sources = result.map((m) => m.source).sort();
+      expect(sources).toEqual(['path', 'wsl']);
+      expect(result).toContainEqual({
+        name: 'z',
+        resolvedPath: linuxBin,
+        source: 'path',
+      });
+      expect(result).toContainEqual({
+        name: 'z',
+        resolvedPath: windowsExe,
+        source: 'wsl',
+      });
+    } finally {
+      await rm(windowsDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not throw on non-existent PATH entry', async () => {
+    const filePath = join(tempDir, 'x');
+    await writeFile(filePath, 'binary');
+    await chmod(filePath, 0o755);
+    const result = await findExecutablesInPath(['x'], {
+      pathString: '/does/not/exist:' + tempDir,
+      platform: 'linux',
+    });
+    expect(result).toEqual([
+      { name: 'x', resolvedPath: filePath, source: 'path' },
+    ]);
   });
 });

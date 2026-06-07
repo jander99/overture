@@ -41,6 +41,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['claude'],
   },
   {
     id: 'claude-desktop',
@@ -106,6 +109,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'high',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
   },
   {
     id: 'opencode',
@@ -147,6 +153,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'high',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['opencode'],
   },
   {
     id: 'github-copilot-vscode',
@@ -188,6 +197,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
   },
   {
     id: 'github-copilot-cli',
@@ -221,6 +233,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['copilot'],
   },
   {
     id: 'github-copilot-cloud-agent',
@@ -228,6 +243,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
     installMarkers: [],
     mcpLocations: [],
     defaultConfidence: 'unsupported',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'unsupported',
+    executableNames: [],
     reason:
       'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
   },
@@ -271,20 +289,14 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'high',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: ['cursor'],
   },
   {
     id: 'windsurf',
     displayName: 'Windsurf',
-    installMarkers: [
-      {
-        id: 'windsurf-1-home-mcp',
-        kind: 'file',
-        base: 'home',
-        relativePath: '.codeium/windsurf/mcp_config.json',
-        confidence: 'high',
-        reason: 'User-global Windsurf MCP configuration',
-      },
-    ],
+    installMarkers: [],
     mcpLocations: [
       {
         scope: 'user',
@@ -296,6 +308,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'high',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['windsurf'],
   },
   {
     id: 'cline',
@@ -365,6 +380,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
   },
   {
     id: 'roo-code',
@@ -434,6 +452,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
   },
   {
     id: 'continue',
@@ -459,6 +480,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: [],
   },
   {
     id: 'zed',
@@ -485,6 +509,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'medium',
+    detectionStrategy: 'marker-only',
+    mcpSupport: 'supported',
+    executableNames: ['zed'],
   },
   {
     id: 'openai-codex',
@@ -526,6 +553,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
       },
     ],
     defaultConfidence: 'high',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'supported',
+    executableNames: ['codex'],
   },
   {
     id: 'aider',
@@ -543,6 +573,9 @@ export const platformRegistry: readonly PlatformRegistryEntry[] = [
     ],
     mcpLocations: [],
     defaultConfidence: 'unsupported',
+    detectionStrategy: 'binary-first',
+    mcpSupport: 'unsupported',
+    executableNames: ['aider'],
     reason:
       'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
   },

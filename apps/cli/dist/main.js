@@ -4,6 +4,7 @@
 // apps/cli/src/platforms/detect.ts
 var import_node_os = require("node:os");
 var import_node_path = require("node:path");
+var import_promises2 = require("node:fs/promises");
 
 // apps/cli/src/platforms/registry.ts
 var platformRegistry = [
@@ -46,7 +47,10 @@ var platformRegistry = [
         notes: "Project-level MCP servers"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "binary-first",
+    mcpSupport: "supported",
+    executableNames: ["claude"]
   },
   {
     id: "claude-desktop",
@@ -109,7 +113,10 @@ var platformRegistry = [
         notes: "Windows user-global MCP servers"
       }
     ],
-    defaultConfidence: "high"
+    defaultConfidence: "high",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: []
   },
   {
     id: "opencode",
@@ -150,7 +157,10 @@ var platformRegistry = [
         notes: "Alternative user-global MCP configuration under mcp key"
       }
     ],
-    defaultConfidence: "high"
+    defaultConfidence: "high",
+    detectionStrategy: "binary-first",
+    mcpSupport: "supported",
+    executableNames: ["opencode"]
   },
   {
     id: "github-copilot-vscode",
@@ -191,7 +201,10 @@ var platformRegistry = [
         notes: "User-global MCP servers under servers key"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: []
   },
   {
     id: "github-copilot-cli",
@@ -224,7 +237,10 @@ var platformRegistry = [
         notes: "User-global MCP servers under servers key"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "binary-first",
+    mcpSupport: "supported",
+    executableNames: ["copilot"]
   },
   {
     id: "github-copilot-cloud-agent",
@@ -232,6 +248,9 @@ var platformRegistry = [
     installMarkers: [],
     mcpLocations: [],
     defaultConfidence: "unsupported",
+    detectionStrategy: "marker-only",
+    mcpSupport: "unsupported",
+    executableNames: [],
     reason: "v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based."
   },
   {
@@ -273,21 +292,15 @@ var platformRegistry = [
         notes: "Project-level MCP servers"
       }
     ],
-    defaultConfidence: "high"
+    defaultConfidence: "high",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: ["cursor"]
   },
   {
     id: "windsurf",
     displayName: "Windsurf",
-    installMarkers: [
-      {
-        id: "windsurf-1-home-mcp",
-        kind: "file",
-        base: "home",
-        relativePath: ".codeium/windsurf/mcp_config.json",
-        confidence: "high",
-        reason: "User-global Windsurf MCP configuration"
-      }
-    ],
+    installMarkers: [],
     mcpLocations: [
       {
         scope: "user",
@@ -298,7 +311,10 @@ var platformRegistry = [
         notes: "User-global MCP servers"
       }
     ],
-    defaultConfidence: "high"
+    defaultConfidence: "high",
+    detectionStrategy: "binary-first",
+    mcpSupport: "supported",
+    executableNames: ["windsurf"]
   },
   {
     id: "cline",
@@ -361,7 +377,10 @@ var platformRegistry = [
         notes: "Windows user-global MCP servers"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: []
   },
   {
     id: "roo-code",
@@ -424,7 +443,10 @@ var platformRegistry = [
         notes: "Windows user-global MCP servers"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: []
   },
   {
     id: "continue",
@@ -449,7 +471,10 @@ var platformRegistry = [
         notes: "User-global MCP servers"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: []
   },
   {
     id: "zed",
@@ -474,7 +499,10 @@ var platformRegistry = [
         notes: "User-global context servers (Zed refers to MCP as context servers)"
       }
     ],
-    defaultConfidence: "medium"
+    defaultConfidence: "medium",
+    detectionStrategy: "marker-only",
+    mcpSupport: "supported",
+    executableNames: ["zed"]
   },
   {
     id: "openai-codex",
@@ -515,7 +543,10 @@ var platformRegistry = [
         notes: "Project-level MCP servers as TOML tables"
       }
     ],
-    defaultConfidence: "high"
+    defaultConfidence: "high",
+    detectionStrategy: "binary-first",
+    mcpSupport: "supported",
+    executableNames: ["codex"]
   },
   {
     id: "aider",
@@ -532,12 +563,26 @@ var platformRegistry = [
     ],
     mcpLocations: [],
     defaultConfidence: "unsupported",
+    detectionStrategy: "binary-first",
+    mcpSupport: "unsupported",
+    executableNames: ["aider"],
     reason: "aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH."
   }
 ];
 
 // apps/cli/src/platforms/paths.ts
 var import_promises = require("node:fs/promises");
+var DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC";
+var SWALLOWED_CODES = /* @__PURE__ */ new Set([
+  "ENOENT",
+  "EACCES",
+  "EPERM",
+  "ELOOP",
+  "ENOTDIR"
+]);
+function isSwallowed(err) {
+  return err instanceof Error && "code" in err && typeof err.code === "string" && SWALLOWED_CODES.has(err.code);
+}
 function resolveMarkerPath(marker, ctx) {
   switch (marker.base) {
     case "home":
@@ -571,11 +616,220 @@ async function markerExists(marker, ctx) {
       }
     }
   } catch (err) {
-    if (err instanceof Error && "code" in err && (err.code === "ENOENT" || err.code === "EACCES" || err.code === "EPERM" || err.code === "ELOOP" || err.code === "ENOTDIR")) {
+    if (isSwallowed(err)) {
       return false;
     }
     throw err;
   }
+}
+function splitPath(pathString, platform) {
+  const sep = platform === "win32" ? ";" : ":";
+  return pathString.split(sep).map((d) => d.trim()).filter((d) => d.length > 0);
+}
+function parsePathext(pathext) {
+  return pathext.split(";").map((e) => e.trim().toLowerCase()).filter((e) => e.length > 0);
+}
+async function matchPosix(dir, name) {
+  const candidate = `${dir}/${name}`;
+  try {
+    const s = await (0, import_promises.stat)(candidate);
+    if (!s.isFile() || (s.mode & 73) === 0) {
+      return null;
+    }
+    return {
+      name,
+      resolvedPath: await (0, import_promises.realpath)(candidate),
+      source: "path"
+    };
+  } catch (err) {
+    if (isSwallowed(err)) return null;
+    throw err;
+  }
+}
+async function matchWindows(dir, name, pathext) {
+  const lowerName = name.toLowerCase();
+  const exts = parsePathext(pathext);
+  if (exts.length === 0) return null;
+  let entries;
+  try {
+    entries = await (0, import_promises.readdir)(dir);
+  } catch (err) {
+    if (isSwallowed(err)) return null;
+    throw err;
+  }
+  for (const entry of entries) {
+    const lower = entry.toLowerCase();
+    if (!lower.startsWith(lowerName)) continue;
+    for (const ext of exts) {
+      if (lower === `${lowerName}${ext}`) {
+        return {
+          name,
+          resolvedPath: await (0, import_promises.realpath)(`${dir}/${entry}`),
+          source: "windows"
+        };
+      }
+    }
+  }
+  return null;
+}
+async function matchWsl(dir, name) {
+  const candidates = [`${dir}/${name}`, `${dir}/${name}.exe`];
+  for (const candidate of candidates) {
+    try {
+      const s = await (0, import_promises.stat)(candidate);
+      if (s.isFile()) {
+        return {
+          name,
+          resolvedPath: await (0, import_promises.realpath)(candidate),
+          source: "wsl"
+        };
+      }
+    } catch (err) {
+      if (isSwallowed(err)) continue;
+      throw err;
+    }
+  }
+  return null;
+}
+var SOURCE_ORDER = {
+  path: 0,
+  wsl: 1,
+  windows: 2
+};
+function compareMatches(a, b) {
+  if (a.name < b.name) return -1;
+  if (a.name > b.name) return 1;
+  return SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
+}
+async function findExecutablesInPath(names, options) {
+  if (names.length === 0) return [];
+  if (options.pathString.length === 0) return [];
+  const dirs = splitPath(options.pathString, options.platform);
+  const pathext = options.pathext ?? DEFAULT_PATHEXT;
+  const matches = [];
+  for (const dir of dirs) {
+    for (const name of names) {
+      const m = options.platform === "win32" ? await matchWindows(dir, name, pathext) : await matchPosix(dir, name);
+      if (m !== null) {
+        matches.push(m);
+      }
+    }
+  }
+  if (options.platform === "linux" && options.wslWindowsPath !== void 0 && options.wslWindowsPath.length > 0) {
+    const wslDirs = splitPath(options.wslWindowsPath, options.platform);
+    for (const dir of wslDirs) {
+      for (const name of names) {
+        const m = await matchWsl(dir, name);
+        if (m === null) continue;
+        const duplicate = matches.some(
+          (existing) => existing.name === m.name && existing.resolvedPath === m.resolvedPath
+        );
+        if (!duplicate) {
+          matches.push(m);
+        }
+      }
+    }
+  }
+  matches.sort(compareMatches);
+  return matches;
+}
+
+// apps/cli/src/platforms/mcp-config.ts
+var import_node_module = require("node:module");
+var import_jsonc_parser = require("jsonc-parser");
+var smolTomlCjsModule = (0, import_node_module.createRequire)(__filename)("smol-toml");
+function parseToml(text) {
+  return smolTomlCjsModule.parse(text);
+}
+function isJsonLike(format) {
+  return format === "json" || format === "jsonc";
+}
+function isContainer(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function nonEmptyContainer(value) {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (isContainer(value)) {
+    return Object.keys(value).length > 0;
+  }
+  return false;
+}
+function stripBom(contents) {
+  return contents.charCodeAt(0) === 65279 ? contents.slice(1) : contents;
+}
+function parseMcpConfig(options) {
+  const { contents, format, topLevelKey } = options;
+  if (topLevelKey === "") {
+    return {
+      configured: false,
+      parsed: false,
+      parseError: "topLevelKey required"
+    };
+  }
+  if (contents === "") {
+    return { configured: false, parsed: true };
+  }
+  if (isJsonLike(format)) {
+    const cleaned = stripBom(contents);
+    const errors = [];
+    let result;
+    try {
+      result = (0, import_jsonc_parser.parse)(cleaned, errors, {
+        allowTrailingComma: true,
+        disallowComments: false
+      });
+    } catch (err) {
+      return {
+        configured: false,
+        parsed: false,
+        parseError: err instanceof Error ? err.message : String(err)
+      };
+    }
+    if (errors.length > 0) {
+      const first = errors[0];
+      const offset = first?.offset ?? 0;
+      return {
+        configured: false,
+        parsed: false,
+        parseError: `${first?.error ?? "parse error"} at offset ${offset}`
+      };
+    }
+    if (!isContainer(result)) {
+      return { configured: false, parsed: true };
+    }
+    const section = result[topLevelKey];
+    return {
+      configured: nonEmptyContainer(section),
+      parsed: true
+    };
+  }
+  if (format === "toml") {
+    const cleaned = stripBom(contents);
+    let result;
+    try {
+      result = parseToml(cleaned);
+    } catch (err) {
+      return {
+        configured: false,
+        parsed: false,
+        parseError: err instanceof Error ? err.message : String(err)
+      };
+    }
+    if (!isContainer(result)) {
+      return { configured: false, parsed: true };
+    }
+    const section = result[topLevelKey];
+    if (!isContainer(section)) {
+      return { configured: false, parsed: true };
+    }
+    return {
+      configured: Object.keys(section).length > 0,
+      parsed: true
+    };
+  }
+  return { configured: false, parsed: false, parseError: "unsupported format" };
 }
 
 // apps/cli/src/platforms/detect.ts
@@ -600,11 +854,169 @@ function defaultPathResolutionContext() {
     platform
   };
 }
-function buildResultForEntry(entry, ctx) {
-  return (async () => {
-    const applicableMarkers = entry.installMarkers.filter(
-      (marker) => marker.platforms === void 0 || marker.platforms.includes(ctx.platform)
-    );
+function resolveMcpLocationPath(loc, ctx) {
+  switch (loc.base) {
+    case "home":
+      return `${ctx.homeDir}/${loc.relativePath}`;
+    case "config":
+      return `${ctx.configDir}/${loc.relativePath}`;
+    case "workspace":
+      return `${ctx.workspaceDir}/${loc.relativePath}`;
+    case "absolute":
+      return loc.relativePath;
+    default: {
+      const _exhaustive = loc.base;
+      throw new Error(`Unsupported path base: ${_exhaustive}`);
+    }
+  }
+}
+function platformMatches(platforms, platform) {
+  return platforms === void 0 || platforms.includes(platform);
+}
+function locationIsApplicable(loc, ctx) {
+  return platformMatches(loc.platforms, ctx.platform);
+}
+async function scanMcpLocation(loc, index, entry, ctx, installed, mcpSupport) {
+  const id = `${entry.id}-${index}`;
+  const resolvedPath = resolveMcpLocationPath(loc, ctx);
+  const topLevelKey = loc.topLevelKey ?? "";
+  const base = {
+    id,
+    resolvedPath,
+    format: loc.format,
+    ...topLevelKey === "" ? {} : { topLevelKey },
+    nonEmpty: false
+  };
+  let contents;
+  try {
+    contents = await (0, import_promises2.readFile)(resolvedPath, "utf8");
+  } catch (err) {
+    if (err instanceof Error && "code" in err && typeof err.code === "string" && err.code === "ENOENT") {
+      return {
+        matched: [],
+        orphaned: [],
+        hasNonEmptyConfigured: false,
+        hasParseError: false
+      };
+    }
+    return {
+      matched: [
+        {
+          ...base,
+          parseError: `read failed: ${err instanceof Error ? err.message : String(err)}`
+        }
+      ],
+      orphaned: [],
+      hasNonEmptyConfigured: false,
+      hasParseError: true
+    };
+  }
+  const parsed = parseMcpConfig({ contents, format: loc.format, topLevelKey });
+  if (!parsed.parsed) {
+    return {
+      matched: [
+        {
+          ...base,
+          parseError: parsed.parseError ?? "parse error"
+        }
+      ],
+      orphaned: [],
+      hasNonEmptyConfigured: false,
+      hasParseError: true
+    };
+  }
+  if (!parsed.configured) {
+    return {
+      matched: [{ ...base, nonEmpty: false }],
+      orphaned: [],
+      hasNonEmptyConfigured: false,
+      hasParseError: false
+    };
+  }
+  const nonEmpty = true;
+  if (!installed) {
+    return {
+      matched: [],
+      orphaned: [{ ...base, nonEmpty }],
+      hasNonEmptyConfigured: true,
+      hasParseError: false
+    };
+  }
+  if (mcpSupport === "supported") {
+    return {
+      matched: [{ ...base, nonEmpty }],
+      orphaned: [],
+      hasNonEmptyConfigured: true,
+      hasParseError: false
+    };
+  }
+  return {
+    matched: [{ ...base, nonEmpty: false }],
+    orphaned: [],
+    hasNonEmptyConfigured: true,
+    hasParseError: false
+  };
+}
+function computeReasonCode(args) {
+  const {
+    detectionStrategy,
+    installed,
+    mcpSupport,
+    hasNonEmptyMcp,
+    hasParseError
+  } = args;
+  if (hasNonEmptyMcp && !installed) {
+    return "orphaned-mcp-config";
+  }
+  if (installed && mcpSupport === "supported" && hasNonEmptyMcp) {
+    return "mcp-configured";
+  }
+  if (installed && mcpSupport === "unsupported") {
+    return "unsupported-no-mcp-client";
+  }
+  if (detectionStrategy === "binary-first" && installed && mcpSupport !== "unsupported") {
+    return "binary-found";
+  }
+  if (detectionStrategy === "marker-only" && installed && mcpSupport !== "unsupported") {
+    return "marker-found";
+  }
+  if (hasParseError && !installed && !hasNonEmptyMcp && (mcpSupport === "unsupported" || mcpSupport === "unknown")) {
+    return "unsupported-no-local-signal";
+  }
+  if (hasParseError && !installed && !hasNonEmptyMcp) {
+    return "parse-error";
+  }
+  if ((mcpSupport === "unsupported" || mcpSupport === "unknown") && !installed) {
+    return "unsupported-no-local-signal";
+  }
+  return "not-detected";
+}
+async function buildResultForEntry(entry, ctx) {
+  const pathString = process.env.PATH ?? "";
+  const wslWindowsPath = process.env.WSL_WINDOWS_PATH;
+  const applicableMarkers = entry.installMarkers.filter(
+    (marker) => platformMatches(marker.platforms, ctx.platform)
+  );
+  const applicableMcpLocations = entry.mcpLocations.filter(
+    (loc) => locationIsApplicable(loc, ctx)
+  );
+  let matchedExecutables = [];
+  let installed = false;
+  let confidence = entry.defaultConfidence;
+  let reason = entry.reason;
+  const matchedMarkerPaths = [];
+  if (entry.detectionStrategy === "binary-first") {
+    matchedExecutables = await findExecutablesInPath(entry.executableNames, {
+      pathString,
+      platform: ctx.platform,
+      ...wslWindowsPath !== void 0 ? { wslWindowsPath } : {}
+    });
+    installed = matchedExecutables.length > 0;
+    if (installed) {
+      confidence = "high";
+      reason = `binary ${matchedExecutables[0]?.name ?? ""} found on PATH`.trim();
+    }
+  } else {
     const markerChecks = await Promise.all(
       applicableMarkers.map(async (marker) => ({
         marker,
@@ -614,55 +1026,75 @@ function buildResultForEntry(entry, ctx) {
     );
     const matched = markerChecks.filter((check) => check.exists);
     if (matched.length > 0) {
-      const bestMatch = matched.reduce((best, current) => {
-        return confidenceRank[current.marker.confidence] > confidenceRank[best.marker.confidence] ? current : best;
+      const bestMatch = matched.reduce(
+        (best, current) => confidenceRank[current.marker.confidence] > confidenceRank[best.marker.confidence] ? current : best
+      );
+      installed = true;
+      confidence = bestMatch.marker.confidence;
+      reason = bestMatch.marker.reason;
+      for (const m of matched) {
+        matchedMarkerPaths.push(m.resolvedPath);
+      }
+    } else if (entry.executableNames.length > 0 && entry.detectionStrategy === "marker-only") {
+      matchedExecutables = await findExecutablesInPath(entry.executableNames, {
+        pathString,
+        platform: ctx.platform,
+        ...wslWindowsPath !== void 0 ? { wslWindowsPath } : {}
       });
-      return {
-        id: entry.id,
-        displayName: entry.displayName,
-        installed: true,
-        confidence: bestMatch.marker.confidence,
-        matchedMarkers: matched.map((m) => m.resolvedPath),
-        installMarkers: entry.installMarkers,
-        mcpLocations: entry.mcpLocations,
-        reason: bestMatch.marker.reason
-      };
     }
-    if (entry.installMarkers.length === 0) {
-      return {
-        id: entry.id,
-        displayName: entry.displayName,
-        installed: false,
-        confidence: "unsupported",
-        matchedMarkers: [],
-        installMarkers: entry.installMarkers,
-        mcpLocations: entry.mcpLocations,
-        reason: entry.reason
-      };
+    if (!installed && entry.installMarkers.length === 0) {
+      confidence = "unsupported";
+    } else if (!installed && entry.defaultConfidence === "unsupported") {
+      confidence = "unsupported";
+    } else if (!installed) {
+      confidence = entry.defaultConfidence;
     }
-    if (entry.defaultConfidence === "unsupported") {
-      return {
-        id: entry.id,
-        displayName: entry.displayName,
-        installed: false,
-        confidence: "unsupported",
-        matchedMarkers: [],
-        installMarkers: entry.installMarkers,
-        mcpLocations: entry.mcpLocations,
-        reason: entry.reason
-      };
+    if (!installed) {
+      reason = reason ?? "No install markers matched.";
     }
-    return {
-      id: entry.id,
-      displayName: entry.displayName,
-      installed: false,
-      confidence: entry.defaultConfidence,
-      matchedMarkers: [],
-      installMarkers: entry.installMarkers,
-      mcpLocations: entry.mcpLocations,
-      reason: entry.reason ?? "No install markers matched."
-    };
-  })();
+  }
+  const mcpScans = await Promise.all(
+    applicableMcpLocations.map(
+      (loc, index) => scanMcpLocation(loc, index, entry, ctx, installed, entry.mcpSupport)
+    )
+  );
+  const matchedMcpLocations = [];
+  const orphanedMcpLocations = [];
+  let hasNonEmptyConfigured = false;
+  let hasParseError = false;
+  for (const scan of mcpScans) {
+    for (const m of scan.matched) matchedMcpLocations.push(m);
+    for (const o of scan.orphaned) orphanedMcpLocations.push(o);
+    if (scan.hasNonEmptyConfigured) hasNonEmptyConfigured = true;
+    if (scan.hasParseError) hasParseError = true;
+  }
+  const mcpConfigured = installed && entry.mcpSupport === "supported" && matchedMcpLocations.some((m) => m.nonEmpty);
+  const reasonCode = computeReasonCode({
+    detectionStrategy: entry.detectionStrategy,
+    installed,
+    mcpSupport: entry.mcpSupport,
+    hasNonEmptyMcp: hasNonEmptyConfigured,
+    hasParseError
+  });
+  const result = {
+    id: entry.id,
+    displayName: entry.displayName,
+    installed,
+    confidence,
+    matchedMarkers: matchedMarkerPaths,
+    installMarkers: entry.installMarkers,
+    mcpLocations: entry.mcpLocations,
+    detectionStrategy: entry.detectionStrategy,
+    mcpSupport: entry.mcpSupport,
+    executableNames: entry.executableNames,
+    matchedExecutables,
+    mcpConfigured,
+    matchedMcpLocations,
+    orphanedMcpLocations,
+    reasonCode,
+    ...reason !== void 0 ? { reason } : {}
+  };
+  return result;
 }
 async function detectPlatforms(ctx) {
   const settled = await Promise.allSettled(
@@ -673,18 +1105,34 @@ async function detectPlatforms(ctx) {
       return result.value;
     }
     const entry = platformRegistry[index];
-    return {
-      id: entry.id,
-      displayName: entry.displayName,
-      installed: false,
-      confidence: "unsupported",
-      matchedMarkers: [],
-      installMarkers: entry.installMarkers,
-      mcpLocations: entry.mcpLocations,
-      reason: result.reason instanceof Error ? result.reason.message : String(result.reason)
-    };
+    if (entry === void 0) {
+      throw new Error(`Missing registry entry at index ${String(index)}`);
+    }
+    return buildFailedResult(entry, result.reason);
   });
   return { platforms };
+}
+function buildFailedResult(entry, failure) {
+  const message = failure instanceof Error ? failure.message : String(failure);
+  const result = {
+    id: entry.id,
+    displayName: entry.displayName,
+    installed: false,
+    confidence: "unsupported",
+    matchedMarkers: [],
+    installMarkers: entry.installMarkers,
+    mcpLocations: entry.mcpLocations,
+    detectionStrategy: entry.detectionStrategy,
+    mcpSupport: entry.mcpSupport,
+    executableNames: entry.executableNames,
+    matchedExecutables: [],
+    mcpConfigured: false,
+    matchedMcpLocations: [],
+    orphanedMcpLocations: [],
+    reasonCode: "not-detected",
+    reason: message
+  };
+  return result;
 }
 
 // apps/cli/src/cli.ts
@@ -693,16 +1141,57 @@ function formatJsonOutput(output) {
 }
 function formatHumanOutput(output) {
   const installed = output.platforms.filter((p) => p.installed);
-  if (installed.length === 0) {
+  const totalOrphans = output.platforms.reduce(
+    (n, p) => n + p.orphanedMcpLocations.length,
+    0
+  );
+  if (installed.length === 0 && totalOrphans === 0) {
     return "No supported MCP-capable platforms detected.\n";
   }
-  const lines = ["Detected MCP-capable platforms:"];
-  for (const platform of installed) {
-    const paths = platform.matchedMarkers.join(", ");
-    lines.push(`  - ${platform.displayName} (${platform.confidence}) ${paths}`);
+  const sections = [];
+  const detected = installed.filter((p) => p.mcpSupport !== "unsupported");
+  if (detected.length > 0) {
+    const lines = ["Detected MCP-capable platforms:"];
+    for (const platform of detected) {
+      let tag;
+      if (platform.mcpConfigured) {
+        tag = "[mcp-configured]";
+      } else if (platform.mcpSupport === "unknown") {
+        tag = "[unknown]";
+      } else {
+        tag = "[mcp-not-configured]";
+      }
+      lines.push(`  - ${platform.displayName} (${platform.confidence}) ${tag}`);
+    }
+    sections.push(lines.join("\n"));
   }
-  lines.push("");
-  return lines.join("\n");
+  const unsupported = installed.filter((p) => p.mcpSupport === "unsupported");
+  if (unsupported.length > 0) {
+    const lines = [
+      "Installed tools without MCP support (inventory):"
+    ];
+    for (const platform of unsupported) {
+      const label = platform.executableNames[0] ?? platform.id;
+      lines.push(`    - ${platform.displayName} (${label})`);
+    }
+    sections.push(lines.join("\n"));
+  }
+  const orphans = [];
+  for (const platform of output.platforms) {
+    for (const orphan of platform.orphanedMcpLocations) {
+      orphans.push({ path: orphan.resolvedPath, platformId: platform.id });
+    }
+  }
+  if (orphans.length > 0) {
+    const lines = [
+      "Orphaned MCP configurations (no platform installed):"
+    ];
+    for (const o of orphans) {
+      lines.push(`    - ${o.path} (${o.platformId})`);
+    }
+    sections.push(lines.join("\n"));
+  }
+  return sections.join("\n\n") + "\n";
 }
 async function run(args) {
   if (args.length === 0 || args[0] === "help" || args[0] === "--help") {
@@ -711,6 +1200,10 @@ async function run(args) {
   }
   if (args[0] === "detect") {
     const flags = args.slice(1);
+    if (flags.includes("--help") || flags.includes("-h")) {
+      process.stdout.write("Usage: overture detect [--json]\n");
+      return 0;
+    }
     const unknownFlags = flags.filter((f) => f !== "--json");
     if (unknownFlags.length > 0) {
       process.stderr.write(
