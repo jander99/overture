@@ -1,0 +1,549 @@
+import type { PlatformRegistryEntry } from './types.js';
+
+export const platformRegistry: readonly PlatformRegistryEntry[] = [
+  {
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installMarkers: [
+      {
+        id: 'claude-code-1-mcp-json',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.claude.json',
+        confidence: 'high',
+        reason: 'Primary user-global configuration file for Claude Code',
+      },
+      {
+        id: 'claude-code-2-project-mcp-json',
+        kind: 'file',
+        base: 'workspace',
+        relativePath: '.mcp.json',
+        confidence: 'high',
+        reason: 'Project-level MCP configuration file for Claude Code',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.claude.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'User-global MCP servers',
+      },
+      {
+        scope: 'project',
+        base: 'workspace',
+        relativePath: '.mcp.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Project-level MCP servers',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'claude-desktop',
+    displayName: 'Claude Desktop',
+    installMarkers: [
+      {
+        id: 'claude-desktop-1-macos-config',
+        kind: 'file',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Claude/claude_desktop_config.json',
+        platforms: ['darwin'],
+        confidence: 'high',
+        reason: 'macOS Claude Desktop configuration file',
+      },
+      {
+        id: 'claude-desktop-2-linux-config',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'Claude/claude_desktop_config.json',
+        platforms: ['linux'],
+        confidence: 'high',
+        reason: 'Linux Claude Desktop configuration file',
+      },
+      {
+        id: 'claude-desktop-3-windows-config',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'Claude/claude_desktop_config.json',
+        platforms: ['win32'],
+        confidence: 'high',
+        reason: 'Windows Claude Desktop configuration file',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Claude/claude_desktop_config.json',
+        platforms: ['darwin'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'macOS user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath: 'Claude/claude_desktop_config.json',
+        platforms: ['linux'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Linux user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath: 'Claude/claude_desktop_config.json',
+        platforms: ['win32'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Windows user-global MCP servers',
+      },
+    ],
+    defaultConfidence: 'high',
+  },
+  {
+    id: 'opencode',
+    displayName: 'OpenCode',
+    installMarkers: [
+      {
+        id: 'opencode-1-config-json',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'opencode/opencode.json',
+        confidence: 'high',
+        reason: 'Primary OpenCode configuration file under XDG config',
+      },
+      {
+        id: 'opencode-2-home-json',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.opencode.json',
+        confidence: 'high',
+        reason: 'Alternative OpenCode configuration file in home directory',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath: 'opencode/opencode.json',
+        format: 'json',
+        topLevelKey: 'mcp',
+        notes: 'User-global MCP configuration under mcp key',
+      },
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.opencode.json',
+        format: 'json',
+        topLevelKey: 'mcp',
+        notes: 'Alternative user-global MCP configuration under mcp key',
+      },
+    ],
+    defaultConfidence: 'high',
+  },
+  {
+    id: 'github-copilot-vscode',
+    displayName: 'GitHub Copilot in VS Code',
+    installMarkers: [
+      {
+        id: 'github-copilot-vscode-1-workspace-mcp',
+        kind: 'file',
+        base: 'workspace',
+        relativePath: '.vscode/mcp.json',
+        confidence: 'medium',
+        reason: 'Workspace-level VS Code MCP configuration',
+      },
+      {
+        id: 'github-copilot-vscode-2-user-mcp',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.vscode/mcp.json',
+        confidence: 'medium',
+        reason: 'User-global VS Code MCP configuration',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'project',
+        base: 'workspace',
+        relativePath: '.vscode/mcp.json',
+        format: 'json',
+        topLevelKey: 'servers',
+        notes: 'Workspace-level MCP servers under servers key',
+      },
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.vscode/mcp.json',
+        format: 'json',
+        topLevelKey: 'servers',
+        notes: 'User-global MCP servers under servers key',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'github-copilot-cli',
+    displayName: 'GitHub Copilot CLI',
+    installMarkers: [
+      {
+        id: 'github-copilot-cli-1-hosts-json',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'github-copilot/hosts.json',
+        confidence: 'medium',
+        reason: 'GitHub Copilot CLI hosts configuration',
+      },
+      {
+        id: 'github-copilot-cli-2-intellij-json',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'github-copilot/intellij.json',
+        confidence: 'low',
+        reason: 'GitHub Copilot IntelliJ configuration (weak proxy)',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath: 'github-copilot/hosts.json',
+        format: 'json',
+        topLevelKey: 'servers',
+        notes: 'User-global MCP servers under servers key',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'github-copilot-cloud-agent',
+    displayName: 'GitHub Copilot Cloud Agent',
+    installMarkers: [],
+    mcpLocations: [],
+    defaultConfidence: 'unsupported',
+    reason:
+      'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
+  },
+  {
+    id: 'cursor',
+    displayName: 'Cursor',
+    installMarkers: [
+      {
+        id: 'cursor-1-home-mcp',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.cursor/mcp.json',
+        confidence: 'high',
+        reason: 'User-global Cursor MCP configuration',
+      },
+      {
+        id: 'cursor-2-project-mcp',
+        kind: 'file',
+        base: 'workspace',
+        relativePath: '.cursor/mcp.json',
+        confidence: 'high',
+        reason: 'Project-level Cursor MCP configuration',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.cursor/mcp.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'User-global MCP servers',
+      },
+      {
+        scope: 'project',
+        base: 'workspace',
+        relativePath: '.cursor/mcp.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Project-level MCP servers',
+      },
+    ],
+    defaultConfidence: 'high',
+  },
+  {
+    id: 'windsurf',
+    displayName: 'Windsurf',
+    installMarkers: [
+      {
+        id: 'windsurf-1-home-mcp',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.codeium/windsurf/mcp_config.json',
+        confidence: 'high',
+        reason: 'User-global Windsurf MCP configuration',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.codeium/windsurf/mcp_config.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'User-global MCP servers',
+      },
+    ],
+    defaultConfidence: 'high',
+  },
+  {
+    id: 'cline',
+    displayName: 'Cline',
+    installMarkers: [
+      {
+        id: 'cline-1-macos-global-storage',
+        kind: 'file',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['darwin'],
+        confidence: 'medium',
+        reason: 'macOS VS Code extension global storage for Cline',
+      },
+      {
+        id: 'cline-2-linux-global-storage',
+        kind: 'file',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['linux'],
+        confidence: 'medium',
+        reason: 'Linux VS Code extension global storage for Cline',
+      },
+      {
+        id: 'cline-3-windows-global-storage',
+        kind: 'file',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['win32'],
+        confidence: 'medium',
+        reason: 'Windows VS Code extension global storage for Cline',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['darwin'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'macOS user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['linux'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Linux user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+        platforms: ['win32'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Windows user-global MCP servers',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'roo-code',
+    displayName: 'Roo Code',
+    installMarkers: [
+      {
+        id: 'roo-code-1-macos-global-storage',
+        kind: 'file',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['darwin'],
+        confidence: 'medium',
+        reason: 'macOS VS Code extension global storage for Roo Code',
+      },
+      {
+        id: 'roo-code-2-linux-global-storage',
+        kind: 'file',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['linux'],
+        confidence: 'medium',
+        reason: 'Linux VS Code extension global storage for Roo Code',
+      },
+      {
+        id: 'roo-code-3-windows-global-storage',
+        kind: 'file',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['win32'],
+        confidence: 'medium',
+        reason: 'Windows VS Code extension global storage for Roo Code',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath:
+          'Library/Application Support/Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['darwin'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'macOS user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['linux'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Linux user-global MCP servers',
+      },
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath:
+          'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+        platforms: ['win32'],
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'Windows user-global MCP servers',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'continue',
+    displayName: 'Continue',
+    installMarkers: [
+      {
+        id: 'continue-1-home-config',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.continue/config.json',
+        confidence: 'medium',
+        reason: 'User-global Continue configuration file',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.continue/config.json',
+        format: 'json',
+        topLevelKey: 'mcpServers',
+        notes: 'User-global MCP servers',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'zed',
+    displayName: 'Zed',
+    installMarkers: [
+      {
+        id: 'zed-1-home-settings',
+        kind: 'file',
+        base: 'config',
+        relativePath: 'zed/settings.json',
+        confidence: 'medium',
+        reason: 'User-global Zed settings file',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'config',
+        relativePath: 'zed/settings.json',
+        format: 'json',
+        topLevelKey: 'context_servers',
+        notes:
+          'User-global context servers (Zed refers to MCP as context servers)',
+      },
+    ],
+    defaultConfidence: 'medium',
+  },
+  {
+    id: 'openai-codex',
+    displayName: 'OpenAI Codex',
+    installMarkers: [
+      {
+        id: 'openai-codex-1-home-config',
+        kind: 'file',
+        base: 'home',
+        relativePath: '.codex/config.toml',
+        confidence: 'high',
+        reason: 'User-global OpenAI Codex configuration file',
+      },
+      {
+        id: 'openai-codex-2-project-config',
+        kind: 'file',
+        base: 'workspace',
+        relativePath: '.codex/config.toml',
+        confidence: 'high',
+        reason: 'Project-level OpenAI Codex configuration file',
+      },
+    ],
+    mcpLocations: [
+      {
+        scope: 'user',
+        base: 'home',
+        relativePath: '.codex/config.toml',
+        format: 'toml',
+        topLevelKey: 'mcp_servers',
+        notes: 'User-global MCP servers as TOML tables',
+      },
+      {
+        scope: 'project',
+        base: 'workspace',
+        relativePath: '.codex/config.toml',
+        format: 'toml',
+        topLevelKey: 'mcp_servers',
+        notes: 'Project-level MCP servers as TOML tables',
+      },
+    ],
+    defaultConfidence: 'high',
+  },
+  {
+    id: 'aider',
+    displayName: 'Aider',
+    installMarkers: [
+      {
+        id: 'aider-1-project-config',
+        kind: 'file',
+        base: 'workspace',
+        relativePath: '.aider.conf.yml',
+        confidence: 'low',
+        reason:
+          'Project-level Aider configuration file (weak proxy for Aider presence, not MCP client support)',
+      },
+    ],
+    mcpLocations: [],
+    defaultConfidence: 'unsupported',
+    reason:
+      'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
+  },
+] as const;

@@ -696,30 +696,89 @@ server configuration should be modeled separately because MCP clients read
 client-specific files such as `.mcp.json`, `opencode.json`, `.vscode/mcp.json`,
 or `~/.codex/config.toml`.
 
+### How `npx skills` detects installed agents
+
+The `vercel-labs/skills` registry keeps a static list of agents in
+[`src/agents.ts`](https://github.com/vercel-labs/skills/blob/main/src/agents.ts).
+Its `detectInstalledAgents()` helper iterates over that registry and, for each
+agent, runs an async filesystem probe (for example, checking whether the
+agent's expected config directory exists). All probes are started in parallel
+with `Promise.all`, and the results are filtered to keep only the agents whose
+markers returned `true`. This pattern is fast and simple, but it conflates
+"the agent is installed" with "the agent has a known MCP configuration
+surface."
+
+Overture intentionally separates those two concerns. An `InstallMarker`
+answers "is this platform present on the machine?" while an `McpLocation`
+answers "where does this platform read its MCP server list?" Keeping them
+distinct lets Overture report a platform as installed even when no stable MCP
+config surface has been documented yet.
+
 ## Suggested data model for Overture-style detection
 
-A detector can represent each platform with these fields:
+A detector can represent each platform with two separate concepts:
+installation evidence and configuration surface.
 
 ```ts
-interface CodingPlatformMcpSurface {
+type PlatformId =
+  | 'claude-code'
+  | 'claude-desktop'
+  | 'opencode'
+  | 'github-copilot-vscode'
+  | 'github-copilot-cli'
+  | 'github-copilot-cloud-agent'
+  | 'cursor'
+  | 'windsurf'
+  | 'cline'
+  | 'roo-code'
+  | 'continue'
+  | 'zed'
+  | 'openai-codex'
+  | 'aider';
+
+type HostPlatform = 'linux' | 'darwin' | 'win32';
+type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
+type MarkerKind = 'file' | 'directory' | 'file-or-directory';
+type PathBase = 'home' | 'config' | 'workspace' | 'absolute';
+type McpLocationScope =
+  | 'project'
+  | 'user'
+  | 'profile'
+  | 'repository'
+  | 'managed';
+type McpLocationFormat = 'json' | 'jsonc' | 'yaml' | 'toml' | 'web-settings';
+
+interface InstallMarker {
   id: string;
-  displayName: string;
-  executableNames: string[];
-  extensionIds: string[];
-  configFiles: Array<{
-    scope: 'project' | 'user' | 'profile' | 'repository' | 'managed';
-    pathPattern: string;
-    format: 'json' | 'jsonc' | 'yaml' | 'toml' | 'web-settings';
-    topLevelKey: string;
-  }>;
-  mcpSupport: 'stable' | 'partial' | 'uncertain';
+  kind: MarkerKind;
+  base: PathBase;
+  relativePath: string;
+  platforms?: HostPlatform[];
+  confidence: DetectionConfidence;
+  reason: string;
+}
+
+interface McpLocation {
+  scope: McpLocationScope;
+  base: PathBase;
+  relativePath: string;
+  platforms?: HostPlatform[];
+  format: McpLocationFormat;
+  topLevelKey?: string;
+  notes?: string;
 }
 ```
 
+v1 Overture detection is filesystem-only and does not perform PATH lookup or
+subprocess probing. `executableNames` and `extensionIds` remain useful registry
+metadata, but they are not used as runtime detection probes in v1.
+
+A platform is reported as installed when any applicable `InstallMarker` resolves to an existing path of the marker's `kind`; `matchedMarkers` carries the absolute resolved paths and the detector uses the highest-confidence matched marker reason (high > medium > low > unsupported).
+
 Detection should report confidence separately from installation. For example,
-`code` on PATH means VS Code is installed, but MCP support should remain
-unconfirmed until `.vscode/mcp.json`, user MCP config, or relevant extensions are
-found.
+finding `.vscode/mcp.json` means VS Code: has a known MCP config surface, but
+MCP support should remain unconfirmed until the file is actually read and
+validated.
 
 ## Source links
 
@@ -737,3 +796,11 @@ found.
 - Zed MCP docs: <https://zed.dev/docs/ai/mcp>
 - OpenAI Codex configuration docs: <https://developers.openai.com/codex/config>
 - AgentSkills reference: <https://www.skills.sh/agent>
+- `vercel-labs/skills` `detectInstalledAgents` helper: <https://github.com/vercel-labs/skills/blob/main/src/agents.ts>
+- `vercel-labs/skills` registry-to-README sync script: <https://github.com/vercel-labs/skills/blob/main/scripts/sync-agents.ts>
+
+## Not Yet Implemented
+
+- PATH lookup or subprocess probing for executable detection.
+- Extension ID or registry-based installation checks.
+- Reading the contents of MCP configuration files to validate schemas.
