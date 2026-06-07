@@ -361,6 +361,15 @@ describe('findExecutablesInPath', () => {
       await rm(windowsDir, { recursive: true, force: true });
     }
   });
+  it('Windows: skips directory named like the binary (e.g. tool.exe)', async () => {
+    const dirPath = join(tempDir, 'tool.exe');
+    await mkdir(dirPath);
+    const result = await findExecutablesInPath(['tool'], {
+      pathString: tempDir,
+      platform: 'win32',
+    });
+    expect(result).toEqual([]);
+  });
 
   it('does not throw on non-existent PATH entry', async () => {
     const filePath = join(tempDir, 'x');

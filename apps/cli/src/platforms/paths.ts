@@ -136,9 +136,17 @@ async function matchWindows(
     if (!lower.startsWith(lowerName)) continue;
     for (const ext of exts) {
       if (lower === `${lowerName}${ext}`) {
+        const candidate = `${dir}/${entry}`;
+        try {
+          const s = await stat(candidate);
+          if (!s.isFile()) break;
+        } catch (err) {
+          if (isSwallowed(err)) break;
+          throw err;
+        }
         return {
           name,
-          resolvedPath: await realpath(`${dir}/${entry}`),
+          resolvedPath: await realpath(candidate),
           source: 'windows',
         };
       }
