@@ -6,7 +6,7 @@
     "overture": "./dist/main.js"
   },
   "scripts": {
-    "link": "yarn nx build cli && npm link",
+    "link": "yarn nx build cli --skip-nx-cache && npm link",
     "unlink": "npm unlink -g overture"
   },
   "nx": {
