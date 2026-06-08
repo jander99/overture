@@ -10,6 +10,26 @@ and friends.
 It is the MCP analog of the "npx skills" workflow: just as `skills` syncs Agent
 Skills across coding agents, `overture` syncs MCP servers.
 
+## Install
+
+`overture` is published to npm as `@jander99/overture`.
+
+```bash
+# Run without installing (uses the latest published version):
+npx @jander99/overture@latest --help
+
+# Install globally:
+npm install -g @jander99/overture
+overture detect
+```
+
+Requires **Node.js >= 24** (the CLI's first published version targets the
+Node 24 LTS baseline; local Node 25 also works).
+
+> **Status**: the npm package shape is ready and the first publish is gated
+> behind a manual approval step. See `.omo/plans/npm-npx-readiness-phase-set.md`
+> for the publish-readiness phase-set.
+
 ## What it does
 
 - **Detects** which MCP-capable LLM platforms are installed on the host by
@@ -94,7 +114,7 @@ those not installed, with flat additive fields (`detectionStrategy`,
 ```
 overture/
 ├── apps/
-│   └── cli/              # The `overture` CLI (entry point: src/main.ts)
+│   └── cli/              # The `@jander99/overture` CLI (entry point: src/main.ts)
 ├── docs/
 │   └── coding-platform-mcp-configurations.md
 ├── nx.json               # NX workspace configuration
@@ -112,7 +132,7 @@ shipped as a CommonJS Node bundle.
 ### Run in dev (one-shot)
 
 ```bash
-yarn nx serve cli
+yarn nx serve @jander99/overture
 ```
 
 This builds the project and runs the output through Node.
@@ -120,32 +140,33 @@ This builds the project and runs the output through Node.
 ### Build only
 
 ```bash
-yarn nx build cli
+yarn nx build @jander99/overture
 # Output: apps/cli/dist/main.js
 ```
 
 ### Test
 
 ```bash
-yarn nx test cli
+yarn nx test @jander99/overture
 ```
 
-### Make `overture` runnable as `npx overture` locally
+### Make `overture` runnable as `npx @jander99/overture` locally
 
-The CLI exposes a `bin` entry so you can run it via `npx overture` from
-anywhere on your machine without publishing to npm. The workflow is:
+The CLI exposes a `bin` entry so you can run it via
+`npx @jander99/overture` (or `overture` after `npm link`) from anywhere on
+your machine without waiting for the first publish. The workflow is:
 
 ```bash
 # 1. Build and create a global symlink
-yarn nx run cli:link
+yarn nx run @jander99/overture:link
 
 # 2. Run it
-npx overture
+npx @jander99/overture
 # or simply
 overture
 
 # 3. When you're done, remove the global symlink
-yarn nx run cli:unlink
+yarn nx run @jander99/overture:unlink
 ```
 
 The `link` script in `apps/cli/package.json` wraps both steps:
@@ -153,8 +174,8 @@ The `link` script in `apps/cli/package.json` wraps both steps:
 ```json
 {
   "scripts": {
-    "link": "yarn nx build cli --skip-nx-cache && npm link",
-    "unlink": "npm unlink -g overture"
+    "link": "yarn nx build @jander99/overture --skip-nx-cache && npm link",
+    "unlink": "npm unlink -g @jander99/overture"
   }
 }
 ```
@@ -162,21 +183,26 @@ The `link` script in `apps/cli/package.json` wraps both steps:
 After editing `apps/cli/src/main.ts`, rebuild and re-link:
 
 ```bash
-yarn nx run cli:link
+yarn nx run @jander99/overture:link
 ```
 
 ### Build configuration notes
 
-`apps/cli/package.json` builds with `bundle: true` so esbuild preserves the
-`#!/usr/bin/env node` shebang defined in `src/main.ts`. The compiled
-`dist/main.js` is what `npm link` registers as the `overture` command.
+`apps/cli/package.json` builds with `bundle: true` and `thirdParty: true` so
+esbuild inlines `jsonc-parser` into the bundle. `smol-toml` is loaded at
+runtime via `createRequire` and is declared as a `dependency` so `npm install`
+sets up the lookup path for npm consumers. The shebang defined in
+`src/main.ts` is preserved by esbuild's `bundle: true` option. The compiled
+`dist/main.js` is what `npm link` (and `npx`) register as the `overture`
+command.
 
 ## Requirements
 
-- Node 20+ (matches `@types/node@20.19.9` in this workspace)
+- Node.js >= 24 (the CLI targets the Node 24 LTS baseline; matches
+  `@types/node` after CI is bumped off Node 20)
 - Yarn 4 (this repo uses Corepack via `.yarnrc.yml`)
 - A POSIX shell for the `npm link` workflow
 
 ## License
 
-TBD
+MIT — see [`LICENSE`](LICENSE).
