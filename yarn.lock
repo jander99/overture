@@ -2432,6 +2432,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@nx/esbuild@npm:22.7.5":
+  version: 22.7.5
+  resolution: "@nx/esbuild@npm:22.7.5"
+  dependencies:
+    "@nx/devkit": "npm:22.7.5"
+    "@nx/js": "npm:22.7.5"
+    picocolors: "npm:^1.1.0"
+    tinyglobby: "npm:^0.2.12"
+    tsconfig-paths: "npm:^4.1.2"
+    tslib: "npm:^2.3.0"
+  peerDependencies:
+    esbuild: ">=0.19.2 <1.0.0"
+  peerDependenciesMeta:
+    esbuild:
+      optional: true
+  checksum: 10c0/2a08eaadc20cee437ca519469e903e8a3c5faee3245d07b8a0f34394ed9db960ecd846b8381b947fcfcdac88bd0edeb72ae2acce24fcd9c1103dcded7d7b1195
+  languageName: node
+  linkType: hard
+
 "@nx/eslint@npm:22.7.5":
   version: 22.7.5
   resolution: "@nx/eslint@npm:22.7.5"
@@ -7921,6 +7940,7 @@ __metadata:
   resolution: "skills-cli@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.0.0"
+    "@nx/esbuild": "npm:22.7.5"
     "@nx/eslint": "npm:22.7.5"
     "@nx/js": "npm:^22.7.5"
     "@nx/node": "npm:^22.7.5"
