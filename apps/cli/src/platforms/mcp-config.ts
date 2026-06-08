@@ -19,8 +19,10 @@ import type { McpLocationFormat } from './types.js';
 interface SmolTomlCjsModule {
   parse: (text: string, options?: unknown) => Record<string, unknown>;
 }
-const smolTomlCjsModule: SmolTomlCjsModule =
-  createRequire(__filename)('smol-toml');
+const smolTomlCjsModule = createRequire(__filename)(
+  'smol-toml',
+) as unknown as SmolTomlCjsModule;
+createRequire(__filename)('smol-toml');
 function parseToml(text: string): Record<string, unknown> {
   return smolTomlCjsModule.parse(text);
 }

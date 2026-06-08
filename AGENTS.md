@@ -122,6 +122,55 @@ When you add a new package:
    tsc finds the source via project references (not path aliases —
    composite+references is the supported pattern in Nx 22).
 
+## Adding a new MCP agent (per-file registry)
+
+The `@jander99/overture` CLI maintains a per-file registry of every
+MCP-capable platform it knows how to detect. Each agent lives in its
+own file and implements the `AgentDefinition` interface (defined in
+`apps/cli/src/platforms/agents/types.ts` as a structural extension of
+`PlatformRegistryEntry` that adds an `mcp: { read, write }` slot).
+The detection pipeline consumes only the static aggregate in
+`apps/cli/src/platforms/agents/index.ts`; per-agent files are not
+imported anywhere else. The legacy `platformRegistry` name in
+`apps/cli/src/platforms/registry.ts` is now a thin re-export of that
+aggregate (object identity, not a copy).
+
+To add a new agent:
+
+1. Read `docs/coding-platform-mcp-configurations.md` for the
+   platform's install marker(s), MCP config location(s), executable
+   name(s), and platform-specific format notes. That catalog is the
+   source of truth for the data; do not invent new paths.
+2. Create `apps/cli/src/platforms/agents/<id>.ts` that exports a
+   single `const <camelCaseId>: AgentDefinition = { ... }`. The body
+   is the platform's data (`id`, `displayName`, `executableNames`,
+   `installMarkers`, `mcpLocations`, `detectionStrategy`,
+   `mcpSupport`, `defaultConfidence`, optional `reason`, ...) plus a
+   trailing `mcp: notImplementedMcpHandlers('<id>')` field. The
+   placeholder `mcp.read` / `mcp.write` handlers will be replaced
+   with real implementations in a follow-up PR — see
+   `apps/cli/src/platforms/agents/types.ts`.
+3. Insert the new import + array entry in
+   `apps/cli/src/platforms/agents/index.ts` at the canonical
+   position. **Order matters**: the legacy `expectedIds` assertion
+   in `apps/cli/src/platforms/registry.spec.ts` pins the index of
+   every entry. Reordering is a breaking change for any consumer
+   that depends on positional indices.
+4. Add or extend a `describe(...)` block in
+   `apps/cli/src/platforms/registry.spec.ts` asserting the
+   per-agent invariants (high-confidence markers, markerless where
+   appropriate, unsupported reason text, etc.).
+5. Run `yarn nx test @jander99/overture --skip-nx-cache`,
+   `yarn nx build @jander99/overture --skip-nx-cache`,
+   `yarn prettier --check .`, and
+   `node apps/cli/scripts/verify-package.mjs` to verify.
+
+**Reserved-keyword edge case.** `continue` is a JavaScript reserved
+keyword. The `continue` agent's per-agent file exports `continueDef`;
+the aggregate renames it on import (`continueDef as continueAgent`).
+Use the same workaround if you add an agent whose id collides with a
+reserved word.
+
 ## Things not to change without asking
 
 - `.yarnrc.yml` (`nodeLinker: node-modules`) — switching to PnP will break

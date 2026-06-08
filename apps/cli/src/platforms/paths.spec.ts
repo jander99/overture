@@ -16,11 +16,7 @@ import {
   markerExists,
   findExecutablesInPath,
 } from './paths.js';
-import type {
-  InstallMarker,
-  PathResolutionContext,
-  HostPlatform,
-} from './types.js';
+import type { InstallMarker, PathResolutionContext } from './types.js';
 
 function makeCtx(
   overrides?: Partial<PathResolutionContext>,
@@ -182,7 +178,7 @@ describe('markerExists', () => {
   });
 
   it('returns false for permission-denied path (skipped if root)', async () => {
-    if (process.getuid && process.getuid() === 0) {
+    if (process.getuid?.() === 0) {
       console.warn('Skipping permission-denied test because running as root');
       return;
     }

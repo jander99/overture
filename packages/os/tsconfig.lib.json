@@ -6,8 +6,7 @@
     "declarationMap": true,
     "outDir": "../../dist/packages/os",
     "rootDir": "src",
-    "tsBuildInfoFile": "../../dist/packages/os/tsconfig.lib.tsbuildinfo",
-    "emitDeclarationOnly": false
+    "tsBuildInfoFile": "../../dist/packages/os/tsconfig.lib.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
   "exclude": [
