@@ -2554,6 +2554,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@overture/os@workspace:packages/os":
+  version: 0.0.0-use.local
+  resolution: "@overture/os@workspace:packages/os"
+  languageName: unknown
+  linkType: soft
+
 "@oxc-project/types@npm:=0.133.0":
   version: 0.133.0
   resolution: "@oxc-project/types@npm:0.133.0"

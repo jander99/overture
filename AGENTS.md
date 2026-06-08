@@ -4,9 +4,11 @@ Compact guide for AI agents working in the `overture` repository.
 
 ## What this repo is
 
-Yarn 4 (Corepack) + Nx 22 monorepo. The only shipped artifact today is the
-`overture` CLI in `apps/cli` (entry: `src/main.ts`); `packages/` exists but is
-empty and is reserved for future shared libraries. The CLI's purpose is to
+Yarn 4 (Corepack) + Nx 22 monorepo. The shipped artifact today is the
+`overture` CLI in `apps/cli` (entry: `src/main.ts`); the first shared
+library `@overture/os` lives in `packages/os/` and provides cross-platform
+OS detection (Windows, macOS, Linux, WSL1/WSL2 with distro). Add new
+shared logic as new packages under `packages/`. The CLI's purpose is to
 sync MCP server configurations across LLM coding platforms — the canonical
 per-platform catalog that drives detection and writing logic is
 [`docs/coding-platform-mcp-configurations.md`](docs/coding-platform-mcp-configurations.md).
@@ -97,15 +99,28 @@ All commands run from the repo root.
 
 ## Adding a new package or app
 
+The `@overture/os` library in `packages/os/` is the canonical template.
+When you add a new package:
+
 1. Create `packages/<name>/` (or `apps/<name>/`) with its own `package.json`,
    `tsconfig.json` (extending `../../tsconfig.base.json`), and a
-   `tsconfig.lib.json` for build / `tsconfig.spec.json` for tests.
+   `tsconfig.lib.json` for build / `tsconfig.spec.json` for tests. Use
+   `project.json` with the `@nx/esbuild:esbuild` executor (matches
+   `apps/cli` and avoids the `@nx/js:tsc` buildable-lib tmp-tsconfig
+   pitfall). Set `composite: true, declaration: true, declarationMap: true`
+   in `tsconfig.lib.json`; these are required when `declarationMap` or
+   `emitDeclarationOnly` is inherited from the base.
 2. Add a project reference from the matching root `tsconfig.json`
    (the root `tsconfig.json` and the relevant `apps/*/tsconfig.json`).
 3. Update `package.json` `workspaces` if it isn't already covered by
    `packages/*` / `apps/*` globs.
-4. For shared libs that should be importable from `apps/cli`, pick a path
-   alias consistent with `@overture/*` and add it to `tsconfig.base.json`.
+4. For shared libs that should be importable from `apps/cli`, point
+   `package.json` `main`/`types` at the source `.ts` files
+   (Yarn workspaces symlinks the package, and esbuild inlines source
+   with `thirdParty: true`). Add a `references` entry to
+   `apps/cli/tsconfig.app.json` and `apps/cli/tsconfig.spec.json` so
+   tsc finds the source via project references (not path aliases —
+   composite+references is the supported pattern in Nx 22).
 
 ## Things not to change without asking
 

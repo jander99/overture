@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./apps/cli"
+    },
+    {
+      "path": "./packages/os"
     }
   ]
 }

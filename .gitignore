@@ -15,7 +15,12 @@ node_modules
 # Generated build artifacts: built from source by `yarn nx build`, not tracked
 # in git. The published npm tarball includes them, built fresh by the
 # publish workflow.
+dist/
 apps/cli/dist/
+
+# Nx tmp generated tsconfigs for buildable libraries (created by
+# @nx/js:tsc / typecheck plugin during project graph processing).
+tmp/
 
 # Build outputs from the prune/copy-workspace-modules Nx targets
 apps/cli/dist/workspace_modules
