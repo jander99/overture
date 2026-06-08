@@ -45,6 +45,8 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           # release-please must NOT publish. The publish step happens
-          # in .github/workflows/publish.yml after the release PR is
-          # merged and a tag is created.
-          command: github-release
+          # in .github/workflows/publish.yml.disabled after the release
+          # PR is merged and a tag is created. (Note: `command:` is not
+          # a valid input on release-please-action@v4; the default
+          # behavior is github-release, which is what we want.)
+          skip-github-release: false
