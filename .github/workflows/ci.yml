@@ -42,11 +42,20 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint
-        # Lint target is not yet defined in apps/cli or nx.json. This
-        # step is a no-op until a lint target is added. Tracked
-        # separately; see .omo/plans/.
-        run: echo "lint target not yet defined; skipping (tracked separately)"
-        continue-on-error: true
+        run: npx nx lint @jander99/overture --skip-nx-cache
+
+      - name: Typecheck
+        # Build mode (`tsc -b`) traverses the project-references graph
+        # and produces .d.ts artifacts for the @overture/os library so
+        # apps/cli can resolve them. We do NOT pass `--noEmit` because
+        # composite projects require declaration emit. The emitted .d.ts
+        # files land in `dist/` which is gitignored.
+        run: npx tsc -b apps/cli/tsconfig.json
+      - name: Audit dependencies
+        # Yarn 4's `npm audit` reads yarn.lock; the `--all --recursive`
+        # scope covers every workspace and every transitive dep. We
+        # fail only on high or critical advisories.
+        run: yarn npm audit --all --recursive --severity=high
 
       - name: Format check
         run: npx prettier --check .
