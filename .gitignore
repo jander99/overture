@@ -29,3 +29,11 @@ apps/cli/dist/workspace_modules
 # `yarn install`); keep the rest of `.yarn/` tracked but ignore the
 # install-state binary.
 .yarn/install-state.gz
+
+# Build outputs from `tsc -b` (project-references typecheck / lib
+# builds). Created on first CI run and on every local typecheck.
+out-tsc/
+
+# ESLint content-cache (per-checkout, regenerated on every lint run).
+.eslintcache
+
