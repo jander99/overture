@@ -11,3 +11,16 @@
 vitest.config.*.timestamp*
 
 node_modules
+
+# Generated build artifacts: built from source by `yarn nx build`, not tracked
+# in git. The published npm tarball includes them, built fresh by the
+# publish workflow.
+apps/cli/dist/
+
+# Build outputs from the prune/copy-workspace-modules Nx targets
+apps/cli/dist/workspace_modules
+
+# Yarn 4 install state is a per-checkout cache (regenerated on every
+# `yarn install`); keep the rest of `.yarn/` tracked but ignore the
+# install-state binary.
+.yarn/install-state.gz
