@@ -2,22 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "declaration": false,
-    "declarationMap": false,
-    "outDir": "dist",
-    "types": ["node"],
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "../../dist/packages/os",
     "rootDir": "src",
-    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+    "tsBuildInfoFile": "../../dist/packages/os/tsconfig.lib.tsbuildinfo",
+    "emitDeclarationOnly": false
   },
-  "references": [
-    {
-      "path": "../../packages/os"
-    }
-  ],
   "include": ["src/**/*.ts"],
   "exclude": [
-    "vite.config.ts",
-    "vite.config.mts",
     "vitest.config.ts",
     "vitest.config.mts",
     "src/**/*.test.ts",

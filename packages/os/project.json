@@ -1,0 +1,30 @@
+{
+  "name": "@overture/os",
+  "root": "packages/os",
+  "sourceRoot": "packages/os/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/os",
+        "main": "packages/os/src/index.ts",
+        "tsConfig": "packages/os/tsconfig.lib.json",
+        "platform": "node",
+        "format": ["esm"],
+        "bundle": true,
+        "thirdParty": true,
+        "generatePackageJson": false
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "coverage/packages/os"
+      }
+    }
+  },
+  "tags": []
+}

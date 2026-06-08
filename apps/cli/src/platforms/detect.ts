@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { detectOS, type HostPlatform } from '@overture/os';
 import { platformRegistry } from './registry.js';
 import {
   findExecutablesInPath,
@@ -32,11 +33,8 @@ export function defaultPathResolutionContext(): PathResolutionContext {
   const homeDir = homedir();
   const configDir = process.env.XDG_CONFIG_HOME ?? join(homeDir, '.config');
   const workspaceDir = process.cwd();
-  const platform = process.platform;
-
-  if (platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') {
-    throw new Error(`Unsupported platform: ${platform}`);
-  }
+  const host = detectOS();
+  const platform: HostPlatform = host.platform;
 
   return {
     homeDir,

@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
-    "outDir": "./out-tsc/vitest",
+    "outDir": "../../dist/packages/os/out-tsc/vitest",
     "types": [
       "vitest/globals",
       "vitest/importMeta",
@@ -11,14 +10,7 @@
       "vitest"
     ]
   },
-  "references": [
-    {
-      "path": "../../packages/os"
-    }
-  ],
   "include": [
-    "vite.config.ts",
-    "vite.config.mts",
     "vitest.config.ts",
     "vitest.config.mts",
     "src/**/*.test.ts",
