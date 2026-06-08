@@ -1,0 +1,110 @@
+name: Publish @jander99/overture
+
+# Manual, environment-gated Trusted Publishing workflow for the
+# `@jander99/overture` CLI. Intentionally NOT triggered by `push: tags:`
+# so release-please tags can never accidentally auto-publish.
+#
+# Usage:
+#   1. Configure the npm Trusted Publisher for the @jander99/overture
+#      package on https://www.npmjs.com/ :
+#        - Owner: jander99
+#        - Repository: jander99/overture
+#        - Workflow filename: publish.yml
+#        - Allowed action: npm publish
+#   2. Create the GitHub environment `npm-production` and add a required
+#      reviewer (manual approval).
+#   3. From the GitHub Actions UI, choose "Run workflow" on this file,
+#      supply the `tag` input (e.g. v0.1.0), and confirm.
+#   4. The workflow checks out the tagged commit, installs deps with
+#      Yarn (immutable, Corepack), builds, runs package verification,
+#      and runs `npm publish --provenance --access public` from
+#      `apps/cli/`.
+#
+# Provenance is auto-attached by npm Trusted Publishing; the explicit
+# `--provenance` flag is redundant but harmless.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v0.1.0)'
+        required: true
+        type: string
+        default: ''
+
+concurrency:
+  group: publish-${{ inputs.tag }}
+  cancel-in-progress: false
+
+# npm Trusted Publishing uses GitHub's OIDC token. No long-lived npm
+# tokens are stored in repo secrets.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Manual approval gate. Configure the environment in repo Settings
+    # -> Environments -> npm-production -> Required reviewers.
+    environment: npm-production
+
+    steps:
+      - name: Validate tag input
+        if: inputs.tag == ''
+        run: |
+          echo "::error::tag input is required (e.g. v0.1.0)"
+          exit 1
+
+      - name: Check out tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build
+        run: yarn nx build @jander99/overture --skip-nx-cache
+
+      - name: Verify package
+        run: node apps/cli/scripts/verify-package.mjs
+
+      - name: Publish to npm
+        # Trusted Publishing: no NODE_AUTH_TOKEN; OIDC token in
+        # `ACTIONS_ID_TOKEN_REQUEST_TOKEN` is used by npm to mint a
+        # short-lived publish token.
+        working-directory: apps/cli
+        run: npm publish --provenance --access public
+
+      - name: Smoke check post-publish
+        # Optional local sanity check; the actual post-publish
+        # `npx @jander99/overture@latest` verification lives in the
+        # runbook (docs/publishing.md) and the publish gate in the
+        # npm/npx readiness plan.
+        run: |
+          VERSION=$(node -e "console.log(require('./apps/cli/package.json').version)")
+          echo "Published @jander99/overture@${VERSION} from tag ${{ inputs.tag }}"
+          npm view "@jander99/overture@${VERSION}" version
