@@ -1,5 +1,8 @@
 import { createRequire } from 'node:module';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { McpLocationFormat } from './types.js';
 
 // `smol-toml` is published as ESM-first but ships a CJS build at
