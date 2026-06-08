@@ -59,7 +59,7 @@ function resolveMcpLocationPath(
       return loc.relativePath;
     default: {
       const _exhaustive: never = loc.base;
-      throw new Error(`Unsupported path base: ${_exhaustive}`);
+      throw new Error(`Unsupported path base: ${String(_exhaustive)}`);
     }
   }
 }

@@ -6,12 +6,12 @@ import type {
 
 /** Read result for a per-agent MCP read. Placeholder for now. */
 export interface AgentMcpReadResult {
-  servers: ReadonlyArray<unknown>;
+  servers: readonly unknown[];
 }
 
 /** Write input for a per-agent MCP write. Placeholder for now. */
 export interface AgentMcpWriteInput {
-  servers: ReadonlyArray<unknown>;
+  servers: readonly unknown[];
 }
 
 /** Write result. Placeholder for now. */

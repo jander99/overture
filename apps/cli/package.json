@@ -133,6 +133,17 @@
           }
         }
       },
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "outputs": ["{options.outputFile}"],
+        "options": {
+          "lintFilePatterns": ["apps/cli/**/*.ts"],
+          "maxWarnings": 0,
+          "cache": true,
+          "cacheStrategy": "content",
+          "errorOnUnmatchedPattern": false
+        }
+      },
       "test": {
         "executor": "@nx/vitest:test",
         "outputs": [

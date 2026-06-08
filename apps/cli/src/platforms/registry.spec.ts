@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { platformRegistry } from './registry.js';
 import { agentRegistry } from './agents/index.js';
 import type { PlatformId } from './types.js';
-import type { AgentDefinition } from './agents/types.js';
 
 describe('platformRegistry', () => {
   const expectedIds: readonly PlatformId[] = [
@@ -211,7 +210,7 @@ describe('platformRegistry', () => {
     });
 
     it('every agent satisfies the AgentDefinition contract (placeholder MCP handlers present)', async () => {
-      for (const a of agentRegistry as readonly AgentDefinition[]) {
+      for (const a of agentRegistry) {
         expect(a.id, `agent.id`).toBeTruthy();
         expect(
           a.displayName.trim().length,
