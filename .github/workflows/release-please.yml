@@ -1,0 +1,50 @@
+name: release-please
+
+# Creates (or updates) a release PR that bumps
+# `apps/cli/package.json` to the next semver, updates `CHANGELOG.md`,
+# and tags the merge commit. The PR is the only output of this
+# workflow; the actual `npm publish` is handled by the manual,
+# environment-gated `.github/workflows/publish.yml` after the release
+# PR is merged.
+#
+# Conventional Commits drive the version bump:
+#   - fix: -> patch
+#   - feat: -> minor
+#   - feat!: or BREAKING CHANGE: -> major
+#
+# Workflow triggers:
+#   - on push to main (picks up new commits and updates the PR)
+#   - on PR open / reopen / synchronize against main (keeps the PR
+#     current when the contributor force-pushes)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # release-please must NOT publish. The publish step happens
+          # in .github/workflows/publish.yml after the release PR is
+          # merged and a tag is created.
+          command: github-release
