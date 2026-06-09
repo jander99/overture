@@ -4,8 +4,11 @@ import type {
   AgentDefinition,
   McpServerMap,
   StdioServerBase,
+  AgentMcpReadResult,
 } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const claudeDesktop: AgentDefinition = {
   id: 'claude-desktop',
   displayName: 'Claude Desktop',
@@ -73,7 +76,10 @@ export const claudeDesktop: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: notImplementedMcpHandlers('claude-desktop'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(claudeDesktop, ctx),
+    write: notImplementedMcpHandlers('claude-desktop').write,
+  },
 };
 
 /** Native Claude Desktop MCP config: `mcpServers` map; each server is stdio-only (no remote transport supported). */
@@ -85,3 +91,18 @@ export interface ClaudeDesktopMcpConfig {
 /** Claude Desktop server: local process invocation via stdio. */
 
 export type ClaudeDesktopMcpServer = StdioServerBase;
+
+/**
+ * Read the agent's MCP config into the typed `ClaudeDesktopMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `claudeDesktop.mcp.read`, but with the generic `config` field
+ * narrowed to `ClaudeDesktopMcpConfig | null`.
+ */
+export async function readClaudeDesktopMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<ClaudeDesktopMcpConfig>> {
+  return readAgentMcpConfig(claudeDesktop, ctx) as Promise<
+    AgentMcpReadResult<ClaudeDesktopMcpConfig>
+  >;
+}

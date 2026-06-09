@@ -6,8 +6,11 @@ import type {
   PermissiveConfigObject,
   RemoteServerBase,
   StdioServerBase,
+  AgentMcpReadResult,
 } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const cursor: AgentDefinition = {
   id: 'cursor',
   displayName: 'Cursor',
@@ -51,7 +54,10 @@ export const cursor: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: ['cursor'],
-  mcp: notImplementedMcpHandlers('cursor'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(cursor, ctx),
+    write: notImplementedMcpHandlers('cursor').write,
+  },
 };
 
 /** Native Cursor MCP config: `mcpServers` map; servers may be stdio (with `command`/`args`/`env`) or remote (with `url`/`headers`). Per-server `envFile` overrides; static OAuth-like credentials live under `auth`. */
@@ -94,3 +100,18 @@ export type CursorAuth = PermissiveConfigObject & {
 
   readonly scopes?: readonly string[];
 };
+
+/**
+ * Read the agent's MCP config into the typed `CursorMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `cursor.mcp.read`, but with the generic `config` field
+ * narrowed to `CursorMcpConfig | null`.
+ */
+export async function readCursorMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<CursorMcpConfig>> {
+  return readAgentMcpConfig(cursor, ctx) as Promise<
+    AgentMcpReadResult<CursorMcpConfig>
+  >;
+}

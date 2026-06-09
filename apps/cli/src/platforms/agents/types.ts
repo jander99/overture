@@ -3,10 +3,28 @@ import type {
   PlatformId,
   PlatformRegistryEntry,
 } from '../types.js';
+import type { McpLocationFormat } from '../types.js';
 
-/** Read result for a per-agent MCP read. Placeholder for now. */
-export interface AgentMcpReadResult {
-  servers: readonly unknown[];
+/**
+ * Read result for a per-agent MCP read.
+ * - `config` is the typed shape (`TConfig`) when at least one applicable
+ *   mcp location was found, parsed, and contained a non-empty top-level
+ *   key. `null` indicates "not configured" (file missing, empty, or only
+ *   parse errors).
+ * - `nonEmpty` is `true` when the chosen mcp location had at least one entry
+ *   under the top-level key.
+ * - `parseError` is set when a file was read but unparseable.
+ * - `location` records the resolved mcp location that produced the result.
+ */
+export interface AgentMcpReadResult<TConfig = unknown> {
+  readonly config: TConfig | null;
+  readonly nonEmpty: boolean;
+  readonly parseError?: string;
+  readonly location?: Readonly<{
+    readonly resolvedPath: string;
+    readonly format: McpLocationFormat;
+    readonly topLevelKey?: string;
+  }>;
 }
 
 /** Write input for a per-agent MCP write. Placeholder for now. */
@@ -19,10 +37,20 @@ export interface AgentMcpWriteResult {
   written: number;
 }
 
+/**
+ * Per-agent typed read handler. Each per-agent file can also export a
+ * `read<AgentName>McpConfig(ctx: PathResolutionContext):
+ * Promise<AgentMcpReadResult<<AgentName>McpConfig>>` so callers can opt
+ * into the per-agent typed shape without going through the registry.
+ */
+export type AgentMcpReadHandlerTyped<TConfig> = (
+  ctx: PathResolutionContext,
+) => Promise<AgentMcpReadResult<TConfig>>;
+
 /** Read handler signature. */
 export type AgentMcpReadHandler = (
   ctx: PathResolutionContext,
-) => Promise<AgentMcpReadResult>;
+) => Promise<AgentMcpReadResult<unknown>>;
 
 /** Write handler signature. */
 export type AgentMcpWriteHandler = (

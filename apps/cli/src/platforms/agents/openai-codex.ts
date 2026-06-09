@@ -1,7 +1,13 @@
 // OpenAI Codex agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, StringMap } from './types.js';
+import type {
+  AgentDefinition,
+  StringMap,
+  AgentMcpReadResult,
+} from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const openaiCodex: AgentDefinition = {
   id: 'openai-codex',
   displayName: 'OpenAI Codex',
@@ -45,7 +51,10 @@ export const openaiCodex: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['codex'],
-  mcp: notImplementedMcpHandlers('openai-codex'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
+    write: notImplementedMcpHandlers('openai-codex').write,
+  },
 };
 
 /**
@@ -103,4 +112,19 @@ export interface OpenAICodexMcpServer {
   http_headers?: StringMap;
   /** Remote: HTTP headers sourced from environment variables. */
   env_http_headers?: StringMap;
+}
+
+/**
+ * Read the agent's MCP config into the typed `OpenAICodexMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `openaiCodex.mcp.read`, but with the generic `config` field
+ * narrowed to `OpenAICodexMcpConfig | null`.
+ */
+export async function readOpenAICodexMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<OpenAICodexMcpConfig>> {
+  return readAgentMcpConfig(openaiCodex, ctx) as Promise<
+    AgentMcpReadResult<OpenAICodexMcpConfig>
+  >;
 }

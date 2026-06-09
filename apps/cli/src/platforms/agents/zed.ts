@@ -1,7 +1,14 @@
 // Zed agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, McpServerMap, StringMap } from './types.js';
+import type {
+  AgentDefinition,
+  McpServerMap,
+  StringMap,
+  AgentMcpReadResult,
+} from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const zed: AgentDefinition = {
   id: 'zed',
   displayName: 'Zed',
@@ -30,7 +37,10 @@ export const zed: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: ['zed'],
-  mcp: notImplementedMcpHandlers('zed'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(zed, ctx),
+    write: notImplementedMcpHandlers('zed').write,
+  },
 };
 
 /**
@@ -69,4 +79,19 @@ export interface ZedRemoteServer {
   url: string;
   /** HTTP headers attached to requests made to the server. */
   headers?: StringMap;
+}
+
+/**
+ * Read the agent's MCP config into the typed `ZedMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `zed.mcp.read`, but with the generic `config` field
+ * narrowed to `ZedMcpConfig | null`.
+ */
+export async function readZedMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<ZedMcpConfig>> {
+  return readAgentMcpConfig(zed, ctx) as Promise<
+    AgentMcpReadResult<ZedMcpConfig>
+  >;
 }

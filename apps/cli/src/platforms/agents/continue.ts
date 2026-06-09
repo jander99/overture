@@ -1,11 +1,13 @@
 // Continue agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, AgentMcpReadResult } from './types.js';
 import type { RequestInitConfig, StringList, StringMap } from './types.js';
 import type { ClaudeCodeMcpConfig } from './claude-code.js';
 import type { CursorMcpConfig } from './cursor.js';
 import type { ClineMcpConfig } from './cline.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 /**
  * Native Continue MCP server entry inside a standalone YAML config.
  * The `name` field is required because Continue identifies servers by
@@ -91,5 +93,23 @@ export const continueDef: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: notImplementedMcpHandlers('continue'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(continueDef, ctx),
+    write: notImplementedMcpHandlers('continue').write,
+  },
 };
+
+/**
+ * Read the agent's MCP config into the typed `ContinueMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `continueDef.mcp.read`, but with the generic `config` field
+ * narrowed to `ContinueMcpConfig | null`.
+ */
+export async function readContinueMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<ContinueMcpConfig>> {
+  return readAgentMcpConfig(continueDef, ctx) as Promise<
+    AgentMcpReadResult<ContinueMcpConfig>
+  >;
+}

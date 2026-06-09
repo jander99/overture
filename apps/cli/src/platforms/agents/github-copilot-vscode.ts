@@ -8,7 +8,10 @@ import type {
   RequestInitConfig,
   StdioServerBase,
   StringMap,
+  AgentMcpReadResult,
 } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const githubCopilotVscode: AgentDefinition = {
   id: 'github-copilot-vscode',
   displayName: 'GitHub Copilot in VS Code',
@@ -52,7 +55,10 @@ export const githubCopilotVscode: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: notImplementedMcpHandlers('github-copilot-vscode'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(githubCopilotVscode, ctx),
+    write: notImplementedMcpHandlers('github-copilot-vscode').write,
+  },
 };
 
 /**
@@ -123,4 +129,19 @@ export type GitHubCopilotVSCodeServer =
 export interface GitHubCopilotVSCodeMcpConfig {
   servers?: McpServerMap<GitHubCopilotVSCodeServer>;
   inputs?: readonly GitHubCopilotVSCodeInput[];
+}
+
+/**
+ * Read the agent's MCP config into the typed `GitHubCopilotVSCodeMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `githubCopilotVscode.mcp.read`, but with the generic `config` field
+ * narrowed to `GitHubCopilotVSCodeMcpConfig | null`.
+ */
+export async function readGitHubCopilotVSCodeMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<GitHubCopilotVSCodeMcpConfig>> {
+  return readAgentMcpConfig(githubCopilotVscode, ctx) as Promise<
+    AgentMcpReadResult<GitHubCopilotVSCodeMcpConfig>
+  >;
 }

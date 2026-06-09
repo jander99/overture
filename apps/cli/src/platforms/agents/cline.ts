@@ -1,8 +1,10 @@
 // Cline agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, AgentMcpReadResult } from './types.js';
 import type { McpServerMap, StringList, StringMap } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 /**
  * Native Cline MCP server entry. Cline accepts either stdio-style servers
  * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
@@ -99,5 +101,23 @@ export const cline: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: notImplementedMcpHandlers('cline'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(cline, ctx),
+    write: notImplementedMcpHandlers('cline').write,
+  },
 };
+
+/**
+ * Read the agent's MCP config into the typed `ClineMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `cline.mcp.read`, but with the generic `config` field
+ * narrowed to `ClineMcpConfig | null`.
+ */
+export async function readClineMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<ClineMcpConfig>> {
+  return readAgentMcpConfig(cline, ctx) as Promise<
+    AgentMcpReadResult<ClineMcpConfig>
+  >;
+}

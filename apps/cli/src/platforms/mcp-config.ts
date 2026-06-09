@@ -34,6 +34,16 @@ export interface McpConfigParseResult {
   parsed: boolean;
   /** Parser-reported error message (if any). */
   parseError?: string;
+  /**
+   * The parsed top-level document, when the parse succeeded and the
+   * configured top-level key was present and non-empty. Set ONLY when
+   * `parsed && configured` is true; undefined on empty, missing-key,
+   * parse-error, or topLevelKey-required paths.
+   *
+   * The per-agent MCP reader casts this into the agent's `*McpConfig`
+   * shape without re-parsing the file.
+   */
+  readonly document?: unknown;
 }
 
 export interface ParseMcpConfigOptions {
@@ -113,9 +123,13 @@ export function parseMcpConfig(
       return { configured: false, parsed: true };
     }
     const section = result[topLevelKey];
+    if (!nonEmptyContainer(section)) {
+      return { configured: false, parsed: true };
+    }
     return {
-      configured: nonEmptyContainer(section),
+      configured: true,
       parsed: true,
+      document: result,
     };
   }
 
@@ -138,9 +152,13 @@ export function parseMcpConfig(
     if (!isContainer(section)) {
       return { configured: false, parsed: true };
     }
+    if (Object.keys(section).length === 0) {
+      return { configured: false, parsed: true };
+    }
     return {
-      configured: Object.keys(section).length > 0,
+      configured: true,
       parsed: true,
+      document: result,
     };
   }
 
