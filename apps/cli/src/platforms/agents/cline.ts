@@ -69,12 +69,20 @@ export const cline: AgentDefinition = {
     {
       scope: 'user',
       base: 'home',
+      relativePath: '.cline/mcp.json',
+      format: 'json',
+      topLevelKey: 'mcpServers',
+      notes: 'Current Cline user config (Cline docs).',
+    },
+    {
+      scope: 'user',
+      base: 'home',
       relativePath:
         'Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
       platforms: ['darwin'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'macOS user-global MCP servers',
+      notes: 'macOS user-global MCP servers (legacy VS Code extension storage)',
     },
     {
       scope: 'user',
@@ -84,7 +92,7 @@ export const cline: AgentDefinition = {
       platforms: ['linux'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'Linux user-global MCP servers',
+      notes: 'Linux user-global MCP servers (legacy VS Code extension storage)',
     },
     {
       scope: 'user',
@@ -94,7 +102,8 @@ export const cline: AgentDefinition = {
       platforms: ['win32'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'Windows user-global MCP servers',
+      notes:
+        'Windows user-global MCP servers (legacy VS Code extension storage)',
     },
   ],
   defaultConfidence: 'medium',

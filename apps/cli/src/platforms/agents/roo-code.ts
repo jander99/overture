@@ -69,6 +69,14 @@ export const rooCode: AgentDefinition = {
   ],
   mcpLocations: [
     {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: '.roo/mcp.json',
+      format: 'json',
+      topLevelKey: 'mcpServers',
+      notes: 'Roo Code project-local MCP config.',
+    },
+    {
       scope: 'user',
       base: 'home',
       relativePath:
@@ -76,7 +84,7 @@ export const rooCode: AgentDefinition = {
       platforms: ['darwin'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'macOS user-global MCP servers',
+      notes: 'macOS user-global MCP servers (legacy VS Code extension storage)',
     },
     {
       scope: 'user',
@@ -86,7 +94,7 @@ export const rooCode: AgentDefinition = {
       platforms: ['linux'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'Linux user-global MCP servers',
+      notes: 'Linux user-global MCP servers (legacy VS Code extension storage)',
     },
     {
       scope: 'user',
@@ -96,7 +104,8 @@ export const rooCode: AgentDefinition = {
       platforms: ['win32'],
       format: 'json',
       topLevelKey: 'mcpServers',
-      notes: 'Windows user-global MCP servers',
+      notes:
+        'Windows user-global MCP servers (legacy VS Code extension storage)',
     },
   ],
   defaultConfidence: 'medium',
