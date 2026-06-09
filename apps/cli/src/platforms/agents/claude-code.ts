@@ -1,6 +1,13 @@
 // Claude Code agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type {
+  AgentDefinition,
+  McpServerMap,
+  PermissiveConfigObject,
+  RemoteServerBase,
+  StdioServerBase,
+  StringMap,
+} from './types.js';
 
 export const claudeCode: AgentDefinition = {
   id: 'claude-code',
@@ -47,3 +54,35 @@ export const claudeCode: AgentDefinition = {
   executableNames: ['claude'],
   mcp: notImplementedMcpHandlers('claude-code'),
 };
+
+/** Native Claude Code MCP config: `mcpServers` map; each server is either a stdio transport or a remote transport (HTTP / streamable-http / SSE / WebSocket). The top level may also carry a local `imports` map (Claude Code's local-imports feature). */
+
+export interface ClaudeCodeMcpConfig {
+  readonly mcpServers?: McpServerMap<ClaudeCodeMcpServer>;
+
+  /** Local-imports map: imports named JSON files (e.g. Claude Desktop) into the active config. */
+
+  readonly imports?: StringMap;
+}
+
+/** Discriminated by `type`; defaults to `stdio` when omitted. Carries a permissive index signature for forward-compatible extension fields. */
+
+export type ClaudeCodeMcpServer = (
+  | ClaudeCodeStdioServer
+  | ClaudeCodeRemoteServer
+) &
+  PermissiveConfigObject;
+
+/** Stdio transport: local process invocation. */
+
+export interface ClaudeCodeStdioServer extends StdioServerBase {
+  /** Transport discriminator. Omitted for stdio in practice; kept open to permit future variants. */
+  readonly type?: string;
+}
+
+/** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
+
+export interface ClaudeCodeRemoteServer extends RemoteServerBase {
+  /** Transport discriminator. Literal values include 'http', 'streamable-http', 'sse', 'ws'; unknown strings are tolerated for forward compatibility. */
+  readonly type?: string;
+}

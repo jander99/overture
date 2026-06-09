@@ -1,7 +1,14 @@
 // GitHub Copilot in VS Code agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
-
+import type {
+  AgentDefinition,
+  McpServerMap,
+  OAuthConfig,
+  PermissiveConfigObject,
+  RequestInitConfig,
+  StdioServerBase,
+  StringMap,
+} from './types.js';
 export const githubCopilotVscode: AgentDefinition = {
   id: 'github-copilot-vscode',
   displayName: 'GitHub Copilot in VS Code',
@@ -47,3 +54,73 @@ export const githubCopilotVscode: AgentDefinition = {
   executableNames: [],
   mcp: notImplementedMcpHandlers('github-copilot-vscode'),
 };
+
+/**
+ * VS Code input variable used by `inputs[]` in `.vscode/mcp.json`.
+ * Mirrors VS Code's generic input variable shape (id/type plus metadata
+ * for prompt, default, password, and options).
+ */
+export interface GitHubCopilotVSCodeInput {
+  id: string;
+  type: string;
+  description?: string;
+  default?: string;
+  password?: boolean;
+  options?: readonly string[];
+}
+
+/**
+ * Discriminator for a VS Code MCP server entry. VS Code accepts the
+ * literal values `'stdio' | 'http' | 'sse'`; the field is documented as
+ * optional in real configs (it falls back to stdio when absent), and
+ * unknown strings are tolerated for forward compatibility.
+ */
+export interface GitHubCopilotVSCodeServerBase extends PermissiveConfigObject {
+  type?: 'stdio' | 'http' | 'sse' | (string & {});
+}
+
+/**
+ * Local (stdio) VS Code MCP server. Inherits the standard
+ * `command`/`args`/`env`/`cwd` shape and adds VS Code-specific
+ * `envFile`, `dev`, and `sandboxEnabled` knobs.
+ */
+export interface GitHubCopilotVSCodeLocalServer extends StdioServerBase {
+  type?: 'stdio' | (string & {});
+  dev?: boolean;
+  envFile?: string;
+  sandboxEnabled?: boolean;
+}
+
+/**
+ * Remote (http/sse) VS Code MCP server. Carries `url` and `headers`,
+ * plus VS Code-specific `oauth` and `requestInit` overrides. Undocumented
+ * extension fields are tolerated via the `extras` bag rather than a wide
+ * index signature, so the typed `oauth`/`requestInit` shapes remain intact.
+ */
+export interface GitHubCopilotVSCodeRemoteServer {
+  type?: 'http' | 'sse' | (string & {});
+  url: string;
+  headers?: StringMap;
+  oauth?: OAuthConfig;
+  requestInit?: RequestInitConfig;
+  extras?: PermissiveConfigObject;
+}
+
+/**
+ * Union of every supported VS Code MCP server variant. Local and remote
+ * are merged via a permissive shared base plus per-variant fields.
+ */
+export type GitHubCopilotVSCodeServer =
+  | GitHubCopilotVSCodeLocalServer
+  | GitHubCopilotVSCodeRemoteServer;
+
+/**
+ * Native shape of `.vscode/mcp.json` (workspace and user-global
+ * variants). The top-level key is `servers` (NOT `mcpServers`); an
+ * optional `inputs` array declares prompt/input variables that may be
+ * referenced from server entries.
+ */
+export interface GitHubCopilotVSCodeMcpConfig {
+  servers?: McpServerMap<GitHubCopilotVSCodeServer>;
+  inputs?: readonly GitHubCopilotVSCodeInput[];
+}

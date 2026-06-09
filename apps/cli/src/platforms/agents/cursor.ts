@@ -1,6 +1,12 @@
 // Cursor agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type {
+  AgentDefinition,
+  McpServerMap,
+  PermissiveConfigObject,
+  RemoteServerBase,
+  StdioServerBase,
+} from './types.js';
 
 export const cursor: AgentDefinition = {
   id: 'cursor',
@@ -46,4 +52,45 @@ export const cursor: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['cursor'],
   mcp: notImplementedMcpHandlers('cursor'),
+};
+
+/** Native Cursor MCP config: `mcpServers` map; servers may be stdio (with `command`/`args`/`env`) or remote (with `url`/`headers`). Per-server `envFile` overrides; static OAuth-like credentials live under `auth`. */
+
+export interface CursorMcpConfig {
+  readonly mcpServers?: McpServerMap<CursorMcpServer>;
+}
+
+/** Cursor server: union of stdio and remote transports with permissive extension fields. */
+
+export type CursorMcpServer = (CursorStdioServer | CursorRemoteServer) &
+  PermissiveConfigObject;
+
+/** Stdio transport: local process invocation. */
+
+export interface CursorStdioServer extends StdioServerBase {
+  /** Path to a dotenv-style env file whose entries are merged into `env`. */
+
+  readonly envFile?: string;
+
+  /** Static OAuth-like credentials: `CLIENT_ID`, `CLIENT_SECRET`, optional `scopes`, plus an open index signature for forward-compatible fields. */
+
+  readonly auth?: CursorAuth;
+}
+
+/** Remote transport: HTTP / SSE. */
+
+export interface CursorRemoteServer extends RemoteServerBase {
+  /** Static OAuth-like credentials. */
+
+  readonly auth?: CursorAuth;
+}
+
+/** Permissive object that exposes the documented Cursor auth keys and permits arbitrary additional fields. */
+
+export type CursorAuth = PermissiveConfigObject & {
+  readonly CLIENT_ID?: string;
+
+  readonly CLIENT_SECRET?: string;
+
+  readonly scopes?: readonly string[];
 };

@@ -171,6 +171,21 @@ the aggregate renames it on import (`continueDef as continueAgent`).
 Use the same workaround if you add an agent whose id collides with a
 reserved word.
 
+**Typed MCP config designs.** Every supported local MCP-capable agent exports a
+colocated `<AgentName>McpConfig` type from its `apps/cli/src/platforms/agents/<id>.ts`
+file. Shared MCP config primitives (e.g. `McpServerMap`, `StdioServerBase`,
+`PermissiveConfigObject`) live in `apps/cli/src/platforms/agents/types.ts`; compose
+new per-agent types from those primitives rather than redefining shape locally.
+These types are compile-time only: no runtime validators, no readers, no writers
+land in the same PR as the type addition. Unsupported and no-local-read agents
+(`aider`, `github-copilot-cloud-agent`) deliberately do not export a config type.
+When the agent file's `mcpLocations` registry metadata conflicts with the
+canonical future-read schema in `docs/coding-platform-mcp-configurations.md`,
+types follow the docs as the source of truth; the registry detection metadata
+itself is updated in a separate, detection-focused PR. The type-contract spec
+in `apps/cli/src/platforms/agents/mcp-config-types.spec.ts` is the canonical home
+for fixture-based type tests.
+
 ## Things not to change without asking
 
 - `.yarnrc.yml` (`nodeLinker: node-modules`) — switching to PnP will break

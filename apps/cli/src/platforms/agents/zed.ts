@@ -1,6 +1,6 @@
 // Zed agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, McpServerMap, StringMap } from './types.js';
 
 export const zed: AgentDefinition = {
   id: 'zed',
@@ -32,3 +32,41 @@ export const zed: AgentDefinition = {
   executableNames: ['zed'],
   mcp: notImplementedMcpHandlers('zed'),
 };
+
+/**
+ * Native Zed MCP config shape. Zed refers to MCP servers as
+ * "context servers" and stores them under the top-level
+ * `context_servers` map. Server entries are a discriminated union
+ * on the presence of `command` (stdio) vs `url` (remote) - the
+ * documented Zed format does not include an explicit `type` field.
+ */
+export interface ZedMcpConfig {
+  readonly context_servers?: McpServerMap<ZedMcpServer>;
+}
+
+/** Zed server entry: union of stdio and remote transports. */
+export type ZedMcpServer = ZedStdioServer | ZedRemoteServer;
+
+/**
+ * Stdio transport: a local subprocess. `command` is required; `args`
+ * and `env` are optional and follow standard MCP server conventions.
+ */
+export interface ZedStdioServer {
+  /** Absolute path or executable name resolvable via the user's PATH. */
+  command: string;
+  /** Command-line arguments passed to the server process. */
+  args?: readonly string[];
+  /** Environment variables injected into the server process. */
+  env?: StringMap;
+}
+
+/**
+ * Remote transport: a URL-based server (HTTP/SSE/etc). `url` is
+ * required; `headers` are optional HTTP headers.
+ */
+export interface ZedRemoteServer {
+  /** URL the MCP client connects to. */
+  url: string;
+  /** HTTP headers attached to requests made to the server. */
+  headers?: StringMap;
+}
