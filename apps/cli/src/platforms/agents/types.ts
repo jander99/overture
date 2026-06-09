@@ -62,6 +62,14 @@ export type AgentMcpWriteHandler = (
 export interface AgentMcpHandlers {
   read: AgentMcpReadHandler;
   write: AgentMcpWriteHandler;
+  /**
+   * Optional handler that parses an agent's MCP config file and returns a
+   * list of structured server entries for human-readable rendering. Each
+   * agent implements this when its config format is rich enough to
+   * display transport and command/URL details (opencode is the first).
+   * The CLI calls this generically — no per-id string dispatch.
+   */
+  parseServers?: AgentMcpParseServersHandler;
 }
 
 /**
@@ -142,6 +150,31 @@ export interface RemoteServerBase {
  * `false` to explicitly disable OAuth for the server.
  */
 export type OAuthConfig = PermissiveConfigObject | false;
+
+/**
+ * Structured MCP server entry returned by an agent's `parseServers`
+ * handler. The shape is intentionally transport-agnostic: `command` is
+ * the argv vector for local servers; `url` is the endpoint for remote
+ * servers. The CLI renders these under the `mcp:` path line in human
+ * output.
+ */
+export interface ServerEntry {
+  readonly name: string;
+  readonly transport: 'local' | 'remote';
+  readonly command?: readonly string[];
+  readonly url?: string;
+}
+
+/**
+ * Handler signature for `AgentMcpHandlers.parseServers`. Receives the
+ * resolved config file path; the agent is responsible for reading and
+ * parsing the file (it knows the format and top-level key). Returns an
+ * empty array on any read or parse failure (silent degradation — the
+ * CLI just omits the server list).
+ */
+export type AgentMcpParseServersHandler = (
+  resolvedPath: string,
+) => readonly ServerEntry[];
 
 /**
  * `fetch`-style request init shape, restricted to a known `headers`
