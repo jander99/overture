@@ -69,15 +69,71 @@ export const opencode: AgentDefinition = {
       relativePath: 'opencode/opencode.json',
       format: 'json',
       topLevelKey: 'mcp',
-      notes: 'User-global MCP configuration under mcp key',
+      notes:
+        'User-global, matching opencode runtime V1() lookup order. First existing file wins.',
     },
     {
       scope: 'user',
-      base: 'home',
-      relativePath: '.opencode.json',
+      base: 'config',
+      relativePath: 'opencode/opencode.jsonc',
+      format: 'jsonc',
+      topLevelKey: 'mcp',
+      notes:
+        'User-global, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'user',
+      base: 'config',
+      relativePath: '.opencode/opencode.json',
       format: 'json',
       topLevelKey: 'mcp',
-      notes: 'Alternative user-global MCP configuration under mcp key',
+      notes:
+        'User-global, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'user',
+      base: 'config',
+      relativePath: '.opencode/opencode.jsonc',
+      format: 'jsonc',
+      topLevelKey: 'mcp',
+      notes:
+        'User-global, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: 'opencode/opencode.json',
+      format: 'json',
+      topLevelKey: 'mcp',
+      notes:
+        'Project-local, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: 'opencode/opencode.jsonc',
+      format: 'jsonc',
+      topLevelKey: 'mcp',
+      notes:
+        'Project-local, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: '.opencode/opencode.json',
+      format: 'json',
+      topLevelKey: 'mcp',
+      notes:
+        'Project-local, matching opencode runtime V1() lookup order. First existing file wins.',
+    },
+    {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: '.opencode/opencode.jsonc',
+      format: 'jsonc',
+      topLevelKey: 'mcp',
+      notes:
+        'Project-local, matching opencode runtime V1() lookup order. First existing file wins.',
     },
   ],
   defaultConfidence: 'high',

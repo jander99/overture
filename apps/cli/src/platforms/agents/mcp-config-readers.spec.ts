@@ -155,11 +155,11 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
     }
   });
 
-  it('github-copilot-cli reads mcpServers from hosts.json', async () => {
+  it('github-copilot-cli reads mcpServers from .copilot/mcp-config.json', async () => {
     const ctx = readerCtx();
     await seed(
-      'config',
-      'github-copilot/hosts.json',
+      'home',
+      '.copilot/mcp-config.json',
       JSON.stringify({ mcpServers: { s: { type: 'local', command: 'c' } } }),
       ctx,
     );
@@ -173,7 +173,6 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
       expect(config.mcpServers?.s?.type).toBe('local');
     }
   });
-
   it('cursor reads mcpServers from .cursor/mcp.json', async () => {
     const ctx = readerCtx();
     await seed(
@@ -212,11 +211,11 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
     }
   });
 
-  it('cline reads mcpServers from Cline global storage', async () => {
+  it('cline reads mcpServers from current ~/.cline/mcp.json', async () => {
     const ctx = readerCtx();
     await seed(
-      'config',
-      'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+      'home',
+      '.cline/mcp.json',
       JSON.stringify({ mcpServers: { s: { command: 'c' } } }),
       ctx,
     );
@@ -230,12 +229,11 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
       expect(config.mcpServers?.s?.command).toBe('c');
     }
   });
-
-  it('roo-code reads mcpServers from Roo Code global storage', async () => {
+  it('roo-code reads mcpServers from project-local .roo/mcp.json', async () => {
     const ctx = readerCtx();
     await seed(
-      'config',
-      'Code/User/globalStorage/roo-cline.roo-cline/settings/mcp_settings.json',
+      'workspace',
+      '.roo/mcp.json',
       JSON.stringify({ mcpServers: { s: { command: 'c' } } }),
       ctx,
     );
@@ -249,12 +247,11 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
       expect(config.mcpServers?.s?.command).toBe('c');
     }
   });
-
-  it('continue reads mcpServers from .continue/config.json', async () => {
+  it('continue reads mcpServers from project-local .continue/mcpServers/mcp.json', async () => {
     const ctx = readerCtx();
     await seed(
-      'home',
-      '.continue/config.json',
+      'workspace',
+      '.continue/mcpServers/mcp.json',
       JSON.stringify({ mcpServers: { s: { command: 'c' } } }),
       ctx,
     );
@@ -268,7 +265,6 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
       expect(config.mcpServers?.s?.command).toBe('c');
     }
   });
-
   it('zed reads context_servers from zed/settings.json', async () => {
     const ctx = readerCtx();
     await seed(
@@ -515,5 +511,142 @@ describe('per-agent mcp.read smoke: real-fs fixtures', () => {
         'https://mcp.example.com/fetch',
       );
     }
+  });
+});
+
+// Audit PR: additional coverage for the 6 mcpLocations fixes.
+describe('per-agent mcp.read covers audit-PR paths', () => {
+  it('opencode: .jsonc variant at ~/.config/opencode/opencode.jsonc (real-host regression)', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'config',
+      'opencode/opencode.jsonc',
+      '// opencode config with comments and trailing commas\n{ "mcp": { "fs": { "type": "local", "command": ["npx", "-y", "fs"] } } , }\n',
+      ctx,
+    );
+    const result = await opencode.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.parseError).toBeUndefined();
+    if (result.config !== null) {
+      const config = result.config as {
+        mcp?: { fs?: { type?: string; command?: string[] } };
+      };
+      expect(config.mcp?.fs?.type).toBe('local');
+      expect(config.mcp?.fs?.command?.[0]).toBe('npx');
+    }
+  });
+
+  it('opencode: .opencode/opencode.jsonc at user-global config dir', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'config',
+      '.opencode/opencode.jsonc',
+      JSON.stringify({
+        mcp: { s: { type: 'remote', url: 'https://example.com/mcp' } },
+      }),
+      ctx,
+    );
+    const result = await opencode.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+  });
+
+  it('opencode: project-local .opencode/opencode.json wins over missing user-global', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'workspace',
+      '.opencode/opencode.json',
+      JSON.stringify({
+        mcp: { local: { type: 'local', command: ['node', 'mcp.js'] } },
+      }),
+      ctx,
+    );
+    const result = await opencode.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.location?.resolvedPath).toBe(
+      join(ctx.workspaceDir, '.opencode/opencode.json'),
+    );
+  });
+
+  it('github-copilot-cli: ~/.copilot/mcp-config.json (correct location)', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'home',
+      '.copilot/mcp-config.json',
+      JSON.stringify({
+        mcpServers: { s: { type: 'local', command: 'c' } },
+      }),
+      ctx,
+    );
+    const result = await githubCopilotCli.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.location?.resolvedPath).toBe(
+      join(ctx.homeDir, '.copilot/mcp-config.json'),
+    );
+  });
+
+  it('cline: project-local legacy Linux storage still works when ~/.cline/mcp.json is absent', async () => {
+    const ctx = readerCtx();
+    // Seed only the legacy Linux VS Code global-storage path.
+    await seed(
+      'config',
+      'Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json',
+      JSON.stringify({ mcpServers: { legacy: { command: 'legacy' } } }),
+      ctx,
+    );
+    const result = await cline.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+  });
+
+  it('roo-code: project-local .roo/mcp.json reads before legacy storage', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'workspace',
+      '.roo/mcp.json',
+      JSON.stringify({ mcpServers: { project: { command: 'proj' } } }),
+      ctx,
+    );
+    const result = await rooCode.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.location?.resolvedPath).toBe(
+      join(ctx.workspaceDir, '.roo/mcp.json'),
+    );
+  });
+
+  it('zed: project-local .zed/settings.json reads when present', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'workspace',
+      '.zed/settings.json',
+      JSON.stringify({ context_servers: { p: { command: 'proj' } } }),
+      ctx,
+    );
+    const result = await zed.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.location?.resolvedPath).toBe(
+      join(ctx.workspaceDir, '.zed/settings.json'),
+    );
+  });
+
+  it('continue: project-local .continue/mcpServers/mcp.json is the canonical MCP path', async () => {
+    const ctx = readerCtx();
+    await seed(
+      'workspace',
+      '.continue/mcpServers/mcp.json',
+      JSON.stringify({ mcpServers: { s: { command: 'c' } } }),
+      ctx,
+    );
+    const result = await continueDef.mcp.read(ctx);
+    expect(result.config).not.toBeNull();
+    expect(result.nonEmpty).toBe(true);
+    expect(result.location?.resolvedPath).toBe(
+      join(ctx.workspaceDir, '.continue/mcpServers/mcp.json'),
+    );
   });
 });

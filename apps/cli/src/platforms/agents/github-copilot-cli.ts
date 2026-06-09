@@ -35,14 +35,15 @@ export const githubCopilotCli: AgentDefinition = {
   mcpLocations: [
     {
       scope: 'user',
-      base: 'config',
-      relativePath: 'github-copilot/hosts.json',
+      base: 'home',
+      relativePath: '.copilot/mcp-config.json',
       format: 'json',
       topLevelKey: 'mcpServers',
       notes:
-        'User-global MCP servers under mcpServers key (matches the typed config contract; the historical `servers` key in the registry metadata is stale per the Copilot CLI docs)',
+        'User-global MCP server list. The location is relocatable with $COPILOT_HOME (not yet supported by overture).',
     },
   ],
+
   defaultConfidence: 'medium',
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',

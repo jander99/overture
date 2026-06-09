@@ -32,6 +32,14 @@ export const zed: AgentDefinition = {
       notes:
         'User-global context servers (Zed refers to MCP as context servers)',
     },
+    {
+      scope: 'project',
+      base: 'workspace',
+      relativePath: '.zed/settings.json',
+      format: 'json',
+      topLevelKey: 'context_servers',
+      notes: 'Zed folder settings (project-local)',
+    },
   ],
   defaultConfidence: 'medium',
   detectionStrategy: 'marker-only',
