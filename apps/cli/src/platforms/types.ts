@@ -14,7 +14,8 @@ export type PlatformId =
   | 'openai-codex'
   | 'aider';
 
-export type HostPlatform = 'linux' | 'darwin' | 'win32';
+import type { HostPlatform } from '@overture/os';
+export type { HostPlatform };
 export type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
 export type MarkerKind = 'file' | 'directory' | 'file-or-directory';
 export type PathBase = 'home' | 'config' | 'workspace' | 'absolute';

@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Enable Corepack
         run: corepack enable
@@ -42,7 +42,20 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint
-        run: npx nx run-many -t lint --all
+        run: npx nx lint @jander99/overture --skip-nx-cache
+
+      - name: Typecheck
+        # Build mode (`tsc -b`) traverses the project-references graph
+        # and produces .d.ts artifacts for the @overture/os library so
+        # apps/cli can resolve them. We do NOT pass `--noEmit` because
+        # composite projects require declaration emit. The emitted .d.ts
+        # files land in `dist/` which is gitignored.
+        run: npx tsc -b apps/cli/tsconfig.json
+      - name: Audit dependencies
+        # Yarn 4's `npm audit` reads yarn.lock; the `--all --recursive`
+        # scope covers every workspace and every transitive dep. We
+        # fail only on high or critical advisories.
+        run: yarn npm audit --all --recursive --severity=high
 
       - name: Format check
         run: npx prettier --check .
@@ -50,7 +63,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-
     timeout-minutes: 15
 
     steps:
@@ -58,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Enable Corepack
         run: corepack enable
@@ -77,4 +89,35 @@ jobs:
         run: yarn install --immutable
 
       - name: Test
-        run: npx nx test cli
+        run: npx nx test @jander99/overture
+
+  package-verify:
+    name: Package verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Verify npm pack + install + smoke
+        run: node apps/cli/scripts/verify-package.mjs

@@ -1,5 +1,8 @@
 import { createRequire } from 'node:module';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { McpLocationFormat } from './types.js';
 
 // `smol-toml` is published as ESM-first but ships a CJS build at
@@ -8,11 +11,18 @@ import type { McpLocationFormat } from './types.js';
 // module cannot statically `import` an ESM-only module under
 // `module: nodenext`, so we load the CJS build through `createRequire`
 // to keep the public API synchronous.
+//
+// For npm consumers, `smol-toml` is listed as a runtime `dependency` in
+// `apps/cli/package.json`, so `npm install @jander99/overture` installs
+// it alongside the CLI. `createRequire(__filename)` then resolves it
+// from the standard `node_modules` lookup path that npm sets up.
 interface SmolTomlCjsModule {
   parse: (text: string, options?: unknown) => Record<string, unknown>;
 }
-const smolTomlCjsModule: SmolTomlCjsModule =
-  createRequire(__filename)('smol-toml');
+const smolTomlCjsModule = createRequire(__filename)(
+  'smol-toml',
+) as unknown as SmolTomlCjsModule;
+createRequire(__filename)('smol-toml');
 function parseToml(text: string): Record<string, unknown> {
   return smolTomlCjsModule.parse(text);
 }

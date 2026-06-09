@@ -1,0 +1,19 @@
+# Golden tarball file list for @jander99/overture npm pack output.
+#
+# This is the expected set of paths inside the tarball produced by
+# `npm pack` in apps/cli/. The verify-package.mjs script asserts:
+#   - every entry in this file IS present
+#   - no forbidden entries (node_modules, .mcp.json, src/, *.spec.ts, etc.)
+#     are present
+#
+# Update this list when the package shape changes intentionally.
+
+# Manifest
+package/package.json
+
+# License + README
+package/LICENSE
+package/README.md
+
+# Build output
+package/dist/main.js

@@ -161,7 +161,7 @@ describe('detectPlatforms', () => {
   });
 
   it('EACCES: does not throw and returns well-formed results', async () => {
-    if (process.getuid && process.getuid() === 0) {
+    if (process.getuid?.() === 0) {
       console.warn('Skipping permission-denied test because running as root');
       return;
     }

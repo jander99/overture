@@ -39,7 +39,7 @@ export function resolveMarkerPath(
       return marker.relativePath;
     default: {
       const _exhaustive: never = marker.base;
-      throw new Error(`Unsupported path base: ${_exhaustive}`);
+      throw new Error(`Unsupported path base: ${String(_exhaustive)}`);
     }
   }
 }
@@ -62,7 +62,7 @@ export async function markerExists(
         return s.isFile() || s.isDirectory();
       default: {
         const _exhaustive: never = marker.kind;
-        throw new Error(`Unsupported marker kind: ${_exhaustive}`);
+        throw new Error(`Unsupported marker kind: ${String(_exhaustive)}`);
       }
     }
   } catch (err) {

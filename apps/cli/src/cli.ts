@@ -67,7 +67,7 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
   }
 
   // Section 3: orphaned MCP configurations (no platform installed)
-  const orphans: Array<{ path: string; platformId: string }> = [];
+  const orphans: { path: string; platformId: string }[] = [];
   for (const platform of output.platforms) {
     for (const orphan of platform.orphanedMcpLocations) {
       orphans.push({ path: orphan.resolvedPath, platformId: platform.id });
