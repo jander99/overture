@@ -444,3 +444,185 @@ it('does not contain ANSI escape sequences', () => {
   expect(json).not.toMatch(/\x1b\[/);
   expect(JSON.parse(json)).toEqual(output);
 });
+
+describe('opencode server list in human output', () => {
+  it('renders server names and transport type for configured opencode platform', async () => {
+    const { mkdtempSync, writeFileSync, mkdirSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const tmpDir = mkdtempSync(tmpdir() + '/overture-test-');
+    mkdirSync(tmpDir, { recursive: true });
+    const configPath = tmpDir + '/opencode.jsonc';
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        mcp: {
+          filesystem: {
+            command: 'npx -y @modelcontextprotocol/server-filesystem',
+            args: ['/home'],
+          },
+          context7: {
+            url: 'https://mcp.context7.com/mcp',
+          },
+        },
+      }),
+    );
+    const platform: PlatformDetectionResult = {
+      id: 'opencode',
+      displayName: 'OpenCode',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['opencode'],
+      matchedExecutables: [
+        {
+          name: 'opencode',
+          resolvedPath: '/usr/bin/opencode',
+          source: 'path',
+        },
+      ],
+      mcpConfigured: true,
+      matchedMcpLocations: [
+        {
+          id: 'opencode-0',
+          resolvedPath: configPath,
+          format: 'json',
+          nonEmpty: true,
+          serverNames: ['filesystem', 'context7'],
+        },
+      ],
+      orphanedMcpLocations: [],
+      reasonCode: 'mcp-configured',
+    };
+    const output = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain('  - OpenCode (high) [mcp-configured]');
+    expect(result).toContain('    agent: /usr/bin/opencode');
+    expect(result).toContain('    mcp:   ' + configPath);
+    expect(result).toContain('      - filesystem  (local)');
+    expect(result).toContain('      - context7  (remote)');
+    expect(result).toContain('https://mcp.context7.com/mcp');
+  });
+
+  it('shows local server with command when command field is present', async () => {
+    const { mkdtempSync, writeFileSync, mkdirSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const tmpDir = mkdtempSync(tmpdir() + '/overture-test2-');
+    mkdirSync(tmpDir, { recursive: true });
+    const configPath = tmpDir + '/opencode2.jsonc';
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        mcp: {
+          github: {
+            command: '@modelcontextprotocol/server-github',
+          },
+        },
+      }),
+    );
+    const platform: PlatformDetectionResult = {
+      id: 'opencode',
+      displayName: 'OpenCode',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['opencode'],
+      matchedExecutables: [],
+      mcpConfigured: true,
+      matchedMcpLocations: [
+        {
+          id: 'opencode-0',
+          resolvedPath: configPath,
+          format: 'json',
+          nonEmpty: true,
+          serverNames: ['github'],
+        },
+      ],
+      orphanedMcpLocations: [],
+      reasonCode: 'mcp-configured',
+    };
+    const output = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain('      - github  (local)');
+    expect(result).toContain('@modelcontextprotocol/server-github');
+  });
+
+  it('renders nothing extra for non-opencode platforms even with serverNames', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['claude'],
+      matchedExecutables: [],
+      mcpConfigured: true,
+      matchedMcpLocations: [
+        {
+          id: 'claude-code-0',
+          resolvedPath: '/home/user/.claude.json',
+          format: 'json',
+          nonEmpty: true,
+          serverNames: ['filesystem', 'context7'],
+        },
+      ],
+      orphanedMcpLocations: [],
+      reasonCode: 'mcp-configured',
+    };
+    const output = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain('    mcp:   /home/user/.claude.json');
+    expect(result).not.toContain('filesystem');
+    expect(result).not.toContain('context7');
+  });
+
+  it('gracefully handles unreadable config path for opencode', () => {
+    const platform: PlatformDetectionResult = {
+      id: 'opencode',
+      displayName: 'OpenCode',
+      installed: true,
+      confidence: 'high',
+      matchedMarkers: [],
+      installMarkers: [],
+      mcpLocations: [],
+      detectionStrategy: 'binary-first',
+      mcpSupport: 'supported',
+      executableNames: ['opencode'],
+      matchedExecutables: [
+        {
+          name: 'opencode',
+          resolvedPath: '/usr/bin/opencode',
+          source: 'path',
+        },
+      ],
+      mcpConfigured: true,
+      matchedMcpLocations: [
+        {
+          id: 'opencode-0',
+          resolvedPath: '/nonexistent/path/opencode.jsonc',
+          format: 'json',
+          nonEmpty: true,
+          serverNames: ['filesystem'],
+        },
+      ],
+      orphanedMcpLocations: [],
+      reasonCode: 'mcp-configured',
+    };
+    const output = { platforms: [platform] };
+    const result = formatHumanOutput(output);
+    expect(result).toContain('  - OpenCode (high) [mcp-configured]');
+    expect(result).toContain('    mcp:   /nonexistent/path/opencode.jsonc');
+    expect(result).not.toContain('      - ');
+  });
+});

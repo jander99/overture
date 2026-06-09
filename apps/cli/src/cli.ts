@@ -2,10 +2,44 @@ import {
   detectPlatforms,
   defaultPathResolutionContext,
 } from './platforms/detect.js';
+import { agentRegistry } from './platforms/agents/index.js';
+import type { ServerEntry } from './platforms/agents/types.js';
 import type { DetectJsonOutput } from './platforms/types.js';
 
 export function formatJsonOutput(output: DetectJsonOutput): string {
   return JSON.stringify(output, null, 2) + '\n';
+}
+
+/**
+ * Render a single `ServerEntry` for human-readable output. Local
+ * servers show the argv vector joined with spaces; remote servers show
+ * the URL. Returns the text without the leading indentation (caller
+ * adds it).
+ */
+function formatServerLine(entry: ServerEntry): string {
+  if (entry.transport === 'remote') {
+    return `- ${entry.name}  (remote)   ${entry.url ?? ''}`;
+  }
+  const cmd =
+    entry.command && entry.command.length > 0 ? entry.command.join(' ') : '';
+  return `- ${entry.name}  (local)   ${cmd}`;
+}
+
+/**
+ * Look up an agent by id in the static registry and, if it exposes a
+ * `parseServers` handler, return the parsed server list for the given
+ * config file path. Returns an empty array when the agent is not found
+ * or doesn't implement `parseServers`. Centralized here so the
+ * per-platform loop in `formatHumanOutput` doesn't need to know about
+ * any specific agent.
+ */
+function parseServersForAgent(
+  agentId: string,
+  resolvedPath: string,
+): readonly ServerEntry[] {
+  const agent = agentRegistry.find((a) => a.id === agentId);
+  if (!agent?.mcp.parseServers) return [];
+  return agent.mcp.parseServers(resolvedPath);
 }
 
 export function formatHumanOutput(output: DetectJsonOutput): string {
@@ -43,6 +77,13 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
         ? platform.matchedMcpLocations[0]?.resolvedPath
         : null;
       lines.push(`    mcp:   ${mcpPath ?? '(not configured)'}`);
+      // Render the agent's parsed server list (if it implements one).
+      if (mcpPath) {
+        const servers = parseServersForAgent(platform.id, mcpPath);
+        for (const s of servers) {
+          lines.push(`      ${formatServerLine(s)}`);
+        }
+      }
     }
     sections.push(lines.join('\n'));
   }

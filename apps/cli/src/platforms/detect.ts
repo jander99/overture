@@ -161,10 +161,14 @@ async function scanMcpLocation(
   }
 
   const nonEmpty = true;
+  const serverNames: readonly string[] = Object.keys(
+    (parsed.document as Record<string, unknown> | undefined)?.[topLevelKey] ??
+      {},
+  );
   if (!installed) {
     return {
       matched: [],
-      orphaned: [{ ...base, nonEmpty }],
+      orphaned: [{ ...base, nonEmpty, serverNames }],
       hasNonEmptyConfigured: true,
       hasParseError: false,
     };
@@ -172,7 +176,7 @@ async function scanMcpLocation(
 
   if (mcpSupport === 'supported') {
     return {
-      matched: [{ ...base, nonEmpty }],
+      matched: [{ ...base, nonEmpty, serverNames }],
       orphaned: [],
       hasNonEmptyConfigured: true,
       hasParseError: false,

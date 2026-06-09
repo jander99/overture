@@ -77,6 +77,7 @@ export interface MatchedMcpLocation {
   topLevelKey?: string;
   nonEmpty: boolean;
   parseError?: string;
+  serverNames?: readonly string[];
 }
 
 export interface PlatformRegistryEntry {
