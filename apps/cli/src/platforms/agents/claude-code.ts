@@ -7,8 +7,11 @@ import type {
   RemoteServerBase,
   StdioServerBase,
   StringMap,
+  AgentMcpReadResult,
 } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const claudeCode: AgentDefinition = {
   id: 'claude-code',
   displayName: 'Claude Code',
@@ -52,7 +55,10 @@ export const claudeCode: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['claude'],
-  mcp: notImplementedMcpHandlers('claude-code'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
+    write: notImplementedMcpHandlers('claude-code').write,
+  },
 };
 
 /** Native Claude Code MCP config: `mcpServers` map; each server is either a stdio transport or a remote transport (HTTP / streamable-http / SSE / WebSocket). The top level may also carry a local `imports` map (Claude Code's local-imports feature). */
@@ -85,4 +91,19 @@ export interface ClaudeCodeStdioServer extends StdioServerBase {
 export interface ClaudeCodeRemoteServer extends RemoteServerBase {
   /** Transport discriminator. Literal values include 'http', 'streamable-http', 'sse', 'ws'; unknown strings are tolerated for forward compatibility. */
   readonly type?: string;
+}
+
+/**
+ * Read the agent's MCP config into the typed `ClaudeCodeMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `claudeCode.mcp.read`, but with the generic `config` field
+ * narrowed to `ClaudeCodeMcpConfig | null`.
+ */
+export async function readClaudeCodeMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<ClaudeCodeMcpConfig>> {
+  return readAgentMcpConfig(claudeCode, ctx) as Promise<
+    AgentMcpReadResult<ClaudeCodeMcpConfig>
+  >;
 }

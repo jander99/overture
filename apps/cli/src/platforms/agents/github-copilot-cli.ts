@@ -6,8 +6,11 @@ import type {
   StringList,
   StringMap,
   ToolList,
+  AgentMcpReadResult,
 } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const githubCopilotCli: AgentDefinition = {
   id: 'github-copilot-cli',
   displayName: 'GitHub Copilot CLI',
@@ -35,15 +38,19 @@ export const githubCopilotCli: AgentDefinition = {
       base: 'config',
       relativePath: 'github-copilot/hosts.json',
       format: 'json',
-      topLevelKey: 'servers',
-      notes: 'User-global MCP servers under servers key',
+      topLevelKey: 'mcpServers',
+      notes:
+        'User-global MCP servers under mcpServers key (matches the typed config contract; the historical `servers` key in the registry metadata is stale per the Copilot CLI docs)',
     },
   ],
   defaultConfidence: 'medium',
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['copilot'],
-  mcp: notImplementedMcpHandlers('github-copilot-cli'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(githubCopilotCli, ctx),
+    write: notImplementedMcpHandlers('github-copilot-cli').write,
+  },
 };
 
 /**
@@ -84,4 +91,19 @@ export type GitHubCopilotCliServer =
  */
 export interface GitHubCopilotCliMcpConfig {
   mcpServers?: McpServerMap<GitHubCopilotCliServer>;
+}
+
+/**
+ * Read the agent's MCP config into the typed `GitHubCopilotCliMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `githubCopilotCli.mcp.read`, but with the generic `config` field
+ * narrowed to `GitHubCopilotCliMcpConfig | null`.
+ */
+export async function readGitHubCopilotCliMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<GitHubCopilotCliMcpConfig>> {
+  return readAgentMcpConfig(githubCopilotCli, ctx) as Promise<
+    AgentMcpReadResult<GitHubCopilotCliMcpConfig>
+  >;
 }

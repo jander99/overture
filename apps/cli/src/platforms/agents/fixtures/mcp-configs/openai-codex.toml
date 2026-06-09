@@ -1,0 +1,12 @@
+# Real OpenAI Codex MCP config fixture used by the smoke tests in
+# apps/cli/src/platforms/agents/mcp-config-readers.spec.ts.
+# The shape mirrors the documented `mcp_servers` table in `.codex/config.toml`.
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+startup_timeout_sec = 30
+
+[mcp_servers.fetch]
+url = "https://mcp.example.com/fetch"
+bearer_token_env_var = "MCP_FETCH_TOKEN"

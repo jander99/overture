@@ -210,6 +210,12 @@ describe('platformRegistry', () => {
     });
 
     it('every agent satisfies the AgentDefinition contract (placeholder MCP handlers present)', async () => {
+      const ctx = {
+        homeDir: '/h',
+        configDir: '/c',
+        workspaceDir: '/w',
+        platform: 'linux',
+      } as const;
       for (const a of agentRegistry) {
         expect(a.id, `agent.id`).toBeTruthy();
         expect(
@@ -220,14 +226,13 @@ describe('platformRegistry', () => {
         expect(['supported', 'unsupported', 'unknown']).toContain(a.mcpSupport);
         expect(typeof a.mcp.read, `mcp.read for ${a.id}`).toBe('function');
         expect(typeof a.mcp.write, `mcp.write for ${a.id}`).toBe('function');
-        await expect(
-          a.mcp.read({
-            homeDir: '/h',
-            configDir: '/c',
-            workspaceDir: '/w',
-            platform: 'linux',
-          }),
-        ).rejects.toThrow(/not implemented/i);
+        if (a.mcpSupport === 'unsupported') {
+          await expect(a.mcp.read(ctx)).rejects.toThrow(/not implemented/i);
+        } else {
+          const result = await a.mcp.read(ctx);
+          expect(result).toHaveProperty('config');
+          expect(result).toHaveProperty('nonEmpty');
+        }
       }
     });
 

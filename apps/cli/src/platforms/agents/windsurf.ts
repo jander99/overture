@@ -2,12 +2,15 @@
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpReadResult,
   McpServerMap,
   PermissiveConfigObject,
   RemoteServerBase,
   StdioServerBase,
 } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 export const windsurf: AgentDefinition = {
   id: 'windsurf',
   displayName: 'Windsurf',
@@ -26,7 +29,10 @@ export const windsurf: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['windsurf'],
-  mcp: notImplementedMcpHandlers('windsurf'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(windsurf, ctx),
+    write: notImplementedMcpHandlers('windsurf').write,
+  },
 };
 
 /** Native Windsurf MCP config: `mcpServers` map; servers may be stdio (`command`/`args`/`env`) or remote. Per docs the remote URL may appear as either `url` or `serverUrl` depending on doc version. */
@@ -50,4 +56,19 @@ export interface WindsurfRemoteServer extends RemoteServerBase {
   /** Alias for `url`; present in some Windsurf doc versions. */
 
   readonly serverUrl?: string;
+}
+
+/**
+ * Read the agent's MCP config into the typed `WindsurfMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `windsurf.mcp.read`, but with the generic `config` field
+ * narrowed to `WindsurfMcpConfig | null`.
+ */
+export async function readWindsurfMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<WindsurfMcpConfig>> {
+  return readAgentMcpConfig(windsurf, ctx) as Promise<
+    AgentMcpReadResult<WindsurfMcpConfig>
+  >;
 }

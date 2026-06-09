@@ -1,8 +1,10 @@
 // Roo Code agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, AgentMcpReadResult } from './types.js';
 import type { McpServerMap, StringList, StringMap } from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 /**
  * Native Roo Code MCP server entry. Roo accepts either stdio-style servers
  * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
@@ -101,5 +103,23 @@ export const rooCode: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: notImplementedMcpHandlers('roo-code'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(rooCode, ctx),
+    write: notImplementedMcpHandlers('roo-code').write,
+  },
 };
+
+/**
+ * Read the agent's MCP config into the typed `RooCodeMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `rooCode.mcp.read`, but with the generic `config` field
+ * narrowed to `RooCodeMcpConfig | null`.
+ */
+export async function readRooCodeMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<RooCodeMcpConfig>> {
+  return readAgentMcpConfig(rooCode, ctx) as Promise<
+    AgentMcpReadResult<RooCodeMcpConfig>
+  >;
+}

@@ -1,7 +1,14 @@
 // OpenCode agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, OAuthConfig, StringMap } from './types.js';
+import type {
+  AgentDefinition,
+  OAuthConfig,
+  StringMap,
+  AgentMcpReadResult,
+} from './types.js';
 
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import type { PathResolutionContext } from '../types.js';
 /**
  * Discriminated union of MCP server entries supported by OpenCode's
  * `mcp` config. The `type` field selects the transport:
@@ -77,5 +84,23 @@ export const opencode: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['opencode'],
-  mcp: notImplementedMcpHandlers('opencode'),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(opencode, ctx),
+    write: notImplementedMcpHandlers('opencode').write,
+  },
 };
+
+/**
+ * Read the agent's MCP config into the typed `OpenCodeMcpConfig` shape.
+ * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
+ * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
+ * as `opencode.mcp.read`, but with the generic `config` field
+ * narrowed to `OpenCodeMcpConfig | null`.
+ */
+export async function readOpenCodeMcpConfig(
+  ctx: PathResolutionContext,
+): Promise<AgentMcpReadResult<OpenCodeMcpConfig>> {
+  return readAgentMcpConfig(opencode, ctx) as Promise<
+    AgentMcpReadResult<OpenCodeMcpConfig>
+  >;
+}
