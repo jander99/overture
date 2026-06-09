@@ -3,7 +3,7 @@ import {
   defaultPathResolutionContext,
 } from './platforms/detect.js';
 import { agentRegistry } from './platforms/agents/index.js';
-import type { ServerEntry } from './platforms/agents/types.js';
+import type { McpServerEntry } from './platforms/agents/types.js';
 import type { DetectJsonOutput } from './platforms/types.js';
 
 export function formatJsonOutput(output: DetectJsonOutput): string {
@@ -11,12 +11,12 @@ export function formatJsonOutput(output: DetectJsonOutput): string {
 }
 
 /**
- * Render a single `ServerEntry` for human-readable output. Local
+ * Render a single `McpServerEntry` for human-readable output. Local
  * servers show the argv vector joined with spaces; remote servers show
  * the URL. Returns the text without the leading indentation (caller
  * adds it).
  */
-function formatServerLine(entry: ServerEntry): string {
+function formatServerLine(entry: McpServerEntry): string {
   if (entry.transport === 'remote') {
     return `- ${entry.name}  (remote)   ${entry.url ?? ''}`;
   }
@@ -36,7 +36,7 @@ function formatServerLine(entry: ServerEntry): string {
 function parseServersForAgent(
   agentId: string,
   resolvedPath: string,
-): readonly ServerEntry[] {
+): readonly McpServerEntry[] {
   const agent = agentRegistry.find((a) => a.id === agentId);
   if (!agent?.mcp.parseServers) return [];
   return agent.mcp.parseServers(resolvedPath);
