@@ -1,6 +1,10 @@
 // Claude Desktop agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type {
+  AgentDefinition,
+  McpServerMap,
+  StdioServerBase,
+} from './types.js';
 
 export const claudeDesktop: AgentDefinition = {
   id: 'claude-desktop',
@@ -71,3 +75,13 @@ export const claudeDesktop: AgentDefinition = {
   executableNames: [],
   mcp: notImplementedMcpHandlers('claude-desktop'),
 };
+
+/** Native Claude Desktop MCP config: `mcpServers` map; each server is stdio-only (no remote transport supported). */
+
+export interface ClaudeDesktopMcpConfig {
+  readonly mcpServers?: McpServerMap<ClaudeDesktopMcpServer>;
+}
+
+/** Claude Desktop server: local process invocation via stdio. */
+
+export type ClaudeDesktopMcpServer = StdioServerBase;

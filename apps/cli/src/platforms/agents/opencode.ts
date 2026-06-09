@@ -1,6 +1,38 @@
 // OpenCode agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, OAuthConfig, StringMap } from './types.js';
+
+/**
+ * Discriminated union of MCP server entries supported by OpenCode's
+ * `mcp` config. The `type` field selects the transport:
+ * - `'local'`  - command spawned as a subprocess; `command` is an argv vector.
+ * - `'remote'` - URL-based transport (HTTP, SSE, etc.).
+ */
+export type OpenCodeMcpServer =
+  | {
+      type: 'local';
+      command: readonly string[];
+      environment?: StringMap;
+      enabled?: boolean;
+      timeout?: number;
+      oauth?: OAuthConfig;
+    }
+  | {
+      type: 'remote';
+      url: string;
+      headers?: StringMap;
+      enabled?: boolean;
+      timeout?: number;
+      oauth?: OAuthConfig;
+    };
+
+/**
+ * Native OpenCode MCP config shape. The top-level `mcp` key holds a
+ * read-only map of server name to {@link OpenCodeMcpServer} entries.
+ */
+export interface OpenCodeMcpConfig {
+  readonly mcp?: Readonly<Record<string, OpenCodeMcpServer>>;
+}
 
 export const opencode: AgentDefinition = {
   id: 'opencode',

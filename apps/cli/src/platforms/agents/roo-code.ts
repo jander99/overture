@@ -1,6 +1,34 @@
 // Roo Code agent definition.
 import { notImplementedMcpHandlers } from './types.js';
 import type { AgentDefinition } from './types.js';
+import type { McpServerMap, StringList, StringMap } from './types.js';
+
+/**
+ * Native Roo Code MCP server entry. Roo accepts either stdio-style servers
+ * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
+ * and adds policy fields (`alwaysAllow`, `disabled`, `timeout`, `watchPaths`,
+ * `disabledTools`) on top.
+ */
+export interface RooCodeMcpServer {
+  command?: string;
+  args?: StringList;
+  env?: StringMap;
+  url?: string;
+  headers?: StringMap;
+  alwaysAllow?: StringList;
+  disabled?: boolean;
+  timeout?: number;
+  watchPaths?: StringList;
+  disabledTools?: StringList;
+}
+
+/**
+ * Native Roo Code MCP config shape. The top-level `mcpServers` key holds a
+ * read-only map of server name to {@link RooCodeMcpServer} entries.
+ */
+export interface RooCodeMcpConfig {
+  readonly mcpServers?: McpServerMap<RooCodeMcpServer>;
+}
 
 export const rooCode: AgentDefinition = {
   id: 'roo-code',

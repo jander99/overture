@@ -1,6 +1,12 @@
 // GitHub Copilot CLI agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type {
+  AgentDefinition,
+  McpServerMap,
+  StringList,
+  StringMap,
+  ToolList,
+} from './types.js';
 
 export const githubCopilotCli: AgentDefinition = {
   id: 'github-copilot-cli',
@@ -39,3 +45,43 @@ export const githubCopilotCli: AgentDefinition = {
   executableNames: ['copilot'],
   mcp: notImplementedMcpHandlers('github-copilot-cli'),
 };
+
+/**
+ * Local (subprocess) Copilot CLI MCP server. `type` is the literal
+ * `'local'` and the entry is keyed on it for a discriminated union.
+ */
+export interface GitHubCopilotCliLocalServer {
+  type: 'local';
+  command: string;
+  args?: StringList;
+  env?: StringMap;
+  tools?: ToolList;
+}
+
+/**
+ * Remote (HTTP) Copilot CLI MCP server. `type` is the literal `'http'`.
+ */
+export interface GitHubCopilotCliRemoteServer {
+  type: 'http';
+  url: string;
+  headers?: StringMap;
+  tools?: ToolList;
+}
+
+/**
+ * Union of every supported Copilot CLI MCP server variant. Discriminated
+ * on the `type` field.
+ */
+export type GitHubCopilotCliServer =
+  | GitHubCopilotCliLocalServer
+  | GitHubCopilotCliRemoteServer;
+
+/**
+ * Native shape of `~/.copilot/mcp-config.json` (user-global; relocatable
+ * via `COPILOT_HOME`). The top-level key is `mcpServers` (per the current
+ * official Copilot CLI docs), NOT the legacy `servers` key referenced by
+ * the stale registry metadata.
+ */
+export interface GitHubCopilotCliMcpConfig {
+  mcpServers?: McpServerMap<GitHubCopilotCliServer>;
+}

@@ -1,6 +1,6 @@
 // OpenAI Codex agent definition.
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, StringMap } from './types.js';
 
 export const openaiCodex: AgentDefinition = {
   id: 'openai-codex',
@@ -47,3 +47,60 @@ export const openaiCodex: AgentDefinition = {
   executableNames: ['codex'],
   mcp: notImplementedMcpHandlers('openai-codex'),
 };
+
+/**
+ * Native OpenAI Codex MCP config shape. Codex stores MCP servers
+ * under the top-level `mcp_servers` table in TOML
+ * (`~/.codex/config.toml` and trusted project `.codex/config.toml`).
+ * Field names are preserved as snake_case to mirror the source TOML
+ * format; this type is a design contract for the parsed shape, not a
+ * normalized camelCase view.
+ */
+export interface OpenAICodexMcpConfig {
+  readonly mcp_servers?: Readonly<Record<string, OpenAICodexMcpServer>>;
+}
+
+/**
+ * OpenAI Codex MCP server entry. All fields are optional; the
+ * transport is implied by the presence of either `command` (stdio)
+ * or `url` (remote). Field names mirror the documented TOML keys
+ * (`env_vars`, `startup_timeout_sec`, `tool_timeout_sec`,
+ * `enabled_tools`, `disabled_tools`, `oauth_resource`,
+ * `bearer_token_env_var`, `http_headers`, `env_http_headers`).
+ */
+export interface OpenAICodexMcpServer {
+  /** Stdio: command to spawn. Remote servers omit this. */
+  command?: string;
+  /** Stdio: command-line arguments. */
+  args?: readonly string[];
+  /** Stdio: inline environment variables as a string map. */
+  env?: StringMap;
+  /** Stdio: names of environment variables to forward from the parent process. */
+  env_vars?: readonly string[];
+  /** Stdio: working directory for the server process. */
+  cwd?: string;
+  /** Stdio: startup timeout in seconds. */
+  startup_timeout_sec?: number;
+  /** Per-tool invocation timeout in seconds. */
+  tool_timeout_sec?: number;
+  /** Allowlist of tool names this server exposes. */
+  enabled_tools?: readonly string[];
+  /** Blocklist of tool names this server exposes. */
+  disabled_tools?: readonly string[];
+  /** OAuth scopes to request for this server. */
+  scopes?: readonly string[];
+  /** OAuth resource URL the client should target. */
+  oauth_resource?: string;
+  /** Whether this server is required by the agent. */
+  required?: boolean;
+  /** Whether this server is enabled. */
+  enabled?: boolean;
+  /** Remote: URL the MCP client connects to. */
+  url?: string;
+  /** Remote: environment variable name holding the bearer token. */
+  bearer_token_env_var?: string;
+  /** Remote: static HTTP headers attached to requests. */
+  http_headers?: StringMap;
+  /** Remote: HTTP headers sourced from environment variables. */
+  env_http_headers?: StringMap;
+}
