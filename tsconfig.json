@@ -2,12 +2,15 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": [
+"references": [
+{
+"path": "./apps/cli"
+},
     {
-      "path": "./apps/cli"
+      "path": "./packages/agents"
     },
     {
-      "path": "./packages/os"
-    }
-  ]
+"path": "./packages/os"
+}
+]
 }
