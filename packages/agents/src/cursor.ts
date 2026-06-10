@@ -1,7 +1,9 @@
 // Cursor agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpParseServersHandler,
   McpServerMap,
   PermissiveConfigObject,
   RemoteServerBase,
@@ -11,6 +13,10 @@ import type {
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+export const parseCursorMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 export const cursor: AgentDefinition = {
   id: 'cursor',
   displayName: 'Cursor',
@@ -57,6 +63,7 @@ export const cursor: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(cursor, ctx),
     write: notImplementedMcpHandlers('cursor').write,
+    parseServers: parseCursorMcpServers,
   },
 };
 

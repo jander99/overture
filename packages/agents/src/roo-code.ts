@@ -1,10 +1,21 @@
 // Roo Code agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, AgentMcpReadResult } from './types.js';
-import type { McpServerMap, StringList, StringMap } from './types.js';
-
+import type {
+  AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
+  McpServerMap,
+  StringList,
+  StringMap,
+} from './types.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseRooCodeMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 /**
  * Native Roo Code MCP server entry. Roo accepts either stdio-style servers
  * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
@@ -112,10 +123,11 @@ export const rooCode: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: {
-    read: (ctx) => readAgentMcpConfig(rooCode, ctx),
+mcp: {
+read: (ctx) => readAgentMcpConfig(rooCode, ctx),
     write: notImplementedMcpHandlers('roo-code').write,
-  },
+    parseServers: parseRooCodeMcpServers,
+},
 };
 
 /**

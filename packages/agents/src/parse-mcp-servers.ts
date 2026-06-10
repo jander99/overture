@@ -12,14 +12,15 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js';
 import type { McpServerEntry } from './types.js';
+import type { McpServerEntry } from './types.js';
 
-const require = createRequire(import.meta.url);
+const localRequire = createRequire(__filename);
 // Load yaml the same way smol-toml is loaded in mcp-config-parser.ts:
 // as a runtime dep installed alongside @jander99/overture, loaded at
 // module-init time via createRequire so the bundle stays a single file
 // and consumers get the parser via `npm install`.
-const yaml: { parse: (text: string) => unknown } = require('yaml');
-const smolToml: { parse: (text: string) => unknown } = require('smol-toml');
+const yaml: { parse: (text: string) => unknown } = localRequire('yaml');
+const smolToml: { parse: (text: string) => unknown } = localRequire('smol-toml');
 
 /**
  * Per-agent overrides for transport inference. Most agents use the
@@ -172,7 +173,7 @@ export function parseJsoncMcpServerMap(
   try {
     const raw = readFileSync(resolvedPath, 'utf8');
     const cleaned = stripBom(raw);
-    const errors: unknown[] = [];
+    const errors: ParseError[] = [];
     const parsed: unknown = parseJsonc(cleaned, errors, {
       allowTrailingComma: true,
       disallowComments: false,

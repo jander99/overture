@@ -1,17 +1,23 @@
 // Claude Code agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
   McpServerMap,
   PermissiveConfigObject,
   RemoteServerBase,
   StdioServerBase,
   StringMap,
-  AgentMcpReadResult,
 } from './types.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseClaudeCodeMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 export const claudeCode: AgentDefinition = {
   id: 'claude-code',
   displayName: 'Claude Code',
@@ -55,10 +61,11 @@ export const claudeCode: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['claude'],
-  mcp: {
-    read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
+mcp: {
+read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
     write: notImplementedMcpHandlers('claude-code').write,
-  },
+    parseServers: parseClaudeCodeMcpServers,
+},
 };
 
 /** Native Claude Code MCP config: `mcpServers` map; each server is either a stdio transport or a remote transport (HTTP / streamable-http / SSE / WebSocket). The top level may also carry a local `imports` map (Claude Code's local-imports feature). */
