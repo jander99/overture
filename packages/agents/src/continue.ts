@@ -7,7 +7,7 @@ import type { CursorMcpConfig } from './cursor.js';
 import type { ClineMcpConfig } from './cline.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 /**
  * Native Continue MCP server entry inside a standalone YAML config.
  * The `name` field is required because Continue identifies servers by

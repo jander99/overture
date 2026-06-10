@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve as pathResolve } from 'node:path';
 import type { AgentDefinition } from './types.js';
-import type { PathResolutionContext, PlatformId } from '../types.js';
+import type { PathResolutionContext, PlatformId } from './types.js';
 
 // Per-test scratch directory. The reader resolves paths against
 // PathResolutionContext, so we point homeDir/configDir/workspaceDir at a
@@ -457,8 +457,8 @@ describe('per-agent mcp.read skips missing locations', () => {
 import { readFile as readFileRaw } from 'node:fs/promises';
 
 const fixtureDir = pathResolve(
-  process.cwd(),
-  'apps/cli/src/platforms/agents/fixtures/mcp-configs',
+  __dirname,
+  'fixtures/mcp-configs',
 );
 
 describe('per-agent mcp.read smoke: real-fs fixtures', () => {

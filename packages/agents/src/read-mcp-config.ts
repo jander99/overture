@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
-import { parseMcpConfig, type McpConfigParseResult } from '../mcp-config.js';
+import { parseMcpConfig, type McpConfigParseResult } from './mcp-config-parser.js';
 import type { AgentDefinition, AgentMcpReadResult } from './types.js';
-import type { McpLocation, PathResolutionContext } from '../types.js';
+import type { McpLocation, PathResolutionContext } from './types.js';
 
 const SWALLOWED_CODES = new Set([
   'ENOENT',

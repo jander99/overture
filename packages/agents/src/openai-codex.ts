@@ -7,7 +7,7 @@ import type {
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 export const openaiCodex: AgentDefinition = {
   id: 'openai-codex',
   displayName: 'OpenAI Codex',

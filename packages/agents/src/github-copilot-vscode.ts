@@ -11,7 +11,7 @@ import type {
   AgentMcpReadResult,
 } from './types.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 export const githubCopilotVscode: AgentDefinition = {
   id: 'github-copilot-vscode',
   displayName: 'GitHub Copilot in VS Code',

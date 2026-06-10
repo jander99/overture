@@ -4,7 +4,7 @@ import type { AgentDefinition, AgentMcpReadResult } from './types.js';
 import type { McpServerMap, StringList, StringMap } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 /**
  * Native Cline MCP server entry. Cline accepts either stdio-style servers
  * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
