@@ -1,6 +1,6 @@
 // OpenCode agent definition.
 import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
-import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -9,7 +9,6 @@ import type {
   AgentMcpReadResult,
 } from './types.js';
 
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 /**
  * Discriminated union of MCP server entries supported by OpenCode's
@@ -53,7 +52,7 @@ export interface OpenCodeMcpConfig {
   readonly mcp?: Readonly<Record<string, OpenCodeMcpServer>>;
 }
 
-export const opencode: AgentDefinition = {
+export const opencode: AgentDefinition = defineAgent({
   id: 'opencode',
   displayName: 'OpenCode',
   installMarkers: [
@@ -153,11 +152,9 @@ export const opencode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['opencode'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(opencode, ctx),
-    write: defaultMcpWriteHandler('opencode'),
     parseServers: parseOpenCodeMcpServers,
   },
-};
+});
 
 /**
  * Read the agent's MCP config into the typed `OpenCodeMcpConfig` shape.

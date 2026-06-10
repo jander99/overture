@@ -1,6 +1,6 @@
 // Claude Desktop agent definition.
-import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   McpServerMap,
@@ -9,14 +9,13 @@ import type {
   AgentMcpParseServersHandler,
 } from './types.js';
 
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseClaudeDesktopMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
 
-export const claudeDesktop: AgentDefinition = {
+export const claudeDesktop: AgentDefinition = defineAgent({
   id: 'claude-desktop',
   displayName: 'Claude Desktop',
   installMarkers: [
@@ -84,11 +83,9 @@ export const claudeDesktop: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: [],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(claudeDesktop, ctx),
-    write: defaultMcpWriteHandler('claude-desktop'),
     parseServers: parseClaudeDesktopMcpServers,
   },
-};
+});
 
 /** Native Claude Desktop MCP config: `mcpServers` map; each server is stdio-only (no remote transport supported). */
 

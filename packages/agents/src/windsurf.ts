@@ -1,6 +1,6 @@
 // Windsurf agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -10,7 +10,6 @@ import type {
   RemoteServerBase,
   StdioServerBase,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseWindsurfMcpServers: AgentMcpParseServersHandler = (
@@ -20,7 +19,7 @@ export const parseWindsurfMcpServers: AgentMcpParseServersHandler = (
     urlFields: ['url', 'serverUrl'],
   });
 
-export const windsurf: AgentDefinition = {
+export const windsurf: AgentDefinition = defineAgent({
   id: 'windsurf',
   displayName: 'Windsurf',
   installMarkers: [],
@@ -39,11 +38,9 @@ export const windsurf: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['windsurf'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(windsurf, ctx),
-    write: defaultMcpWriteHandler('windsurf'),
     parseServers: parseWindsurfMcpServers,
   },
-};
+});
 
 /** Native Windsurf MCP config: `mcpServers` map; servers may be stdio (`command`/`args`/`env`) or remote. Per docs the remote URL may appear as either `url` or `serverUrl` depending on doc version. */
 

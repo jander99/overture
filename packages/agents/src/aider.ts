@@ -1,8 +1,8 @@
 // Aider agent definition.
-import { notImplementedMcpHandlers } from './types.js';
 import type { AgentDefinition } from './types.js';
+import { defineAgent, notImplementedMcpHandlers } from './define-agent.js';
 
-export const aider: AgentDefinition = {
+export const aider: AgentDefinition = defineAgent({
   id: 'aider',
   displayName: 'Aider',
   installMarkers: [
@@ -24,4 +24,4 @@ export const aider: AgentDefinition = {
   reason:
     'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
   mcp: notImplementedMcpHandlers('aider'),
-};
+});

@@ -1,14 +1,13 @@
 // Cursor agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
-  McpServerMap,
+  AgentMcpReadResult,
   PermissiveConfigObject,
   StandardMcpConfig,
   StandardMcpServer,
-  AgentMcpReadResult,
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
@@ -17,7 +16,7 @@ export const parseCursorMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
 
-export const cursor: AgentDefinition = {
+export const cursor: AgentDefinition = defineAgent({
   id: 'cursor',
   displayName: 'Cursor',
   installMarkers: [
@@ -61,11 +60,9 @@ export const cursor: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['cursor'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(cursor, ctx),
-    write: defaultMcpWriteHandler('cursor'),
     parseServers: parseCursorMcpServers,
   },
-};
+});
 
 /**
  * Cursor-specific server extension. Both stdio and remote servers may

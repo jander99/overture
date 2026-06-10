@@ -1,6 +1,6 @@
 // Claude Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { defaultMcpWriteHandler } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -10,14 +10,13 @@ import type {
   StandardMcpServer,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseClaudeCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
 
-export const claudeCode: AgentDefinition = {
+export const claudeCode: AgentDefinition = defineAgent({
   id: 'claude-code',
   displayName: 'Claude Code',
   installMarkers: [
@@ -61,11 +60,9 @@ export const claudeCode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['claude'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
-    write: defaultMcpWriteHandler('claude-code'),
     parseServers: parseClaudeCodeMcpServers,
   },
-};
+});
 
 /**
  * Native Claude Code MCP config: `mcpServers` map; the top level may

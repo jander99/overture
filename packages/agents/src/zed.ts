@@ -1,6 +1,6 @@
 // Zed agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -8,13 +8,12 @@ import type {
   McpServerMap,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseZedMcpServers: AgentMcpParseServersHandler = (resolvedPath) =>
   parseJsoncMcpServerMap(resolvedPath, 'context_servers');
 
-export const zed: AgentDefinition = {
+export const zed: AgentDefinition = defineAgent({
   id: 'zed',
   displayName: 'Zed',
   installMarkers: [
@@ -51,11 +50,9 @@ export const zed: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['zed'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(zed, ctx),
-    write: defaultMcpWriteHandler('zed'),
     parseServers: parseZedMcpServers,
   },
-};
+});
 
 /**
  * Native Zed MCP config shape. Zed refers to MCP servers as
