@@ -10,7 +10,10 @@
 // smol-toml, yaml) all support sync parse.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { McpServerEntry } from './types.js';
 
 const localRequire = createRequire(__filename);

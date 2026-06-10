@@ -47,13 +47,13 @@ describe('parseClaudeDesktopMcpServers', () => {
     expect(parseClaudeDesktopMcpServers('/no/such/file')).toEqual([]);
   });
 
-it('returns [] for malformed JSON', () => {
-const path = writeFile('bad.json', '{"mcpServers": {');
-expect(parseClaudeDesktopMcpServers(path)).toEqual([]);
+  it('returns [] for malformed JSON', () => {
+    const path = writeFile('bad.json', '{"mcpServers": {');
+    expect(parseClaudeDesktopMcpServers(path)).toEqual([]);
   });
 
   it('returns [] when the top-level key is absent', () => {
     const path = writeFile('nokey.json', JSON.stringify({ other: {} }));
     expect(parseClaudeDesktopMcpServers(path)).toEqual([]);
-});
+  });
 });
