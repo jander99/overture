@@ -150,7 +150,12 @@ To add a new agent:
    trailing `mcp: notImplementedMcpHandlers('<id>')` field. The
    placeholder `mcp.read` / `mcp.write` handlers will be replaced
    with real implementations in a follow-up PR — see
-   `packages/agents/src/types.ts`.
+   `packages/agents/src/types.ts`. Every supported agent should
+   also wire a `mcp.parseServers` handler (one of the shared
+   helpers from `packages/agents/src/parse-mcp-servers.ts`, or
+   `opencode`'s inline impl) so the CLI can render the server list
+   under the `mcp:` path line. Skipping `parseServers` is a silent
+   UX regression.
 3. Insert the new import + array entry in
    `packages/agents/src/index.ts` at the canonical
    position. **Order matters**: the legacy `expectedIds` assertion

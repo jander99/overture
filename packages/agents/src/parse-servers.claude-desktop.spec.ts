@@ -43,6 +43,26 @@ describe('parseClaudeDesktopMcpServers', () => {
     ]);
   });
 
+  it('infers a remote server from a `url` field (no explicit type)', () => {
+    // Claude Desktop's documented config is local-only, but the
+    // shared helper infers remote from `url` for forward-compat
+    // with future transport support. This test pins the behavior.
+    const path = writeFile(
+      'remote.json',
+      JSON.stringify({
+        mcpServers: { remote: { url: 'https://mcp.example.com/mcp' } },
+      }),
+    );
+
+    expect(parseClaudeDesktopMcpServers(path)).toEqual([
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ]);
+  });
+
   it('returns [] for a missing file', () => {
     expect(parseClaudeDesktopMcpServers('/no/such/file')).toEqual([]);
   });

@@ -146,8 +146,16 @@ describe('parseJsoncMcpServerMap', () => {
     ).toEqual([{ name: 'r', transport: 'remote', url: 'https://example.com' }]);
   });
 
-  it('returns [] when the top-level value is an array, not a map (JSON variant)', () => {
-    const p = writeFile('arr.json', JSON.stringify({ mcpServers: [] }));
+  it('returns [] when the JSON top-level value is a list (list shape is YAML-only)', () => {
+    // Pre-fix, this would have been parsed as a YAML-list and returned
+    // one entry per item. With allowListShape defaulting to false for
+    // JSON, the helper now returns [].
+    const p = writeFile(
+      'arr.json',
+      JSON.stringify({
+        mcpServers: [{ name: 'foo', command: 'npx' }],
+      }),
+    );
     expect(parseJsoncMcpServerMap(p, 'mcpServers')).toEqual([]);
   });
 });
