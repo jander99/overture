@@ -62,11 +62,11 @@ export const githubCopilotVscode: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-mcp: {
-read: (ctx) => readAgentMcpConfig(githubCopilotVscode, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(githubCopilotVscode, ctx),
     write: notImplementedMcpHandlers('github-copilot-vscode').write,
     parseServers: parseGitHubCopilotVSCodeMcpServers,
-},
+  },
 };
 
 /**

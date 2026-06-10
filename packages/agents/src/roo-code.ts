@@ -123,11 +123,11 @@ export const rooCode: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-mcp: {
-read: (ctx) => readAgentMcpConfig(rooCode, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(rooCode, ctx),
     write: notImplementedMcpHandlers('roo-code').write,
     parseServers: parseRooCodeMcpServers,
-},
+  },
 };
 
 /**

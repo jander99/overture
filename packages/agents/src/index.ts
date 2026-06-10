@@ -82,19 +82,31 @@ import { aider } from './aider.js';
 
 export { readAgentMcpConfig } from './read-mcp-config.js';
 
-export { parseClaudeCodeMcpServers, readClaudeCodeMcpConfig } from './claude-code.js';
+export {
+  parseClaudeCodeMcpServers,
+  readClaudeCodeMcpConfig,
+} from './claude-code.js';
 export type { ClaudeCodeMcpConfig } from './claude-code.js';
 
-export { parseClaudeDesktopMcpServers, readClaudeDesktopMcpConfig } from './claude-desktop.js';
+export {
+  parseClaudeDesktopMcpServers,
+  readClaudeDesktopMcpConfig,
+} from './claude-desktop.js';
 export type { ClaudeDesktopMcpConfig } from './claude-desktop.js';
 
 export { parseOpenCodeMcpServers, readOpenCodeMcpConfig } from './opencode.js';
 export type { OpenCodeMcpConfig } from './opencode.js';
 
-export { parseGitHubCopilotVSCodeMcpServers, readGitHubCopilotVSCodeMcpConfig } from './github-copilot-vscode.js';
+export {
+  parseGitHubCopilotVSCodeMcpServers,
+  readGitHubCopilotVSCodeMcpConfig,
+} from './github-copilot-vscode.js';
 export type { GitHubCopilotVSCodeMcpConfig } from './github-copilot-vscode.js';
 
-export { parseGitHubCopilotCliMcpServers, readGitHubCopilotCliMcpConfig } from './github-copilot-cli.js';
+export {
+  parseGitHubCopilotCliMcpServers,
+  readGitHubCopilotCliMcpConfig,
+} from './github-copilot-cli.js';
 export type { GitHubCopilotCliMcpConfig } from './github-copilot-cli.js';
 
 export { parseCursorMcpServers, readCursorMcpConfig } from './cursor.js';
@@ -120,7 +132,10 @@ export type {
 export { parseZedMcpServers, readZedMcpConfig } from './zed.js';
 export type { ZedMcpConfig } from './zed.js';
 
-export { parseOpenAICodexMcpServers, readOpenAICodexMcpConfig } from './openai-codex.js';
+export {
+  parseOpenAICodexMcpServers,
+  readOpenAICodexMcpConfig,
+} from './openai-codex.js';
 export type { OpenAICodexMcpConfig } from './openai-codex.js';
 
 export const agentRegistry: readonly AgentDefinition[] = [

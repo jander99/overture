@@ -11,9 +11,8 @@ import type {
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
-export const parseZedMcpServers: AgentMcpParseServersHandler = (
-  resolvedPath,
-) => parseJsoncMcpServerMap(resolvedPath, 'context_servers');
+export const parseZedMcpServers: AgentMcpParseServersHandler = (resolvedPath) =>
+  parseJsoncMcpServerMap(resolvedPath, 'context_servers');
 
 export const zed: AgentDefinition = {
   id: 'zed',
@@ -51,11 +50,11 @@ export const zed: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: ['zed'],
-mcp: {
-read: (ctx) => readAgentMcpConfig(zed, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(zed, ctx),
     write: notImplementedMcpHandlers('zed').write,
     parseServers: parseZedMcpServers,
-},
+  },
 };
 
 /**

@@ -143,9 +143,7 @@ describe('parseJsoncMcpServerMap', () => {
       parseJsoncMcpServerMap(p, 'mcpServers', {
         urlFields: ['url', 'serverUrl'],
       }),
-    ).toEqual([
-      { name: 'r', transport: 'remote', url: 'https://example.com' },
-    ]);
+    ).toEqual([{ name: 'r', transport: 'remote', url: 'https://example.com' }]);
   });
 
   it('returns [] when the top-level value is an array, not a map (JSON variant)', () => {
@@ -170,7 +168,10 @@ describe('parseTomlMcpServerMap', () => {
   });
 
   it('strips a leading UTF-8 BOM', () => {
-    const p = writeFile('bom.toml', '\uFEFF[mcp_servers.fs]\ncommand = "npx"\n');
+    const p = writeFile(
+      'bom.toml',
+      '\uFEFF[mcp_servers.fs]\ncommand = "npx"\n',
+    );
     expect(parseTomlMcpServerMap(p, 'mcp_servers')).toEqual([
       { name: 'fs', transport: 'local', command: ['npx'] },
     ]);

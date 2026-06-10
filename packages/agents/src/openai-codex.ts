@@ -57,11 +57,11 @@ export const openaiCodex: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['codex'],
-mcp: {
-read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
     write: notImplementedMcpHandlers('openai-codex').write,
     parseServers: parseOpenAICodexMcpServers,
-},
+  },
 };
 
 /**

@@ -113,11 +113,11 @@ export const continueDef: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-mcp: {
-read: (ctx) => readAgentMcpConfig(continueDef, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(continueDef, ctx),
     write: notImplementedMcpHandlers('continue').write,
     parseServers: parseContinueMcpServers,
-},
+  },
 };
 
 /**

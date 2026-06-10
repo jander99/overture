@@ -51,7 +51,12 @@ describe('parseWindsurfMcpServers', () => {
       {
         name: 'filesystem',
         transport: 'local',
-        command: ['npx', '-y', '@modelcontextprotocol/server-filesystem', '/home'],
+        command: [
+          'npx',
+          '-y',
+          '@modelcontextprotocol/server-filesystem',
+          '/home',
+        ],
       },
       {
         name: 'memory',

@@ -121,11 +121,11 @@ export const cline: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-mcp: {
-read: (ctx) => readAgentMcpConfig(cline, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(cline, ctx),
     write: notImplementedMcpHandlers('cline').write,
     parseServers: parseClineMcpServers,
-},
+  },
 };
 
 /**

@@ -38,11 +38,11 @@ export const windsurf: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['windsurf'],
-mcp: {
-read: (ctx) => readAgentMcpConfig(windsurf, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(windsurf, ctx),
     write: notImplementedMcpHandlers('windsurf').write,
     parseServers: parseWindsurfMcpServers,
-},
+  },
 };
 
 /** Native Windsurf MCP config: `mcpServers` map; servers may be stdio (`command`/`args`/`env`) or remote. Per docs the remote URL may appear as either `url` or `serverUrl` depending on doc version. */

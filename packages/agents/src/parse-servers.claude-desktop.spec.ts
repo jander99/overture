@@ -26,7 +26,10 @@ describe('parseClaudeDesktopMcpServers', () => {
       'claude_desktop_config.json',
       JSON.stringify({
         mcpServers: {
-          filesystem: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem'] },
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+          },
         },
       }),
     );

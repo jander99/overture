@@ -10,7 +10,10 @@
 // smol-toml, yaml) all support sync parse.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { McpServerEntry } from './types.js';
 
 const localRequire = createRequire(__filename);
@@ -19,7 +22,8 @@ const localRequire = createRequire(__filename);
 // module-init time via createRequire so the bundle stays a single file
 // and consumers get the parser via `npm install`.
 const yaml: { parse: (text: string) => unknown } = localRequire('yaml');
-const smolToml: { parse: (text: string) => unknown } = localRequire('smol-toml');
+const smolToml: { parse: (text: string) => unknown } =
+  localRequire('smol-toml');
 
 /**
  * Per-agent overrides for transport inference. Most agents use the
@@ -68,7 +72,9 @@ function asStringArray(value: unknown): readonly string[] | undefined {
   return undefined;
 }
 
-function normalizeCommand(entry: Record<string, unknown>): readonly string[] | undefined {
+function normalizeCommand(
+  entry: Record<string, unknown>,
+): readonly string[] | undefined {
   // OpenAI Codex uses bare `command` as a string + `args` array.
   const cmdStr = asString(entry.command);
   if (cmdStr) {
@@ -119,7 +125,9 @@ function normalizeServerEntry(
   };
 }
 
-function resolveOptions(options?: ParseServerMapOptions): Required<ParseServerMapOptions> {
+function resolveOptions(
+  options?: ParseServerMapOptions,
+): Required<ParseServerMapOptions> {
   return {
     urlFields: options?.urlFields ?? DEFAULT_URL_FIELDS,
     remoteTypes: options?.remoteTypes ?? DEFAULT_REMOTE_TYPES,

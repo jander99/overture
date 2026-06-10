@@ -61,11 +61,11 @@ export const claudeCode: AgentDefinition = {
   detectionStrategy: 'binary-first',
   mcpSupport: 'supported',
   executableNames: ['claude'],
-mcp: {
-read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
+  mcp: {
+    read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
     write: notImplementedMcpHandlers('claude-code').write,
     parseServers: parseClaudeCodeMcpServers,
-},
+  },
 };
 
 /** Native Claude Code MCP config: `mcpServers` map; each server is either a stdio transport or a remote transport (HTTP / streamable-http / SSE / WebSocket). The top level may also carry a local `imports` map (Claude Code's local-imports feature). */
