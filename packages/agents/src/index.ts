@@ -13,7 +13,7 @@
  * JSON output, future tools) rely on. The legacy `platformRegistry`
  * shim in apps/cli re-exports this same array by reference.
  */
-import type { AgentDefinition } from './types.js';
+import type { AgentDefinition, PlatformId } from './types.js';
 export type {
   AgentDefinition,
   AgentMcpHandlers,

@@ -16,7 +16,6 @@ import { parseCursorMcpServers } from './cursor.js';
 import { parseGitHubCopilotCliMcpServers } from './github-copilot-cli.js';
 import { parseGitHubCopilotVSCodeMcpServers } from './github-copilot-vscode.js';
 import { parseOpenAICodexMcpServers } from './openai-codex.js';
-import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
 import { parseRooCodeMcpServers } from './roo-code.js';
 import { parseWindsurfMcpServers } from './windsurf.js';
 import { parseZedMcpServers } from './zed.js';

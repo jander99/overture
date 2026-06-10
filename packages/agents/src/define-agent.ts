@@ -28,7 +28,7 @@ export type DefineAgentInput = PlatformRegistryEntry & {
    * Pass `notImplementedMcpHandlers(id)` for unsupported agents
    * whose read should also reject.
    */
-  readonly mcp?: AgentMcpHandlers;
+  readonly mcp?: Partial<AgentMcpHandlers>;
 };
 
 /**
@@ -45,7 +45,7 @@ export function defineAgent(input: DefineAgentInput): AgentDefinition {
   // `notImplementedMcpHandlers(id)` for an unsupported agent), spread
   // it and only fill in the default write if missing. We do NOT
   // overwrite the caller-provided read.
-  if (input.mcp && 'read' in input.mcp) {
+  if (input.mcp && typeof input.mcp.read === 'function') {
     const write = input.mcp.write ?? defaultMcpWriteHandler(input.id);
     return {
       ...input,

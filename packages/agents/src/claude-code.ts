@@ -1,5 +1,6 @@
 // Claude Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
@@ -86,10 +87,7 @@ export type ClaudeCodeRemoteServer = StandardMcpServer<NoMcpExtension>;
 
 /** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
 
-export interface ClaudeCodeRemoteServer extends RemoteServerBase {
-  /** Transport discriminator. Literal values include 'http', 'streamable-http', 'sse', 'ws'; unknown strings are tolerated for forward compatibility. */
-  readonly type?: string;
-}
+
 
 /**
  * Read the agent's MCP config into the typed `ClaudeCodeMcpConfig` shape.

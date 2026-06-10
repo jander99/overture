@@ -1,5 +1,6 @@
 // GitHub Copilot CLI agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
