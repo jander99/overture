@@ -3,7 +3,7 @@ import {
   parse as parseJsonc,
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
-import type { McpLocationFormat } from './types.js';
+import type { McpLocationFormat } from '@overture/agents';
 
 // `smol-toml` is published as ESM-first but ships a CJS build at
 // `./dist/index.cjs` (reachable via the `require` condition in its

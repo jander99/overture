@@ -16,11 +16,10 @@ import type {
   McpLocation,
   McpSupport,
   PathResolutionContext,
-  PlatformDetectionResult,
   PlatformRegistryEntry,
   ReasonCode,
-  DetectJsonOutput,
-} from './types.js';
+} from '@overture/agents';
+import type { PlatformDetectionResult, DetectJsonOutput } from './types.js';
 
 const confidenceRank: Record<DetectionConfidence, number> = {
   high: 3,
@@ -431,4 +430,4 @@ function buildFailedResult(
 }
 
 // PlatformId re-export for type-only consumers
-export type { PlatformId } from './types.js';
+export type { PlatformId } from '@overture/agents';

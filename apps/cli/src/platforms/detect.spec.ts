@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { detectPlatforms, defaultPathResolutionContext } from './detect.js';
 import { platformRegistry } from './registry.js';
-import type { PathResolutionContext } from './types.js';
+import type { PathResolutionContext } from '@overture/agents';
 
 function makeCtx(
   overrides?: Partial<PathResolutionContext>,
