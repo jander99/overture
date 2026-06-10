@@ -1,14 +1,21 @@
 // Claude Desktop agent definition.
 import { notImplementedMcpHandlers } from './types.js';
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import type {
   AgentDefinition,
   McpServerMap,
   StdioServerBase,
   AgentMcpReadResult,
+  AgentMcpParseServersHandler,
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseClaudeDesktopMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 export const claudeDesktop: AgentDefinition = {
   id: 'claude-desktop',
   displayName: 'Claude Desktop',
@@ -79,6 +86,7 @@ export const claudeDesktop: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(claudeDesktop, ctx),
     write: notImplementedMcpHandlers('claude-desktop').write,
+    parseServers: parseClaudeDesktopMcpServers,
   },
 };
 

@@ -1,10 +1,21 @@
 // Cline agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, AgentMcpReadResult } from './types.js';
-import type { McpServerMap, StringList, StringMap } from './types.js';
-
+import type {
+  AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
+  McpServerMap,
+  StringList,
+  StringMap,
+} from './types.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseClineMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 /**
  * Native Cline MCP server entry. Cline accepts either stdio-style servers
  * (with `command`/`args`/`env`) or remote servers (with `url`/`headers`)
@@ -113,6 +124,7 @@ export const cline: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(cline, ctx),
     write: notImplementedMcpHandlers('cline').write,
+    parseServers: parseClineMcpServers,
   },
 };
 

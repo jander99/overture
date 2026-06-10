@@ -1,13 +1,19 @@
 // OpenAI Codex agent definition.
+import { parseTomlMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
-  StringMap,
+  AgentMcpParseServersHandler,
   AgentMcpReadResult,
+  StringMap,
 } from './types.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseOpenAICodexMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseTomlMcpServerMap(resolvedPath, 'mcp_servers');
+
 export const openaiCodex: AgentDefinition = {
   id: 'openai-codex',
   displayName: 'OpenAI Codex',
@@ -54,6 +60,7 @@ export const openaiCodex: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
     write: notImplementedMcpHandlers('openai-codex').write,
+    parseServers: parseOpenAICodexMcpServers,
   },
 };
 

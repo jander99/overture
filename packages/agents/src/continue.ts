@@ -1,13 +1,32 @@
 // Continue agent definition.
+import {
+  parseJsoncMcpServerMap,
+  parseYamlMcpServerList,
+} from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, AgentMcpReadResult } from './types.js';
+import type {
+  AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
+} from './types.js';
 import type { RequestInitConfig, StringList, StringMap } from './types.js';
 import type { ClaudeCodeMcpConfig } from './claude-code.js';
 import type { CursorMcpConfig } from './cursor.js';
 import type { ClineMcpConfig } from './cline.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseContinueMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => {
+  // Continue accepts both YAML standalone files and JSON imports copied
+  // from clients like Claude/Cursor/Cline. Pick the parser by extension.
+  if (resolvedPath.endsWith('.yaml') || resolvedPath.endsWith('.yml')) {
+    return parseYamlMcpServerList(resolvedPath, 'mcpServers');
+  }
+  return parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+};
+
 /**
  * Native Continue MCP server entry inside a standalone YAML config.
  * The `name` field is required because Continue identifies servers by
@@ -87,7 +106,7 @@ export const continueDef: AgentDefinition = {
       format: 'json',
       topLevelKey: 'mcpServers',
       notes:
-        "Continue imports MCP config files from this directory; the canonical imported filename is mcp.json. Continue also accepts standalone YAML files at <workspace>/.continue/mcpServers/*.yaml with a top-level mcpServers list, but overture's reader does not yet support YAML parsing (future PR).",
+        'Continue imports MCP config files from this directory; the canonical imported filename is mcp.json. Continue also accepts standalone YAML files at <workspace>/.continue/mcpServers/*.yaml with a top-level mcpServers list. The YAML parser is implemented in parseContinueMcpServers, but the detectors mcpLocations model is per-file-path, so arbitrary per-server YAML files are not yet auto-discovered. Tracked as a follow-up.',
     },
   ],
   defaultConfidence: 'medium',
@@ -97,6 +116,7 @@ export const continueDef: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(continueDef, ctx),
     write: notImplementedMcpHandlers('continue').write,
+    parseServers: parseContinueMcpServers,
   },
 };
 

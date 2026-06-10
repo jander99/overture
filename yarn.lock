@@ -2101,6 +2101,7 @@ __metadata:
   dependencies:
     jsonc-parser: "npm:^3.3.1"
     smol-toml: "npm:^1.6.1"
+    yaml: "npm:^2.9.0"
   bin:
     overture: ./dist/main.js
   languageName: unknown
@@ -8964,7 +8965,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml@npm:2.9.0":
+"yaml@npm:2.9.0, yaml@npm:^2.9.0":
   version: 2.9.0
   resolution: "yaml@npm:2.9.0"
   bin:

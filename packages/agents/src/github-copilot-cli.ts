@@ -1,16 +1,22 @@
 // GitHub Copilot CLI agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
   McpServerMap,
+  PathResolutionContext,
   StringList,
   StringMap,
   ToolList,
-  AgentMcpReadResult,
 } from './types.js';
 
-import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from './types.js';
+export const parseGitHubCopilotCliMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
 export const githubCopilotCli: AgentDefinition = {
   id: 'github-copilot-cli',
   displayName: 'GitHub Copilot CLI',
@@ -51,6 +57,7 @@ export const githubCopilotCli: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(githubCopilotCli, ctx),
     write: notImplementedMcpHandlers('github-copilot-cli').write,
+    parseServers: parseGitHubCopilotCliMcpServers,
   },
 };
 

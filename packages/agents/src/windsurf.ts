@@ -1,16 +1,25 @@
 // Windsurf agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpParseServersHandler,
   AgentMcpReadResult,
   McpServerMap,
   PermissiveConfigObject,
   RemoteServerBase,
   StdioServerBase,
 } from './types.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseWindsurfMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) =>
+  parseJsoncMcpServerMap(resolvedPath, 'mcpServers', {
+    urlFields: ['url', 'serverUrl'],
+  });
+
 export const windsurf: AgentDefinition = {
   id: 'windsurf',
   displayName: 'Windsurf',
@@ -32,6 +41,7 @@ export const windsurf: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(windsurf, ctx),
     write: notImplementedMcpHandlers('windsurf').write,
+    parseServers: parseWindsurfMcpServers,
   },
 };
 
