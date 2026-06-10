@@ -121,3 +121,67 @@ jobs:
 
       - name: Verify npm pack + install + smoke
         run: node apps/cli/scripts/verify-package.mjs
+
+  build-and-detect:
+    # Native build + runtime smoke. Mirrors the local `yarn nx build` +
+    # `node apps/cli/dist/main.js detect` workflow that the `cli:link`
+    # script uses (see apps/cli/package.json). The `package-verify`
+    # job proves the published tarball contract; this job proves the
+    # workspace build pipeline end-to-end on a runner with no
+    # pre-installed agents.
+    name: Build & detect
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build CLI (workspace)
+        # `--skip-nx-cache` forces a clean build so we catch transitive
+        # `^build` regressions (the @overture/agents package must build
+        # before apps/cli). Mirrors what `cli:link` does locally.
+        run: yarn nx build @jander99/overture --skip-nx-cache
+
+      - name: Run overture detect --json on a clean runner
+        # The runner has no installed MCP-capable agents. We assert:
+        # - exit 0
+        # - stdout is valid JSON with a `platforms` array of all 14
+        #   registry entries
+        # - every entry reports `installed: false`
+        # - no platform carries a `parseError`
+        # If any of these fail, the build pipeline is broken in a way
+        # the unit tests wouldn't catch (e.g. a missing runtime dep
+        # like `smol-toml`, or a broken Yarn workspace symlink).
+        run: |
+          set -euo pipefail
+          OUTPUT=$(node apps/cli/dist/main.js detect --json)
+          echo "$OUTPUT" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          assert isinstance(data.get('platforms'), list), 'platforms must be a list'
+          assert len(data['platforms']) == 14, f'expected 14 registry entries, got {len(data[\"platforms\"])}'
+          for p in data['platforms']:
+              assert p.get('installed') is False, f'{p[\"id\"]} reports installed on a clean runner'
+              assert not p.get('parseError'), f'{p[\"id\"]} has parseError: {p.get(\"parseError\")}'
+          print(f'OK: detect --json produced {len(data[\"platforms\"])} platforms, all installed=false, no parseErrors')
+          "

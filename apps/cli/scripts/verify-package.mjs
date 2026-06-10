@@ -127,11 +127,24 @@ if (jsonResult.status !== 0) {
 }
 try {
   const parsed = JSON.parse(jsonResult.stdout);
-  if (!Array.isArray(parsed.platforms) || parsed.platforms.length === 0) {
-    fail(`detect --json produced no platforms`);
+  // The full registry is always emitted; on a clean runner every
+  // entry reports `installed: false`. Asserting `length > 0` would
+  // fail in CI, which runs on a clean machine with no pre-installed
+  // agents.
+  if (!Array.isArray(parsed.platforms) || parsed.platforms.length !== 14) {
+    fail(
+      `detect --json produced ${parsed.platforms?.length ?? 0} platforms;
+  expected 14`,
+    );
   }
+  for (const p of parsed.platforms) {
+    if (p.parseError) {
+      fail(`${p.id} has parseError: ${p.parseError}`);
+    }
+  }
+  const installed = parsed.platforms.filter((p) => p.installed).length;
   console.log(
-    `detect --json: ${parsed.platforms.length} platforms (parseable)`,
+    `detect --json: ${parsed.platforms.length} platforms (${installed} installed on this host)`,
   );
 } catch (err) {
   fail(`detect --json output is not valid JSON: ${err.message}`);

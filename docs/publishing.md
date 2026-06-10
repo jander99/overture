@@ -283,6 +283,20 @@ on Trusted Publishing only. Do not add a fallback token.
 - The verify-package step is a no-publish gate: it builds, packs,
   and smoke-tests the tarball. The same script runs in the CI
   `package-verify` job on every PR.
+- The `build-and-detect` CI job is the native-build counterpart to
+  `package-verify`. It runs `yarn install --immutable` from a clean
+  cache, builds the CLI with the Nx workspace toolchain (`yarn nx
+build @jander99/overture --skip-nx-cache`), then executes the
+  freshly built `apps/cli/dist/main.js detect --json` on a runner
+  with no pre-installed agents. It asserts the output is valid JSON
+  with all 14 registry entries, every entry reports
+  `installed: false`, and no platform carries a `parseError`. This
+  catches the class of build-pipeline regressions the unit tests
+  would not (a missing runtime dep like `smol-toml`, a broken Yarn
+  workspace symlink, a transitive `^build` failure, etc.). Together
+  with `package-verify` (which proves the published-tarball
+  contract) the two jobs cover both the workspace build and the
+  shipped artifact.
 - The Trusted Publisher UI is the source of truth for who can
   publish. This runbook does not and should not encode npm
   tokens.
