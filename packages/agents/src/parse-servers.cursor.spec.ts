@@ -1,3 +1,4 @@
+// Tests for the cursor parseServers handler.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -57,5 +58,15 @@ describe('parseCursorMcpServers', () => {
 
   it('returns [] for a missing file', () => {
     expect(parseCursorMcpServers('/no/such/file')).toEqual([]);
+  });
+
+  it('returns [] for malformed JSON', () => {
+    const p = writeFile('bad.json', '{ not valid');
+    expect(parseCursorMcpServers(p)).toEqual([]);
+  });
+
+  it('returns [] when the top-level key is absent', () => {
+    const p = writeFile('nokey.json', JSON.stringify({ other: {} }));
+    expect(parseCursorMcpServers(p)).toEqual([]);
   });
 });

@@ -10,10 +10,7 @@
 // smol-toml, yaml) all support sync parse.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import {
-  parse as parseJsonc,
-  type ParseError,
-} from 'jsonc-parser/lib/esm/main.js';
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
 import type { McpServerEntry } from './types.js';
 
 const localRequire = createRequire(__filename);
@@ -38,6 +35,13 @@ export interface ParseServerMapOptions {
   readonly remoteTypes?: readonly string[];
   /** `type` values that mark an entry as local. Default: `['local', 'stdio']`. */
   readonly localTypes?: readonly string[];
+  /**
+   * Allow a list-shaped value at the top-level key (each item must
+   * carry its own `name` field). Continue's YAML configs use this
+   * shape; JSON and TOML configs are always map-shaped. Default: `false`.
+   * The YAML helper forces this to `true` regardless of caller input.
+   */
+  readonly allowListShape?: boolean;
 }
 
 const DEFAULT_URL_FIELDS = ['url'] as const;
@@ -132,6 +136,7 @@ function resolveOptions(
     urlFields: options?.urlFields ?? DEFAULT_URL_FIELDS,
     remoteTypes: options?.remoteTypes ?? DEFAULT_REMOTE_TYPES,
     localTypes: options?.localTypes ?? DEFAULT_LOCAL_TYPES,
+    allowListShape: options?.allowListShape ?? false,
   };
 }
 
@@ -145,6 +150,11 @@ function iterateServerMap(
   if (!isRecord(map) && !Array.isArray(map)) return [];
 
   if (Array.isArray(map)) {
+    if (!options.allowListShape) {
+      // JSON/TOML configs are always map-shaped; a list here is
+      // almost certainly a malformed/empty config, not a YAML list.
+      return [];
+    }
     // YAML-list shape (continue): each item has its own `name` field.
     const out: McpServerEntry[] = [];
     for (const item of map) {
@@ -166,10 +176,12 @@ function iterateServerMap(
 }
 
 /**
- * Parse a JSON/JSONC MCP config file. Tolerates trailing commas and
- * `//` / `/* * /` comments. Strips a leading UTF-8 BOM.
+ * Parse a JSON/JSONC MCP config file. Tolerates trailing commas,
+ * line comments, and block comments. Strips a leading UTF-8 BOM.
  *
- * Returns `[]` on any read or parse failure.
+ * Returns `[]` on any read or parse failure. The top-level value is
+ * always expected to be a map (not a list) — a list at the top-level
+ * key returns `[]` (see `allowListShape` for the YAML-list shape).
  */
 export function parseJsoncMcpServerMap(
   resolvedPath: string,
@@ -195,7 +207,9 @@ export function parseJsoncMcpServerMap(
 /**
  * Parse a TOML MCP config file. Strips a leading UTF-8 BOM.
  *
- * Returns `[]` on any read or parse failure.
+ * Returns `[]` on any read or parse failure. The top-level value is
+ * always expected to be a map (not a list) — a list at the top-level
+ * key returns `[]` (see `allowListShape` for the YAML-list shape).
  */
 export function parseTomlMcpServerMap(
   resolvedPath: string,
@@ -216,8 +230,9 @@ export function parseTomlMcpServerMap(
 /**
  * Parse a YAML MCP config file. Used by Continue, which stores
  * server entries as a YAML list (not a map). The list shape is
- * handled by {@link iterateServerMap} when it sees an array at the
- * top-level key.
+ * handled by `iterateServerMap` when it sees an array at the
+ * top-level key — this helper forces `allowListShape: true` so
+ * the list shape is accepted (JSON and TOML helpers default to false).
  *
  * Returns `[]` on any read or parse failure.
  */
@@ -226,7 +241,9 @@ export function parseYamlMcpServerList(
   topLevelKey: string,
   options?: ParseServerMapOptions,
 ): readonly McpServerEntry[] {
-  const resolved = resolveOptions(options);
+  // YAML is the one format where the top-level value can be a list
+  // (Continue's standalone config), so opt in to list handling here.
+  const resolved = { ...resolveOptions(options), allowListShape: true };
   try {
     const raw = readFileSync(resolvedPath, 'utf8');
     const cleaned = stripBom(raw);

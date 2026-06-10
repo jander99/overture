@@ -104,10 +104,10 @@ export const continueDef: AgentDefinition = {
       base: 'workspace',
       relativePath: '.continue/mcpServers/mcp.json',
       format: 'json',
-      topLevelKey: 'mcpServers',
+topLevelKey: 'mcpServers',
       notes:
-        "Continue imports MCP config files from this directory; the canonical imported filename is mcp.json. Continue also accepts standalone YAML files at <workspace>/.continue/mcpServers/*.yaml with a top-level mcpServers list, but overture's reader does not yet support YAML parsing (future PR).",
-    },
+        'Continue imports MCP config files from this directory; the canonical imported filename is mcp.json. Continue also accepts standalone YAML files at <workspace>/.continue/mcpServers/*.yaml with a top-level mcpServers list. The YAML parser is implemented in parseContinueMcpServers, but the detectors mcpLocations model is per-file-path, so arbitrary per-server YAML files are not yet auto-discovered. Tracked as a follow-up.',
+},
   ],
   defaultConfidence: 'medium',
   detectionStrategy: 'marker-only',
