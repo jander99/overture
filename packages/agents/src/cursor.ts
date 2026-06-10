@@ -1,6 +1,6 @@
 // Cursor agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -62,7 +62,7 @@ export const cursor: AgentDefinition = {
   executableNames: ['cursor'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(cursor, ctx),
-    write: notImplementedMcpHandlers('cursor').write,
+    write: defaultMcpWriteHandler('cursor'),
     parseServers: parseCursorMcpServers,
   },
 };

@@ -1,6 +1,6 @@
 // Roo Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -125,7 +125,7 @@ export const rooCode: AgentDefinition = {
   executableNames: [],
   mcp: {
     read: (ctx) => readAgentMcpConfig(rooCode, ctx),
-    write: notImplementedMcpHandlers('roo-code').write,
+    write: defaultMcpWriteHandler('roo-code'),
     parseServers: parseRooCodeMcpServers,
   },
 };

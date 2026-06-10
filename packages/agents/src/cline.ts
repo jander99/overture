@@ -1,6 +1,6 @@
 // Cline agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -123,7 +123,7 @@ export const cline: AgentDefinition = {
   executableNames: [],
   mcp: {
     read: (ctx) => readAgentMcpConfig(cline, ctx),
-    write: notImplementedMcpHandlers('cline').write,
+    write: defaultMcpWriteHandler('cline'),
     parseServers: parseClineMcpServers,
   },
 };

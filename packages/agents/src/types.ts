@@ -156,10 +156,17 @@ export type AgentMcpWriteHandler = (
   input: AgentMcpWriteInput,
 ) => Promise<AgentMcpWriteResult>;
 
-/** Bundled MCP handlers exposed by an agent. */
+/**
+ * Bundled MCP handlers exposed by an agent.
+ *
+ * `read` is always required. `write` is optional on the input shape
+ * so `defineAgent()` can fill in the shared default; the exported
+ * `AgentDefinition.mcp` always carries a complete (non-optional)
+ * `write` handler (see `CompleteAgentMcpHandlers`).
+ */
 export interface AgentMcpHandlers {
   read: AgentMcpReadHandler;
-  write: AgentMcpWriteHandler;
+  write?: AgentMcpWriteHandler;
   /**
    * Optional handler that parses an agent's MCP config file and returns a
    * list of structured server entries for human-readable rendering. Each
@@ -170,13 +177,18 @@ export interface AgentMcpHandlers {
   parseServers?: AgentMcpParseServersHandler;
 }
 
+/** Complete (non-optional) MCP handlers, as exposed on every exported `AgentDefinition`. */
+export type CompleteAgentMcpHandlers = AgentMcpHandlers & {
+  write: AgentMcpWriteHandler;
+};
+
 /**
  * Per-agent definition. Currently a structural extension of
  * `PlatformRegistryEntry` with a bundled `mcp` placeholder object that
  * will eventually carry the agent's MCP read/write implementation.
  */
 export interface AgentDefinition extends PlatformRegistryEntry {
-  readonly mcp: AgentMcpHandlers;
+  readonly mcp: CompleteAgentMcpHandlers;
 }
 
 /**
@@ -194,6 +206,19 @@ export function notImplementedMcpHandlers(
     read: () => Promise.reject(message('read')),
     write: () => Promise.reject(message('write')),
   };
+}
+
+/**
+ * Shared placeholder write handler that always rejects with the
+ * canonical "not implemented" error. Mirrors the error text produced
+ * by `notImplementedMcpHandlers(agentId).write` so consumers see the
+ * same message regardless of which path built the agent definition.
+ */
+export function defaultMcpWriteHandler(agentId: PlatformId): AgentMcpWriteHandler {
+  return () =>
+    Promise.reject(
+      new Error(`MCP write for agent '${agentId}' is not implemented yet`),
+    );
 }
 
 /** JSON scalar value: string, number, boolean, or null. */

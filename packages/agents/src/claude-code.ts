@@ -1,6 +1,6 @@
 // Claude Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -63,7 +63,7 @@ export const claudeCode: AgentDefinition = {
   executableNames: ['claude'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
-    write: notImplementedMcpHandlers('claude-code').write,
+    write: defaultMcpWriteHandler('claude-code'),
     parseServers: parseClaudeCodeMcpServers,
   },
 };

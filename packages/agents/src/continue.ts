@@ -3,7 +3,7 @@ import {
   parseJsoncMcpServerMap,
   parseYamlMcpServerList,
 } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -115,7 +115,7 @@ export const continueDef: AgentDefinition = {
   executableNames: [],
   mcp: {
     read: (ctx) => readAgentMcpConfig(continueDef, ctx),
-    write: notImplementedMcpHandlers('continue').write,
+    write: defaultMcpWriteHandler('continue'),
     parseServers: parseContinueMcpServers,
   },
 };

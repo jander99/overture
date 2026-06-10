@@ -1,7 +1,7 @@
 // OpenCode agent definition.
 import { readFileSync } from 'node:fs';
 import { parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -185,7 +185,7 @@ export const opencode: AgentDefinition = {
   executableNames: ['opencode'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(opencode, ctx),
-    write: notImplementedMcpHandlers('opencode').write,
+    write: defaultMcpWriteHandler('opencode'),
     parseServers: parseOpenCodeMcpServers,
   },
 };

@@ -1,6 +1,6 @@
 // Zed agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -52,7 +52,7 @@ export const zed: AgentDefinition = {
   executableNames: ['zed'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(zed, ctx),
-    write: notImplementedMcpHandlers('zed').write,
+    write: defaultMcpWriteHandler('zed'),
     parseServers: parseZedMcpServers,
   },
 };

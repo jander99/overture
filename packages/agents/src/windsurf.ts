@@ -1,6 +1,6 @@
 // Windsurf agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -40,7 +40,7 @@ export const windsurf: AgentDefinition = {
   executableNames: ['windsurf'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(windsurf, ctx),
-    write: notImplementedMcpHandlers('windsurf').write,
+    write: defaultMcpWriteHandler('windsurf'),
     parseServers: parseWindsurfMcpServers,
   },
 };

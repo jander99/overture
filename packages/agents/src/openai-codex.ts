@@ -1,6 +1,6 @@
 // OpenAI Codex agent definition.
 import { parseTomlMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -59,7 +59,7 @@ export const openaiCodex: AgentDefinition = {
   executableNames: ['codex'],
   mcp: {
     read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
-    write: notImplementedMcpHandlers('openai-codex').write,
+    write: defaultMcpWriteHandler('openai-codex'),
     parseServers: parseOpenAICodexMcpServers,
   },
 };

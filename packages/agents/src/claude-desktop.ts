@@ -1,5 +1,5 @@
 // Claude Desktop agent definition.
-import { notImplementedMcpHandlers } from './types.js';
+import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import type {
   AgentDefinition,
@@ -85,7 +85,7 @@ export const claudeDesktop: AgentDefinition = {
   executableNames: [],
   mcp: {
     read: (ctx) => readAgentMcpConfig(claudeDesktop, ctx),
-    write: notImplementedMcpHandlers('claude-desktop').write,
+    write: defaultMcpWriteHandler('claude-desktop'),
     parseServers: parseClaudeDesktopMcpServers,
   },
 };
