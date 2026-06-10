@@ -62,23 +62,24 @@ Common transport fields:
 ## Adding a new platform
 
 The catalog in this document is the **source of truth** for the
-per-platform detection data that `overture` consumes. The CLI stores
-that data as one file per agent under
-`apps/cli/src/platforms/agents/<id>.ts`, then aggregates them in
-`apps/cli/src/platforms/agents/index.ts` (the `platformRegistry`
-export in `apps/cli/src/platforms/registry.ts` is now a re-export
-of that aggregate). To wire a new platform into the CLI:
+per-platform detection data that `overture` consumes. The
+`@overture/agents` library (in `packages/agents/`) stores that data
+as one file per agent under `packages/agents/src/<id>.ts`, then
+aggregates them in `packages/agents/src/index.ts` (the
+`platformRegistry` export in `apps/cli/src/platforms/registry.ts` is
+a re-export of that aggregate). To wire a new platform into the
+CLI:
 
 1. Add a "## <Platform name>" section to the catalog below with the
    platform's installation markers, MCP config locations, executable
    names, detection strategy, and any platform-specific format notes.
-2. Create `apps/cli/src/platforms/agents/<id>.ts` in the repository.
+2. Create `packages/agents/src/<id>.ts` in the repository.
    The file exports a single `const <camelCaseId>: AgentDefinition`
    whose body is the platform's data plus a trailing
    `mcp: notImplementedMcpHandlers('<id>')` placeholder. See
    `AGENTS.md` (search for "Adding a new MCP agent") for the full
    step-by-step, including the `continue` reserved-keyword edge case.
-3. Wire the new agent into `apps/cli/src/platforms/agents/index.ts`
+3. Wire the new agent into `packages/agents/src/index.ts`
    at the canonical position (the legacy `expectedIds` assertion in
    `apps/cli/src/platforms/registry.spec.ts` pins the index of every
    entry — reordering is a breaking change).
