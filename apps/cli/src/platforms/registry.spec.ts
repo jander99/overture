@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { agentRegistry } from '@overture/agents';
-import { agentRegistry } from '@overture/agents';
 import type { PlatformId } from '@overture/agents';
 
 describe('agentRegistry', () => {
