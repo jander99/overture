@@ -166,11 +166,11 @@ To add a new agent:
    `yarn nx build @jander99/overture --skip-nx-cache`,
    `yarn prettier --check .`, and
    `node apps/cli/scripts/verify-package.mjs` to verify.
-**Reserved-keyword edge case.** `continue` is a JavaScript reserved
-keyword. The `continue` agent's per-agent file exports `continueDef`;
-the aggregate renames it on import (`continueDef as continueAgent`).
-Use the same workaround if you add an agent whose id collides with a
-reserved word.
+   **Reserved-keyword edge case.** `continue` is a JavaScript reserved
+   keyword. The `continue` agent's per-agent file exports `continueDef`;
+   the aggregate renames it on import (`continueDef as continueAgent`).
+   Use the same workaround if you add an agent whose id collides with a
+   reserved word.
 
 **Typed MCP config designs.** Every supported local MCP-capable agent exports a
 colocated `<AgentName>McpConfig` type from its `packages/agents/src/<id>.ts`

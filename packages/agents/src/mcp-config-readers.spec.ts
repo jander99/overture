@@ -456,10 +456,7 @@ describe('per-agent mcp.read skips missing locations', () => {
 // Fixture path is relative to this spec file: ./fixtures/mcp-configs/.
 import { readFile as readFileRaw } from 'node:fs/promises';
 
-const fixtureDir = pathResolve(
-  __dirname,
-  'fixtures/mcp-configs',
-);
+const fixtureDir = pathResolve(__dirname, 'fixtures/mcp-configs');
 
 describe('per-agent mcp.read smoke: real-fs fixtures', () => {
   it('claude-desktop reads the fixture file and returns the typed config', async () => {

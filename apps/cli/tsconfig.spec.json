@@ -11,14 +11,14 @@
       "vitest"
     ]
   },
-"references": [
+  "references": [
     {
       "path": "../../packages/agents"
     },
     {
-"path": "../../packages/os"
-}
-],
+      "path": "../../packages/os"
+    }
+  ],
   "include": [
     "src/**/*.ts",
     "vite.config.ts",

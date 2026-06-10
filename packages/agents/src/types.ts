@@ -30,7 +30,12 @@ export type McpLocationScope =
   | 'profile'
   | 'repository'
   | 'managed';
-export type McpLocationFormat = 'json' | 'jsonc' | 'yaml' | 'toml' | 'web-settings';
+export type McpLocationFormat =
+  | 'json'
+  | 'jsonc'
+  | 'yaml'
+  | 'toml'
+  | 'web-settings';
 export type DetectionStrategy = 'binary-first' | 'marker-only';
 export type McpSupport = 'supported' | 'unsupported' | 'unknown';
 export type ReasonCode =
@@ -97,8 +102,6 @@ export interface PathResolutionContext {
   workspaceDir: string;
   platform: HostPlatform;
 }
-
-
 
 /**
  * Read result for a per-agent MCP read.

@@ -9,14 +9,14 @@
     "rootDir": "src",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
   },
-"references": [
+  "references": [
     {
       "path": "../../packages/agents"
     },
     {
-"path": "../../packages/os"
-}
-],
+      "path": "../../packages/os"
+    }
+  ],
   "include": ["src/**/*.ts"],
   "exclude": [
     "vite.config.ts",
