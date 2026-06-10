@@ -119,7 +119,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-- name: Verify npm pack + install + smoke
+      - name: Verify npm pack + install + smoke
         run: node apps/cli/scripts/verify-package.mjs
 
   build-and-detect:
