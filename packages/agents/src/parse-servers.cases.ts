@@ -483,7 +483,8 @@ mcpServers:
 
   {
     agentId: 'github-copilot-vscode',
-    description: 'extracts a remote HTTP server from the `servers` top-level key',
+    description:
+      'extracts a remote HTTP server from the `servers` top-level key',
     parser: parseGitHubCopilotVSCodeMcpServers,
     fileName: 'remote.json',
     contents: JSON.stringify({
@@ -778,7 +779,8 @@ url = "https://mcp.example.com/mcp"
 
   {
     agentId: 'zed',
-    description: 'extracts a remote server (inferred from url since Zed has no type field)',
+    description:
+      'extracts a remote server (inferred from url since Zed has no type field)',
     parser: parseZedMcpServers,
     fileName: 'remote.json',
     contents: JSON.stringify({
@@ -794,7 +796,8 @@ url = "https://mcp.example.com/mcp"
   },
   {
     agentId: 'zed',
-    description: 'returns [] when the top-level key is mcpServers instead of context_servers',
+    description:
+      'returns [] when the top-level key is mcpServers instead of context_servers',
     parser: parseZedMcpServers,
     fileName: 'wrongkey.json',
     contents: JSON.stringify({
