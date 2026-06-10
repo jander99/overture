@@ -235,8 +235,5 @@ describe('agentRegistry', () => {
       }
     });
 
-    it('agentRegistry is a compat alias of agentRegistry (same reference)', () => {
-      expect(agentRegistry).toBe(agentRegistry);
-    });
   });
 });

@@ -8,10 +8,10 @@
  * `read<Agent>McpConfig` typed helper, and every per-agent
  * `parse<Agent>McpServers` handler.
  *
- * Order matters: the agent id order in the `agentRegistry` aggregate
- * below is the canonical positional order downstream consumers (CLI
- * JSON output, future tools) rely on. The legacy `platformRegistry`
- * shim in apps/cli re-exports this same array by reference.
+ * Order matters: the agent id order in `AGENT_REGISTRY_ORDER` is the
+ * canonical positional order downstream consumers (CLI JSON output,
+ * future tools) rely on. The `agentRegistry` aggregate is built from
+ * this constant and the `agentsById` map.
  */
 import type { AgentDefinition, PlatformId } from './types.js';
 export type {

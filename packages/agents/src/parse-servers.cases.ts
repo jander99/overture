@@ -194,6 +194,25 @@ export const parseServersCases: readonly ParseServersCase[] = [
     expected: [],
   },
 
+  {
+    agentId: 'cline',
+    description: 'extracts a remote server with explicit transportType',
+    parser: parseClineMcpServers,
+    fileName: 'remote.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        remote: { transportType: 'http', url: 'https://mcp.example.com/mcp' },
+      },
+    }),
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
+  },
+
   // ── continue (YAML/JSON dispatch by file extension) ──────────────
   {
     agentId: 'continue',
@@ -385,6 +404,45 @@ mcpServers:
     expected: [],
   },
 
+  {
+    agentId: 'github-copilot-cli',
+    description: 'extracts a remote server with type=http',
+    parser: parseGitHubCopilotCliMcpServers,
+    fileName: 'remote.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        remote: { type: 'http', url: 'https://mcp.example.com/mcp' },
+      },
+    }),
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
+  },
+  {
+    agentId: 'github-copilot-cli',
+    description: 'extracts a mixed local+remote config',
+    parser: parseGitHubCopilotCliMcpServers,
+    fileName: 'mixed.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        fs: { type: 'local', command: 'npx', args: ['-y', 'fs-server'] },
+        gh: { type: 'http', url: 'https://api.githubcopilot.com/mcp' },
+      },
+    }),
+    expected: [
+      { name: 'fs', transport: 'local', command: ['npx', '-y', 'fs-server'] },
+      {
+        name: 'gh',
+        transport: 'remote',
+        url: 'https://api.githubcopilot.com/mcp',
+      },
+    ],
+  },
+
   // ── github-copilot-vscode (top-level key is 'servers', not 'mcpServers') ─
   {
     agentId: 'github-copilot-vscode',
@@ -423,6 +481,33 @@ mcpServers:
     expected: [],
   },
 
+  {
+    agentId: 'github-copilot-vscode',
+    description: 'extracts a remote HTTP server from the `servers` top-level key',
+    parser: parseGitHubCopilotVSCodeMcpServers,
+    fileName: 'remote.json',
+    contents: JSON.stringify({
+      servers: { remote: { type: 'http', url: 'https://mcp.example.com/mcp' } },
+    }),
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
+  },
+  {
+    agentId: 'github-copilot-vscode',
+    description: 'returns [] when the file has mcpServers instead of servers',
+    parser: parseGitHubCopilotVSCodeMcpServers,
+    fileName: 'wrongkey.json',
+    contents: JSON.stringify({
+      mcpServers: { fs: { command: 'npx', args: ['-y', 'fs-server'] } },
+    }),
+    expected: [],
+  },
+
   // ── openai-codex (TOML, top-level key: mcp_servers) ──────────────
   {
     agentId: 'openai-codex',
@@ -457,6 +542,32 @@ args = ["-y", "fs-server"]
   {
     agentId: 'openai-codex',
     description: 'returns [] when the top-level key is absent',
+    parser: parseOpenAICodexMcpServers,
+    fileName: 'nokey.toml',
+    contents: '',
+    expected: [],
+  },
+
+  {
+    agentId: 'openai-codex',
+    description: 'extracts a remote server from a TOML table',
+    parser: parseOpenAICodexMcpServers,
+    fileName: 'remote.toml',
+    contents: `
+[mcp_servers.remote]
+url = "https://mcp.example.com/mcp"
+`,
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
+  },
+  {
+    agentId: 'openai-codex',
+    description: 'returns [] when the [mcp_servers] table is absent',
     parser: parseOpenAICodexMcpServers,
     fileName: 'nokey.toml',
     contents: '',
@@ -503,6 +614,49 @@ args = ["-y", "fs-server"]
     fileName: 'nokey.json',
     contents: JSON.stringify({ other: {} }),
     expected: [],
+  },
+
+  {
+    agentId: 'roo-code',
+    description: 'extracts a local stdio server (ignores the policy extras)',
+    parser: parseRooCodeMcpServers,
+    fileName: 'local.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        fs: {
+          command: 'npx',
+          args: ['-y', 'fs-server'],
+          alwaysAllow: ['read_file'],
+          watchPaths: ['/tmp'],
+          disabledTools: ['write_file'],
+          timeout: 30,
+        },
+      },
+    }),
+    expected: [
+      { name: 'fs', transport: 'local', command: ['npx', '-y', 'fs-server'] },
+    ],
+  },
+  {
+    agentId: 'roo-code',
+    description: 'extracts a remote streamable-http server',
+    parser: parseRooCodeMcpServers,
+    fileName: 'remote.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        remote: {
+          type: 'streamable-http',
+          url: 'https://mcp.example.com/mcp',
+        },
+      },
+    }),
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
   },
 
   // ── windsurf (serverUrl alias for remote) ────────────────────────
@@ -559,6 +713,31 @@ args = ["-y", "fs-server"]
     expected: [],
   },
 
+  {
+    agentId: 'windsurf',
+    description: 'extracts local stdio servers (filesystem + memory)',
+    parser: parseWindsurfMcpServers,
+    fileName: 'multi.json',
+    contents: JSON.stringify({
+      mcpServers: {
+        filesystem: { command: 'npx', args: ['-y', '@mcp/server-fs'] },
+        memory: { command: 'npx', args: ['-y', '@mcp/server-memory'] },
+      },
+    }),
+    expected: [
+      {
+        name: 'filesystem',
+        transport: 'local',
+        command: ['npx', '-y', '@mcp/server-fs'],
+      },
+      {
+        name: 'memory',
+        transport: 'local',
+        command: ['npx', '-y', '@mcp/server-memory'],
+      },
+    ],
+  },
+
   // ── zed (top-level key: context_servers) ─────────────────────────
   {
     agentId: 'zed',
@@ -594,6 +773,33 @@ args = ["-y", "fs-server"]
     parser: parseZedMcpServers,
     fileName: 'nokey.json',
     contents: JSON.stringify({ other: {} }),
+    expected: [],
+  },
+
+  {
+    agentId: 'zed',
+    description: 'extracts a remote server (inferred from url since Zed has no type field)',
+    parser: parseZedMcpServers,
+    fileName: 'remote.json',
+    contents: JSON.stringify({
+      context_servers: { remote: { url: 'https://mcp.example.com/mcp' } },
+    }),
+    expected: [
+      {
+        name: 'remote',
+        transport: 'remote',
+        url: 'https://mcp.example.com/mcp',
+      },
+    ],
+  },
+  {
+    agentId: 'zed',
+    description: 'returns [] when the top-level key is mcpServers instead of context_servers',
+    parser: parseZedMcpServers,
+    fileName: 'wrongkey.json',
+    contents: JSON.stringify({
+      mcpServers: { fs: { command: 'npx', args: ['-y', 'fs-server'] } },
+    }),
     expected: [],
   },
 ];
