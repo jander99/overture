@@ -1,12 +1,10 @@
 // OpenCode agent definition.
-import { readFileSync } from 'node:fs';
-import { parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js';
+import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
 import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   OAuthConfig,
-  McpServerEntry,
   StringMap,
   AgentMcpReadResult,
 } from './types.js';
@@ -45,36 +43,7 @@ export type OpenCodeMcpServer =
  */
 export const parseOpenCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
-) => {
-  try {
-    const contents = readFileSync(resolvedPath, 'utf8');
-    const parsed: unknown = parseJsonc(contents, undefined, {
-      allowTrailingComma: true,
-    });
-    const mcp = (parsed as Record<string, unknown> | undefined)?.mcp;
-    if (!mcp || typeof mcp !== 'object') return [];
-    const servers: McpServerEntry[] = [];
-    for (const [name, entry] of Object.entries(mcp)) {
-      if (!entry || typeof entry !== 'object') continue;
-      const e = entry as Record<string, unknown>;
-      const url = typeof e.url === 'string' ? e.url : undefined;
-      const command = Array.isArray(e.command)
-        ? (e.command as readonly string[])
-        : typeof e.command === 'string'
-          ? [e.command]
-          : undefined;
-      servers.push({
-        name,
-        transport: url ? 'remote' : 'local',
-        url,
-        command,
-      });
-    }
-    return servers;
-  } catch {
-    return [];
-  }
-};
+) => parseOpenCodeMcpServerMap(resolvedPath);
 
 /**
  * Native OpenCode MCP config shape. The top-level `mcp` key holds a
