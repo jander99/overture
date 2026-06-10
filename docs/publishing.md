@@ -281,12 +281,12 @@ on Trusted Publishing only. Do not add a fallback token.
   fine for development but the publish uses 24 for
   reproducibility.
 - The verify-package step is a no-publish gate: it builds, packs,
-and smoke-tests the tarball. The same script runs in the CI
+  and smoke-tests the tarball. The same script runs in the CI
   `package-verify` job on every PR.
 - The `build-and-detect` CI job is the native-build counterpart to
   `package-verify`. It runs `yarn install --immutable` from a clean
   cache, builds the CLI with the Nx workspace toolchain (`yarn nx
-  build @jander99/overture --skip-nx-cache`), then executes the
+build @jander99/overture --skip-nx-cache`), then executes the
   freshly built `apps/cli/dist/main.js detect --json` on a runner
   with no pre-installed agents. It asserts the output is valid JSON
   with all 14 registry entries, every entry reports
