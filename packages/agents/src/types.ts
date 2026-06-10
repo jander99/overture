@@ -269,6 +269,65 @@ export interface RemoteServerBase {
 }
 
 /**
+ * Marker for "no extension fields" — the default for agents whose
+ * servers carry no platform-specific fields beyond the standard
+ * StdioServerBase + RemoteServerBase + PermissiveConfigObject union.
+ * Use `NoMcpExtension` as the type argument when no extension applies.
+ */
+export type NoMcpExtension = Record<never, never>;
+
+/**
+ * Standard MCP server entry shape: a permissive union of stdio
+ * (subprocess) and remote (URL-based) transports, plus an optional
+ * `TExtension` of platform-specific server fields.
+ *
+ * Every supported local MCP-capable agent's per-server type is a
+ * `StandardMcpServer<...>` with a tailored extension:
+ * - `StandardMcpServer` (no args): plain stdio + remote + permissive
+ * - `StandardMcpServer<{ envFile?: string; auth?: ... }>`: cursor-style
+ *
+ * The `& PermissiveConfigObject` intersection preserves the open
+ * string-keyed index signature so undocumented fields remain
+ * type-accessible without explicit declarations.
+ */
+export type StandardMcpServer<
+  TExtension extends object = NoMcpExtension,
+> = Readonly<
+  (StdioServerBase | RemoteServerBase) &
+    PermissiveConfigObject &
+    TExtension
+>;
+
+/**
+ * Standard MCP config shape: a top-level object carrying a single
+ * MCP-server map (keyed by server name) at a configurable top-level
+ * key, plus optional platform-specific top-level fields and
+ * server-extension fields.
+ *
+ * Use this for agents whose config is a JSON/JSONC/TOML object of
+ * the form:
+ *   { <topLevelKey>: { <serverName>: <server> } }
+ * with optional platform-specific top-level fields.
+ *
+ * Default `TTopLevelKey` is `'mcpServers'`, matching the dominant
+ * MCP config convention. Agents that use a different top-level
+ * (opencode: `'mcp'`, openai-codex: `'mcp_servers'`, copilot-vscode:
+ * `'servers'`, zed: `'context_servers'`) pass it as the third
+ * argument.
+ */
+export type StandardMcpConfig<
+  TServerExtension extends object = NoMcpExtension,
+  TTopLevelExtension extends object = NoMcpExtension,
+  TTopLevelKey extends string = 'mcpServers',
+> = Readonly<
+  TTopLevelExtension & {
+    readonly [K in TTopLevelKey]?: McpServerMap<
+      StandardMcpServer<TServerExtension>
+    >;
+  }
+>;
+
+/**
  * OAuth configuration: an object of arbitrary OAuth-related fields, or
  * `false` to explicitly disable OAuth for the server.
  */
