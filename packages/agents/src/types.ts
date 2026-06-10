@@ -214,7 +214,9 @@ export function notImplementedMcpHandlers(
  * by `notImplementedMcpHandlers(agentId).write` so consumers see the
  * same message regardless of which path built the agent definition.
  */
-export function defaultMcpWriteHandler(agentId: PlatformId): AgentMcpWriteHandler {
+export function defaultMcpWriteHandler(
+  agentId: PlatformId,
+): AgentMcpWriteHandler {
   return () =>
     Promise.reject(
       new Error(`MCP write for agent '${agentId}' is not implemented yet`),
@@ -290,13 +292,10 @@ export type NoMcpExtension = Record<never, never>;
  * string-keyed index signature so undocumented fields remain
  * type-accessible without explicit declarations.
  */
-export type StandardMcpServer<
-  TExtension extends object = NoMcpExtension,
-> = Readonly<
-  (StdioServerBase | RemoteServerBase) &
-    PermissiveConfigObject &
-    TExtension
->;
+export type StandardMcpServer<TExtension extends object = NoMcpExtension> =
+  Readonly<
+    (StdioServerBase | RemoteServerBase) & PermissiveConfigObject & TExtension
+  >;
 
 /**
  * Standard MCP config shape: a top-level object carrying a single

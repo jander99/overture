@@ -33,8 +33,7 @@ function writeFile(name: string, contents: string): string {
   // outside workdir — write to that absolute path instead. If the
   // fileName starts with '/' and isn't under workdir, skip writing
   // and let the parser return [].
-  const isExternalPath =
-    name.startsWith('/') && !name.startsWith(workdir);
+  const isExternalPath = name.startsWith('/') && !name.startsWith(workdir);
   const path = isExternalPath ? name : join(workdir, name);
   if (!isExternalPath) writeFileSync(path, contents);
   return path;

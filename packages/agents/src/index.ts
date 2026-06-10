@@ -65,7 +65,11 @@ export {
   type ParseServerMapOptions,
 } from './parse-mcp-servers.js';
 
-export { defineAgent, notImplementedMcpHandlers, type DefineAgentInput } from './define-agent.js';
+export {
+  defineAgent,
+  notImplementedMcpHandlers,
+  type DefineAgentInput,
+} from './define-agent.js';
 
 import { claudeCode } from './claude-code.js';
 import { claudeDesktop } from './claude-desktop.js';

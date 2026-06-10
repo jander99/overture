@@ -87,8 +87,6 @@ export type ClaudeCodeRemoteServer = StandardMcpServer<NoMcpExtension>;
 
 /** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
 
-
-
 /**
  * Read the agent's MCP config into the typed `ClaudeCodeMcpConfig` shape.
  * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
