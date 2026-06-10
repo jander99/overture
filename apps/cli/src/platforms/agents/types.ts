@@ -158,7 +158,7 @@ export type OAuthConfig = PermissiveConfigObject | false;
  * servers. The CLI renders these under the `mcp:` path line in human
  * output.
  */
-export interface ServerEntry {
+export interface McpServerEntry {
   readonly name: string;
   readonly transport: 'local' | 'remote';
   readonly command?: readonly string[];
@@ -174,7 +174,7 @@ export interface ServerEntry {
  */
 export type AgentMcpParseServersHandler = (
   resolvedPath: string,
-) => readonly ServerEntry[];
+) => readonly McpServerEntry[];
 
 /**
  * `fetch`-style request init shape, restricted to a known `headers`

@@ -6,7 +6,7 @@ import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   OAuthConfig,
-  ServerEntry,
+  McpServerEntry,
   StringMap,
   AgentMcpReadResult,
 } from './types.js';
@@ -43,7 +43,7 @@ export type OpenCodeMcpServer =
  * Returns an empty array on any read or parse failure (silent
  * degradation — the CLI just omits the server list).
  */
-export const parseOpenCodeServers: AgentMcpParseServersHandler = (
+export const parseOpenCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => {
   try {
@@ -53,7 +53,7 @@ export const parseOpenCodeServers: AgentMcpParseServersHandler = (
     });
     const mcp = (parsed as Record<string, unknown> | undefined)?.mcp;
     if (!mcp || typeof mcp !== 'object') return [];
-    const servers: ServerEntry[] = [];
+    const servers: McpServerEntry[] = [];
     for (const [name, entry] of Object.entries(mcp)) {
       if (!entry || typeof entry !== 'object') continue;
       const e = entry as Record<string, unknown>;
@@ -186,7 +186,7 @@ export const opencode: AgentDefinition = {
   mcp: {
     read: (ctx) => readAgentMcpConfig(opencode, ctx),
     write: notImplementedMcpHandlers('opencode').write,
-    parseServers: parseOpenCodeServers,
+    parseServers: parseOpenCodeMcpServers,
   },
 };
 
