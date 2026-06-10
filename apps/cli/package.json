@@ -135,9 +135,13 @@
       },
       "lint": {
         "executor": "@nx/eslint:lint",
-        "outputs": ["{options.outputFile}"],
+        "outputs": [
+          "{options.outputFile}"
+        ],
         "options": {
-          "lintFilePatterns": ["apps/cli/**/*.ts"],
+          "lintFilePatterns": [
+            "apps/cli/**/*.ts"
+          ],
           "maxWarnings": 0,
           "cache": true,
           "cacheStrategy": "content",
@@ -157,6 +161,7 @@
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1",
-    "smol-toml": "^1.6.1"
+    "smol-toml": "^1.6.1",
+    "yaml": "^2.9.0"
   }
 }
