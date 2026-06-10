@@ -1,14 +1,20 @@
 // Zed agent definition.
+import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
 import type {
   AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
   McpServerMap,
   StringMap,
-  AgentMcpReadResult,
 } from './types.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseZedMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => parseJsoncMcpServerMap(resolvedPath, 'context_servers');
+
 export const zed: AgentDefinition = {
   id: 'zed',
   displayName: 'Zed',
@@ -45,10 +51,11 @@ export const zed: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: ['zed'],
-  mcp: {
-    read: (ctx) => readAgentMcpConfig(zed, ctx),
+mcp: {
+read: (ctx) => readAgentMcpConfig(zed, ctx),
     write: notImplementedMcpHandlers('zed').write,
-  },
+    parseServers: parseZedMcpServers,
+},
 };
 
 /**

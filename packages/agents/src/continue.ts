@@ -1,13 +1,32 @@
 // Continue agent definition.
+import {
+  parseJsoncMcpServerMap,
+  parseYamlMcpServerList,
+} from './parse-mcp-servers.js';
 import { notImplementedMcpHandlers } from './types.js';
-import type { AgentDefinition, AgentMcpReadResult } from './types.js';
+import type {
+  AgentDefinition,
+  AgentMcpParseServersHandler,
+  AgentMcpReadResult,
+} from './types.js';
 import type { RequestInitConfig, StringList, StringMap } from './types.js';
 import type { ClaudeCodeMcpConfig } from './claude-code.js';
 import type { CursorMcpConfig } from './cursor.js';
 import type { ClineMcpConfig } from './cline.js';
-
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
+
+export const parseContinueMcpServers: AgentMcpParseServersHandler = (
+  resolvedPath,
+) => {
+  // Continue accepts both YAML standalone files and JSON imports copied
+  // from clients like Claude/Cursor/Cline. Pick the parser by extension.
+  if (resolvedPath.endsWith('.yaml') || resolvedPath.endsWith('.yml')) {
+    return parseYamlMcpServerList(resolvedPath, 'mcpServers');
+  }
+  return parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+};
+
 /**
  * Native Continue MCP server entry inside a standalone YAML config.
  * The `name` field is required because Continue identifies servers by
@@ -94,10 +113,11 @@ export const continueDef: AgentDefinition = {
   detectionStrategy: 'marker-only',
   mcpSupport: 'supported',
   executableNames: [],
-  mcp: {
-    read: (ctx) => readAgentMcpConfig(continueDef, ctx),
+mcp: {
+read: (ctx) => readAgentMcpConfig(continueDef, ctx),
     write: notImplementedMcpHandlers('continue').write,
-  },
+    parseServers: parseContinueMcpServers,
+},
 };
 
 /**
