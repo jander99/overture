@@ -4,7 +4,7 @@ import type {
   InstallMarker,
   MatchedExecutable,
   PathResolutionContext,
-} from './types.js';
+} from '@overture/agents';
 
 const DEFAULT_PATHEXT = '.COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC';
 const SWALLOWED_CODES = new Set([

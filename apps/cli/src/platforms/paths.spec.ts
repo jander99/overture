@@ -16,7 +16,7 @@ import {
   markerExists,
   findExecutablesInPath,
 } from './paths.js';
-import type { InstallMarker, PathResolutionContext } from './types.js';
+import type { InstallMarker, PathResolutionContext } from '@overture/agents';
 
 function makeCtx(
   overrides?: Partial<PathResolutionContext>,

@@ -3,24 +3,13 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "declarationMap": false,
-    "outDir": "dist",
-    "types": ["node"],
+    "declarationMap": true,
+    "outDir": "../../dist/packages/agents",
     "rootDir": "src",
-    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+    "tsBuildInfoFile": "../../dist/packages/agents/tsconfig.lib.tsbuildinfo"
   },
-  "references": [
-    {
-      "path": "../../packages/agents"
-    },
-    {
-      "path": "../../packages/os"
-    }
-  ],
   "include": ["src/**/*.ts"],
   "exclude": [
-    "vite.config.ts",
-    "vite.config.mts",
     "vitest.config.ts",
     "vitest.config.mts",
     "src/**/*.test.ts",

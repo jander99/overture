@@ -11,7 +11,7 @@ import type {
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 export const claudeCode: AgentDefinition = {
   id: 'claude-code',
   displayName: 'Claude Code',

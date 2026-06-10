@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { platformRegistry } from './registry.js';
-import { agentRegistry } from './agents/index.js';
-import type { PlatformId } from './types.js';
+import { agentRegistry } from '@overture/agents';
+import type { PlatformId } from '@overture/agents';
 
 describe('platformRegistry', () => {
   const expectedIds: readonly PlatformId[] = [

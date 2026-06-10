@@ -124,16 +124,17 @@ When you add a new package:
 
 ## Adding a new MCP agent (per-file registry)
 
-The `@jander99/overture` CLI maintains a per-file registry of every
-MCP-capable platform it knows how to detect. Each agent lives in its
-own file and implements the `AgentDefinition` interface (defined in
-`apps/cli/src/platforms/agents/types.ts` as a structural extension of
-`PlatformRegistryEntry` that adds an `mcp: { read, write }` slot).
-The detection pipeline consumes only the static aggregate in
-`apps/cli/src/platforms/agents/index.ts`; per-agent files are not
-imported anywhere else. The legacy `platformRegistry` name in
-`apps/cli/src/platforms/registry.ts` is now a thin re-export of that
-aggregate (object identity, not a copy).
+The `@overture/agents` library (in `packages/agents/`) maintains a
+per-file registry of every MCP-capable platform it knows how to
+detect. Each agent lives in its own file and implements the
+`AgentDefinition` interface (defined in `packages/agents/src/types.ts`
+as a structural extension of `PlatformRegistryEntry` that adds an
+`mcp: { read, write }` slot). The detection pipeline consumes only
+the static aggregate in `packages/agents/src/index.ts`; per-agent
+files are not imported anywhere else. The legacy `platformRegistry`
+name in `apps/cli/src/platforms/registry.ts` is a thin re-export of
+that aggregate (object identity, not a copy) so older CLI callers
+keep working.
 
 To add a new agent:
 
@@ -141,7 +142,7 @@ To add a new agent:
    platform's install marker(s), MCP config location(s), executable
    name(s), and platform-specific format notes. That catalog is the
    source of truth for the data; do not invent new paths.
-2. Create `apps/cli/src/platforms/agents/<id>.ts` that exports a
+2. Create `packages/agents/src/<id>.ts` that exports a
    single `const <camelCaseId>: AgentDefinition = { ... }`. The body
    is the platform's data (`id`, `displayName`, `executableNames`,
    `installMarkers`, `mcpLocations`, `detectionStrategy`,
@@ -149,9 +150,9 @@ To add a new agent:
    trailing `mcp: notImplementedMcpHandlers('<id>')` field. The
    placeholder `mcp.read` / `mcp.write` handlers will be replaced
    with real implementations in a follow-up PR — see
-   `apps/cli/src/platforms/agents/types.ts`.
+   `packages/agents/src/types.ts`.
 3. Insert the new import + array entry in
-   `apps/cli/src/platforms/agents/index.ts` at the canonical
+   `packages/agents/src/index.ts` at the canonical
    position. **Order matters**: the legacy `expectedIds` assertion
    in `apps/cli/src/platforms/registry.spec.ts` pins the index of
    every entry. Reordering is a breaking change for any consumer
@@ -160,21 +161,21 @@ To add a new agent:
    `apps/cli/src/platforms/registry.spec.ts` asserting the
    per-agent invariants (high-confidence markers, markerless where
    appropriate, unsupported reason text, etc.).
-5. Run `yarn nx test @jander99/overture --skip-nx-cache`,
+5. Run `yarn nx test @overture/agents --skip-nx-cache`,
+   `yarn nx test @jander99/overture --skip-nx-cache`,
    `yarn nx build @jander99/overture --skip-nx-cache`,
    `yarn prettier --check .`, and
    `node apps/cli/scripts/verify-package.mjs` to verify.
-
-**Reserved-keyword edge case.** `continue` is a JavaScript reserved
-keyword. The `continue` agent's per-agent file exports `continueDef`;
-the aggregate renames it on import (`continueDef as continueAgent`).
-Use the same workaround if you add an agent whose id collides with a
-reserved word.
+   **Reserved-keyword edge case.** `continue` is a JavaScript reserved
+   keyword. The `continue` agent's per-agent file exports `continueDef`;
+   the aggregate renames it on import (`continueDef as continueAgent`).
+   Use the same workaround if you add an agent whose id collides with a
+   reserved word.
 
 **Typed MCP config designs.** Every supported local MCP-capable agent exports a
-colocated `<AgentName>McpConfig` type from its `apps/cli/src/platforms/agents/<id>.ts`
+colocated `<AgentName>McpConfig` type from its `packages/agents/src/<id>.ts`
 file. Shared MCP config primitives (e.g. `McpServerMap`, `StdioServerBase`,
-`PermissiveConfigObject`) live in `apps/cli/src/platforms/agents/types.ts`; compose
+`PermissiveConfigObject`) live in `packages/agents/src/types.ts`; compose
 new per-agent types from those primitives rather than redefining shape locally.
 These types are compile-time only: no runtime validators, no readers, no writers
 land in the same PR as the type addition. Unsupported and no-local-read agents
@@ -183,7 +184,7 @@ When the agent file's `mcpLocations` registry metadata conflicts with the
 canonical future-read schema in `docs/coding-platform-mcp-configurations.md`,
 types follow the docs as the source of truth; the registry detection metadata
 itself is updated in a separate, detection-focused PR. The type-contract spec
-in `apps/cli/src/platforms/agents/mcp-config-types.spec.ts` is the canonical home
+in `packages/agents/src/mcp-config-types.spec.ts` is the canonical home
 for fixture-based type tests.
 
 ## Things not to change without asking

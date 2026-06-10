@@ -2,8 +2,7 @@ import {
   detectPlatforms,
   defaultPathResolutionContext,
 } from './platforms/detect.js';
-import { agentRegistry } from './platforms/agents/index.js';
-import type { McpServerEntry } from './platforms/agents/types.js';
+import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
 
 export function formatJsonOutput(output: DetectJsonOutput): string {

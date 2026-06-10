@@ -7,6 +7,9 @@
       "path": "./apps/cli"
     },
     {
+      "path": "./packages/agents"
+    },
+    {
       "path": "./packages/os"
     }
   ]

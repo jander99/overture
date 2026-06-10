@@ -1,0 +1,30 @@
+{
+  "name": "@overture/agents",
+  "root": "packages/agents",
+  "sourceRoot": "packages/agents/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/agents",
+        "main": "packages/agents/src/index.ts",
+        "tsConfig": "packages/agents/tsconfig.lib.json",
+        "platform": "node",
+        "format": ["esm"],
+        "bundle": true,
+        "thirdParty": true,
+        "generatePackageJson": false
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "coverage/packages/agents"
+      }
+    }
+  },
+  "tags": []
+}

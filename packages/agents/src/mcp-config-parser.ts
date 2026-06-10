@@ -1,28 +1,30 @@
+// Internal MCP config parser for @overture/agents.
+//
+// Mirrors apps/cli/src/platforms/mcp-config.ts. The duplication is
+// intentional: keeping the package's parser internal avoids a reverse
+// dependency from the package on the CLI. A future refactor can lift the
+// parser into a third shared package if both consumers converge.
+//
+// `smol-toml` is published as ESM-first but ships a CJS build reachable
+// via `require`. The CLI bundle targets CJS, and a CJS module cannot
+// statically `import` an ESM-only module under `module: nodenext`, so we
+// load the CJS build through `createRequire` to keep the public API
+// synchronous.
 import { createRequire } from 'node:module';
 import {
   parse as parseJsonc,
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
-import type { McpLocationFormat } from '@overture/agents';
+import type { McpLocationFormat } from './types.js';
 
-// `smol-toml` is published as ESM-first but ships a CJS build at
-// `./dist/index.cjs` (reachable via the `require` condition in its
-// `package.json` `exports` field). The CLI bundle targets CJS, and a CJS
-// module cannot statically `import` an ESM-only module under
-// `module: nodenext`, so we load the CJS build through `createRequire`
-// to keep the public API synchronous.
-//
-// For npm consumers, `smol-toml` is listed as a runtime `dependency` in
-// `apps/cli/package.json`, so `npm install @jander99/overture` installs
-// it alongside the CLI. `createRequire(__filename)` then resolves it
-// from the standard `node_modules` lookup path that npm sets up.
 interface SmolTomlCjsModule {
   parse: (text: string, options?: unknown) => Record<string, unknown>;
 }
+
 const smolTomlCjsModule = createRequire(__filename)(
   'smol-toml',
 ) as unknown as SmolTomlCjsModule;
-createRequire(__filename)('smol-toml');
+
 function parseToml(text: string): Record<string, unknown> {
   return smolTomlCjsModule.parse(text);
 }

@@ -2683,6 +2683,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@overture/agents@workspace:packages/agents":
+  version: 0.0.0-use.local
+  resolution: "@overture/agents@workspace:packages/agents"
+  languageName: unknown
+  linkType: soft
+
 "@overture/os@workspace:packages/os":
   version: 0.0.0-use.local
   resolution: "@overture/os@workspace:packages/os"

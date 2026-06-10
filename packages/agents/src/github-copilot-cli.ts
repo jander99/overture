@@ -10,7 +10,7 @@ import type {
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 export const githubCopilotCli: AgentDefinition = {
   id: 'github-copilot-cli',
   displayName: 'GitHub Copilot CLI',

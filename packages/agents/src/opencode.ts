@@ -12,7 +12,7 @@ import type {
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
-import type { PathResolutionContext } from '../types.js';
+import type { PathResolutionContext } from './types.js';
 /**
  * Discriminated union of MCP server entries supported by OpenCode's
  * `mcp` config. The `type` field selects the transport:
