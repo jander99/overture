@@ -1,14 +1,13 @@
 // Cursor agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
-  McpServerMap,
-  PermissiveConfigObject,
-  RemoteServerBase,
-  StdioServerBase,
   AgentMcpReadResult,
+  PermissiveConfigObject,
+  StandardMcpConfig,
+  StandardMcpServer,
 } from './types.js';
 
 import { readAgentMcpConfig } from './read-mcp-config.js';
@@ -17,7 +16,7 @@ export const parseCursorMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
 
-export const cursor: AgentDefinition = {
+export const cursor: AgentDefinition = defineAgent({
   id: 'cursor',
   displayName: 'Cursor',
   installMarkers: [
@@ -61,52 +60,42 @@ export const cursor: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['cursor'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(cursor, ctx),
-    write: notImplementedMcpHandlers('cursor').write,
     parseServers: parseCursorMcpServers,
   },
-};
+});
 
-/** Native Cursor MCP config: `mcpServers` map; servers may be stdio (with `command`/`args`/`env`) or remote (with `url`/`headers`). Per-server `envFile` overrides; static OAuth-like credentials live under `auth`. */
-
-export interface CursorMcpConfig {
-  readonly mcpServers?: McpServerMap<CursorMcpServer>;
-}
-
-/** Cursor server: union of stdio and remote transports with permissive extension fields. */
-
-export type CursorMcpServer = (CursorStdioServer | CursorRemoteServer) &
-  PermissiveConfigObject;
-
-/** Stdio transport: local process invocation. */
-
-export interface CursorStdioServer extends StdioServerBase {
-  /** Path to a dotenv-style env file whose entries are merged into `env`. */
-
+/**
+ * Cursor-specific server extension. Both stdio and remote servers may
+ * carry static OAuth-like credentials under `auth`; stdio servers may
+ * also point at a dotenv-style `envFile` whose entries are merged into
+ * `env`. Built on top of `StandardMcpServer` so the stdio/remote
+ * union and permissive index signature are inherited.
+ */
+export type CursorServerExtension = Readonly<{
+  /** Path to a dotenv-style env file whose entries are merged into `env` (stdio only). */
   readonly envFile?: string;
-
-  /** Static OAuth-like credentials: `CLIENT_ID`, `CLIENT_SECRET`, optional `scopes`, plus an open index signature for forward-compatible fields. */
-
+  /** Static OAuth-like credentials: `CLIENT_ID`, `CLIENT_SECRET`, optional `scopes`, plus an open index signature. */
   readonly auth?: CursorAuth;
-}
-
-/** Remote transport: HTTP / SSE. */
-
-export interface CursorRemoteServer extends RemoteServerBase {
-  /** Static OAuth-like credentials. */
-
-  readonly auth?: CursorAuth;
-}
+}>;
 
 /** Permissive object that exposes the documented Cursor auth keys and permits arbitrary additional fields. */
-
 export type CursorAuth = PermissiveConfigObject & {
   readonly CLIENT_ID?: string;
-
   readonly CLIENT_SECRET?: string;
-
   readonly scopes?: readonly string[];
 };
+
+/** Native Cursor MCP config: `mcpServers` map; servers may be stdio (with `command`/`args`/`env`) or remote (with `url`/`headers`). */
+export type CursorMcpConfig = StandardMcpConfig<CursorServerExtension>;
+
+/** Re-export of the per-server type (preserves the old `CursorMcpServer` name for downstream imports). */
+export type CursorMcpServer = StandardMcpServer<CursorServerExtension>;
+
+/** Re-export of the stdio server shape. */
+export type CursorStdioServer = StandardMcpServer<CursorServerExtension>;
+
+/** Re-export of the remote server shape. */
+export type CursorRemoteServer = StandardMcpServer<CursorServerExtension>;
 
 /**
  * Read the agent's MCP config into the typed `CursorMcpConfig` shape.

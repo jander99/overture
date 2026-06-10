@@ -1,24 +1,23 @@
 // Claude Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   AgentMcpReadResult,
-  McpServerMap,
-  PermissiveConfigObject,
-  RemoteServerBase,
-  StdioServerBase,
+  NoMcpExtension,
+  StandardMcpConfig,
+  StandardMcpServer,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseClaudeCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
 
-export const claudeCode: AgentDefinition = {
+export const claudeCode: AgentDefinition = defineAgent({
   id: 'claude-code',
   displayName: 'Claude Code',
   installMarkers: [
@@ -62,43 +61,31 @@ export const claudeCode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['claude'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(claudeCode, ctx),
-    write: notImplementedMcpHandlers('claude-code').write,
     parseServers: parseClaudeCodeMcpServers,
   },
-};
+});
 
-/** Native Claude Code MCP config: `mcpServers` map; each server is either a stdio transport or a remote transport (HTTP / streamable-http / SSE / WebSocket). The top level may also carry a local `imports` map (Claude Code's local-imports feature). */
+/**
+ * Native Claude Code MCP config: `mcpServers` map; the top level may
+ * also carry a local `imports` map (Claude Code's local-imports
+ * feature). The per-server shape is the standard stdio/remote
+ * union — no Claude-specific server fields beyond the imports slot.
+ */
+export type ClaudeCodeMcpConfig = StandardMcpConfig<
+  NoMcpExtension,
+  Readonly<{ readonly imports?: StringMap }>
+>;
 
-export interface ClaudeCodeMcpConfig {
-  readonly mcpServers?: McpServerMap<ClaudeCodeMcpServer>;
-
-  /** Local-imports map: imports named JSON files (e.g. Claude Desktop) into the active config. */
-
-  readonly imports?: StringMap;
-}
-
-/** Discriminated by `type`; defaults to `stdio` when omitted. Carries a permissive index signature for forward-compatible extension fields. */
-
-export type ClaudeCodeMcpServer = (
-  | ClaudeCodeStdioServer
-  | ClaudeCodeRemoteServer
-) &
-  PermissiveConfigObject;
+/** Per-server type — re-exported under the historical name for downstream imports. */
+export type ClaudeCodeMcpServer = StandardMcpServer<NoMcpExtension>;
 
 /** Stdio transport: local process invocation. */
-
-export interface ClaudeCodeStdioServer extends StdioServerBase {
-  /** Transport discriminator. Omitted for stdio in practice; kept open to permit future variants. */
-  readonly type?: string;
-}
+export type ClaudeCodeStdioServer = StandardMcpServer<NoMcpExtension>;
 
 /** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
+export type ClaudeCodeRemoteServer = StandardMcpServer<NoMcpExtension>;
 
-export interface ClaudeCodeRemoteServer extends RemoteServerBase {
-  /** Transport discriminator. Literal values include 'http', 'streamable-http', 'sse', 'ws'; unknown strings are tolerated for forward compatibility. */
-  readonly type?: string;
-}
+/** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
 
 /**
  * Read the agent's MCP config into the typed `ClaudeCodeMcpConfig` shape.

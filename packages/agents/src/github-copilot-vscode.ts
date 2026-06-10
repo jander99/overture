@@ -1,6 +1,7 @@
 // GitHub Copilot in VS Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -12,14 +13,13 @@ import type {
   StdioServerBase,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseGitHubCopilotVSCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'servers');
 
-export const githubCopilotVscode: AgentDefinition = {
+export const githubCopilotVscode: AgentDefinition = defineAgent({
   id: 'github-copilot-vscode',
   displayName: 'GitHub Copilot in VS Code',
   installMarkers: [
@@ -63,11 +63,9 @@ export const githubCopilotVscode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: [],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(githubCopilotVscode, ctx),
-    write: notImplementedMcpHandlers('github-copilot-vscode').write,
     parseServers: parseGitHubCopilotVSCodeMcpServers,
   },
-};
+});
 
 /**
  * VS Code input variable used by `inputs[]` in `.vscode/mcp.json`.

@@ -1,6 +1,7 @@
 // Roo Code agent definition.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -9,7 +10,6 @@ import type {
   StringList,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseRooCodeMcpServers: AgentMcpParseServersHandler = (
@@ -43,7 +43,7 @@ export interface RooCodeMcpConfig {
   readonly mcpServers?: McpServerMap<RooCodeMcpServer>;
 }
 
-export const rooCode: AgentDefinition = {
+export const rooCode: AgentDefinition = defineAgent({
   id: 'roo-code',
   displayName: 'Roo Code',
   installMarkers: [
@@ -124,11 +124,9 @@ export const rooCode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: [],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(rooCode, ctx),
-    write: notImplementedMcpHandlers('roo-code').write,
     parseServers: parseRooCodeMcpServers,
   },
-};
+});
 
 /**
  * Read the agent's MCP config into the typed `RooCodeMcpConfig` shape.

@@ -3,7 +3,8 @@ import {
   parseJsoncMcpServerMap,
   parseYamlMcpServerList,
 } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
@@ -13,7 +14,6 @@ import type { RequestInitConfig, StringList, StringMap } from './types.js';
 import type { ClaudeCodeMcpConfig } from './claude-code.js';
 import type { CursorMcpConfig } from './cursor.js';
 import type { ClineMcpConfig } from './cline.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseContinueMcpServers: AgentMcpParseServersHandler = (
@@ -85,7 +85,7 @@ export type ContinueMcpConfig =
   | ContinueYamlMcpConfig
   | ContinueImportedJsonMcpConfig;
 
-export const continueDef: AgentDefinition = {
+export const continueDef: AgentDefinition = defineAgent({
   id: 'continue',
   displayName: 'Continue',
   installMarkers: [
@@ -114,11 +114,9 @@ export const continueDef: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: [],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(continueDef, ctx),
-    write: notImplementedMcpHandlers('continue').write,
     parseServers: parseContinueMcpServers,
   },
-};
+});
 
 /**
  * Read the agent's MCP config into the typed `ContinueMcpConfig` shape.

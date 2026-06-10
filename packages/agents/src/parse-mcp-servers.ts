@@ -256,3 +256,20 @@ export function parseYamlMcpServerList(
     return [];
   }
 }
+
+/**
+ * Parse an opencode MCP config file. Thin wrapper over
+ * `parseJsoncMcpServerMap` that pins the top-level key to `'mcp'`
+ * (opencode uses `mcp`, not the more common `mcpServers`).
+ *
+ * Opencode's config is JSON/JSONC. The shared helper already handles
+ * the `command: string | readonly string[]` polymorphism opencode
+ * expects, so no extra normalization is needed.
+ *
+ * Returns `[]` on any read or parse failure.
+ */
+export function parseOpenCodeMcpServerMap(
+  resolvedPath: string,
+): readonly McpServerEntry[] {
+  return parseJsoncMcpServerMap(resolvedPath, 'mcp');
+}

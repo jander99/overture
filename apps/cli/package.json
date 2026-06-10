@@ -1,12 +1,9 @@
 {
   "name": "@jander99/overture",
   "version": "0.0.1",
-  "private": false,
   "description": "Keep your MCP server configurations in sync across every installed LLM coding platform.",
   "license": "MIT",
-  "bin": {
-    "overture": "./dist/main.js"
-  },
+  "bin": "./dist/main.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/jander99/overture.git",

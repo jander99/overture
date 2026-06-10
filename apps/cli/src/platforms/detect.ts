@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { detectOS, type HostPlatform } from '@overture/os';
-import { platformRegistry } from './registry.js';
+import { agentRegistry } from '@overture/agents';
 import {
   findExecutablesInPath,
   markerExists,
@@ -385,7 +385,7 @@ export async function detectPlatforms(
   ctx: PathResolutionContext,
 ): Promise<DetectJsonOutput> {
   const settled = await Promise.allSettled(
-    platformRegistry.map((entry) => buildResultForEntry(entry, ctx)),
+    agentRegistry.map((entry) => buildResultForEntry(entry, ctx)),
   );
 
   const platforms = settled.map((result, index) => {
@@ -393,7 +393,7 @@ export async function detectPlatforms(
       return result.value;
     }
 
-    const entry = platformRegistry[index];
+    const entry = agentRegistry[index];
     if (entry === undefined) {
       throw new Error(`Missing registry entry at index ${String(index)}`);
     }

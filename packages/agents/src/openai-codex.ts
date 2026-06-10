@@ -1,20 +1,20 @@
 // OpenAI Codex agent definition.
 import { parseTomlMcpServerMap } from './parse-mcp-servers.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   AgentMcpReadResult,
   StringMap,
 } from './types.js';
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export const parseOpenAICodexMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseTomlMcpServerMap(resolvedPath, 'mcp_servers');
 
-export const openaiCodex: AgentDefinition = {
+export const openaiCodex: AgentDefinition = defineAgent({
   id: 'openai-codex',
   displayName: 'OpenAI Codex',
   installMarkers: [
@@ -58,11 +58,9 @@ export const openaiCodex: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['codex'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(openaiCodex, ctx),
-    write: notImplementedMcpHandlers('openai-codex').write,
     parseServers: parseOpenAICodexMcpServers,
   },
-};
+});
 
 /**
  * Native OpenAI Codex MCP config shape. Codex stores MCP servers

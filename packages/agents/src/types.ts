@@ -156,10 +156,17 @@ export type AgentMcpWriteHandler = (
   input: AgentMcpWriteInput,
 ) => Promise<AgentMcpWriteResult>;
 
-/** Bundled MCP handlers exposed by an agent. */
+/**
+ * Bundled MCP handlers exposed by an agent.
+ *
+ * `read` is always required. `write` is optional on the input shape
+ * so `defineAgent()` can fill in the shared default; the exported
+ * `AgentDefinition.mcp` always carries a complete (non-optional)
+ * `write` handler (see `CompleteAgentMcpHandlers`).
+ */
 export interface AgentMcpHandlers {
   read: AgentMcpReadHandler;
-  write: AgentMcpWriteHandler;
+  write?: AgentMcpWriteHandler;
   /**
    * Optional handler that parses an agent's MCP config file and returns a
    * list of structured server entries for human-readable rendering. Each
@@ -170,13 +177,18 @@ export interface AgentMcpHandlers {
   parseServers?: AgentMcpParseServersHandler;
 }
 
+/** Complete (non-optional) MCP handlers, as exposed on every exported `AgentDefinition`. */
+export type CompleteAgentMcpHandlers = AgentMcpHandlers & {
+  write: AgentMcpWriteHandler;
+};
+
 /**
  * Per-agent definition. Currently a structural extension of
  * `PlatformRegistryEntry` with a bundled `mcp` placeholder object that
  * will eventually carry the agent's MCP read/write implementation.
  */
 export interface AgentDefinition extends PlatformRegistryEntry {
-  readonly mcp: AgentMcpHandlers;
+  readonly mcp: CompleteAgentMcpHandlers;
 }
 
 /**
@@ -194,6 +206,21 @@ export function notImplementedMcpHandlers(
     read: () => Promise.reject(message('read')),
     write: () => Promise.reject(message('write')),
   };
+}
+
+/**
+ * Shared placeholder write handler that always rejects with the
+ * canonical "not implemented" error. Mirrors the error text produced
+ * by `notImplementedMcpHandlers(agentId).write` so consumers see the
+ * same message regardless of which path built the agent definition.
+ */
+export function defaultMcpWriteHandler(
+  agentId: PlatformId,
+): AgentMcpWriteHandler {
+  return () =>
+    Promise.reject(
+      new Error(`MCP write for agent '${agentId}' is not implemented yet`),
+    );
 }
 
 /** JSON scalar value: string, number, boolean, or null. */
@@ -242,6 +269,62 @@ export interface RemoteServerBase {
   /** HTTP headers attached to requests made to the server. */
   headers?: StringMap;
 }
+
+/**
+ * Marker for "no extension fields" — the default for agents whose
+ * servers carry no platform-specific fields beyond the standard
+ * StdioServerBase + RemoteServerBase + PermissiveConfigObject union.
+ * Use `NoMcpExtension` as the type argument when no extension applies.
+ */
+export type NoMcpExtension = Record<never, never>;
+
+/**
+ * Standard MCP server entry shape: a permissive union of stdio
+ * (subprocess) and remote (URL-based) transports, plus an optional
+ * `TExtension` of platform-specific server fields.
+ *
+ * Every supported local MCP-capable agent's per-server type is a
+ * `StandardMcpServer<...>` with a tailored extension:
+ * - `StandardMcpServer` (no args): plain stdio + remote + permissive
+ * - `StandardMcpServer<{ envFile?: string; auth?: ... }>`: cursor-style
+ *
+ * The `& PermissiveConfigObject` intersection preserves the open
+ * string-keyed index signature so undocumented fields remain
+ * type-accessible without explicit declarations.
+ */
+export type StandardMcpServer<TExtension extends object = NoMcpExtension> =
+  Readonly<
+    (StdioServerBase | RemoteServerBase) & PermissiveConfigObject & TExtension
+  >;
+
+/**
+ * Standard MCP config shape: a top-level object carrying a single
+ * MCP-server map (keyed by server name) at a configurable top-level
+ * key, plus optional platform-specific top-level fields and
+ * server-extension fields.
+ *
+ * Use this for agents whose config is a JSON/JSONC/TOML object of
+ * the form:
+ *   { <topLevelKey>: { <serverName>: <server> } }
+ * with optional platform-specific top-level fields.
+ *
+ * Default `TTopLevelKey` is `'mcpServers'`, matching the dominant
+ * MCP config convention. Agents that use a different top-level
+ * (opencode: `'mcp'`, openai-codex: `'mcp_servers'`, copilot-vscode:
+ * `'servers'`, zed: `'context_servers'`) pass it as the third
+ * argument.
+ */
+export type StandardMcpConfig<
+  TServerExtension extends object = NoMcpExtension,
+  TTopLevelExtension extends object = NoMcpExtension,
+  TTopLevelKey extends string = 'mcpServers',
+> = Readonly<
+  TTopLevelExtension & {
+    readonly [K in TTopLevelKey]?: McpServerMap<
+      StandardMcpServer<TServerExtension>
+    >;
+  }
+>;
 
 /**
  * OAuth configuration: an object of arbitrary OAuth-related fields, or

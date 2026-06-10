@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { platformRegistry } from './registry.js';
 import { agentRegistry } from '@overture/agents';
 import type { PlatformId } from '@overture/agents';
 
-describe('platformRegistry', () => {
+describe('agentRegistry', () => {
   const expectedIds: readonly PlatformId[] = [
     'claude-code',
     'claude-desktop',
@@ -22,19 +21,19 @@ describe('platformRegistry', () => {
   ];
 
   it('has exactly 14 entries', () => {
-    expect(platformRegistry).toHaveLength(14);
+    expect(agentRegistry).toHaveLength(14);
   });
 
   it('has no duplicate IDs', () => {
-    expect(new Set(platformRegistry.map((e) => e.id)).size).toBe(14);
+    expect(new Set(agentRegistry.map((e) => e.id)).size).toBe(14);
   });
 
   it('contains the exact ordered set of IDs', () => {
-    expect(platformRegistry.map((e) => e.id)).toEqual(expectedIds);
+    expect(agentRegistry.map((e) => e.id)).toEqual(expectedIds);
   });
 
   it('has a non-empty displayName for every entry', () => {
-    for (const entry of platformRegistry) {
+    for (const entry of agentRegistry) {
       expect(entry.displayName, `displayName for ${entry.id}`).toBeTruthy();
       expect(
         entry.displayName.trim().length,
@@ -44,13 +43,13 @@ describe('platformRegistry', () => {
   });
 
   it('marks aider and github-copilot-cloud-agent as unsupported with a reason', () => {
-    const aider = platformRegistry.find((e) => e.id === 'aider');
+    const aider = agentRegistry.find((e) => e.id === 'aider');
     expect(aider).toBeDefined();
     expect(aider!.defaultConfidence).toBe('unsupported');
     expect(aider!.reason).toBeTruthy();
     expect(aider!.reason!.trim().length).toBeGreaterThan(0);
 
-    const cloudAgent = platformRegistry.find(
+    const cloudAgent = agentRegistry.find(
       (e) => e.id === 'github-copilot-cloud-agent',
     );
     expect(cloudAgent).toBeDefined();
@@ -60,7 +59,7 @@ describe('platformRegistry', () => {
   });
 
   it('gives claude-code at least one high-confidence install marker', () => {
-    const entry = platformRegistry.find((e) => e.id === 'claude-code');
+    const entry = agentRegistry.find((e) => e.id === 'claude-code');
     expect(entry).toBeDefined();
     const highMarkers = entry!.installMarkers.filter(
       (m) => m.confidence === 'high',
@@ -69,7 +68,7 @@ describe('platformRegistry', () => {
   });
 
   it('gives opencode at least one high-confidence install marker', () => {
-    const entry = platformRegistry.find((e) => e.id === 'opencode');
+    const entry = agentRegistry.find((e) => e.id === 'opencode');
     expect(entry).toBeDefined();
     const highMarkers = entry!.installMarkers.filter(
       (m) => m.confidence === 'high',
@@ -78,7 +77,7 @@ describe('platformRegistry', () => {
   });
 
   it('gives cursor at least one high-confidence install marker', () => {
-    const entry = platformRegistry.find((e) => e.id === 'cursor');
+    const entry = agentRegistry.find((e) => e.id === 'cursor');
     expect(entry).toBeDefined();
     const highMarkers = entry!.installMarkers.filter(
       (m) => m.confidence === 'high',
@@ -87,7 +86,7 @@ describe('platformRegistry', () => {
   });
 
   it('windsurf has no install markers (binary-first only; mcp-only locations)', () => {
-    const entry = platformRegistry.find((e) => e.id === 'windsurf');
+    const entry = agentRegistry.find((e) => e.id === 'windsurf');
     expect(entry).toBeDefined();
     expect(entry!.installMarkers).toHaveLength(0);
     // executableNames must include the canonical 'windsurf' binary name
@@ -102,7 +101,7 @@ describe('platformRegistry', () => {
   });
 
   it('gives openai-codex at least one high-confidence install marker', () => {
-    const entry = platformRegistry.find((e) => e.id === 'openai-codex');
+    const entry = agentRegistry.find((e) => e.id === 'openai-codex');
     expect(entry).toBeDefined();
     const highMarkers = entry!.installMarkers.filter(
       (m) => m.confidence === 'high',
@@ -112,7 +111,7 @@ describe('platformRegistry', () => {
 
   it('has unique installMarker IDs across the entire registry', () => {
     const markerIds: string[] = [];
-    for (const entry of platformRegistry) {
+    for (const entry of agentRegistry) {
       for (const marker of entry.installMarkers) {
         markerIds.push(marker.id);
       }
@@ -121,14 +120,14 @@ describe('platformRegistry', () => {
   });
 
   it('marker-only entries with supplementary executables (cursor, zed) list them', () => {
-    const cursor = platformRegistry.find((e) => e.id === 'cursor');
+    const cursor = agentRegistry.find((e) => e.id === 'cursor');
     expect(cursor).toBeDefined();
     expect(cursor!.detectionStrategy).toBe('marker-only');
     expect(cursor!.executableNames).toContain('cursor');
     // Sanity: marker-only entries still have install markers
     expect(cursor!.installMarkers.length).toBeGreaterThan(0);
 
-    const zed = platformRegistry.find((e) => e.id === 'zed');
+    const zed = agentRegistry.find((e) => e.id === 'zed');
     expect(zed).toBeDefined();
     expect(zed!.detectionStrategy).toBe('marker-only');
     expect(zed!.executableNames).toContain('zed');
@@ -234,10 +233,6 @@ describe('platformRegistry', () => {
           expect(result).toHaveProperty('nonEmpty');
         }
       }
-    });
-
-    it('platformRegistry is a compat alias of agentRegistry (same reference)', () => {
-      expect(platformRegistry).toBe(agentRegistry);
     });
   });
 });

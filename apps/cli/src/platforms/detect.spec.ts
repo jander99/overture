@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { detectPlatforms, defaultPathResolutionContext } from './detect.js';
-import { platformRegistry } from './registry.js';
+import { agentRegistry } from '@overture/agents';
 import type { PathResolutionContext } from '@overture/agents';
 
 function makeCtx(
@@ -106,7 +106,7 @@ describe('detectPlatforms', () => {
     const result = await detectPlatforms(ctx);
 
     expect(result.platforms).toHaveLength(14);
-    const expectedIds = platformRegistry.map((entry) => entry.id);
+    const expectedIds = agentRegistry.map((entry) => entry.id);
     const actualIds = result.platforms.map((p) => p.id);
     expect(actualIds).toEqual(expectedIds);
   });

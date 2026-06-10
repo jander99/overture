@@ -1,17 +1,15 @@
 // OpenCode agent definition.
-import { readFileSync } from 'node:fs';
-import { parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js';
-import { notImplementedMcpHandlers } from './types.js';
+import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
+import { readAgentMcpConfig } from './read-mcp-config.js';
+import { defineAgent } from './define-agent.js';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   OAuthConfig,
-  McpServerEntry,
   StringMap,
   AgentMcpReadResult,
 } from './types.js';
 
-import { readAgentMcpConfig } from './read-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 /**
  * Discriminated union of MCP server entries supported by OpenCode's
@@ -45,36 +43,7 @@ export type OpenCodeMcpServer =
  */
 export const parseOpenCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
-) => {
-  try {
-    const contents = readFileSync(resolvedPath, 'utf8');
-    const parsed: unknown = parseJsonc(contents, undefined, {
-      allowTrailingComma: true,
-    });
-    const mcp = (parsed as Record<string, unknown> | undefined)?.mcp;
-    if (!mcp || typeof mcp !== 'object') return [];
-    const servers: McpServerEntry[] = [];
-    for (const [name, entry] of Object.entries(mcp)) {
-      if (!entry || typeof entry !== 'object') continue;
-      const e = entry as Record<string, unknown>;
-      const url = typeof e.url === 'string' ? e.url : undefined;
-      const command = Array.isArray(e.command)
-        ? (e.command as readonly string[])
-        : typeof e.command === 'string'
-          ? [e.command]
-          : undefined;
-      servers.push({
-        name,
-        transport: url ? 'remote' : 'local',
-        url,
-        command,
-      });
-    }
-    return servers;
-  } catch {
-    return [];
-  }
-};
+) => parseOpenCodeMcpServerMap(resolvedPath);
 
 /**
  * Native OpenCode MCP config shape. The top-level `mcp` key holds a
@@ -84,7 +53,7 @@ export interface OpenCodeMcpConfig {
   readonly mcp?: Readonly<Record<string, OpenCodeMcpServer>>;
 }
 
-export const opencode: AgentDefinition = {
+export const opencode: AgentDefinition = defineAgent({
   id: 'opencode',
   displayName: 'OpenCode',
   installMarkers: [
@@ -184,11 +153,9 @@ export const opencode: AgentDefinition = {
   mcpSupport: 'supported',
   executableNames: ['opencode'],
   mcp: {
-    read: (ctx) => readAgentMcpConfig(opencode, ctx),
-    write: notImplementedMcpHandlers('opencode').write,
     parseServers: parseOpenCodeMcpServers,
   },
-};
+});
 
 /**
  * Read the agent's MCP config into the typed `OpenCodeMcpConfig` shape.
