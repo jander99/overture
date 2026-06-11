@@ -82,6 +82,41 @@ describe('detectPlatforms', () => {
     expect(cursorResult!.reason).toBe('User-global Cursor MCP configuration');
   });
 
+  it('happy path: detects github-copilot-vscode when user XDG mcp.json is present', async () => {
+    // VS Code's actual user-level MCP config path on linux is
+    // ${XDG_CONFIG_HOME:-~/.config}/Code/User/mcp.json
+    // (per https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).
+    // The wrong path ~/.vscode/mcp.json does not exist on a real VS Code install.
+    const vscodeUserDir = join(tempConfigDir, 'Code', 'User');
+    await mkdir(vscodeUserDir, { recursive: true });
+    await writeFile(
+      join(vscodeUserDir, 'mcp.json'),
+      JSON.stringify({
+        servers: { filesystem: { type: 'stdio', command: 'npx' } },
+      }),
+    );
+
+    const ctx = makeCtx({
+      homeDir: tempHomeDir,
+      configDir: tempConfigDir,
+      workspaceDir: tempWorkspaceDir,
+    });
+
+    const result = await detectPlatforms(ctx);
+    const vscodeResult = result.platforms.find(
+      (p) => p.id === 'github-copilot-vscode',
+    );
+
+    expect(vscodeResult).toBeDefined();
+    expect(vscodeResult!.installed).toBe(true);
+    expect(vscodeResult!.matchedMcpLocations.length).toBeGreaterThan(0);
+    expect(
+      vscodeResult!.matchedMcpLocations.some((m) =>
+        m.resolvedPath.endsWith('Code/User/mcp.json'),
+      ),
+    ).toBe(true);
+  });
+
   it('no markers: every platform reports installed false', async () => {
     const ctx = makeCtx({
       homeDir: tempHomeDir,

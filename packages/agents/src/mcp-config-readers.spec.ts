@@ -136,11 +136,16 @@ describe('per-agent mcp.read returns typed *McpConfig shape', () => {
     }
   });
 
-  it('github-copilot-vscode reads servers map from .vscode/mcp.json', async () => {
+  it('github-copilot-vscode reads servers map from Code/User/mcp.json (XDG) on linux', async () => {
+    // VS Code's actual user-level MCP config path on linux is
+    // ${XDG_CONFIG_HOME:-~/.config}/Code/User/mcp.json
+    // (per https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).
+    // The old ~/.vscode/mcp.json path was incorrect; VS Code stores the
+    // user-level MCP config in `Code/User/mcp.json` under XDG_CONFIG_HOME.
     const ctx = readerCtx();
     await seed(
-      'home',
-      '.vscode/mcp.json',
+      'config',
+      'Code/User/mcp.json',
       JSON.stringify({ servers: { s: { type: 'stdio', command: 'c' } } }),
       ctx,
     );

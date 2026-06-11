@@ -1,4 +1,10 @@
 // GitHub Copilot in VS Code agent definition.
+//
+// TODO(agents-vscode-win32): add user-level mcpLocation for Windows
+// (`%APPDATA%\Code\User\mcp.json` and `Code - Insiders` variant). Requires
+// a per-OS `configDir` resolver in `defaultPathResolutionContext()`
+// (apps/cli/src/platforms/detect.ts:31-44). Tracked in
+// https://github.com/jander99/overture/issues/84.
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
@@ -32,12 +38,44 @@ export const githubCopilotVscode: AgentDefinition = defineAgent({
       reason: 'Workspace-level VS Code MCP configuration',
     },
     {
-      id: 'github-copilot-vscode-2-user-mcp',
+      id: 'github-copilot-vscode-2-user-xdg-linux',
+      kind: 'file',
+      base: 'config',
+      relativePath: 'Code/User/mcp.json',
+      platforms: ['linux'],
+      confidence: 'high',
+      reason:
+        'VS Code user-level MCP config (XDG on linux): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      id: 'github-copilot-vscode-3-user-xdg-linux-insiders',
+      kind: 'file',
+      base: 'config',
+      relativePath: 'Code - Insiders/User/mcp.json',
+      platforms: ['linux'],
+      confidence: 'high',
+      reason:
+        'VS Code Insiders user-level MCP config (XDG on linux): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      id: 'github-copilot-vscode-4-user-appx-darwin',
       kind: 'file',
       base: 'home',
-      relativePath: '.vscode/mcp.json',
-      confidence: 'medium',
-      reason: 'User-global VS Code MCP configuration',
+      relativePath: 'Library/Application Support/Code/User/mcp.json',
+      platforms: ['darwin'],
+      confidence: 'high',
+      reason:
+        'VS Code user-level MCP config (macOS): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      id: 'github-copilot-vscode-5-user-appx-darwin-insiders',
+      kind: 'file',
+      base: 'home',
+      relativePath: 'Library/Application Support/Code - Insiders/User/mcp.json',
+      platforms: ['darwin'],
+      confidence: 'high',
+      reason:
+        'VS Code Insiders user-level MCP config (macOS): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
     },
   ],
   mcpLocations: [
@@ -51,11 +89,43 @@ export const githubCopilotVscode: AgentDefinition = defineAgent({
     },
     {
       scope: 'user',
-      base: 'home',
-      relativePath: '.vscode/mcp.json',
+      base: 'config',
+      relativePath: 'Code/User/mcp.json',
+      platforms: ['linux'],
       format: 'json',
       topLevelKey: 'servers',
-      notes: 'User-global MCP servers under servers key',
+      notes:
+        'VS Code user MCP servers under servers key (XDG on linux): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      scope: 'user',
+      base: 'config',
+      relativePath: 'Code - Insiders/User/mcp.json',
+      platforms: ['linux'],
+      format: 'json',
+      topLevelKey: 'servers',
+      notes:
+        'VS Code Insiders user MCP servers under servers key (XDG on linux): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      scope: 'user',
+      base: 'home',
+      relativePath: 'Library/Application Support/Code/User/mcp.json',
+      platforms: ['darwin'],
+      format: 'json',
+      topLevelKey: 'servers',
+      notes:
+        'VS Code user MCP servers under servers key (macOS): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
+    },
+    {
+      scope: 'user',
+      base: 'home',
+      relativePath: 'Library/Application Support/Code - Insiders/User/mcp.json',
+      platforms: ['darwin'],
+      format: 'json',
+      topLevelKey: 'servers',
+      notes:
+        'VS Code Insiders user MCP servers under servers key (macOS): https://code.visualstudio.com/docs/copilot/reference/mcp-configuration',
     },
   ],
   defaultConfidence: 'medium',
@@ -127,7 +197,7 @@ export type GitHubCopilotVSCodeServer =
   | GitHubCopilotVSCodeRemoteServer;
 
 /**
- * Native shape of `.vscode/mcp.json` (workspace and user-global
+ * Native shape of VS Code's `mcp.json` (workspace and user-profile
  * variants). The top-level key is `servers` (NOT `mcpServers`); an
  * optional `inputs` array declares prompt/input variables that may be
  * referenced from server entries.
