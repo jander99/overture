@@ -100,6 +100,89 @@ describe('agentRegistry', () => {
     ).toBe(true);
   });
 
+  it('github-copilot-vscode installMarkers + mcpLocations model the correct user-profile paths per OS', () => {
+    const entry = agentRegistry.find((e) => e.id === 'github-copilot-vscode');
+    expect(entry).toBeDefined();
+
+    // Linux (XDG): Code/User/mcp.json under configDir.
+    expect(
+      entry!.installMarkers.some(
+        (m) =>
+          m.base === 'config' &&
+          m.relativePath === 'Code/User/mcp.json' &&
+          m.platforms?.includes('linux'),
+      ),
+      'linux XDG user marker must be present',
+    ).toBe(true);
+    // Linux Insiders.
+    expect(
+      entry!.installMarkers.some(
+        (m) =>
+          m.base === 'config' &&
+          m.relativePath === 'Code - Insiders/User/mcp.json' &&
+          m.platforms?.includes('linux'),
+      ),
+      'linux XDG Insiders user marker must be present',
+    ).toBe(true);
+    // macOS: Library/Application Support/Code/User/mcp.json under homeDir.
+    expect(
+      entry!.installMarkers.some(
+        (m) =>
+          m.base === 'home' &&
+          m.relativePath === 'Library/Application Support/Code/User/mcp.json' &&
+          m.platforms?.includes('darwin'),
+      ),
+      'macOS user marker must be present',
+    ).toBe(true);
+    // macOS Insiders.
+    expect(
+      entry!.installMarkers.some(
+        (m) =>
+          m.base === 'home' &&
+          m.relativePath ===
+            'Library/Application Support/Code - Insiders/User/mcp.json' &&
+          m.platforms?.includes('darwin'),
+      ),
+      'macOS Insiders user marker must be present',
+    ).toBe(true);
+
+    // The old, wrong user marker at ~/.vscode/mcp.json must be GONE from BOTH
+    // installMarkers and mcpLocations.
+    expect(
+      entry!.installMarkers.some(
+        (m) => m.base === 'home' && m.relativePath === '.vscode/mcp.json',
+      ),
+      'old base=home .vscode/mcp.json marker must not be present',
+    ).toBe(false);
+    expect(
+      entry!.mcpLocations.some(
+        (m) => m.base === 'home' && m.relativePath === '.vscode/mcp.json',
+      ),
+      'old base=home .vscode/mcp.json mcpLocation must not be present',
+    ).toBe(false);
+
+    // mcpLocations must mirror the installMarkers: every user-profile path
+    // appears as a mcpLocation too.
+    expect(
+      entry!.mcpLocations.some(
+        (m) =>
+          m.base === 'config' &&
+          m.relativePath === 'Code/User/mcp.json' &&
+          m.platforms?.includes('linux'),
+      ),
+      'mcpLocations must include the linux XDG user profile',
+    ).toBe(true);
+    expect(
+      entry!.mcpLocations.some(
+        (m) =>
+          m.base === 'home' &&
+          m.relativePath === 'Library/Application Support/Code/User/mcp.json' &&
+          m.platforms?.includes('darwin'),
+      ),
+      'mcpLocations must include the macOS user profile',
+    ).toBe(true);
+  });
+
   it('gives openai-codex at least one high-confidence install marker', () => {
     const entry = agentRegistry.find((e) => e.id === 'openai-codex');
     expect(entry).toBeDefined();

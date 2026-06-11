@@ -306,12 +306,21 @@ Detection:
 - VS Code extension checks may include GitHub Copilot and GitHub Copilot Chat.
 - Workspace config: `.vscode/mcp.json`.
 
-Configuration locations:
+Configuration locations (per [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)):
 
-| Scope        | Location                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------- |
-| Workspace    | `<workspace>/.vscode/mcp.json`                                                                          |
-| User/profile | Open with VS Code command `MCP: Open User Configuration`; stored in the active profile/user config area |
+| Scope           | Linux                                                         | macOS                                                         | Windows                                   |
+| --------------- | ------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| Workspace       | `<workspace>/.vscode/mcp.json`                                | `<workspace>/.vscode/mcp.json`                                | `<workspace>/.vscode/mcp.json`            |
+| User (stable)   | `${XDG_CONFIG_HOME:-~/.config}/Code/User/mcp.json`            | `~/Library/Application Support/Code/User/mcp.json`            | `%APPDATA%\Code\User\mcp.json`            |
+| User (Insiders) | `${XDG_CONFIG_HOME:-~/.config}/Code - Insiders/User/mcp.json` | `~/Library/Application Support/Code - Insiders/User/mcp.json` | `%APPDATA%\Code - Insiders\User\mcp.json` |
+
+> **Note**: `overture` currently models user-level markers for **linux** (XDG
+> under `configDir`) and **macOS** (`base: 'home'` + `Library/Application Support/...`).
+> Windows user-level detection (`%APPDATA%\Code\User\mcp.json`) requires a
+> per-OS `configDir` resolver in `defaultPathResolutionContext()`
+> (`apps/cli/src/platforms/detect.ts:31-44`) and is tracked as a follow-up.
+> The universal workspace marker `<workspace>/.vscode/mcp.json` works on
+> every OS.
 
 Format uses top-level `servers`, not `mcpServers`:
 
@@ -807,7 +816,8 @@ metadata, but they are not used as runtime detection probes in v1.
 A platform is reported as installed when any applicable `InstallMarker` resolves to an existing path of the marker's `kind`; `matchedMarkers` carries the absolute resolved paths and the detector uses the highest-confidence matched marker reason (high > medium > low > unsupported).
 
 Detection should report confidence separately from installation. For example,
-finding `.vscode/mcp.json` means VS Code: has a known MCP config surface, but
+finding `<workspace>/.vscode/mcp.json` (or the user-profile
+`Code/User/mcp.json` under XDG_CONFIG_HOME) means VS Code: has a known MCP config surface, but
 MCP support should remain unconfirmed until the file is actually read and
 validated.
 
