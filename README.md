@@ -91,7 +91,11 @@ overture detect
 # Machine-readable: full 14-platform inventory with all additive fields
 overture detect --json
 
+# Print the resolved user-level overture config (XDG-aware)
+overture config show
+
 # Print usage and exit 0
+
 overture detect --help
 overture --help
 overture help
@@ -116,6 +120,9 @@ overture/
 ├── apps/
 │   └── cli/              # The `@jander99/overture` CLI (entry point: src/main.ts)
 ├── docs/
+│   ├── overture-config.md  # User-level config schema (overture.jsonc)
+│   └── coding-platform-mcp-configurations.md
+
 │   └── coding-platform-mcp-configurations.md
 ├── nx.json               # NX workspace configuration
 └── package.json          # Yarn 4 workspaces root

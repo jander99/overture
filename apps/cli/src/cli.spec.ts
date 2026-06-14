@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+import { __setPlatformForTests } from './cli.js';
+
 import { run, formatHumanOutput, formatJsonOutput } from './cli.js';
 import type {
   DetectJsonOutput,
@@ -27,7 +33,7 @@ describe('run', () => {
     const code = await run([]);
     expect(code).toBe(0);
     expect(stdoutSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: overture detect [--json]'),
+      expect.stringContaining('detect [--json]'),
     );
   });
 
@@ -35,7 +41,7 @@ describe('run', () => {
     const code = await run(['help']);
     expect(code).toBe(0);
     expect(stdoutSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: overture detect [--json]'),
+      expect.stringContaining('detect [--json]'),
     );
   });
 
@@ -43,7 +49,7 @@ describe('run', () => {
     const code = await run(['--help']);
     expect(code).toBe(0);
     expect(stdoutSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Usage: overture detect [--json]'),
+      expect.stringContaining('detect [--json]'),
     );
   });
 
@@ -624,5 +630,135 @@ describe('opencode server list in human output', () => {
     expect(result).toContain('  - OpenCode (high) [mcp-configured]');
     expect(result).toContain('    mcp:   /nonexistent/path/opencode.jsonc');
     expect(result).not.toContain('      - ');
+  });
+});
+
+describe('run (platform gate)', () => {
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+    __setPlatformForTests(null);
+  });
+
+  it('prints a Windows unsupported message and exits 0 when platform is win32', async () => {
+    __setPlatformForTests('win32');
+    const code = await run(['detect']);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Windows is not supported'),
+    );
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('detected platform: win32'),
+    );
+  });
+
+  it('the Windows gate fires even for `overture --help`', async () => {
+    __setPlatformForTests('win32');
+    const code = await run([]);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Windows is not supported'),
+    );
+  });
+
+  it('does not write the Windows message on linux', async () => {
+    __setPlatformForTests('linux');
+    const code = await run(['detect', '--help']);
+    expect(code).toBe(0);
+    const allWrites = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(allWrites).not.toContain('Windows is not supported');
+  });
+});
+
+describe('run (config show)', () => {
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+  let tempDir: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    tempDir = mkdtempSync(join(tmpdir(), 'overture-cli-'));
+    prevHome = process.env.HOME;
+    process.env.HOME = tempDir;
+    process.env.XDG_CONFIG_HOME = tempDir;
+    process.env.XDG_STATE_HOME = tempDir;
+    process.env.XDG_CACHE_HOME = tempDir;
+    __setPlatformForTests('linux');
+  });
+
+  afterEach(() => {
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+    __setPlatformForTests(null);
+    if (prevHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = prevHome;
+    }
+    delete process.env.XDG_CONFIG_HOME;
+    delete process.env.XDG_STATE_HOME;
+    delete process.env.XDG_CACHE_HOME;
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('prints "not found" message when no config file exists', async () => {
+    const code = await run(['config', 'show']);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(out).toContain('No overture config found');
+    expect(out).toContain(tempDir);
+  });
+
+  it('prints the resolved config file path and JSON contents when present', async () => {
+    const configDir = join(tempDir, 'overture');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      join(configDir, 'overture.jsonc'),
+      JSON.stringify({
+        $schema: 'https://example/x.json',
+        version: 1,
+        profiles: {
+          default: {
+            mcpServers: {
+              fs: { type: 'stdio', command: 'npx' },
+            },
+            sync: { targets: ['claude-code'] },
+            skills: [],
+          },
+        },
+      }),
+      'utf8',
+    );
+    const code = await run(['config', 'show']);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(out).toContain(join(configDir, 'overture.jsonc'));
+    expect(out).toContain('"version": 1');
+    expect(out).toContain('claude-code');
+  });
+
+  it('returns 2 with a helpful message for unknown config subcommands', async () => {
+    const code = await run(['config', 'frobnicate']);
+    expect(code).toBe(2);
+    const err = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    expect(err).toContain('config');
   });
 });
