@@ -677,7 +677,10 @@ describe('run (platform gate)', () => {
     __setPlatformForTests('linux');
     const code = await run(['detect', '--help']);
     expect(code).toBe(0);
-    const allWrites = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    const allWrites = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+
     expect(allWrites).not.toContain('Windows is not supported');
   });
 });
@@ -722,7 +725,10 @@ describe('run (config show)', () => {
   it('prints "not found" message when no config file exists', async () => {
     const code = await run(['config', 'show']);
     expect(code).toBe(0);
-    const out = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+
     expect(out).toContain('No overture config found');
     expect(out).toContain(tempDir);
   });
@@ -749,7 +755,10 @@ describe('run (config show)', () => {
     );
     const code = await run(['config', 'show']);
     expect(code).toBe(0);
-    const out = stdoutSpy.mock.calls.map((c) => c[0] as string).join('');
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+
     expect(out).toContain(join(configDir, 'overture.jsonc'));
     expect(out).toContain('"version": 1');
     expect(out).toContain('claude-code');
@@ -758,7 +767,10 @@ describe('run (config show)', () => {
   it('returns 2 with a helpful message for unknown config subcommands', async () => {
     const code = await run(['config', 'frobnicate']);
     expect(code).toBe(2);
-    const err = stderrSpy.mock.calls.map((c) => c[0] as string).join('');
+    const err = stderrSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+
     expect(err).toContain('config');
   });
 });
