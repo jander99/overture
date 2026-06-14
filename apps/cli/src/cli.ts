@@ -1,9 +1,28 @@
+import { platform as nodePlatform } from 'node:os';
 import {
-  detectPlatforms,
-  defaultPathResolutionContext,
-} from './platforms/detect.js';
+  defaultOverturePaths,
+  isSupportedPlatform,
+  loadOvertureConfig,
+  type HostPlatform,
+  type OvertureConfig,
+  type OverturePaths,
+} from '@overture/config';
+import { detectPlatforms } from './platforms/detect.js';
 import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
+
+/**
+ * Indirection over `process.platform` so tests can force a specific host
+ * (e.g. `win32`) without having to mutate Node's global state. Production
+ * callers always see the real value.
+ */
+let platformOverride: HostPlatform | null = null;
+export function __setPlatformForTests(p: HostPlatform | null): void {
+  platformOverride = p;
+}
+function currentPlatform(): HostPlatform {
+  return platformOverride ?? (nodePlatform() as HostPlatform);
+}
 
 export function formatJsonOutput(output: DetectJsonOutput): string {
   return JSON.stringify(output, null, 2) + '\n';
@@ -126,40 +145,119 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
   return sections.join('\n\n') + '\n';
 }
 
-export async function run(args: readonly string[]): Promise<number> {
-  if (args.length === 0 || args[0] === 'help' || args[0] === '--help') {
+const USAGE =
+  'Usage: overture <command> [flags]\n\nCommands:\n' +
+  '  detect [--json]   Detect installed MCP-capable platforms.\n' +
+  '  config show       Print the resolved user-level overture config.\n';
+
+async function runDetect(flags: readonly string[]): Promise<number> {
+  if (flags.includes('--help') || flags.includes('-h')) {
     process.stdout.write('Usage: overture detect [--json]\n');
+    return 0;
+  }
+  const unknownFlags = flags.filter((f) => f !== '--json');
+  if (unknownFlags.length > 0) {
+    process.stderr.write(
+      `Unknown flag: ${unknownFlags[0]}\nUsage: overture detect [--json]\n`,
+    );
+    return 2;
+  }
+  const output = await detectPlatforms(
+    defaultOverturePaths({ workspaceDir: process.cwd() }),
+  );
+  if (flags.includes('--json')) {
+    process.stdout.write(formatJsonOutput(output));
+    return 0;
+  }
+  process.stdout.write(formatHumanOutput(output));
+  return 0;
+}
+
+function renderConfigNotFound(paths: OverturePaths): string {
+  return (
+    `No overture config found at ${paths.configFile}\n` +
+    `Resolved config dir: ${paths.configDir}\n` +
+    `Platform: ${paths.platform}\n` +
+    `(create the file to enable declarative sync — see docs/overture-config.md)\n`
+  );
+}
+
+function renderConfigFound(paths: OverturePaths, cfg: OvertureConfig): string {
+  return (
+    `Config file: ${paths.configFile}\n` +
+    `Platform:    ${paths.platform}\n` +
+    `---\n` +
+    JSON.stringify(cfg, null, 2) +
+    '\n'
+  );
+}
+
+async function runConfigShow(paths: OverturePaths): Promise<number> {
+  let cfg: OvertureConfig | null;
+  try {
+    cfg = await loadOvertureConfig(paths);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`${message}\n`);
+    return 2;
+  }
+  if (cfg === null) {
+    process.stdout.write(renderConfigNotFound(paths));
+    return 0;
+  }
+  process.stdout.write(renderConfigFound(paths, cfg));
+  return 0;
+}
+
+async function runConfig(subArgs: readonly string[]): Promise<number> {
+  if (subArgs.length === 0) {
+    process.stderr.write(
+      'Usage: overture config <subcommand>\n  show     Print the resolved user-level overture config.\n',
+    );
+    return 2;
+  }
+  if (subArgs[0] === '--help' || subArgs[0] === '-h') {
+    process.stdout.write(
+      'Usage: overture config <subcommand>\n  show     Print the resolved user-level overture config.\n',
+    );
+    return 0;
+  }
+  if (subArgs[0] === 'show') {
+    return runConfigShow(defaultOverturePaths());
+  }
+  process.stderr.write(
+    `Unknown config subcommand: ${subArgs[0]}\nUsage: overture config <subcommand>\n`,
+  );
+  return 2;
+}
+
+export async function run(args: readonly string[]): Promise<number> {
+  // Platform gate: only linux (incl. WSL1/WSL2) and darwin are supported
+  // in v1. We surface this as a clean stdout message + exit 0 so users
+  // running on Windows see an explanation, not a stack trace.
+  const platform = currentPlatform();
+  if (!isSupportedPlatform(platform)) {
+    const message =
+      `Note: Windows is not supported in this version of overture. ` +
+      `Support is planned for a future release.\n` +
+      `(detected platform: ${platform})\n`;
+    process.stdout.write(message);
+    return 0;
+  }
+
+  if (args.length === 0 || args[0] === 'help' || args[0] === '--help') {
+    process.stdout.write(USAGE);
     return 0;
   }
 
   if (args[0] === 'detect') {
-    const flags = args.slice(1);
-    // Help is recognized and exits 0.
-    if (flags.includes('--help') || flags.includes('-h')) {
-      process.stdout.write('Usage: overture detect [--json]\n');
-      return 0;
-    }
-    const unknownFlags = flags.filter((f) => f !== '--json');
-    if (unknownFlags.length > 0) {
-      process.stderr.write(
-        `Unknown flag: ${unknownFlags[0]}\nUsage: overture detect [--json]\n`,
-      );
-      return 2;
-    }
-
-    const output = await detectPlatforms(defaultPathResolutionContext());
-
-    if (flags.includes('--json')) {
-      process.stdout.write(formatJsonOutput(output));
-      return 0;
-    }
-
-    process.stdout.write(formatHumanOutput(output));
-    return 0;
+    return runDetect(args.slice(1));
   }
 
-  process.stderr.write(
-    `Unknown command: ${args[0]}\nUsage: overture detect [--json]\n`,
-  );
+  if (args[0] === 'config') {
+    return runConfig(args.slice(1));
+  }
+
+  process.stderr.write(`Unknown command: ${args[0]}\n${USAGE}`);
   return 2;
 }
