@@ -7,6 +7,8 @@
 .nx/self-healing
 .nx/polygraph
 .claude/worktrees
+.worktrees/
+
 .claude/settings.local.json
 vitest.config.*.timestamp*
 
