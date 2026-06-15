@@ -55,10 +55,6 @@ jobs:
       - name: Format check
         run: npx prettier --check .
 
-
-      - name: Format check
-        run: npx prettier --check .
-
   test:
     name: Test
     runs-on: ubuntu-latest
