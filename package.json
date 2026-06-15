@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
+    "@eslint/js": "^10.0.0",
     "@nx/esbuild": "22.7.5",
     "@nx/eslint": "22.7.5",
     "@nx/js": "^22.7.5",
@@ -20,7 +20,7 @@
     "@types/node": "24.13.1",
     "@vitest/coverage-v8": "^3.0.5",
     "esbuild": "^0.28.0",
-    "eslint": "^9.0.0",
+    "eslint": "^10.0.0",
     "globals": "^17.0.0",
     "jsdom": "^29.0.0",
     "nx": "22.7.5",
