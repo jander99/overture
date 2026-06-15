@@ -7,6 +7,9 @@
 .nx/self-healing
 .nx/polygraph
 .claude/worktrees
+.opencode/
+.worktrees/
+
 .worktrees/
 
 .claude/settings.local.json

@@ -35,6 +35,22 @@ All commands run from the repo root.
 - Verify a local npm pack + install + smoke (no publish):
   `node apps/cli/scripts/verify-package.mjs`.
 
+## RTK
+
+RTK intercepts shell commands at runtime — `git status` becomes
+`rtk git status`; output may change. Don't pre-wrap commands; let RTK do
+its job. Use `rtk run <command>` only when RTK's output is unusable.
+
+**Exception for quality-gate tools.** RTK's runtime versions of
+`prettier`, `eslint`, `tsc`, `vitest`, and `nx` may not match the
+versions the workspace pins in `package.json` (e.g. `prettier: "^3.8.3"`,
+`typescript: "~5.9.0"`). When the command's output gates a CI check — i.e.
+when you intend the result to be the same answer CI will give — invoke
+the workspace-pinned version explicitly: `yarn prettier`, `yarn tsc -b`,
+`yarn nx lint`, `yarn nx test`, or `./node_modules/.bin/<tool>`. RTK's
+output is fine for read-only inspection, but the workspace-pinned version
+is what CI runs and what should gate a commit.
+
 ## Gotchas
 
 - **Naming.** The root `package.json` is named `skills-cli` (legacy project
