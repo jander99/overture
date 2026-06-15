@@ -15,6 +15,12 @@
       "description": "Require 7-day minimum release age for npm/yarn updates to guard against supply chain attacks",
       "matchManagers": ["npm"],
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Hold typescript at <6 until Nx 23+ is adopted (Nx 22.7.5 only supports TS 5.x)",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.0.0"
     }
+
   ]
 }
