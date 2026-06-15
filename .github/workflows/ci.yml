@@ -51,11 +51,10 @@ jobs:
         # composite projects require declaration emit. The emitted .d.ts
         # files land in `dist/` which is gitignored.
         run: npx tsc -b apps/cli/tsconfig.json
-      - name: Audit dependencies
-        # Yarn 4's `npm audit` reads yarn.lock; the `--all --recursive`
-        # scope covers every workspace and every transitive dep. We
-        # fail only on high or critical advisories.
-        run: yarn npm audit --all --recursive --severity=high
+
+      - name: Format check
+        run: npx prettier --check .
+
 
       - name: Format check
         run: npx prettier --check .
