@@ -17,7 +17,7 @@
     "@swc-node/register": "~1.11.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
-    "@types/node": "24.13.1",
+    "@types/node": "24.13.2",
     "@vitest/coverage-v8": "^4.0.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.0.0",
