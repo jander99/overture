@@ -46,6 +46,8 @@ These slices are independent and safe to do at any time.
 
 ### A1. Align README with shipped state
 
+**Status: completed in PR #106.**
+
 Update public docs so they do not claim sync/apply behavior that has not shipped.
 The current shipped surface is `detect` and `config show`.
 
