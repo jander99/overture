@@ -78,6 +78,7 @@ field.
       },
 
       "skills": [
+        // reserved; inert in v1
         {
           "source": "vercel-labs/agent-skills",
           "include": ["frontend-design", "skill-creator"],
@@ -118,7 +119,17 @@ Two transport kinds, modeled as a discriminated union on `type`:
 
 ### Skills
 
-A skill install entry is a `npx skills add` invocation pre-baked:
+> **Reserved / inert in v1.** The schema accepts `skills`
+> entries for forward compatibility, but `overture` does not
+> install, update, remove, or enumerate Agent Skills in v1.
+> Skill entries are validated and preserved on disk; they are
+> otherwise ignored at runtime. See
+> [`overture-vision.md`](./overture-vision.md#out-of-scope)
+> for the full out-of-scope statement.
+
+The shape, if a future version activates the field, is a list of
+skill install entries. Each entry is a `npx skills add` invocation
+pre-baked:
 
 ```jsonc
 {
@@ -127,15 +138,9 @@ A skill install entry is a `npx skills add` invocation pre-baked:
 }
 ```
 
-This expands to:
-
-```bash
-npx skills add vercel-labs/agent-skills --skill frontend-design --skill skill-creator -g -y
-```
-
 `source` must be in `owner/repo` form. Full URLs and local paths are
-intentionally disallowed because the first-class install flow is the
-`npx skills add` shim. `include` is required and must contain at
+intentionally disallowed because the first-class install flow would be
+the `npx skills add` shim. `include` is required and must contain at
 least one skill name — installing "the whole repo" is too broad to
 be a stable config target.
 
@@ -184,9 +189,9 @@ v1 entirely:
 2. **No agent-specific quirks at the top level.** The schema uses the
    dominant `mcpServers` shape; per-agent translation lives in the
    writer layer (`packages/agents/src/<id>.ts`).
-3. **Skills are installer coordinates, not local skill names.** The
-   schema records where to _install from_, not what's already on
-   disk. Local skill enumeration is `npx skills list`'s job.
+3. **Skills are reserved for a future capability, not inert metadata.** The
+   schema accepts `skills` entries for forward compatibility, but the
+   field is inert in v1; overture does not read or act on it.
 4. **State lives elsewhere.** Anything that changes at runtime
    belongs in `${XDG_STATE_HOME}/overture/`, not in the config.
 5. **JSONC, not JSON.** The file name advertises that comments and
@@ -204,7 +209,7 @@ v1 entirely:
     "default": {
       "mcpServers": {},
       "sync": { "targets": [] },
-      "skills": [],
+      "skills": [], // reserved; inert in v1
     },
   },
 }
@@ -239,6 +244,7 @@ v1 entirely:
         "targets": ["claude-code", "opencode", "github-copilot-cli"],
       },
       "skills": [
+        // reserved; inert in v1
         {
           "source": "vercel-labs/agent-skills",
           "include": ["frontend-design", "skill-creator"],
@@ -261,7 +267,9 @@ overture config show
 
 The loader accepts JSONC: line comments (`// ...`) and trailing commas
 are tolerated. Unknown top-level keys are rejected — the file must
-match the schema exactly.
+match the schema exactly. `skills` entries are accepted by the schema
+for forward compatibility but are inert at runtime (see
+[`overture-vision.md`](./overture-vision.md#out-of-scope)).
 
 ## See also
 
