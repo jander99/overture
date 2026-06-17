@@ -1,14 +1,11 @@
 # overture
 
-`overture` is a CLI utility that keeps your MCP (Model Context Protocol) server
-configurations in sync across every installed LLM coding platform on your
-machine. Define your MCP servers once, and `overture` propagates them to the
-configuration files of every detected client — Claude Code, OpenCode, VS Code /
-GitHub Copilot, Cursor, Windsurf, Cline, Roo Code, Continue, Codex, Zed, Aider,
-and friends.
+`overture` is a CLI utility that scans your machine for MCP-capable LLM coding
+platforms and reports the state of each platform's MCP server configuration.
 
-It is the MCP analog of the "npx skills" workflow: just as `skills` syncs Agent
-Skills across coding agents, `overture` syncs MCP servers.
+The currently-shipped commands are `overture detect` (read-only inventory)
+and `overture config show` (print the resolved user-level `overture.jsonc`).
+No command writes, syncs, or modifies any configuration file.
 
 ## Install
 
@@ -17,10 +14,6 @@ Skills across coding agents, `overture` syncs MCP servers.
 ```bash
 # Run without installing (uses the latest published version):
 npx @jander99/overture@latest --help
-
-# Install globally:
-npm install -g @jander99/overture
-overture detect
 ```
 
 Requires **Node.js >= 24** (the CLI's first published version targets the
@@ -32,24 +25,26 @@ Node 24 LTS baseline; local Node 25 also works).
 
 ## What it does
 
-- **Detects** which MCP-capable LLM platforms are installed on the host by
-  probing executables, IDE extensions, and configuration files.
-- **Reads** your canonical MCP server definitions from a single source of
-  truth.
-- **Writes** equivalent entries into each platform's native configuration
-  location, respecting that platform's schema and transport conventions
-  (`mcpServers`, `servers`, `mcp`, `context_servers`, YAML lists, TOML
-  tables, etc.).
-- **Reports** drift, conflicts, and unsupported fields so you can resolve
-  them explicitly instead of silently losing configuration.
+`overture detect` scans the host and reports which MCP-capable LLM platforms
+are installed. For each platform it reports three orthogonal signals:
+
+- `installed` — the platform app or CLI is on this machine.
+- `mcpConfigured` — the user has populated the platform's expected MCP
+  section in its config file (parser-backed for JSON, JSONC, and TOML
+  formats).
+- `mcpSupport` — whether the platform has a known MCP client surface
+  (`supported`, `unsupported`, or `unknown`).
+
+`overture config show` prints the resolved user-level `overture.jsonc` config
+if present.
 
 See [`docs/coding-platform-mcp-configurations.md`](docs/coding-platform-mcp-configurations.md)
-for the per-platform catalog that drives detection and writing logic.
+for the per-platform catalog that drives detection.
 
 ## The `detect` command
 
-The currently-shipped command is `overture detect`. It is a **read-only**
-inventory: it never reads, writes, syncs, or modifies any configuration file.
+`overture detect` is a **read-only** inventory: it never writes, syncs, or
+modifies any configuration file.
 
 It scans the host and reports which MCP-capable LLM platforms are installed,
 using two complementary strategies:
@@ -119,17 +114,21 @@ those not installed, with flat additive fields (`detectionStrategy`,
 overture/
 ├── apps/
 │   └── cli/              # The `@jander99/overture` CLI (entry point: src/main.ts)
+├── packages/
+│   ├── os/               # `@overture/os`: cross-platform OS detection
+│   ├── agents/           # `@overture/agents`: per-agent MCP registry and parsers
+│   └── config/           # `@overture/config`: user-level config loading and schema
 ├── docs/
-│   ├── overture-config.md  # User-level config schema (overture.jsonc)
-│   └── coding-platform-mcp-configurations.md
-
-│   └── coding-platform-mcp-configurations.md
+│   ├── coding-platform-mcp-configurations.md
+│   ├── overture-config.md
+│   ├── overture-vision.md
+│   ├── overture-implementation-slices.md
+│   └── publishing.md
 ├── nx.json               # NX workspace configuration
 └── package.json          # Yarn 4 workspaces root
 ```
 
-The workspace is a Yarn 4 monorepo orchestrated by NX 22. Today only `apps/cli`
-exists; additional apps and shared packages will land under `packages/`.
+The workspace is a Yarn 4 monorepo orchestrated by NX 22.
 
 ## Build & execute
 
@@ -209,7 +208,3 @@ command.
   `@types/node` after CI is bumped off Node 20)
 - Yarn 4 (this repo uses Corepack via `.yarnrc.yml`)
 - A POSIX shell for the `npm link` workflow
-
-## License
-
-MIT — see [`LICENSE`](LICENSE).
