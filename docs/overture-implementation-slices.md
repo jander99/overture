@@ -56,6 +56,8 @@ the intended direction.
 
 ### A2. Quiet skills in config docs
 
+**Status: completed.**
+
 Keep schema support for `skills`, but document that it is reserved/inert today.
 Overture does not install, update, or remove Agent Skills.
 
