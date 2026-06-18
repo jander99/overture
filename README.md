@@ -49,14 +49,14 @@ modifies any configuration file.
 It scans the host and reports which MCP-capable LLM platforms are installed,
 using two complementary strategies:
 
-- **Binary-first** (e.g. `claude`, `opencode`, `codex`, `copilot`, `aider`): the
+- **Binary-first** (e.g. `claude`, `opencode`, `copilot`, `codex`): the
   platform is reported as installed when its canonical CLI is found on the
   process `PATH`. The CLI never spawns subprocesses; executable discovery is a
   pure filesystem scan that respects POSIX executable bits, Windows
   `PATHEXT`, and WSL-visible `.exe` entries.
-- **Marker-only** (e.g. Cursor, Zed, Cline, Roo Code, Continue, GitHub Copilot
-  VS Code, GitHub Copilot Cloud Agent): the platform is reported as installed
-  when a known config or extension-storage path is present.
+- **Marker-only** (no supported agent currently uses this strategy). The platform
+  would be reported as installed when a known config or extension-storage path is
+  present.
 
 For every platform the report includes three orthogonal signals:
 
@@ -69,13 +69,12 @@ For every platform the report includes three orthogonal signals:
 Additional surface area:
 
 - **Stale config** is reported via `orphanedMcpLocations`: an MCP config file
-  is present for a platform that is not currently installed (e.g. a leftover
-  `~/.codeium/windsurf/mcp_config.json` from a previous Windsurf install).
-  Stale config alone never implies install.
-- **Unsupported tools** (e.g. Aider has a CLI but no first-party MCP client
-  surface in v1) are surfaced as installed inventory entries with
+  is present for a platform that is not currently installed. Stale config alone
+  never implies install.
+- **Unsupported tools** are surfaced as installed inventory entries with
   `mcpSupport: unsupported` and `mcpConfigured: false`, so you can see them
-  without being misled into expecting MCP sync to work.
+  without being misled into expecting MCP sync to work. (No supported agent
+  currently falls into this category.)
 
 ### Usage
 
@@ -83,7 +82,7 @@ Additional surface area:
 # Print installed platforms, configured/unsupported/orphaned sections
 overture detect
 
-# Machine-readable: full 14-platform inventory with all additive fields
+# Machine-readable: full 4-platform inventory with all additive fields
 overture detect --json
 
 # Print the resolved user-level overture config (XDG-aware)
@@ -101,7 +100,7 @@ The human-readable output has three sections that appear only when relevant:
 (inventory)", and "Orphaned MCP configurations (no platform installed)". No
 ANSI color is emitted; the output is plain text suitable for piping.
 
-The JSON output is the full inventory: all 14 platform entries, including
+The JSON output is the full inventory: all 4 platform entries, including
 those not installed, with flat additive fields (`detectionStrategy`,
 `mcpSupport`, `executableNames`, `matchedExecutables`, `mcpConfigured`,
 `matchedMcpLocations`, `orphanedMcpLocations`, `reasonCode`).

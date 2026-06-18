@@ -487,7 +487,7 @@ wins:
 
 ### Inventory completeness
 
-The JSON output of `overture detect --json` always contains all 14 platform
+The JSON output of `overture detect --json` always contains all 4 platform
 entries in registry order, including those not installed, so a UI or
 automation can render a complete status grid without needing to know the
 list of supported IDs separately. `installed: false` is a first-class

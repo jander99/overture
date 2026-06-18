@@ -107,7 +107,6 @@ Start with the highest-value agents:
 - Claude Code
 - OpenCode
 - GitHub Copilot CLI
-- GitHub Copilot in VS Code
 - OpenAI Codex
 
 Expected result: fixture-backed normalization for each included agent, with no
