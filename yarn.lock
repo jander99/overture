@@ -2512,6 +2512,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@overture/scan-matrix@workspace:packages/scan-matrix":
+  version: 0.0.0-use.local
+  resolution: "@overture/scan-matrix@workspace:packages/scan-matrix"
+  languageName: unknown
+  linkType: soft
+
 "@oxc-project/types@npm:=0.133.0":
   version: 0.133.0
   resolution: "@oxc-project/types@npm:0.133.0"
