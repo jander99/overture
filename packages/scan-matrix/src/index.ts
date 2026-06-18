@@ -251,3 +251,138 @@ export interface CompareAgentEntriesInput {
   readonly agent: Readonly<Record<string, NormalizedAgentServer>>;
   readonly agentId: string;
 }
+
+/**
+ * Classify a single canonical intent against a single agent's
+ * post-normalized server map.
+ *
+ * The function is a pure, synchronous row emitter. It does not read files,
+ * inspect agent-native fields, or branch on agent ids: every decision is
+ * made from the canonical entry, the `NormalizedAgentServer` produced by
+ * upstream B2 normalization, and the comparison helpers in this module.
+ *
+ * Row order is deterministic:
+ *
+ * 1. One row per canonical server name, iterated in ascending lexical
+ *    order. The row's `canonicalName` is the name; `agentServerName` is
+ *    `null` when the agent lacks that name.
+ * 2. One row per agent-only server name, appended after the canonical
+ *    block and iterated in ascending lexical order. `canonicalName` is
+ *    `null`; `agentServerName` is the agent's name.
+ *
+ * `canonicalServer` / `agentServer` use `null` for absent sides; the
+ * `presence` field and `__extra__` magic sentinel are explicitly forbidden.
+ * Reasons are human-readable strings that downstream renderers can surface
+ * verbatim.
+ */
+export function compareAgentEntries(
+  input: CompareAgentEntriesInput,
+): readonly ServerStatusRow[] {
+  const { canonical, agent, agentId } = input;
+  const rows: ServerStatusRow[] = [];
+
+  const canonicalNames = Object.keys(canonical).sort();
+  const agentNames = Object.keys(agent).sort();
+
+  for (const name of canonicalNames) {
+    const canonicalServer = canonical[name];
+    if (canonicalServer === undefined) {
+      // Defensive: `Object.keys` only returns own enumerable keys, so this
+      // branch is unreachable in practice. Kept to satisfy `noUncheckedIndexedAccess`.
+      continue;
+    }
+    const entry = agent[name];
+    if (entry === undefined) {
+      rows.push({
+        agentId,
+        canonicalName: name,
+        agentServerName: null,
+        status: 'missing-from-agent',
+        canonicalServer,
+        agentServer: null,
+        reason: `Agent has no server named "${name}"`,
+      });
+      continue;
+    }
+    if (entry.state === 'shape-conflict') {
+      rows.push({
+        agentId,
+        canonicalName: name,
+        agentServerName: name,
+        status: 'shape-conflict',
+        canonicalServer,
+        agentServer: null,
+        reason: entry.reason,
+      });
+      continue;
+    }
+    const agentServer = entry.server;
+    if (canonicalServer.type !== agentServer.type) {
+      rows.push({
+        agentId,
+        canonicalName: name,
+        agentServerName: name,
+        status: 'shape-conflict',
+        canonicalServer,
+        agentServer: null,
+        reason: `Canonical type "${canonicalServer.type}" differs from agent type "${agentServer.type}"`,
+      });
+      continue;
+    }
+    if (serverSettingsEqual(canonicalServer, agentServer)) {
+      rows.push({
+        agentId,
+        canonicalName: name,
+        agentServerName: name,
+        status: 'aligned',
+        canonicalServer,
+        agentServer,
+      });
+      continue;
+    }
+    rows.push({
+      agentId,
+      canonicalName: name,
+      agentServerName: name,
+      status: 'different-settings',
+      canonicalServer,
+      agentServer,
+      reason: 'Canonical and agent settings differ',
+    });
+  }
+
+  for (const name of agentNames) {
+    if (canonical[name] !== undefined) {
+      continue;
+    }
+    const entry = agent[name];
+    if (entry === undefined) {
+      // Mirror the canonical loop's defensive guard: `Object.keys` only yields
+      // own keys, so this branch is unreachable in practice.
+      continue;
+    }
+    if (entry.state === 'shape-conflict') {
+      rows.push({
+        agentId,
+        canonicalName: null,
+        agentServerName: name,
+        status: 'shape-conflict',
+        canonicalServer: null,
+        agentServer: null,
+        reason: entry.reason,
+      });
+      continue;
+    }
+    rows.push({
+      agentId,
+      canonicalName: null,
+      agentServerName: name,
+      status: 'extra-in-agent',
+      canonicalServer: null,
+      agentServer: entry.server,
+      reason: `Canonical intent has no server named "${name}"`,
+    });
+  }
+
+  return rows;
+}
