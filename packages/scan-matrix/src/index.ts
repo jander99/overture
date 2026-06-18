@@ -386,3 +386,302 @@ export function compareAgentEntries(
 
   return rows;
 }
+
+/**
+ * Default agent-id order for `buildScanMatrix`.
+ *
+ * Mirrors the canonical four-agent registry (`claude-code`, `opencode`,
+ * `github-copilot-cli`, `openai-codex`) but is intentionally a plain
+ * string list rather than a re-export of `@overture/agents`'s
+ * `AGENT_REGISTRY_ORDER` so the scan-matrix model stays decoupled from
+ * per-agent `AgentDefinition` data. Callers that want to override the
+ * order pass `BuildScanMatrixInput.registryOrder`; this constant is the
+ * fallback when no order is supplied.
+ */
+export const DEFAULT_REGISTRY_ORDER: readonly string[] = [
+  'claude-code',
+  'opencode',
+  'github-copilot-cli',
+  'openai-codex',
+];
+
+interface ResolveCanonicalResult {
+  readonly state: 'absent' | 'ready' | 'invalid-profile';
+  readonly profileName: string | null;
+  readonly intent: Readonly<Record<string, OvertureMcpServer>>;
+  readonly targetIds: readonly string[];
+  readonly reason?: string;
+}
+
+/**
+ * Resolve canonical state, intent, and target ids from the input. Pulled
+ * out of `buildScanMatrix` so the three-state switch stays readable.
+ *
+ * - `config === null` => absent state, empty intent, targets = `registryOrder`.
+ * - Default profile missing => invalid-profile state, empty intent, targets
+ *   follow `sync.targets` (so the snapshot list still populates correctly),
+ *   reason pinned to the approved string.
+ * - Default profile present => ready state, intent is the profile's
+ *   `mcpServers` minus `sync.disabledServers` entries, targets follow
+ *   `sync.targets`.
+ */
+function resolveCanonical(
+  config: OvertureConfig | null,
+  registryOrder: readonly string[],
+): ResolveCanonicalResult {
+  if (config === null) {
+    return {
+      state: 'absent',
+      profileName: null,
+      intent: {},
+      targetIds: registryOrder,
+    };
+  }
+  // The Zod schema's `default('default')` is shadowed by the outer
+  // `.partial().default({})` on the settings object, so the inferred type
+  // surfaces as `string | undefined`. Post-parse, the value is always
+  // defined (the schema applies its default before output), so the
+  // `?? 'default'` is a TypeScript-only fallback that matches the
+  // schema's resolved default.
+  const profileName = config.settings.defaultProfile ?? 'default';
+  const profile = config.profiles[profileName];
+  if (profile === undefined) {
+    // Named profile is missing. Fall back to the 'default' profile's
+    // sync.targets so the agent snapshot list still has meaningful
+    // content (the test plan requires "populated target agents" even
+    // for invalid-profile state). If the default profile is itself
+    // missing or its targets are empty, fall back to registryOrder.
+    const fallback = config.profiles.default;
+    const fallbackTargets =
+      fallback !== undefined && fallback.sync.targets.length > 0
+        ? fallback.sync.targets
+        : registryOrder;
+    return {
+      state: 'invalid-profile',
+      profileName,
+      intent: {},
+      targetIds: fallbackTargets,
+      reason: `Default profile "${profileName}" does not exist`,
+    };
+  }
+  const targetIds =
+    profile.sync.targets.length === 0 ? registryOrder : profile.sync.targets;
+  const disabled = new Set(profile.sync.disabledServers);
+  const mcpServers = profile.mcpServers;
+  const intent: Record<string, OvertureMcpServer> = {};
+  for (const name of Object.keys(mcpServers)) {
+    if (disabled.has(name)) {
+      continue;
+    }
+    const server = mcpServers[name];
+    if (server === undefined) {
+      continue;
+    }
+    intent[name] = server;
+  }
+  return {
+    state: 'ready',
+    profileName,
+    intent,
+    targetIds,
+  };
+}
+
+/**
+ * Derive the per-target id order used for both the snapshot list and the
+ * global row sort. Known ids emit first in their `registryOrder` position;
+ * unknown ids follow in ascending lexical order. Duplicates collapse.
+ */
+function orderTargetIds(
+  targetIds: readonly string[],
+  registryOrder: readonly string[],
+): readonly string[] {
+  const known = new Set(registryOrder);
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const id of registryOrder) {
+    if (targetIds.includes(id) && !seen.has(id)) {
+      ordered.push(id);
+      seen.add(id);
+    }
+  }
+  for (const id of [...targetIds].filter((id) => !known.has(id)).sort()) {
+    if (!seen.has(id)) {
+      ordered.push(id);
+      seen.add(id);
+    }
+  }
+  return ordered;
+}
+
+/**
+ * Build the public `AgentSnapshot` for a target id. When an input is
+ * present, the `servers` field is dropped (the snapshot is intentionally
+ * server-free). When absent, a synthetic not-installed snapshot is built
+ * with the approved reason.
+ */
+function snapshotForTarget(
+  id: string,
+  input: AgentScanInput | undefined,
+): AgentSnapshot {
+  if (input !== undefined) {
+    const { servers: _ignored, ...snapshot } = input;
+    return snapshot;
+  }
+  return {
+    id,
+    displayName: id,
+    installed: false,
+    mcpSupport: 'unknown',
+    readState: 'not-installed',
+    reason: `No scan input for target "${id}"`,
+  };
+}
+
+/**
+ * Build the synthetic unsupported-agent snapshot for a target id that is
+ * not part of the four-agent registry. `installed: false` because
+ * unsupported agents are not part of the host.
+ */
+function unsupportedSnapshotFor(id: string): AgentSnapshot {
+  return {
+    id,
+    displayName: id,
+    installed: false,
+    mcpSupport: 'unsupported',
+    readState: 'unsupported-agent',
+    reason: `Target "${id}" is not supported by this Overture build`,
+  };
+}
+
+/**
+ * Build the full scan matrix from canonical config and per-agent scan
+ * inputs. Pure, synchronous, and side-effect free: it never reads files,
+ * inspects agent-native fields, or mutates any of its inputs.
+ *
+ * Output shape:
+ *
+ * - `canonicalState`, `canonicalProfileName`, `canonicalIntent`, and
+ *   optional `reason` are derived from the config (absent / ready /
+ *   invalid-profile).
+ * - `agents` lists one `AgentSnapshot` per target id, ordered by
+ *   `registryOrder` for known ids and lexicographically for unknown ids.
+ *   Synthesized not-installed / unsupported-agent snapshots fill the
+ *   gaps left by missing or unrecognized inputs.
+ * - `rows` is the global concatenation of `compareAgentEntries` results
+ *   for every read-ok target. The list is empty for the invalid-profile
+ *   state (the plan pins that as the row count when the named profile
+ *   is missing). Rows whose `canonicalName` is non-null emit first,
+ *   sorted by canonical name ascending then by agent position; rows
+ *   with a null `canonicalName` (agent-only entries) emit after, sorted
+ *   by agent position then by agent server name.
+ * Read states other than `read-ok` produce no rows for that agent but
+ * still appear in the snapshot list (the input's snapshot view is used
+ * verbatim, minus the `servers` field). `read-ok` without a `servers`
+ * map behaves as an empty server map.
+ */
+export function buildScanMatrix(input: BuildScanMatrixInput): ScanMatrix {
+  const { config, agents } = input;
+  const registryOrder = input.registryOrder ?? DEFAULT_REGISTRY_ORDER;
+
+  const inputById = new Map<string, AgentScanInput>();
+  for (const agent of agents) {
+    inputById.set(agent.id, agent);
+  }
+  const knownIds = new Set(registryOrder);
+
+  const resolution = resolveCanonical(config, registryOrder);
+  const orderedIds = orderTargetIds(resolution.targetIds, registryOrder);
+
+  const matrixAgents: AgentSnapshot[] = [];
+  for (const id of orderedIds) {
+    if (!knownIds.has(id)) {
+      matrixAgents.push(unsupportedSnapshotFor(id));
+    } else {
+      matrixAgents.push(snapshotForTarget(id, inputById.get(id)));
+    }
+  }
+
+  const agentPosition = new Map<string, number>();
+  orderedIds.forEach((id, index) => {
+    agentPosition.set(id, index);
+  });
+
+  const rawRows: ServerStatusRow[] = [];
+  // The plan pins `rows: []` for the invalid-profile state: the canonical
+  // intent is empty (the named profile is missing), so even read-ok agents
+  // cannot meaningfully compare against nothing. Skip row generation in
+  // that state so the row list stays empty as the plan requires.
+  if (resolution.state !== 'invalid-profile') {
+    for (const id of orderedIds) {
+      const agentInput = inputById.get(id);
+      if (agentInput === undefined) {
+        continue;
+      }
+      if (agentInput.readState !== 'read-ok') {
+        continue;
+      }
+      for (const row of compareAgentEntries({
+        canonical: resolution.intent,
+        agent: agentInput.servers ?? {},
+        agentId: id,
+      })) {
+        rawRows.push(row);
+      }
+    }
+  }
+
+  const canonicalRows: ServerStatusRow[] = [];
+  const extraRows: ServerStatusRow[] = [];
+  for (const row of rawRows) {
+    if (row.canonicalName === null) {
+      extraRows.push(row);
+    } else {
+      canonicalRows.push(row);
+    }
+  }
+
+  canonicalRows.sort((left, right) => {
+    const leftName = left.canonicalName ?? '';
+    const rightName = right.canonicalName ?? '';
+    if (leftName < rightName) {
+      return -1;
+    }
+    if (leftName > rightName) {
+      return 1;
+    }
+    return (
+      (agentPosition.get(left.agentId) ?? 0) -
+      (agentPosition.get(right.agentId) ?? 0)
+    );
+  });
+
+  extraRows.sort((left, right) => {
+    const leftPos = agentPosition.get(left.agentId) ?? 0;
+    const rightPos = agentPosition.get(right.agentId) ?? 0;
+    if (leftPos !== rightPos) {
+      return leftPos - rightPos;
+    }
+    const leftName = left.agentServerName ?? '';
+    const rightName = right.agentServerName ?? '';
+    if (leftName < rightName) {
+      return -1;
+    }
+    if (leftName > rightName) {
+      return 1;
+    }
+    return 0;
+  });
+
+  const result: ScanMatrix = {
+    canonicalState: resolution.state,
+    canonicalProfileName: resolution.profileName,
+    canonicalIntent: resolution.intent,
+    agents: matrixAgents,
+    rows: [...canonicalRows, ...extraRows],
+  };
+  if (resolution.reason !== undefined) {
+    return { ...result, reason: resolution.reason };
+  }
+  return result;
+}

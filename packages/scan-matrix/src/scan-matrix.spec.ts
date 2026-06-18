@@ -1,7 +1,12 @@
 import { describe, it, expect, expectTypeOf } from 'vitest';
 import type { McpSupport } from '@overture/agents';
 import type { OvertureConfig, OvertureMcpServer } from '@overture/config';
-import { compareAgentEntries, serverSettingsEqual } from './index.js';
+import {
+  DEFAULT_REGISTRY_ORDER,
+  buildScanMatrix,
+  compareAgentEntries,
+  serverSettingsEqual,
+} from './index.js';
 import type {
   AgentReadState,
   AgentScanInput,
@@ -661,6 +666,492 @@ describe('compareAgentEntries', () => {
       agentServer: null,
       reason: 'agent side is broken',
     });
+  });
+});
+
+describe('buildScanMatrix', () => {
+  // Minimal fixtures shared by the buildScanMatrix tests. Each helper
+  // produces a strict-mode-compliant `OvertureConfig` or `AgentScanInput`
+  // so individual tests can focus on the field under test rather than
+  // Zod noise.
+  const stdioA: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'npx',
+    args: ['-y', 'mcp-a'],
+  };
+  const stdioB: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'npx',
+    args: ['-y', 'mcp-b'],
+  };
+  const remoteA: OvertureMcpServer = {
+    type: 'remote',
+    url: 'https://api.example.com/mcp',
+  };
+
+  const makeConfig = (
+    profileName: string,
+    profileOverrides: {
+      mcpServers?: Record<string, OvertureMcpServer>;
+      targets?: readonly string[];
+      disabledServers?: readonly string[];
+    } = {},
+  ): OvertureConfig => {
+    const profile = {
+      mcpServers: profileOverrides.mcpServers ?? {},
+      sync: {
+        targets: [...(profileOverrides.targets ?? [])],
+        disabledServers: [...(profileOverrides.disabledServers ?? [])],
+      },
+      skills: [],
+    };
+    const profiles: OvertureConfig['profiles'] = { default: profile };
+    if (profileName !== 'default') {
+      profiles[profileName] = profile;
+    }
+    return {
+      version: 1,
+      settings: { defaultProfile: profileName },
+      profiles,
+    };
+  };
+
+  const makeAgent = (
+    id: string,
+    overrides: Partial<AgentScanInput> = {},
+  ): AgentScanInput => ({
+    id,
+    displayName: id,
+    installed: true,
+    mcpSupport: 'supported',
+    readState: 'read-ok',
+    servers: {},
+    ...overrides,
+  });
+
+  it('config: null uses registryOrder as targets and ignores unknown input agent ids', () => {
+    const matrix = buildScanMatrix({
+      config: null,
+      registryOrder: ['claude-code'],
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: { x: { state: 'normalized', server: stdioA } },
+        }),
+        makeAgent('unknown-future', {
+          readState: 'read-ok',
+          servers: { y: { state: 'normalized', server: stdioA } },
+        }),
+      ],
+    });
+    expect(matrix.canonicalState).toBe('absent');
+    expect(matrix.canonicalProfileName).toBeNull();
+    expect(matrix.canonicalIntent).toEqual({});
+    expect(matrix.agents.map((a) => a.id)).toEqual(['claude-code']);
+    // The unknown input agent is dropped, so no extras for it.
+    expect(matrix.rows.map((r) => r.agentServerName)).toEqual(['x']);
+  });
+
+  it('config: null with empty agent entries synthesizes not-installed snapshots for every registry id', () => {
+    const matrix = buildScanMatrix({ config: null, agents: [] });
+    expect(matrix.canonicalState).toBe('absent');
+    expect(matrix.agents.map((a) => a.id)).toEqual([
+      'claude-code',
+      'opencode',
+      'github-copilot-cli',
+      'openai-codex',
+    ]);
+    for (const snapshot of matrix.agents) {
+      expect(snapshot.readState).toBe('not-installed');
+      expect(snapshot.installed).toBe(false);
+      expect(snapshot.mcpSupport).toBe('unknown');
+      expect(snapshot.reason).toBe(`No scan input for target "${snapshot.id}"`);
+    }
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('config: null with populated read-ok agents emits extra-in-agent rows only', () => {
+    const matrix = buildScanMatrix({
+      config: null,
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: { orphan: { state: 'normalized', server: stdioA } },
+        }),
+      ],
+    });
+    expect(matrix.canonicalIntent).toEqual({});
+    expect(matrix.rows).toHaveLength(1);
+    expect(matrix.rows[0]).toMatchObject({
+      agentId: 'claude-code',
+      canonicalName: null,
+      agentServerName: 'orphan',
+      status: 'extra-in-agent',
+      canonicalServer: null,
+      agentServer: stdioA,
+      reason: 'Canonical intent has no server named "orphan"',
+    });
+  });
+
+  it('uses the default profile when the named profile exists', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('staging', {
+        mcpServers: { x: stdioA },
+        targets: ['claude-code'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: { x: { state: 'normalized', server: stdioA } },
+        }),
+      ],
+    });
+    expect(matrix.canonicalState).toBe('ready');
+    expect(matrix.canonicalProfileName).toBe('staging');
+    expect(matrix.canonicalIntent).toEqual({ x: stdioA });
+    expect(matrix.rows).toEqual([
+      {
+        agentId: 'claude-code',
+        canonicalName: 'x',
+        agentServerName: 'x',
+        status: 'aligned',
+        canonicalServer: stdioA,
+        agentServer: stdioA,
+      },
+    ]);
+  });
+
+  it('returns invalid-profile with populated agents and zero rows when the default profile is missing', () => {
+    // Inlined so the config intentionally lacks the named 'missing'
+    // profile: only 'default' is present, but the defaultProfile setting
+    // points elsewhere. `makeConfig` auto-creates the named profile, so
+    // it cannot express this case.
+    const matrix = buildScanMatrix({
+      config: {
+        version: 1,
+        settings: { defaultProfile: 'missing' },
+        profiles: {
+          default: {
+            mcpServers: {},
+            sync: { targets: ['claude-code'], disabledServers: [] },
+            skills: [],
+          },
+        },
+      },
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: { x: { state: 'normalized', server: stdioA } },
+        }),
+      ],
+    });
+    expect(matrix.canonicalState).toBe('invalid-profile');
+    expect(matrix.canonicalProfileName).toBe('missing');
+    expect(matrix.canonicalIntent).toEqual({});
+    expect(matrix.reason).toBe('Default profile "missing" does not exist');
+    expect(matrix.agents.map((a) => a.id)).toEqual(['claude-code']);
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('sync.targets empty includes every registry id present in the input', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', { targets: [] }),
+      agents: [
+        makeAgent('claude-code'),
+        makeAgent('opencode'),
+        makeAgent('github-copilot-cli'),
+        makeAgent('openai-codex'),
+      ],
+    });
+    expect(matrix.agents.map((a) => a.id)).toEqual(DEFAULT_REGISTRY_ORDER);
+  });
+
+  it('sync.targets non-empty filters agents to only the listed ids', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', { targets: ['opencode'] }),
+      agents: [
+        makeAgent('claude-code'),
+        makeAgent('opencode'),
+        makeAgent('github-copilot-cli'),
+        makeAgent('openai-codex'),
+      ],
+    });
+    expect(matrix.agents.map((a) => a.id)).toEqual(['opencode']);
+  });
+
+  it('unknown target id produces an unsupported-agent snapshot with the approved reason', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        targets: ['claude-code', 'unknown-future'],
+      }),
+      agents: [makeAgent('claude-code')],
+    });
+    expect(matrix.agents.map((a) => a.id)).toEqual([
+      'claude-code',
+      'unknown-future',
+    ]);
+    const unsupported = matrix.agents[1];
+    expect(unsupported).toMatchObject({
+      id: 'unknown-future',
+      displayName: 'unknown-future',
+      installed: false,
+      mcpSupport: 'unsupported',
+      readState: 'unsupported-agent',
+      reason: 'Target "unknown-future" is not supported by this Overture build',
+    });
+  });
+
+  it('known target id without a matching input produces a not-installed snapshot', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', { targets: ['claude-code'] }),
+      agents: [],
+    });
+    expect(matrix.agents).toHaveLength(1);
+    expect(matrix.agents[0]).toMatchObject({
+      id: 'claude-code',
+      displayName: 'claude-code',
+      installed: false,
+      mcpSupport: 'unknown',
+      readState: 'not-installed',
+      reason: 'No scan input for target "claude-code"',
+    });
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('sync.disabledServers removes the named servers from canonicalIntent and makes matching agent entries extra', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { keep: stdioA, drop: stdioB },
+        targets: ['claude-code'],
+        disabledServers: ['drop'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: {
+            keep: { state: 'normalized', server: stdioA },
+            drop: { state: 'normalized', server: stdioB },
+          },
+        }),
+      ],
+    });
+    expect(matrix.canonicalIntent).toEqual({ keep: stdioA });
+    expect(
+      matrix.rows.map((r) => ({
+        canonical: r.canonicalName,
+        agent: r.agentServerName,
+        status: r.status,
+      })),
+    ).toEqual([
+      { canonical: 'keep', agent: 'keep', status: 'aligned' },
+      { canonical: null, agent: 'drop', status: 'extra-in-agent' },
+    ]);
+  });
+
+  it('parse-error agent snapshots preserve the parse reason and produce no rows', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { x: stdioA },
+        targets: ['claude-code'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'parse-error',
+          reason: 'unexpected token at position 42',
+          // No `servers` on a parse-error agent.
+        }),
+      ],
+    });
+    expect(matrix.agents[0]).toMatchObject({
+      id: 'claude-code',
+      readState: 'parse-error',
+      reason: 'unexpected token at position 42',
+    });
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('read-empty and read-no-config snapshots are preserved verbatim and produce no rows', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { x: stdioA },
+        targets: ['claude-code', 'opencode'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-empty',
+        }),
+        makeAgent('opencode', {
+          readState: 'read-no-config',
+        }),
+      ],
+    });
+    expect(matrix.agents[0]?.readState).toBe('read-empty');
+    expect(matrix.agents[1]?.readState).toBe('read-no-config');
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('multiple agents sharing a server name produce independent rows keyed by agentId', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { shared: stdioA },
+        targets: ['claude-code', 'opencode'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: { shared: { state: 'normalized', server: stdioA } },
+        }),
+        makeAgent('opencode', {
+          readState: 'read-ok',
+          servers: { shared: { state: 'normalized', server: stdioA } },
+        }),
+      ],
+    });
+    const aligned = matrix.rows.filter((r) => r.status === 'aligned');
+    expect(aligned).toHaveLength(2);
+    const ids = aligned.map((r) => r.agentId).sort();
+    expect(ids).toEqual(['claude-code', 'opencode']);
+    for (const row of aligned) {
+      expect(row.canonicalName).toBe('shared');
+      expect(row.agentServerName).toBe('shared');
+    }
+  });
+
+  it('JSON.stringify is identical for repeated buildScanMatrix calls with the same input', () => {
+    const input: BuildScanMatrixInput = {
+      config: makeConfig('default', {
+        mcpServers: { a: stdioA, b: stdioB },
+        targets: ['claude-code', 'opencode'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: {
+            a: { state: 'normalized', server: stdioA },
+            c: { state: 'normalized', server: remoteA },
+          },
+        }),
+        makeAgent('opencode', {
+          readState: 'parse-error',
+          reason: 'bad token',
+        }),
+      ],
+    };
+    const first = JSON.stringify(buildScanMatrix(input));
+    const second = JSON.stringify(buildScanMatrix(input));
+    expect(first).toBe(second);
+  });
+
+  it('applies the global row order: canonical rows by name then agent, extras by agent then name', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { a: stdioA, b: stdioB },
+        targets: ['claude-code', 'opencode'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'read-ok',
+          servers: {
+            a: { state: 'normalized', server: stdioA },
+            b: { state: 'normalized', server: stdioB },
+            c: { state: 'normalized', server: remoteA },
+          },
+        }),
+        makeAgent('opencode', {
+          readState: 'read-ok',
+          servers: {
+            a: { state: 'normalized', server: stdioA },
+            b: { state: 'normalized', server: stdioB },
+            d: { state: 'normalized', server: remoteA },
+          },
+        }),
+      ],
+    });
+    const summary = matrix.rows.map((r) => ({
+      canonical: r.canonicalName,
+      agent: r.agentId,
+      server: r.agentServerName,
+      status: r.status,
+    }));
+    expect(summary).toEqual([
+      { canonical: 'a', agent: 'claude-code', server: 'a', status: 'aligned' },
+      { canonical: 'a', agent: 'opencode', server: 'a', status: 'aligned' },
+      { canonical: 'b', agent: 'claude-code', server: 'b', status: 'aligned' },
+      { canonical: 'b', agent: 'opencode', server: 'b', status: 'aligned' },
+      {
+        canonical: null,
+        agent: 'claude-code',
+        server: 'c',
+        status: 'extra-in-agent',
+      },
+      {
+        canonical: null,
+        agent: 'opencode',
+        server: 'd',
+        status: 'extra-in-agent',
+      },
+    ]);
+  });
+
+  it('does not mutate the input config, agents, or server entries', () => {
+    const config = makeConfig('default', {
+      mcpServers: { a: stdioA },
+      targets: ['claude-code'],
+    });
+    const agentInput = makeAgent('claude-code', {
+      readState: 'read-ok',
+      servers: {
+        a: { state: 'normalized', server: stdioA },
+        extra: { state: 'normalized', server: stdioB },
+      },
+    });
+    const configSnapshot = JSON.parse(JSON.stringify(config));
+    const agentSnapshot = JSON.parse(JSON.stringify(agentInput));
+    const originalStdioA = JSON.parse(JSON.stringify(stdioA));
+
+    buildScanMatrix({ config, agents: [agentInput] });
+
+    expect(JSON.parse(JSON.stringify(config))).toEqual(configSnapshot);
+    expect(JSON.parse(JSON.stringify(agentInput))).toEqual(agentSnapshot);
+    expect(JSON.parse(JSON.stringify(stdioA))).toEqual(originalStdioA);
+  });
+
+  it('readState not in read-ok is the only state gate for row emission (not-installed, not-read, unsupported-agent)', () => {
+    const matrix = buildScanMatrix({
+      config: makeConfig('default', {
+        mcpServers: { x: stdioA },
+        targets: ['claude-code', 'opencode', 'github-copilot-cli'],
+      }),
+      agents: [
+        makeAgent('claude-code', {
+          readState: 'not-installed',
+          installed: false,
+        }),
+        makeAgent('opencode', {
+          readState: 'not-read',
+        }),
+        makeAgent('github-copilot-cli', {
+          readState: 'unsupported-agent',
+          mcpSupport: 'unsupported',
+          installed: false,
+        }),
+      ],
+    });
+    expect(matrix.agents.map((a) => a.readState)).toEqual([
+      'not-installed',
+      'not-read',
+      'unsupported-agent',
+    ]);
+    expect(matrix.rows).toEqual([]);
+  });
+
+  it('DEFAULT_REGISTRY_ORDER lists the four canonical agent ids in the documented order', () => {
+    expect(DEFAULT_REGISTRY_ORDER).toEqual([
+      'claude-code',
+      'opencode',
+      'github-copilot-cli',
+      'openai-codex',
+    ]);
   });
 });
 
