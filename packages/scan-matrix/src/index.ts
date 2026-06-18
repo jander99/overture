@@ -7,11 +7,114 @@
  * entries produced by per-agent renderers, and config-file reads are
  * explicitly out of scope here.
  *
- * Behavior (`serverSettingsEqual`, `compareAgentEntries`, `buildScanMatrix`)
- * lands in later tasks; this module is type-only.
+ * Behavior (`compareAgentEntries`, `buildScanMatrix`) lands in later
+ * tasks; `serverSettingsEqual` is the canonical equality helper row
+ * classification and matrix construction consume.
  */
 import type { OvertureConfig, OvertureMcpServer } from '@overture/config';
 import type { McpSupport } from '@overture/agents';
+
+/**
+ * Canonical equality for two `OvertureMcpServer` values.
+ *
+ * The comparison is post-normalization: callers are responsible for
+ * producing both sides from their native shapes before invoking. The
+ * helper is a pure, synchronous, field-exact byte comparison:
+ *
+ * - `type` mismatch short-circuits to `false`; cross-type fields are
+ *   never inspected.
+ * - `stdio` compares only `command`, `args`, and `env`.
+ * - `remote` compares only `url` and `headers`.
+ * - Optional arrays/objects: `undefined` and `[]` / `{}` are distinct
+ *   values and never compare equal.
+ * - `args` order is significant; `env` / `headers` key insertion order
+ *   is not.
+ * - No URL normalization, command trimming, case folding, or
+ *   `JSON.stringify`-based diffing.
+ *
+ * This is the equality contract row classification and the matrix
+ * builder rely on.
+ */
+export function serverSettingsEqual(
+  left: OvertureMcpServer,
+  right: OvertureMcpServer,
+): boolean {
+  if (left.type !== right.type) {
+    return false;
+  }
+  if (left.type === 'stdio' && right.type === 'stdio') {
+    return (
+      left.command === right.command &&
+      stringArrayEqual(left.args, right.args) &&
+      stringRecordEqual(left.env, right.env)
+    );
+  }
+  if (left.type === 'remote' && right.type === 'remote') {
+    return (
+      left.url === right.url && stringRecordEqual(left.headers, right.headers)
+    );
+  }
+  return false;
+}
+
+/**
+ * Order-sensitive equality for two optional `string[]` values.
+ *
+ * `undefined` and `[]` are distinct: a missing field is not the same
+ * as an explicitly empty list. Same reference (including both
+ * `undefined`) short-circuits to `true`.
+ */
+function stringArrayEqual(
+  left: readonly string[] | undefined,
+  right: readonly string[] | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left === undefined || right === undefined) {
+    return false;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Key-set + per-key string equality for two optional
+ * `Record<string, string>` values. Key insertion order is ignored;
+ * `undefined` and `{}` are distinct. Same reference (including both
+ * `undefined`) short-circuits to `true`.
+ */
+function stringRecordEqual(
+  left: Readonly<Record<string, string>> | undefined,
+  right: Readonly<Record<string, string>> | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left === undefined || right === undefined) {
+    return false;
+  }
+  const leftKeys = Object.keys(left);
+  if (leftKeys.length !== Object.keys(right).length) {
+    return false;
+  }
+  for (const key of leftKeys) {
+    if (!(key in right)) {
+      return false;
+    }
+    if (left[key] !== right[key]) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /**
  * Per-row classification of a single canonical/agent server pair.

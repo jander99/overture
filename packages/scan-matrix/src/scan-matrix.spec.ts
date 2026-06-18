@@ -1,6 +1,7 @@
 import { describe, it, expect, expectTypeOf } from 'vitest';
 import type { McpSupport } from '@overture/agents';
 import type { OvertureConfig, OvertureMcpServer } from '@overture/config';
+import { serverSettingsEqual } from './index.js';
 import type {
   AgentReadState,
   AgentScanInput,
@@ -188,6 +189,168 @@ describe('B1 public type contracts', () => {
       agentId: 'claude-code',
     };
     expectTypeOf(input).toMatchTypeOf<CompareAgentEntriesInput>();
+  });
+});
+
+describe('serverSettingsEqual', () => {
+  // Fixtures: keep the equality tests focused on the fields the helper
+  // is contract-bound to compare. Each case is a single behavioral
+  // assertion that pins the post-normalization contract.
+  const stdioBase: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'npx',
+    args: ['-y', 'mcp-server'],
+    env: { API_KEY: 'secret', REGION: 'us-east-1' },
+  };
+  const remoteBase: OvertureMcpServer = {
+    type: 'remote',
+    url: 'https://api.example.com/mcp',
+    headers: { Authorization: 'Bearer token', Accept: 'application/json' },
+  };
+
+  it('identical stdio entries are equal', () => {
+    expect(serverSettingsEqual(stdioBase, { ...stdioBase })).toBe(true);
+  });
+
+  it('identical remote entries are equal', () => {
+    expect(serverSettingsEqual(remoteBase, { ...remoteBase })).toBe(true);
+  });
+
+  it('stdio command differs', () => {
+    const right: OvertureMcpServer = { ...stdioBase, command: 'node' };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(false);
+  });
+
+  it('stdio command differs by case (npx vs Npx)', () => {
+    const right: OvertureMcpServer = { ...stdioBase, command: 'Npx' };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(false);
+  });
+
+  it('stdio command differs by whitespace (npx vs " npx ")', () => {
+    const right: OvertureMcpServer = { ...stdioBase, command: ' npx ' };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(false);
+  });
+
+  it('stdio args missing vs [] are unequal', () => {
+    const left: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'npx',
+      env: { API_KEY: 'secret' },
+    };
+    const right: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'npx',
+      args: [],
+      env: { API_KEY: 'secret' },
+    };
+    expect(serverSettingsEqual(left, right)).toBe(false);
+  });
+
+  it('stdio args order differs', () => {
+    const right: OvertureMcpServer = {
+      ...stdioBase,
+      args: ['mcp-server', '-y'],
+    };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(false);
+  });
+
+  it('stdio env subset differs', () => {
+    const right: OvertureMcpServer = {
+      ...stdioBase,
+      env: { API_KEY: 'secret' },
+    };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(false);
+  });
+
+  it('stdio env key insertion order does not differ', () => {
+    const right: OvertureMcpServer = {
+      ...stdioBase,
+      env: { REGION: 'us-east-1', API_KEY: 'secret' },
+    };
+    expect(serverSettingsEqual(stdioBase, right)).toBe(true);
+  });
+
+  it('remote url differs', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      url: 'https://api.example.com/v2/mcp',
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(false);
+  });
+
+  it('remote url trailing slash differs', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      url: 'https://api.example.com/mcp/',
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(false);
+  });
+
+  it('remote scheme differs', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      url: 'http://api.example.com/mcp',
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(false);
+  });
+
+  it('remote host case differs', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      url: 'https://API.EXAMPLE.COM/mcp',
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(false);
+  });
+
+  it('remote headers subset differs', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      headers: { Authorization: 'Bearer token' },
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(false);
+  });
+
+  it('remote headers missing vs {} differs', () => {
+    const left: OvertureMcpServer = {
+      type: 'remote',
+      url: 'https://api.example.com/mcp',
+    };
+    const right: OvertureMcpServer = {
+      type: 'remote',
+      url: 'https://api.example.com/mcp',
+      headers: {},
+    };
+    expect(serverSettingsEqual(left, right)).toBe(false);
+  });
+
+  it('remote headers key insertion order does not differ', () => {
+    const right: OvertureMcpServer = {
+      ...remoteBase,
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer token',
+      },
+    };
+    expect(serverSettingsEqual(remoteBase, right)).toBe(true);
+  });
+
+  it('type mismatch returns false and does not inspect cross-type fields', () => {
+    // Even when every cross-type field matches, the type mismatch must
+    // short-circuit to false. The fixture intentionally sets stdio.command
+    // to the remote url and remote.url to the stdio command to prove no
+    // field value is consulted once `type` differs.
+    const stdioSide: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'https://api.example.com/mcp',
+      args: [],
+    };
+    const remoteSide: OvertureMcpServer = {
+      type: 'remote',
+      url: 'npx',
+      headers: { '0': 'npx', '1': 'mcp-server' },
+    };
+    expect(serverSettingsEqual(stdioSide, remoteSide)).toBe(false);
+    expect(serverSettingsEqual(remoteSide, stdioSide)).toBe(false);
   });
 });
 
