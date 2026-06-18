@@ -1,0 +1,30 @@
+{
+  "name": "@overture/scan-matrix",
+  "root": "packages/scan-matrix",
+  "sourceRoot": "packages/scan-matrix/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/scan-matrix",
+        "main": "packages/scan-matrix/src/index.ts",
+        "tsConfig": "packages/scan-matrix/tsconfig.lib.json",
+        "platform": "node",
+        "format": ["esm"],
+        "bundle": true,
+        "thirdParty": true,
+        "generatePackageJson": false
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "coverage/packages/scan-matrix"
+      }
+    }
+  },
+  "tags": []
+}

@@ -69,6 +69,8 @@ These slices create the product object that later commands use.
 
 ### B1. Define the scan matrix model
 
+**Status: completed.**
+
 Create an internal model for comparing agents, canonical intent, and server
 entries.
 
@@ -96,6 +98,19 @@ Candidate status values:
 Approval gate: status vocabulary and meanings.
 
 Expected result: a pure model with tests and no CLI output changes.
+
+Delivered: the `@overture/scan-matrix` package in `packages/scan-matrix/`
+exports `BuildScanMatrixInput`, `CompareAgentEntriesInput`, `AgentScanInput`,
+`AgentSnapshot`, `NormalizedAgentServer`, `ScanMatrix`, `ServerStatusRow`,
+`ServerStatus`, `AgentReadState`, `serverSettingsEqual`, `compareAgentEntries`,
+`buildScanMatrix`, and `DEFAULT_REGISTRY_ORDER`. The status vocabulary
+approved here is now enforced by the package's type and runtime tests
+(`packages/scan-matrix/src/scan-matrix.spec.ts` plus the colocated
+`scope-guards.spec.ts` anti-scope guards). The implementation source has no
+I/O, no MCP config readers/parsers, and no output formatters; canonical vs
+agent equality is a post-normalization field-exact byte compare
+(`serverSettingsEqual`). B2 can consume the `NormalizedAgentServer` contract
+to supply post-normalized `OvertureMcpServer` values without changing B1.
 
 ### B2. Normalize agent MCP configs into canonical server entries
 
