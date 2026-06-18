@@ -131,10 +131,10 @@ try {
   // entry reports `installed: false`. Asserting `length > 0` would
   // fail in CI, which runs on a clean machine with no pre-installed
   // agents.
-  if (!Array.isArray(parsed.platforms) || parsed.platforms.length !== 14) {
+  if (!Array.isArray(parsed.platforms) || parsed.platforms.length !== 4) {
     fail(
       `detect --json produced ${parsed.platforms?.length ?? 0} platforms;
-  expected 14`,
+  expected 4`,
     );
   }
   for (const p of parsed.platforms) {

@@ -160,7 +160,8 @@ jobs:
       - name: Run overture detect --json on a clean runner
         # The runner has no installed MCP-capable agents. We assert:
         # - exit 0
-        # - stdout is valid JSON with a `platforms` array of all 14
+        # - stdout is valid JSON with a `platforms` array of all 4
+        #   registry entries (the four CLI agents the product syncs)
         #   registry entries
         # - every entry reports `installed: false`
         # - no platform carries a `parseError`
@@ -174,7 +175,7 @@ jobs:
           import json, sys
           data = json.load(sys.stdin)
           assert isinstance(data.get('platforms'), list), 'platforms must be a list'
-          assert len(data['platforms']) == 14, f'expected 14 registry entries, got {len(data[\"platforms\"])}'
+          assert len(data['platforms']) == 4, f'expected 4 registry entries, got {len(data[\"platforms\"])}'
           for p in data['platforms']:
               assert p.get('installed') is False, f'{p[\"id\"]} reports installed on a clean runner'
               assert not p.get('parseError'), f'{p[\"id\"]} has parseError: {p.get(\"parseError\")}'
