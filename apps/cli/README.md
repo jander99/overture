@@ -25,7 +25,7 @@ npx @jander99/overture@latest --help
 
 - `overture detect` — print installed MCP-capable platforms and their config
   state.
-- `overture detect --json` — full 14-platform inventory with all additive
+- `overture detect --json` — full 4-platform inventory with all additive
   fields.
 - `overture config show` — print the resolved user-level `overture.jsonc`.
 - `overture detect --help` / `overture --help` — print usage and exit 0.

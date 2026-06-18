@@ -51,72 +51,6 @@ describe('detectPlatforms', () => {
     }
   });
 
-  it('happy path: detects cursor when both home and workspace markers exist', async () => {
-    const cursorHomeDir = join(tempHomeDir, '.cursor');
-    await mkdir(cursorHomeDir, { recursive: true });
-    await writeFile(join(cursorHomeDir, 'mcp.json'), '{}');
-
-    const cursorWorkspaceDir = join(tempWorkspaceDir, '.cursor');
-    await mkdir(cursorWorkspaceDir, { recursive: true });
-    await writeFile(join(cursorWorkspaceDir, 'mcp.json'), '{}');
-
-    const ctx = makeCtx({
-      homeDir: tempHomeDir,
-      configDir: tempConfigDir,
-      workspaceDir: tempWorkspaceDir,
-    });
-
-    const result = await detectPlatforms(ctx);
-    const cursorResult = result.platforms.find((p) => p.id === 'cursor');
-
-    expect(cursorResult).toBeDefined();
-    expect(cursorResult!.installed).toBe(true);
-    expect(cursorResult!.confidence).toBe('high');
-    expect(cursorResult!.matchedMarkers).toHaveLength(2);
-    expect(cursorResult!.matchedMarkers).toContain(
-      join(tempHomeDir, '.cursor', 'mcp.json'),
-    );
-    expect(cursorResult!.matchedMarkers).toContain(
-      join(tempWorkspaceDir, '.cursor', 'mcp.json'),
-    );
-    expect(cursorResult!.reason).toBe('User-global Cursor MCP configuration');
-  });
-
-  it('happy path: detects github-copilot-vscode when user XDG mcp.json is present', async () => {
-    // VS Code's actual user-level MCP config path on linux is
-    // ${XDG_CONFIG_HOME:-~/.config}/Code/User/mcp.json
-    // (per https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).
-    // The wrong path ~/.vscode/mcp.json does not exist on a real VS Code install.
-    const vscodeUserDir = join(tempConfigDir, 'Code', 'User');
-    await mkdir(vscodeUserDir, { recursive: true });
-    await writeFile(
-      join(vscodeUserDir, 'mcp.json'),
-      JSON.stringify({
-        servers: { filesystem: { type: 'stdio', command: 'npx' } },
-      }),
-    );
-
-    const ctx = makeCtx({
-      homeDir: tempHomeDir,
-      configDir: tempConfigDir,
-      workspaceDir: tempWorkspaceDir,
-    });
-
-    const result = await detectPlatforms(ctx);
-    const vscodeResult = result.platforms.find(
-      (p) => p.id === 'github-copilot-vscode',
-    );
-
-    expect(vscodeResult).toBeDefined();
-    expect(vscodeResult!.installed).toBe(true);
-    expect(vscodeResult!.matchedMcpLocations.length).toBeGreaterThan(0);
-    expect(
-      vscodeResult!.matchedMcpLocations.some((m) =>
-        m.resolvedPath.endsWith('Code/User/mcp.json'),
-      ),
-    ).toBe(true);
-  });
-
   it('no markers: every platform reports installed false', async () => {
     const ctx = makeCtx({
       homeDir: tempHomeDir,
@@ -131,7 +65,7 @@ describe('detectPlatforms', () => {
     }
   });
 
-  it('all entries returned: platforms array has 14 entries in registry order', async () => {
+  it('all entries returned: platforms array has 4 entries in registry order', async () => {
     const ctx = makeCtx({
       homeDir: tempHomeDir,
       configDir: tempConfigDir,
@@ -140,38 +74,10 @@ describe('detectPlatforms', () => {
 
     const result = await detectPlatforms(ctx);
 
-    expect(result.platforms).toHaveLength(14);
+    expect(result.platforms).toHaveLength(4);
     const expectedIds = agentRegistry.map((entry) => entry.id);
     const actualIds = result.platforms.map((p) => p.id);
     expect(actualIds).toEqual(expectedIds);
-  });
-
-  it('unsupported platform no markers: github-copilot-cloud-agent and aider', async () => {
-    const ctx = makeCtx({
-      homeDir: tempHomeDir,
-      configDir: tempConfigDir,
-      workspaceDir: tempWorkspaceDir,
-    });
-
-    const result = await detectPlatforms(ctx);
-
-    const cloudAgent = result.platforms.find(
-      (p) => p.id === 'github-copilot-cloud-agent',
-    );
-    expect(cloudAgent).toBeDefined();
-    expect(cloudAgent!.installed).toBe(false);
-    expect(cloudAgent!.confidence).toBe('unsupported');
-    expect(cloudAgent!.reason).toBe(
-      'v1 filesystem-only detection cannot confirm GitHub Copilot cloud agent presence; it is repository/settings-based.',
-    );
-
-    const aider = result.platforms.find((p) => p.id === 'aider');
-    expect(aider).toBeDefined();
-    expect(aider!.installed).toBe(false);
-    expect(aider!.confidence).toBe('unsupported');
-    expect(aider!.reason).toBe(
-      'aider detection in v1 is filesystem-only; a stable first-party MCP config surface is unconfirmed. Marker present (e.g., .aider.conf.yml) can be reported, but the registry must not claim install from PATH.',
-    );
   });
 
   it('broken symlink: marker resolves to false', async () => {
@@ -216,7 +122,7 @@ describe('detectPlatforms', () => {
 
       const result = await detectPlatforms(ctx);
 
-      expect(result.platforms).toHaveLength(14);
+      expect(result.platforms).toHaveLength(4);
       for (const platform of result.platforms) {
         expect(platform).toHaveProperty('id');
         expect(platform).toHaveProperty('installed');
@@ -255,7 +161,7 @@ describe('PlatformDetectionResult schema (binary-first)', () => {
       workspaceDir: tempWorkspaceDir,
     });
     const result = await detectPlatforms(ctx);
-    expect(result.platforms).toHaveLength(14);
+    expect(result.platforms).toHaveLength(4);
     for (const p of result.platforms) {
       expect(p).toHaveProperty('detectionStrategy');
       expect(p).toHaveProperty('mcpSupport');

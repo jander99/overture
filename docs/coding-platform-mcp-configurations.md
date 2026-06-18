@@ -104,25 +104,18 @@ command -v claude
 command -v opencode
 command -v gh
 command -v codex
-command -v cursor
-command -v code
-command -v windsurf
-command -v zed
-command -v aider
 ```
 
 ### IDE and extension checks
 
 For VS Code-family tools, the binary alone only proves that the editor is
 installed. MCP capability may come from the editor itself, GitHub Copilot Chat,
-or an extension such as Claude Code, Cline, Roo Code, or Continue.
+or an extension such as Claude Code.
 
 Useful probes:
 
 ```sh
 code --list-extensions
-cursor --list-extensions
-windsurf --list-extensions
 ```
 
 ### Configuration-file checks
@@ -142,22 +135,18 @@ research pass:
 | `claude`   | `/home/jeff/.local/bin/claude`                    |
 | `opencode` | `/home/linuxbrew/.linuxbrew/bin/opencode`         |
 | `gh`       | `/home/linuxbrew/.linuxbrew/bin/gh`               |
-| `code`     | `/mnt/c/Program Files/Microsoft VS Code/bin/code` |
 | `codex`    | `/home/jeff/.nvm/versions/node/v25.2.1/bin/codex` |
-| `aider`    | `/home/jeff/.local/bin/aider`                     |
 
 The following MCP-related config files were present:
 
-| File                                  | Platform interpretation                                                                                              |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `~/.claude.json`                      | Claude Code local/user MCP scopes                                                                                    |
-| `.mcp.json`                           | Claude Code project MCP config convention                                                                            |
-| `opencode.json`                       | OpenCode project config with top-level `mcp`                                                                         |
-| `.github/mcp.json`                    | GitHub Copilot repository/workspace MCP convention; verify against current Copilot CLI behavior before relying on it |
-| `~/.codeium/windsurf/mcp_config.json` | Windsurf MCP config                                                                                                  |
+| File               | Platform interpretation                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `~/.claude.json`   | Claude Code local/user MCP scopes                                                                                    |
+| `.mcp.json`        | Claude Code project MCP config convention                                                                            |
+| `opencode.json`    | OpenCode project config with top-level `mcp`                                                                         |
+| `.github/mcp.json` | GitHub Copilot repository/workspace MCP convention; verify against current Copilot CLI behavior before relying on it |
 
-The VS Code extension list included `anthropic.claude-code`, but no Cline, Roo,
-Continue, or Copilot extension was visible in the checked output.
+The VS Code extension list included `anthropic.claude-code`.
 
 ## Platform catalog
 
@@ -217,34 +206,6 @@ Notes:
 - Claude Code can import Claude Desktop MCP servers.
 - Claude Code can also run as an MCP server via `claude mcp serve`.
 
-### Claude Desktop
-
-Detection:
-
-- macOS app bundle or Windows application install.
-- Config file existence is usually the most reliable MCP-specific signal.
-
-Configuration locations:
-
-| OS      | Location                                                          |
-| ------- | ----------------------------------------------------------------- |
-| macOS   | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json`                     |
-| Linux   | No stable first-party desktop path was confirmed during research  |
-
-Format:
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me"]
-    }
-  }
-}
-```
-
 ### OpenCode
 
 Detection:
@@ -298,50 +259,6 @@ Remote format:
 }
 ```
 
-### GitHub Copilot in VS Code / Copilot Chat
-
-Detection:
-
-- Executable/editor: `code`, `cursor`, or another VS Code-compatible host.
-- VS Code extension checks may include GitHub Copilot and GitHub Copilot Chat.
-- Workspace config: `.vscode/mcp.json`.
-
-Configuration locations (per [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)):
-
-| Scope           | Linux                                                         | macOS                                                         | Windows                                   |
-| --------------- | ------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
-| Workspace       | `<workspace>/.vscode/mcp.json`                                | `<workspace>/.vscode/mcp.json`                                | `<workspace>/.vscode/mcp.json`            |
-| User (stable)   | `${XDG_CONFIG_HOME:-~/.config}/Code/User/mcp.json`            | `~/Library/Application Support/Code/User/mcp.json`            | `%APPDATA%\Code\User\mcp.json`            |
-| User (Insiders) | `${XDG_CONFIG_HOME:-~/.config}/Code - Insiders/User/mcp.json` | `~/Library/Application Support/Code - Insiders/User/mcp.json` | `%APPDATA%\Code - Insiders\User\mcp.json` |
-
-> **Note**: `overture` currently models user-level markers for **linux** (XDG
-> under `configDir`) and **macOS** (`base: 'home'` + `Library/Application Support/...`).
-> Windows user-level detection (`%APPDATA%\Code\User\mcp.json`) requires a
-> per-OS `configDir` resolver in `defaultPathResolutionContext()`
-> (`apps/cli/src/platforms/detect.ts:31-44`) and is tracked as a follow-up.
-> The universal workspace marker `<workspace>/.vscode/mcp.json` works on
-> every OS.
-
-Format uses top-level `servers`, not `mcpServers`:
-
-```json
-{
-  "servers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp"
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@microsoft/mcp-server-playwright"]
-    }
-  }
-}
-```
-
-VS Code MCP configs may also use `inputs` and `requestInit.headers` for secrets
-and request customization.
-
 ### GitHub Copilot CLI
 
 Detection:
@@ -386,294 +303,6 @@ workflows and were present in this repository, but current official Copilot CLI
 docs identify `~/.copilot/mcp-config.json` as the user config path. Verify the
 installed CLI before relying on workspace behavior.
 
-### GitHub Copilot coding agent / cloud agent
-
-Detection:
-
-- GitHub repository settings, not a local executable.
-- Requires repository access and Copilot coding/cloud agent configuration access.
-
-Configuration location:
-
-| Scope      | Location                                                                          |
-| ---------- | --------------------------------------------------------------------------------- |
-| Repository | GitHub.com repository settings under Copilot coding/cloud agent MCP configuration |
-
-Format:
-
-```json
-{
-  "mcpServers": {
-    "repo-server": {
-      "type": "local",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "env": {
-        "TOKEN": "${COPILOT_MCP_TOKEN}"
-      },
-      "tools": ["memory_create_entities", "memory_search_nodes"]
-    }
-  }
-}
-```
-
-Notes:
-
-- Tool allowlists are important for cloud agent configurations.
-- Secrets and variables used by Copilot MCP config must use the
-  `COPILOT_MCP_` prefix.
-- GitHub's built-in MCP server is available by default in cloud contexts.
-
-### Cursor
-
-Detection:
-
-- Executable: `cursor`
-- Config files: `~/.cursor/mcp.json`, `<project>/.cursor/mcp.json`
-- UI: Cursor settings for MCP / Tools.
-
-Configuration locations:
-
-| Scope       | Location                     |
-| ----------- | ---------------------------- |
-| Project     | `<project>/.cursor/mcp.json` |
-| User global | `~/.cursor/mcp.json`         |
-
-Format:
-
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "env": {}
-    }
-  }
-}
-```
-
-Remote servers use the same `mcpServers` map with URL/transport fields accepted
-by the current Cursor release. Treat project config as higher priority than
-global config when both define the same server.
-
-### Windsurf
-
-Detection:
-
-- Executable: `windsurf`
-- Config file: `~/.codeium/windsurf/mcp_config.json`
-- UI: Windsurf Settings > Advanced Settings / Cascade MCP configuration.
-
-Configuration location:
-
-| Scope       | Location                              |
-| ----------- | ------------------------------------- |
-| User global | `~/.codeium/windsurf/mcp_config.json` |
-
-Format follows the Claude Desktop-style `mcpServers` schema:
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home"]
-    },
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
-    }
-  }
-}
-```
-
-Notes:
-
-- Windsurf documentation describes stdio and remote/SSE-style server
-  configuration. Remote examples may use `url` or `serverUrl` depending on doc
-  version.
-- Windsurf currently focuses on tools, with documented limits on exposed tools.
-
-### Cline
-
-Detection:
-
-- VS Code extension. Check `code --list-extensions` for Cline extension IDs.
-- `~/.cline/mcp.json` or legacy extension global-storage config file existence
-  is an MCP-specific signal.
-
-Configuration locations:
-
-| Scope                      | Common location                                                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Current Cline user config  | `~/.cline/mcp.json`                                                                                             |
-| Legacy Cline CLI/user data | `~/.cline/data/settings/cline_mcp_settings.json`                                                                |
-| Legacy VS Code on Linux    | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`                     |
-| Legacy VS Code on macOS    | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
-| Legacy VS Code on Windows  | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`                     |
-
-Format:
-
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "env": {},
-      "disabled": false
-    }
-  }
-}
-```
-
-Caveat: Cline's documented path has changed over time. Prefer
-`~/.cline/mcp.json` for current Cline docs, but keep the older
-`cline_mcp_settings.json` probes for backward compatibility. Extension publisher
-IDs and global-storage paths can vary by fork, editor, or extension generation.
-
-### Roo Code
-
-Detection:
-
-- VS Code extension. Check `code --list-extensions` for Roo Code extension IDs.
-- Project file: `.roo/mcp.json`.
-
-Configuration locations:
-
-| Scope       | Location                                                                 |
-| ----------- | ------------------------------------------------------------------------ |
-| Project     | `<project>/.roo/mcp.json`                                                |
-| User global | Roo Code global `mcp_settings.json`, opened from the Roo MCP settings UI |
-
-Format:
-
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "cwd": "/home/me/project",
-      "env": {},
-      "alwaysAllow": [],
-      "disabled": false,
-      "timeout": 60,
-      "watchPaths": [],
-      "disabledTools": []
-    }
-  }
-}
-```
-
-Remote format:
-
-```json
-{
-  "mcpServers": {
-    "remote-server": {
-      "type": "streamable-http",
-      "url": "https://mcp.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${MCP_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-Project config takes precedence over global config when both define the same
-server name.
-
-### Continue
-
-Detection:
-
-- VS Code or JetBrains extension.
-- Workspace directory: `.continue/mcpServers/`.
-
-Configuration locations:
-
-| Scope                   | Location                                  |
-| ----------------------- | ----------------------------------------- |
-| Workspace YAML          | `<workspace>/.continue/mcpServers/*.yaml` |
-| Workspace imported JSON | `<workspace>/.continue/mcpServers/*.json` |
-
-Continue can import JSON files copied from supported clients into this directory;
-`<workspace>/.continue/mcpServers/mcp.json` is a common imported filename.
-
-Standalone YAML format:
-
-```yaml
-name: playwright-mcp
-version: 0.0.1
-schema: v1
-mcpServers:
-  - name: playwright
-    command: npx
-    args:
-      - -y
-      - '@microsoft/mcp-server-playwright'
-```
-
-Remote YAML format:
-
-```yaml
-name: remote-mcp
-version: 0.0.1
-schema: v1
-mcpServers:
-  - name: remote-server
-    type: streamable-http
-    url: https://mcp.example.com/mcp
-    env:
-      TOKEN: ${{ secrets.MCP_TOKEN }}
-```
-
-Continue can also copy JSON MCP files from clients such as Claude, Cursor, and
-Cline into `.continue/mcpServers/`.
-
-### Zed
-
-Detection:
-
-- Executable: `zed`
-- Settings file opened through the `zed: open settings` command.
-
-Configuration locations:
-
-| Scope           | Location                                                             |
-| --------------- | -------------------------------------------------------------------- |
-| User settings   | Zed `settings.json`; commonly `~/.config/zed/settings.json` on Linux |
-| Folder settings | `<project>/.zed/settings.json`                                       |
-
-Format uses top-level `context_servers`:
-
-```json
-{
-  "context_servers": {
-    "local-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "env": {}
-    },
-    "remote-mcp-server": {
-      "url": "https://mcp.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${MCP_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-Notes:
-
-- Zed refers to MCP servers as context servers.
-- Zed supports MCP tools and prompts.
-- Zed can forward configured MCP servers to external agents over ACP.
-
 ### OpenAI Codex
 
 Detection:
@@ -710,32 +339,6 @@ Other documented options include `env`, `env_vars`, `cwd`,
 `startup_timeout_sec`, `tool_timeout_sec`, `required`, `enabled_tools`,
 `disabled_tools`, `http_headers`, `env_http_headers`, and OAuth-related fields.
 
-### Aider
-
-Detection:
-
-- Executable: `aider`
-- Config file: `.aider.conf.yml` for Aider itself.
-
-MCP status:
-
-- A stable first-party MCP client configuration path was not confirmed during
-  research.
-- MCP support appeared in issues and pull requests, not in a stable documented
-  configuration surface.
-
-Recommendation: enumerate Aider as installed when `aider` is on PATH, but place
-it in a watchlist or “no stable first-party MCP config found” bucket until its
-current release docs confirm MCP client support.
-
-## Adjacent: AgentSkills / `npx skills`
-
-AgentSkills discovery is adjacent to this guide but not the same configuration
-surface. `npx skills`-style detection can inspire platform enumeration, but MCP
-server configuration should be modeled separately because MCP clients read
-client-specific files such as `.mcp.json`, `opencode.json`, `.vscode/mcp.json`,
-or `~/.codex/config.toml`.
-
 ### How `npx skills` detects installed agents
 
 The `vercel-labs/skills` registry keeps a static list of agents in
@@ -761,20 +364,11 @@ installation evidence and configuration surface.
 
 ```ts
 type PlatformId =
+  type PlatformId =
   | 'claude-code'
-  | 'claude-desktop'
   | 'opencode'
-  | 'github-copilot-vscode'
   | 'github-copilot-cli'
-  | 'github-copilot-cloud-agent'
-  | 'cursor'
-  | 'windsurf'
-  | 'cline'
-  | 'roo-code'
-  | 'continue'
-  | 'zed'
-  | 'openai-codex'
-  | 'aider';
+  | 'openai-codex';
 
 type HostPlatform = 'linux' | 'darwin' | 'win32';
 type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
@@ -828,13 +422,7 @@ validated.
 - OpenCode MCP docs: <https://opencode.ai/docs/mcp-servers/>
 - OpenCode config docs: <https://opencode.ai/docs/config/>
 - GitHub Copilot MCP docs: <https://docs.github.com/en/copilot>
-- VS Code MCP docs: <https://code.visualstudio.com/docs/agent-customization/mcp-servers>
-- VS Code MCP configuration reference: <https://code.visualstudio.com/docs/copilot/reference/mcp-configuration>
-- Windsurf MCP docs: <https://docs.windsurf.com/windsurf/cascade/mcp>
-- Cline MCP configuration docs: <https://docs.cline.bot/mcp/adding-and-configuring-servers>
-- Roo Code MCP docs: <https://docs.roocode.com/features/mcp/using-mcp-in-roo>
-- Continue MCP docs: <https://docs.continue.dev/customize/deep-dives/mcp>
-- Zed MCP docs: <https://zed.dev/docs/ai/mcp>
+- OpenAI Codex configuration docs: <https://developers.openai.com/codex/config>
 - OpenAI Codex configuration docs: <https://developers.openai.com/codex/config>
 - AgentSkills reference: <https://www.skills.sh/agent>
 - `vercel-labs/skills` `detectInstalledAgents` helper: <https://github.com/vercel-labs/skills/blob/main/src/agents.ts>
@@ -850,15 +438,8 @@ validated.
 
 `overture detect` uses two complementary strategies:
 
-- **Binary-first** (e.g. Claude Code, OpenCode, OpenAI Codex, GitHub Copilot
-  CLI, Windsurf, Aider). The platform is installed when its canonical CLI is
-  found on the process `PATH`. Discovery is a pure filesystem scan — no
-  `child_process`, no `which`, no shell — that respects POSIX executable
-  bits, Windows `PATHEXT`, and WSL-visible `.exe` entries.
-- **Marker-only** (e.g. Claude Desktop, Cursor, Zed, Cline, Roo Code, Continue,
-  GitHub Copilot VS Code, GitHub Copilot Cloud Agent). The platform is
-  installed when a known config file, extension-storage path, or
-  settings directory is present.
+- **Binary-first** (Claude Code, OpenCode, OpenAI Codex, GitHub Copilot CLI). The platform is installed when its canonical CLI is found on the process `PATH`. Discovery is a pure filesystem scan — no
+- **Marker-only** (no agent currently uses this strategy; all four supported agents are binary-first). The platform would be
 
 `detect` is **read-only**: it inspects configuration files but never writes,
 modifies, or syncs them. Future commands may add writing/sync surfaces, but
@@ -867,12 +448,7 @@ this document and the CLI's current behavior only cover the inventory side.
 ### Stale-config false positive guardrail
 
 A configuration file alone is not evidence of installation. If a user
-uninstalls a platform but the user's `~/.codeium/windsurf/mcp_config.json`
-(or equivalent) remains on disk, the file is reported as an **orphaned MCP
-configuration** rather than as evidence the platform is installed. The
-registry entry for Windsurf deliberately has zero `installMarkers` and lists
-`mcpServers` only as an `mcpLocation`; the platform is binary-first on the
-`windsurf` CLI.
+uninstalls a platform but a leftover config file remains on disk, the file is reported as an **orphaned MCP configuration** rather than as evidence the platform is installed.
 
 ### Parser-backed key requirements
 
@@ -911,7 +487,7 @@ wins:
 
 ### Inventory completeness
 
-The JSON output of `overture detect --json` always contains all 14 platform
+The JSON output of `overture detect --json` always contains all 4 platform
 entries in registry order, including those not installed, so a UI or
 automation can render a complete status grid without needing to know the
 list of supported IDs separately. `installed: false` is a first-class

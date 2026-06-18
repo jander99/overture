@@ -5,27 +5,17 @@ import type { PlatformId } from '@overture/agents';
 describe('agentRegistry', () => {
   const expectedIds: readonly PlatformId[] = [
     'claude-code',
-    'claude-desktop',
     'opencode',
-    'github-copilot-vscode',
     'github-copilot-cli',
-    'github-copilot-cloud-agent',
-    'cursor',
-    'windsurf',
-    'cline',
-    'roo-code',
-    'continue',
-    'zed',
     'openai-codex',
-    'aider',
   ];
 
-  it('has exactly 14 entries', () => {
-    expect(agentRegistry).toHaveLength(14);
+  it('has exactly 4 entries', () => {
+    expect(agentRegistry).toHaveLength(4);
   });
 
   it('has no duplicate IDs', () => {
-    expect(new Set(agentRegistry.map((e) => e.id)).size).toBe(14);
+    expect(new Set(agentRegistry.map((e) => e.id)).size).toBe(4);
   });
 
   it('contains the exact ordered set of IDs', () => {
@@ -40,22 +30,6 @@ describe('agentRegistry', () => {
         `displayName for ${entry.id}`,
       ).toBeGreaterThan(0);
     }
-  });
-
-  it('marks aider and github-copilot-cloud-agent as unsupported with a reason', () => {
-    const aider = agentRegistry.find((e) => e.id === 'aider');
-    expect(aider).toBeDefined();
-    expect(aider!.defaultConfidence).toBe('unsupported');
-    expect(aider!.reason).toBeTruthy();
-    expect(aider!.reason!.trim().length).toBeGreaterThan(0);
-
-    const cloudAgent = agentRegistry.find(
-      (e) => e.id === 'github-copilot-cloud-agent',
-    );
-    expect(cloudAgent).toBeDefined();
-    expect(cloudAgent!.defaultConfidence).toBe('unsupported');
-    expect(cloudAgent!.reason).toBeTruthy();
-    expect(cloudAgent!.reason!.trim().length).toBeGreaterThan(0);
   });
 
   it('gives claude-code at least one high-confidence install marker', () => {
@@ -74,113 +48,6 @@ describe('agentRegistry', () => {
       (m) => m.confidence === 'high',
     );
     expect(highMarkers.length).toBeGreaterThan(0);
-  });
-
-  it('gives cursor at least one high-confidence install marker', () => {
-    const entry = agentRegistry.find((e) => e.id === 'cursor');
-    expect(entry).toBeDefined();
-    const highMarkers = entry!.installMarkers.filter(
-      (m) => m.confidence === 'high',
-    );
-    expect(highMarkers.length).toBeGreaterThan(0);
-  });
-
-  it('windsurf has no install markers (binary-first only; mcp-only locations)', () => {
-    const entry = agentRegistry.find((e) => e.id === 'windsurf');
-    expect(entry).toBeDefined();
-    expect(entry!.installMarkers).toHaveLength(0);
-    // executableNames must include the canonical 'windsurf' binary name
-    expect(entry!.executableNames).toContain('windsurf');
-    // The mcpLocations still references the same path so stale configs
-    // surface as orphan, not as install.
-    expect(
-      entry!.mcpLocations.some(
-        (l) => l.relativePath === '.codeium/windsurf/mcp_config.json',
-      ),
-    ).toBe(true);
-  });
-
-  it('github-copilot-vscode installMarkers + mcpLocations model the correct user-profile paths per OS', () => {
-    const entry = agentRegistry.find((e) => e.id === 'github-copilot-vscode');
-    expect(entry).toBeDefined();
-
-    // Linux (XDG): Code/User/mcp.json under configDir.
-    expect(
-      entry!.installMarkers.some(
-        (m) =>
-          m.base === 'config' &&
-          m.relativePath === 'Code/User/mcp.json' &&
-          m.platforms?.includes('linux'),
-      ),
-      'linux XDG user marker must be present',
-    ).toBe(true);
-    // Linux Insiders.
-    expect(
-      entry!.installMarkers.some(
-        (m) =>
-          m.base === 'config' &&
-          m.relativePath === 'Code - Insiders/User/mcp.json' &&
-          m.platforms?.includes('linux'),
-      ),
-      'linux XDG Insiders user marker must be present',
-    ).toBe(true);
-    // macOS: Library/Application Support/Code/User/mcp.json under homeDir.
-    expect(
-      entry!.installMarkers.some(
-        (m) =>
-          m.base === 'home' &&
-          m.relativePath === 'Library/Application Support/Code/User/mcp.json' &&
-          m.platforms?.includes('darwin'),
-      ),
-      'macOS user marker must be present',
-    ).toBe(true);
-    // macOS Insiders.
-    expect(
-      entry!.installMarkers.some(
-        (m) =>
-          m.base === 'home' &&
-          m.relativePath ===
-            'Library/Application Support/Code - Insiders/User/mcp.json' &&
-          m.platforms?.includes('darwin'),
-      ),
-      'macOS Insiders user marker must be present',
-    ).toBe(true);
-
-    // The old, wrong user marker at ~/.vscode/mcp.json must be GONE from BOTH
-    // installMarkers and mcpLocations.
-    expect(
-      entry!.installMarkers.some(
-        (m) => m.base === 'home' && m.relativePath === '.vscode/mcp.json',
-      ),
-      'old base=home .vscode/mcp.json marker must not be present',
-    ).toBe(false);
-    expect(
-      entry!.mcpLocations.some(
-        (m) => m.base === 'home' && m.relativePath === '.vscode/mcp.json',
-      ),
-      'old base=home .vscode/mcp.json mcpLocation must not be present',
-    ).toBe(false);
-
-    // mcpLocations must mirror the installMarkers: every user-profile path
-    // appears as a mcpLocation too.
-    expect(
-      entry!.mcpLocations.some(
-        (m) =>
-          m.base === 'config' &&
-          m.relativePath === 'Code/User/mcp.json' &&
-          m.platforms?.includes('linux'),
-      ),
-      'mcpLocations must include the linux XDG user profile',
-    ).toBe(true);
-    expect(
-      entry!.mcpLocations.some(
-        (m) =>
-          m.base === 'home' &&
-          m.relativePath === 'Library/Application Support/Code/User/mcp.json' &&
-          m.platforms?.includes('darwin'),
-      ),
-      'mcpLocations must include the macOS user profile',
-    ).toBe(true);
   });
 
   it('gives openai-codex at least one high-confidence install marker', () => {
@@ -202,73 +69,20 @@ describe('agentRegistry', () => {
     expect(new Set(markerIds).size).toBe(markerIds.length);
   });
 
-  it('marker-only entries with supplementary executables (cursor, zed) list them', () => {
-    const cursor = agentRegistry.find((e) => e.id === 'cursor');
-    expect(cursor).toBeDefined();
-    expect(cursor!.detectionStrategy).toBe('marker-only');
-    expect(cursor!.executableNames).toContain('cursor');
-    // Sanity: marker-only entries still have install markers
-    expect(cursor!.installMarkers.length).toBeGreaterThan(0);
-
-    const zed = agentRegistry.find((e) => e.id === 'zed');
-    expect(zed).toBeDefined();
-    expect(zed!.detectionStrategy).toBe('marker-only');
-    expect(zed!.executableNames).toContain('zed');
-    expect(zed!.installMarkers.length).toBeGreaterThan(0);
-  });
-
   describe('agentRegistry aggregate (per-file agents)', () => {
-    it('exposes a static aggregate with exactly 14 agents', () => {
+    it('exposes a static aggregate with exactly 4 agents', () => {
       expect(agentRegistry).toBeDefined();
       expect(Array.isArray(agentRegistry)).toBe(true);
-      expect(agentRegistry).toHaveLength(14);
+      expect(agentRegistry).toHaveLength(4);
     });
 
-    it('preserves the exact 14-ID order from the legacy platformRegistry', () => {
+    it('preserves the exact 4-ID order from the legacy platformRegistry', () => {
       expect(agentRegistry.map((a) => a.id)).toEqual(expectedIds);
     });
 
     it('has no duplicate agent IDs', () => {
       const ids = agentRegistry.map((a) => a.id);
       expect(new Set(ids).size).toBe(ids.length);
-    });
-
-    it('keeps every legacy invariant for hand-migrated agents', () => {
-      const aider = agentRegistry.find((a) => a.id === 'aider');
-      expect(aider).toBeDefined();
-      expect(aider!.defaultConfidence).toBe('unsupported');
-      expect(aider!.reason).toBeTruthy();
-      expect(aider!.reason!.trim().length).toBeGreaterThan(0);
-
-      const cloudAgent = agentRegistry.find(
-        (a) => a.id === 'github-copilot-cloud-agent',
-      );
-      expect(cloudAgent).toBeDefined();
-      expect(cloudAgent!.defaultConfidence).toBe('unsupported');
-      expect(cloudAgent!.reason).toBeTruthy();
-      expect(cloudAgent!.reason!.trim().length).toBeGreaterThan(0);
-
-      const windsurf = agentRegistry.find((a) => a.id === 'windsurf');
-      expect(windsurf).toBeDefined();
-      expect(windsurf!.installMarkers).toHaveLength(0);
-      expect(windsurf!.executableNames).toContain('windsurf');
-      expect(
-        windsurf!.mcpLocations.some(
-          (l) => l.relativePath === '.codeium/windsurf/mcp_config.json',
-        ),
-      ).toBe(true);
-
-      const cursor = agentRegistry.find((a) => a.id === 'cursor');
-      expect(cursor).toBeDefined();
-      expect(cursor!.detectionStrategy).toBe('marker-only');
-      expect(cursor!.executableNames).toContain('cursor');
-      expect(cursor!.installMarkers.length).toBeGreaterThan(0);
-
-      const zed = agentRegistry.find((a) => a.id === 'zed');
-      expect(zed).toBeDefined();
-      expect(zed!.detectionStrategy).toBe('marker-only');
-      expect(zed!.executableNames).toContain('zed');
-      expect(zed!.installMarkers.length).toBeGreaterThan(0);
     });
 
     it('keeps marker IDs unique across the entire aggregate', () => {
@@ -308,13 +122,9 @@ describe('agentRegistry', () => {
         expect(['supported', 'unsupported', 'unknown']).toContain(a.mcpSupport);
         expect(typeof a.mcp.read, `mcp.read for ${a.id}`).toBe('function');
         expect(typeof a.mcp.write, `mcp.write for ${a.id}`).toBe('function');
-        if (a.mcpSupport === 'unsupported') {
-          await expect(a.mcp.read(ctx)).rejects.toThrow(/not implemented/i);
-        } else {
-          const result = await a.mcp.read(ctx);
-          expect(result).toHaveProperty('config');
-          expect(result).toHaveProperty('nonEmpty');
-        }
+        const result = await a.mcp.read(ctx);
+        expect(result).toHaveProperty('config');
+        expect(result).toHaveProperty('nonEmpty');
       }
     });
   });

@@ -193,7 +193,7 @@ npx -y @jander99/overture@latest --help
 npx -y @jander99/overture@latest detect --json | head -c 200
 ```
 
-The `detect --json` output should print 14 platforms' worth of
+The `detect --json` output should print 4 platforms' worth of
 inventory.
 
 If the smoke checks fail, see [Rollback](#rollback) below.

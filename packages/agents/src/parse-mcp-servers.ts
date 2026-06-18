@@ -27,9 +27,9 @@ const smolToml: { parse: (text: string) => unknown } =
 
 /**
  * Per-agent overrides for transport inference. Most agents use the
- * defaults; windsurf needs `serverUrl` accepted as a remote URL
- * (it appears in older doc versions), and the copilot CLI family
- * uses `local`/`http` (already in defaults).
+ * defaults. The GitHub Copilot CLI uses `local`/`http` (already in
+ * defaults). OpenAI Codex uses TOML with snake_case fields; that
+ * is handled by the per-agent reader, not here.
  */
 export interface ParseServerMapOptions {
   /** Field names that mark an entry as remote when present and string-shaped. Default: `['url']`. */
@@ -40,9 +40,9 @@ export interface ParseServerMapOptions {
   readonly localTypes?: readonly string[];
   /**
    * Allow a list-shaped value at the top-level key (each item must
-   * carry its own `name` field). Continue's YAML configs use this
-   * shape; JSON and TOML configs are always map-shaped. Default: `false`.
-   * The YAML helper forces this to `true` regardless of caller input.
+   * carry its own `name` field). JSON and TOML configs are always
+   * map-shaped. Default: `false`. The YAML helper forces this to
+   * `true` regardless of caller input.
    */
   readonly allowListShape?: boolean;
 }
@@ -158,7 +158,7 @@ function iterateServerMap(
       // almost certainly a malformed/empty config, not a YAML list.
       return [];
     }
-    // YAML-list shape (continue): each item has its own `name` field.
+    // YAML-list shape: each item has its own `name` field.
     const out: McpServerEntry[] = [];
     for (const item of map) {
       if (!isRecord(item)) continue;
@@ -231,11 +231,10 @@ export function parseTomlMcpServerMap(
 }
 
 /**
- * Parse a YAML MCP config file. Used by Continue, which stores
- * server entries as a YAML list (not a map). The list shape is
- * handled by `iterateServerMap` when it sees an array at the
- * top-level key — this helper forces `allowListShape: true` so
- * the list shape is accepted (JSON and TOML helpers default to false).
+ * Parse a YAML MCP config file. The list shape is handled by
+ * `iterateServerMap` when it sees an array at the top-level key —
+ * this helper forces `allowListShape: true` so the list shape is
+ * accepted (JSON and TOML helpers default to false).
  *
  * Returns `[]` on any read or parse failure.
  */
