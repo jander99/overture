@@ -7,19 +7,9 @@ export type { HostPlatform };
 
 export type PlatformId =
   | 'claude-code'
-  | 'claude-desktop'
   | 'opencode'
-  | 'github-copilot-vscode'
   | 'github-copilot-cli'
-  | 'github-copilot-cloud-agent'
-  | 'cursor'
-  | 'windsurf'
-  | 'cline'
-  | 'roo-code'
-  | 'continue'
-  | 'zed'
-  | 'openai-codex'
-  | 'aider';
+  | 'openai-codex';
 
 export type DetectionConfidence = 'high' | 'medium' | 'low' | 'unsupported';
 export type MarkerKind = 'file' | 'directory' | 'file-or-directory';
@@ -286,7 +276,7 @@ export type NoMcpExtension = Record<never, never>;
  * Every supported local MCP-capable agent's per-server type is a
  * `StandardMcpServer<...>` with a tailored extension:
  * - `StandardMcpServer` (no args): plain stdio + remote + permissive
- * - `StandardMcpServer<{ envFile?: string; auth?: ... }>`: cursor-style
+ * - `StandardMcpServer<{ envFile?: string; auth?: ... }>`: extension shape
  *
  * The `& PermissiveConfigObject` intersection preserves the open
  * string-keyed index signature so undocumented fields remain
@@ -310,8 +300,9 @@ export type StandardMcpServer<TExtension extends object = NoMcpExtension> =
  *
  * Default `TTopLevelKey` is `'mcpServers'`, matching the dominant
  * MCP config convention. Agents that use a different top-level
- * (opencode: `'mcp'`, openai-codex: `'mcp_servers'`, copilot-vscode:
- * `'servers'`, zed: `'context_servers'`) pass it as the third
+ * Default `TTopLevelKey` is `'mcpServers'`, matching the dominant
+ * MCP config convention. Agents that use a different top-level
+ * (opencode: `'mcp'`, openai-codex: `'mcp_servers'`) pass it as the third
  * argument.
  */
 export type StandardMcpConfig<

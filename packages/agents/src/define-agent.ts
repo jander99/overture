@@ -4,8 +4,7 @@
 // and write (the shared "not implemented" rejecting handler).
 //
 // Per-agent files can still override any of the three MCP handlers via
-// the optional `mcp` field. Unsupported agents (aider,
-// github-copilot-cloud-agent) pass a complete
+// the optional `mcp` field. Unsupported agents pass a complete
 // `notImplementedMcpHandlers('<id>')` to keep read rejecting too.
 
 import { defaultMcpWriteHandler, notImplementedMcpHandlers } from './types.js';
