@@ -2,9 +2,21 @@
 import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import {
+  asRegistryNormalizeHandler,
+  isRecord,
+  normalizeOptionalArgs,
+  normalizeOptionalEnv,
+  normalizeOptionalHeaders,
+  normalized,
+  shapeConflict,
+} from './normalize-mcp-config.js';
+import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
+  AgentMcpNormalizeHandler,
   AgentMcpParseServersHandler,
+  AgentNormalizedMcpServer,
   OAuthConfig,
   StringMap,
   AgentMcpReadResult,
@@ -44,6 +56,110 @@ export type OpenCodeMcpServer =
 export const parseOpenCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseOpenCodeMcpServerMap(resolvedPath);
+
+/**
+ * Normalize an OpenCode MCP config read result into the canonical
+ * `OvertureMcpServer` shape the scan matrix consumes.
+ *
+ * OpenCode is discriminator-driven: each server entry's `type` selects
+ * the transport. `'local'` requires a non-empty `command` array
+ * (argv[0] becomes the canonical `command`, argv[1..] becomes the
+ * optional canonical `args`); `'remote'` requires a non-empty `url`
+ * plus an optional `headers` map. OpenCode extension fields
+ * (`enabled`, `timeout`, `oauth`) are intentionally ignored because
+ * the canonical `OvertureMcpServer` union does not have a slot for
+ * them. Any other `type` value (including a missing `type` key)
+ * produces the canonical `'Unsupported MCP server transport type.'`
+ * reason.
+ *
+ * Returns `{}` when the read result is `null`, has a `parseError`, is
+ * missing the top-level `mcp` map, or has a non-object `mcp` value
+ * (the registry uses the empty object to mean "no normalized entries
+ * to surface" — there is no implicit error to render in that case).
+ */
+export const normalizeOpenCodeMcpServers: AgentMcpNormalizeHandler<
+  OpenCodeMcpConfig
+> = (input) => {
+  if (input.parseError !== undefined) {
+    return {};
+  }
+  if (input.config === null) {
+    return {};
+  }
+  const mcp = input.config.mcp;
+  if (mcp === undefined) {
+    return {};
+  }
+  if (!isRecord(mcp)) {
+    return {};
+  }
+
+  const out: Record<string, AgentNormalizedMcpServer> = {};
+  for (const name of Object.keys(mcp)) {
+    const entry = mcp[name];
+    if (!isRecord(entry)) {
+      out[name] = shapeConflict('Expected server entry to be an object.');
+      continue;
+    }
+
+    const entryType = entry['type'];
+
+    if (entryType === 'local') {
+      const command = entry['command'];
+      if (!Array.isArray(command) || command.length === 0) {
+        out[name] = shapeConflict('Stdio command is missing or empty.');
+        continue;
+      }
+      const canonical: OvertureMcpServer = {
+        type: 'stdio',
+        command: command[0] as string,
+      };
+      if (command.length > 1) {
+        const args = normalizeOptionalArgs(command.slice(1));
+        if (typeof args === 'string') {
+          out[name] = shapeConflict(args);
+          continue;
+        }
+        // `args` is a non-empty `string[]` here: `command.length > 1`
+        // guarantees `command.slice(1)` is non-empty, and the helper
+        // preserves non-empty arrays as `string[]` (not `undefined`).
+        canonical.args = args;
+      }
+      const env = normalizeOptionalEnv(entry['environment']);
+      if (typeof env === 'string') {
+        out[name] = shapeConflict(env);
+        continue;
+      }
+      if (env !== undefined) {
+        canonical.env = env;
+      }
+      out[name] = normalized(canonical);
+      continue;
+    }
+
+    if (entryType === 'remote') {
+      const url = entry['url'];
+      if (typeof url !== 'string' || url.length === 0) {
+        out[name] = shapeConflict('Remote url is missing or empty.');
+        continue;
+      }
+      const canonical: OvertureMcpServer = { type: 'remote', url };
+      const headers = normalizeOptionalHeaders(entry['headers']);
+      if (typeof headers === 'string') {
+        out[name] = shapeConflict(headers);
+        continue;
+      }
+      if (headers !== undefined) {
+        canonical.headers = headers;
+      }
+      out[name] = normalized(canonical);
+      continue;
+    }
+
+    out[name] = shapeConflict('Unsupported MCP server transport type.');
+  }
+  return out;
+};
 
 /**
  * Native OpenCode MCP config shape. The top-level `mcp` key holds a
@@ -154,6 +270,7 @@ export const opencode: AgentDefinition = defineAgent({
   executableNames: ['opencode'],
   mcp: {
     parseServers: parseOpenCodeMcpServers,
+    normalize: asRegistryNormalizeHandler(normalizeOpenCodeMcpServers),
   },
 });
 
