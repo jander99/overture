@@ -24,7 +24,5 @@
     "src/**/*.spec.jsx",
     "src/**/*.d.ts"
   ],
-  "references": [
-    { "path": "../config/tsconfig.lib.json" }
-  ]
+  "references": [{ "path": "../config/tsconfig.lib.json" }]
 }
