@@ -74,6 +74,8 @@ export {
   type DefineAgentInput,
 } from './define-agent.js';
 
+export { asRegistryNormalizeHandler } from './normalize-mcp-config.js';
+
 import { claudeCode } from './claude-code.js';
 import { opencode } from './opencode.js';
 import { githubCopilotCli } from './github-copilot-cli.js';
