@@ -42,6 +42,19 @@ describe('defineAgent', () => {
     expect(agent.mcp.parseServers).toBe(parseServers);
   });
 
+  it('preserves caller-provided normalize by identity', () => {
+    const normalize = () => ({});
+    const agent = defineAgent({
+      ...base,
+      id: 'opencode',
+      mcp: {
+        read: () => Promise.resolve({ config: null, nonEmpty: false }),
+        normalize,
+      },
+    });
+    expect(agent.mcp.normalize).toBe(normalize);
+  });
+
   it('preserves notImplementedMcpHandlers for unsupported agents', async () => {
     const agent = defineAgent({
       ...base,

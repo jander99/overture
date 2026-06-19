@@ -54,6 +54,9 @@ export function defineAgent(input: DefineAgentInput): AgentDefinition {
         ...(input.mcp.parseServers
           ? { parseServers: input.mcp.parseServers }
           : {}),
+        ...(input.mcp.normalize
+          ? { normalize: input.mcp.normalize }
+          : {}),
       },
     };
   }
@@ -68,6 +71,9 @@ export function defineAgent(input: DefineAgentInput): AgentDefinition {
       write: input.mcp?.write ?? defaultMcpWriteHandler(input.id),
       ...(input.mcp?.parseServers
         ? { parseServers: input.mcp.parseServers }
+        : {}),
+      ...(input.mcp?.normalize
+        ? { normalize: input.mcp?.normalize }
         : {}),
     },
   };
