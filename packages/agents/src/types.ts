@@ -3,6 +3,7 @@
 // from @overture/agents. The MCP config parser is internal (not exported from
 // index.ts); per-agent readers use it via the internal mcp-config-parser.
 import type { HostPlatform } from '@overture/os';
+import type { OvertureMcpServer } from '@overture/config';
 export type { HostPlatform };
 
 export type PlatformId =
@@ -147,6 +148,54 @@ export type AgentMcpWriteHandler = (
 ) => Promise<AgentMcpWriteResult>;
 
 /**
+ * Canonical reason a per-agent MCP server entry could not be normalized to
+ * `OvertureMcpServer`. The union is the contract shared by every agent's
+ * `normalize` handler; the `shape-conflict` arm of `AgentNormalizedMcpServer`
+ * is restricted to one of these strings so downstream renderers can surface
+ * a stable, human-readable message without inspecting the agent's native shape.
+ * Task 2's `NORMALIZE_SHAPE_CONFLICT_REASONS` constant re-uses this union.
+ */
+export type AgentMcpNormalizeReason =
+  | 'Expected server entry to be an object.'
+  | 'Stdio command is missing or empty.'
+  | 'Remote url is missing or empty.'
+  | 'Server declares both stdio command and remote url.'
+  | 'Server declares neither stdio command nor remote url.'
+  | 'Expected string array for args.'
+  | 'Expected string map for env.'
+  | 'Expected string map for headers.'
+  | 'Unsupported MCP server transport type.';
+
+/**
+ * Per-agent normalized server entry. The `normalized` arm carries a canonical
+ * `OvertureMcpServer` that the scan matrix compares against the canonical intent;
+ * the `shape-conflict` arm carries the human-readable reason the entry could not
+ * be normalized. This is the agents-local output type consumed by the scan
+ * matrix; the `state` discriminant aligns with the downstream consumer so
+ * scan matrix can consume the agents output as-is once the `server` field is set.
+ */
+export type AgentNormalizedMcpServer =
+  | {
+      readonly state: 'normalized';
+      readonly server: OvertureMcpServer;
+    }
+  | {
+      readonly state: 'shape-conflict';
+      readonly reason: AgentMcpNormalizeReason;
+    };
+
+/**
+ * Per-agent typed normalize handler. The `TConfig` type parameter is the agent's
+ * native MCP config shape (e.g. `ClaudeCodeMcpConfig`); the default of `unknown`
+ * matches the registry's heterogeneous non-generic slot. Per-agent normalizers
+ * expose a typed variant and adapt it to `unknown` via Task 2's
+ * `asRegistryNormalizeHandler<TConfig>()` helper at the call site.
+ */
+export type AgentMcpNormalizeHandler<TConfig = unknown> = (
+  input: AgentMcpReadResult<TConfig>,
+) => Readonly<Record<string, AgentNormalizedMcpServer>>;
+
+/**
  * Bundled MCP handlers exposed by an agent.
  *
  * `read` is always required. `write` is optional on the input shape
@@ -165,6 +214,17 @@ export interface AgentMcpHandlers {
    * The CLI calls this generically — no per-id string dispatch.
    */
   parseServers?: AgentMcpParseServersHandler;
+  /**
+   * Optional handler that converts an agent's native MCP config into the
+   * normalized `OvertureMcpServer` shape the scan matrix consumes. Agents
+   * whose native schema is rich enough to express every canonical field wire a
+   * typed normalizer; agents whose shape is too narrow omit it and rely on the
+   * shared "no entry" behavior. The CLI invokes this through the registry's
+   * non-generic `AgentMcpNormalizeHandler<unknown>` slot, so per-agent
+   * normalizers expose a typed variant and adapt it at the call site (Task 2
+   * introduces `asRegistryNormalizeHandler`).
+   */
+  normalize?: AgentMcpNormalizeHandler<unknown>;
 }
 
 /** Complete (non-optional) MCP handlers, as exposed on every exported `AgentDefinition`. */

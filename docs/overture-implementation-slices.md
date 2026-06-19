@@ -114,18 +114,32 @@ to supply post-normalized `OvertureMcpServer` values without changing B1.
 
 ### B2. Normalize agent MCP configs into canonical server entries
 
-Convert each supported agent's native MCP shape into canonical `mcpServers`
-entries for comparison.
+Add a new optional handler `mcp.normalize` on `AgentMcpHandlers` that converts
+each supported agent's native MCP shape into canonical `OvertureMcpServer`
+entries. The handler is implemented per agent inside `@overture/agents` (the
+existing `mcp.parseServers` handler stays separate — it renders the display
+path; `mcp.normalize` is the canonical path for comparison).
 
-Start with the highest-value agents:
+Per-agent implementations live in `packages/agents/src/<id>.ts` for
+claude-code, opencode, github-copilot-cli, and openai-codex. The agents
+package depends on `@overture/config` for the `OvertureMcpServer` type
+only — no `@overture/scan-matrix` import (scan-matrix already imports
+`McpSupport` from agents; a reverse import would close a package cycle).
 
-- Claude Code
-- OpenCode
-- GitHub Copilot CLI
-- OpenAI Codex
+Shared normalization helpers and the canonical shape-conflict reason strings
+live in `packages/agents/src/normalize-mcp-config.ts`. Per-agent normalizers are
+wired into the registry through `asRegistryNormalizeHandler<TConfig>(handler)`
+so the heterogeneous `AgentMcpHandlers.normalize` slot stays non-generic
+while per-agent functions preserve their typed input shape.
 
-Expected result: fixture-backed normalization for each included agent, with no
-writes.
+Approval gate: the `mcp.normalize` handler interface and the
+agents-package-as-home decision.
+
+Expected result: fixture-backed `mcp.normalize` per agent, with no CLI
+surface change. `@overture/scan-matrix` continues to receive canonical
+entries unchanged.
+
+**Status: completed.**
 
 ### B3. Classify conflicts
 

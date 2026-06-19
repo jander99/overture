@@ -10,5 +10,8 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     }
+  },
+  "dependencies": {
+    "@overture/config": "workspace:*"
   }
 }

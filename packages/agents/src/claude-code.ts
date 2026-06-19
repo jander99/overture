@@ -1,11 +1,22 @@
 // Claude Code agent definition.
+import {
+  asRegistryNormalizeHandler,
+  isRecord,
+  normalized,
+  normalizeOptionalArgs,
+  normalizeOptionalEnv,
+  normalizeOptionalHeaders,
+  shapeConflict,
+} from './normalize-mcp-config.js';
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   AgentMcpReadResult,
+  AgentNormalizedMcpServer,
   NoMcpExtension,
   StandardMcpConfig,
   StandardMcpServer,
@@ -16,6 +27,80 @@ import type { PathResolutionContext } from './types.js';
 export const parseClaudeCodeMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
+export function normalizeClaudeCodeMcpServers(
+  input: AgentMcpReadResult<ClaudeCodeMcpConfig>,
+): Readonly<Record<string, AgentNormalizedMcpServer>> {
+  if (input.parseError !== undefined) {
+    return {};
+  }
+  if (input.config === null) {
+    return {};
+  }
+  const mcpServers = input.config.mcpServers;
+  if (mcpServers === undefined) {
+    return {};
+  }
+  if (!isRecord(mcpServers)) {
+    return {};
+  }
+  const out: Record<string, AgentNormalizedMcpServer> = {};
+  for (const name of Object.keys(mcpServers)) {
+    out[name] = normalizeClaudeServerEntry(mcpServers[name]);
+  }
+  return out;
+}
+
+function normalizeClaudeServerEntry(entry: unknown): AgentNormalizedMcpServer {
+  if (!isRecord(entry)) {
+    return shapeConflict('Expected server entry to be an object.');
+  }
+  const hasCommand = 'command' in entry;
+  const hasUrl = 'url' in entry;
+  if (hasCommand && hasUrl) {
+    return shapeConflict('Server declares both stdio command and remote url.');
+  }
+  if (!hasCommand && !hasUrl) {
+    return shapeConflict(
+      'Server declares neither stdio command nor remote url.',
+    );
+  }
+  if (hasCommand) {
+    const command = entry['command'];
+    if (typeof command !== 'string' || command.length === 0) {
+      return shapeConflict('Stdio command is missing or empty.');
+    }
+    const args = normalizeOptionalArgs(entry['args']);
+    if (typeof args === 'string') {
+      return shapeConflict(args);
+    }
+    const env = normalizeOptionalEnv(entry['env']);
+    if (typeof env === 'string') {
+      return shapeConflict(env);
+    }
+    const server: OvertureMcpServer = {
+      type: 'stdio',
+      command,
+      ...(args !== undefined ? { args } : {}),
+      ...(env !== undefined ? { env } : {}),
+    };
+    return normalized(server);
+  }
+  const url = entry['url'];
+  if (typeof url !== 'string' || url.length === 0) {
+    return shapeConflict('Remote url is missing or empty.');
+  }
+  const headers = normalizeOptionalHeaders(entry['headers']);
+  if (typeof headers === 'string') {
+    return shapeConflict(headers);
+  }
+  const server: OvertureMcpServer = {
+    type: 'remote',
+    url,
+    ...(headers !== undefined ? { headers } : {}),
+  };
+  return normalized(server);
+}
 
 export const claudeCode: AgentDefinition = defineAgent({
   id: 'claude-code',
@@ -62,38 +147,21 @@ export const claudeCode: AgentDefinition = defineAgent({
   executableNames: ['claude'],
   mcp: {
     parseServers: parseClaudeCodeMcpServers,
+    normalize: asRegistryNormalizeHandler(normalizeClaudeCodeMcpServers),
   },
 });
 
-/**
- * Native Claude Code MCP config: `mcpServers` map; the top level may
- * also carry a local `imports` map (Claude Code's local-imports
- * feature). The per-server shape is the standard stdio/remote
- * union — no Claude-specific server fields beyond the imports slot.
- */
 export type ClaudeCodeMcpConfig = StandardMcpConfig<
   NoMcpExtension,
   Readonly<{ readonly imports?: StringMap }>
 >;
 
-/** Per-server type — re-exported under the historical name for downstream imports. */
 export type ClaudeCodeMcpServer = StandardMcpServer<NoMcpExtension>;
 
-/** Stdio transport: local process invocation. */
 export type ClaudeCodeStdioServer = StandardMcpServer<NoMcpExtension>;
 
-/** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
 export type ClaudeCodeRemoteServer = StandardMcpServer<NoMcpExtension>;
 
-/** Remote transport: HTTP / streamable-http / SSE / WebSocket. */
-
-/**
- * Read the agent's MCP config into the typed `ClaudeCodeMcpConfig` shape.
- * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
- * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
- * as `claudeCode.mcp.read`, but with the generic `config` field
- * narrowed to `ClaudeCodeMcpConfig | null`.
- */
 export async function readClaudeCodeMcpConfig(
   ctx: PathResolutionContext,
 ): Promise<AgentMcpReadResult<ClaudeCodeMcpConfig>> {

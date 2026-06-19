@@ -17,6 +17,8 @@ import type { AgentDefinition, PlatformId } from './types.js';
 export type {
   AgentDefinition,
   AgentMcpHandlers,
+  AgentMcpNormalizeHandler,
+  AgentMcpNormalizeReason,
   AgentMcpParseServersHandler,
   AgentMcpReadHandler,
   AgentMcpReadHandlerTyped,
@@ -24,6 +26,7 @@ export type {
   AgentMcpWriteHandler,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   JsonPrimitive,
   JsonValue,
   StringList,
@@ -70,6 +73,8 @@ export {
   notImplementedMcpHandlers,
   type DefineAgentInput,
 } from './define-agent.js';
+
+export { asRegistryNormalizeHandler } from './normalize-mcp-config.js';
 
 import { claudeCode } from './claude-code.js';
 import { opencode } from './opencode.js';
