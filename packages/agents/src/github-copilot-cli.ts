@@ -1,11 +1,22 @@
 // GitHub Copilot CLI agent definition.
+import {
+  asRegistryNormalizeHandler,
+  isRecord,
+  normalized,
+  normalizeOptionalArgs,
+  normalizeOptionalEnv,
+  normalizeOptionalHeaders,
+  shapeConflict,
+} from './normalize-mcp-config.js';
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
   AgentMcpParseServersHandler,
   AgentMcpReadResult,
+  AgentNormalizedMcpServer,
   McpServerMap,
   PathResolutionContext,
   StringList,
@@ -16,6 +27,73 @@ import type {
 export const parseGitHubCopilotCliMcpServers: AgentMcpParseServersHandler = (
   resolvedPath,
 ) => parseJsoncMcpServerMap(resolvedPath, 'mcpServers');
+
+export function normalizeGitHubCopilotCliMcpServers(
+  input: AgentMcpReadResult<GitHubCopilotCliMcpConfig>,
+): Readonly<Record<string, AgentNormalizedMcpServer>> {
+  if (input.parseError !== undefined) {
+    return {};
+  }
+  if (input.config === null) {
+    return {};
+  }
+  const mcpServers = input.config.mcpServers;
+  if (mcpServers === undefined) {
+    return {};
+  }
+  if (!isRecord(mcpServers)) {
+    return {};
+  }
+  const out: Record<string, AgentNormalizedMcpServer> = {};
+  for (const name of Object.keys(mcpServers)) {
+    out[name] = normalizeCopilotServerEntry(mcpServers[name]);
+  }
+  return out;
+}
+
+function normalizeCopilotServerEntry(entry: unknown): AgentNormalizedMcpServer {
+  if (!isRecord(entry)) {
+    return shapeConflict('Expected server entry to be an object.');
+  }
+  if (entry['type'] === 'local') {
+    const command = entry['command'];
+    if (typeof command !== 'string' || command.length === 0) {
+      return shapeConflict('Stdio command is missing or empty.');
+    }
+    const args = normalizeOptionalArgs(entry['args']);
+    if (typeof args === 'string') {
+      return shapeConflict(args);
+    }
+    const env = normalizeOptionalEnv(entry['env']);
+    if (typeof env === 'string') {
+      return shapeConflict(env);
+    }
+    const server: OvertureMcpServer = {
+      type: 'stdio',
+      command,
+      ...(args !== undefined ? { args } : {}),
+      ...(env !== undefined ? { env } : {}),
+    };
+    return normalized(server);
+  }
+  if (entry['type'] === 'http') {
+    const url = entry['url'];
+    if (typeof url !== 'string' || url.length === 0) {
+      return shapeConflict('Remote url is missing or empty.');
+    }
+    const headers = normalizeOptionalHeaders(entry['headers']);
+    if (typeof headers === 'string') {
+      return shapeConflict(headers);
+    }
+    const server: OvertureMcpServer = {
+      type: 'remote',
+      url,
+      ...(headers !== undefined ? { headers } : {}),
+    };
+    return normalized(server);
+  }
+  return shapeConflict('Unsupported MCP server transport type.');
+}
 
 export const githubCopilotCli: AgentDefinition = defineAgent({
   id: 'github-copilot-cli',
@@ -56,13 +134,10 @@ export const githubCopilotCli: AgentDefinition = defineAgent({
   executableNames: ['copilot'],
   mcp: {
     parseServers: parseGitHubCopilotCliMcpServers,
+    normalize: asRegistryNormalizeHandler(normalizeGitHubCopilotCliMcpServers),
   },
 });
 
-/**
- * Local (subprocess) Copilot CLI MCP server. `type` is the literal
- * `'local'` and the entry is keyed on it for a discriminated union.
- */
 export interface GitHubCopilotCliLocalServer {
   type: 'local';
   command: string;
@@ -71,9 +146,6 @@ export interface GitHubCopilotCliLocalServer {
   tools?: ToolList;
 }
 
-/**
- * Remote (HTTP) Copilot CLI MCP server. `type` is the literal `'http'`.
- */
 export interface GitHubCopilotCliRemoteServer {
   type: 'http';
   url: string;
@@ -81,31 +153,14 @@ export interface GitHubCopilotCliRemoteServer {
   tools?: ToolList;
 }
 
-/**
- * Union of every supported Copilot CLI MCP server variant. Discriminated
- * on the `type` field.
- */
 export type GitHubCopilotCliServer =
   | GitHubCopilotCliLocalServer
   | GitHubCopilotCliRemoteServer;
 
-/**
- * Native shape of `~/.copilot/mcp-config.json` (user-global; relocatable
- * via `COPILOT_HOME`). The top-level key is `mcpServers` (per the current
- * official Copilot CLI docs), NOT the legacy `servers` key referenced by
- * the stale registry metadata.
- */
 export interface GitHubCopilotCliMcpConfig {
   mcpServers?: McpServerMap<GitHubCopilotCliServer>;
 }
 
-/**
- * Read the agent's MCP config into the typed `GitHubCopilotCliMcpConfig` shape.
- * Thin wrapper over `readAgentMcpConfig` that casts the unknown document
- * to the agent's typed config. Returns the same `AgentMcpReadResult` shape
- * as `githubCopilotCli.mcp.read`, but with the generic `config` field
- * narrowed to `GitHubCopilotCliMcpConfig | null`.
- */
 export async function readGitHubCopilotCliMcpConfig(
   ctx: PathResolutionContext,
 ): Promise<AgentMcpReadResult<GitHubCopilotCliMcpConfig>> {
