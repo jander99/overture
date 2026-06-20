@@ -140,19 +140,17 @@ describe('run', () => {
     const code = await run(['detect', '--json']);
     expect(code).toBe(0);
 
-    const stdout = (
-      stdoutSpy.mock.calls as ReadonlyArray<ReadonlyArray<unknown>>
-    )
-      .map((call) => String(call[0] ?? ''))
+    const stdout = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
       .join('');
     const parsed = JSON.parse(stdout) as {
-      platforms: Array<{
+      platforms: {
         id: string;
         installed: boolean;
         mcpSupport: string;
         mcpConfigured: boolean;
-        matchedMcpLocations: Array<{ resolvedPath: string }>;
-      }>;
+        matchedMcpLocations: { resolvedPath: string }[];
+      }[];
     };
     const opencode = parsed.platforms.find(
       (platform) => platform.id === 'opencode',
