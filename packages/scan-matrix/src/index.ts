@@ -685,3 +685,300 @@ export function buildScanMatrix(input: BuildScanMatrixInput): ScanMatrix {
   }
   return result;
 }
+
+/**
+ * B3 - Per-name conflict classification reasons for hard-refuse entries.
+ * Exhaustive union; extend by adding a new literal AND a new message template.
+ */
+export type HardRefuseReason =
+  | 'parse-error'
+  | 'shape-conflict'
+  | 'mixed-transport-types'
+  | 'canonical-settings-drift';
+
+/**
+ * B3 - One candidate entry inside a `PickableConflict.candidates` list.
+ * Carries only stable data that renderers (C1/C2) and the bootstrap prompt (D2) need.
+ */
+export interface PickableConflictCandidate {
+  readonly agentId: string;
+  readonly displayName: string;
+  readonly server: OvertureMcpServer;
+}
+
+/**
+ * B3 - One bootstrap pickable conflict: same server name across two or more agents
+ * with non-equal settings (and only emitted when `matrix.canonicalState === 'absent'`).
+ */
+export interface PickableConflict {
+  readonly serverName: string;
+  readonly candidates: readonly PickableConflictCandidate[];
+  readonly message: string;
+}
+
+/**
+ * B3 - One hard-refuse entry. `serverName`, `agentId`, and `displayName` are nullable
+ * because some reasons span multiple agents without a single agent of blame.
+ */
+export interface HardRefuseConflict {
+  readonly reason: HardRefuseReason;
+  readonly serverName: string | null;
+  readonly agentId: string | null;
+  readonly displayName: string | null;
+  readonly message: string;
+}
+
+/**
+ * B3 - Full classification output. Both arrays are JSON-serializable plain data:
+ * no `Map`, `Set`, `Date`, functions, classes, or `ServerStatusRow` references.
+ */
+export interface ConflictClassification {
+  readonly pickable: readonly PickableConflict[];
+  readonly hardRefuses: readonly HardRefuseConflict[];
+}
+
+/**
+ * B3 - Resolve the human-readable display name for a row's agent.
+ *
+ * Looks the agent up in `matrix.agents` by `row.agentId` so the refusal
+ * message names the platform, not the internal id. Falls back to the
+ * `agentId` itself when the snapshot is missing (defensive — callers
+ * must include every agent referenced by the row list).
+ */
+function displayNameFor(matrix: ScanMatrix, agentId: string): string {
+  for (const snapshot of matrix.agents) {
+    if (snapshot.id === agentId) {
+      return snapshot.displayName;
+    }
+  }
+  return agentId;
+}
+
+/**
+ * B3 - Compare two sort keys ascending. Returns the conventional
+ * three-way -1 / 0 / +1 used by `Array.prototype.sort`.
+ */
+function compareStrings(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
+}
+
+/**
+ * B3 - Classify a scan matrix into pickable conflicts and hard-refuse conflicts.
+ *
+ * Task 2 populates `hardRefuses` for parse-error snapshots, shape-conflict rows,
+ * and canonical-settings-drift rows. Task 3 adds bootstrap-only `pickable` and
+ * the `mixed-transport-types` reason, both built from same-name
+ * `extra-in-agent` row groups. When canonical intent exists, same-name extras
+ * are not conflicts.
+ *
+ * Pure, synchronous, no I/O. Deterministic ordering:
+ *   - `pickable` sorted by `serverName` ascending.
+ *   - pickable `candidates` sorted by matrix agent order, falling back to `agentId` ascending.
+ *   - `hardRefuses` sorted by `reason`, then `serverName ?? ''`, then `agentId ?? ''`.
+ *
+ * The implementation never mutates the input matrix: every emitted
+ * `HardRefuseConflict` and `PickableConflict` is built from snapshot/row
+ * fields read by value.
+ */
+export function classifyConflicts(matrix: ScanMatrix): ConflictClassification {
+  const hardRefuses: HardRefuseConflict[] = [];
+
+  for (const snapshot of matrix.agents) {
+    if (snapshot.readState !== 'parse-error') {
+      continue;
+    }
+    const path = snapshot.resolvedPath ?? '<unknown path>';
+    const reason = snapshot.reason ?? '<no reason provided>';
+    hardRefuses.push({
+      reason: 'parse-error',
+      serverName: null,
+      agentId: snapshot.id,
+      displayName: snapshot.displayName,
+      message: `Cannot classify MCP conflicts because ${snapshot.displayName} could not parse ${path}: ${reason}. Fix that config file and retry.`,
+    });
+  }
+
+  for (const row of matrix.rows) {
+    if (row.status === 'shape-conflict') {
+      const displayName = displayNameFor(matrix, row.agentId);
+      const serverName = row.canonicalName ?? row.agentServerName;
+      hardRefuses.push({
+        reason: 'shape-conflict',
+        serverName,
+        agentId: row.agentId,
+        displayName,
+        message: `Cannot classify server "${serverName}" from ${displayName}: ${row.reason ?? '<no reason>'}. Fix that config entry and retry.`,
+      });
+      continue;
+    }
+    if (
+      row.status === 'different-settings' &&
+      matrix.canonicalState === 'ready'
+    ) {
+      const displayName = displayNameFor(matrix, row.agentId);
+      // `different-settings` rows always carry a non-null `canonicalName`
+      // when canonical is `ready` — the row was emitted from the
+      // canonical-loop branch, never the agent-only extras branch.
+      const serverName = row.canonicalName ?? '';
+      hardRefuses.push({
+        reason: 'canonical-settings-drift',
+        serverName,
+        agentId: row.agentId,
+        displayName,
+        message: `Refusing to continue for server "${serverName}" on ${displayName}: canonical and agent settings differ. Update the canonical config or the agent config and retry.`,
+      });
+    }
+  }
+
+  // === B3 Task 3: group same-name `extra-in-agent` rows for bootstrap
+  // pickable conflicts and mixed-transport-types hard-refuses.
+  //
+  // Mixed-transport wins over pickable for a given `serverName`: when a
+  // group spans both 'stdio' and 'remote', emit ONE mixed-transport-types
+  // hard-refuse and skip the pickable pass for that group. Single-transport
+  // groups with all-equal settings emit nothing.
+  const pickable: PickableConflict[] = [];
+
+  const extrasByServerName = new Map<string, ServerStatusRow[]>();
+  for (const row of matrix.rows) {
+    if (
+      row.status === 'extra-in-agent' &&
+      row.agentServerName !== null &&
+      row.agentServer !== null
+    ) {
+      const list = extrasByServerName.get(row.agentServerName) ?? [];
+      list.push(row);
+      extrasByServerName.set(row.agentServerName, list);
+    }
+  }
+
+  const mixedTransportKeys = new Set<string>();
+  for (const [serverName, rows] of extrasByServerName) {
+    const types = new Set<string>();
+    for (const row of rows) {
+      if (row.agentServer !== null) {
+        types.add(row.agentServer.type);
+      }
+    }
+    if (types.has('stdio') && types.has('remote')) {
+      mixedTransportKeys.add(serverName);
+      const sortedTypes = [...types].sort().join(', ');
+      hardRefuses.push({
+        reason: 'mixed-transport-types',
+        serverName,
+        agentId: null,
+        displayName: null,
+        message: `Cannot classify server "${serverName}" because agents disagree on transport type (${sortedTypes}). Rename or fix the source entries and retry.`,
+      });
+    }
+  }
+
+  // Pickable fires only when `canonicalState === 'absent'`. When canonical
+  // intent exists, same-name extras are not conflicts (vision: client
+  // differences are information before intent).
+  if (matrix.canonicalState === 'absent') {
+    const agentPosition = new Map<string, number>();
+    matrix.agents.forEach((snapshot, index) => {
+      agentPosition.set(snapshot.id, index);
+    });
+
+    for (const [serverName, rows] of extrasByServerName) {
+      if (mixedTransportKeys.has(serverName)) {
+        continue;
+      }
+      const first = rows[0];
+      if (first === undefined || first.agentServer === null) {
+        continue;
+      }
+      const firstType = first.agentServer.type;
+      const sameTypeRows = rows.filter(
+        (row) => row.agentServer !== null && row.agentServer.type === firstType,
+      );
+      if (sameTypeRows.length < 2) {
+        continue;
+      }
+      let hasNonEqualPair = false;
+      for (let i = 0; i < sameTypeRows.length && !hasNonEqualPair; i++) {
+        const left = sameTypeRows[i];
+        if (left === undefined || left.agentServer === null) {
+          continue;
+        }
+        for (let j = i + 1; j < sameTypeRows.length; j++) {
+          const right = sameTypeRows[j];
+          if (right === undefined || right.agentServer === null) {
+            continue;
+          }
+          if (!serverSettingsEqual(left.agentServer, right.agentServer)) {
+            hasNonEqualPair = true;
+            break;
+          }
+        }
+      }
+      if (!hasNonEqualPair) {
+        continue;
+      }
+      const candidateRows: {
+        readonly agentId: string;
+        readonly displayName: string;
+        readonly server: OvertureMcpServer;
+        readonly agentPosition: number;
+      }[] = [];
+      for (const row of sameTypeRows) {
+        if (row.agentServer === null) {
+          continue;
+        }
+        candidateRows.push({
+          agentId: row.agentId,
+          displayName: displayNameFor(matrix, row.agentId),
+          server: row.agentServer,
+          agentPosition: agentPosition.get(row.agentId) ?? 0,
+        });
+      }
+      candidateRows.sort((left, right) => {
+        if (left.agentPosition !== right.agentPosition) {
+          return left.agentPosition - right.agentPosition;
+        }
+        return compareStrings(left.agentId, right.agentId);
+      });
+      const candidates: PickableConflictCandidate[] = candidateRows.map(
+        (candidate) => ({
+          agentId: candidate.agentId,
+          displayName: candidate.displayName,
+          server: candidate.server,
+        }),
+      );
+      pickable.push({
+        serverName,
+        candidates,
+        message: `Pickable conflict for "${serverName}" across ${candidates.length} agents (${firstType}): choose one canonical entry or skip.`,
+      });
+    }
+
+    pickable.sort((left, right) =>
+      compareStrings(left.serverName, right.serverName),
+    );
+  }
+
+  hardRefuses.sort((left, right) => {
+    const reasonOrder = compareStrings(left.reason, right.reason);
+    if (reasonOrder !== 0) {
+      return reasonOrder;
+    }
+    const serverOrder = compareStrings(
+      left.serverName ?? '',
+      right.serverName ?? '',
+    );
+    if (serverOrder !== 0) {
+      return serverOrder;
+    }
+    return compareStrings(left.agentId ?? '', right.agentId ?? '');
+  });
+
+  return { pickable, hardRefuses };
+}

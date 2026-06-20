@@ -152,10 +152,31 @@ Rules:
 - Same server name with type/shape mismatch is a hard refuse.
 - Parse errors are hard refuses until the user fixes the source file.
 
+**Status: completed.**
+
 Approval gate: conflict taxonomy and refusal language.
 
 Expected result: tests prove pickable conflicts and hard-refuse conflicts are
 separate states.
+
+Delivered: the `@overture/scan-matrix` package gains a pure, deterministic
+`classifyConflicts(matrix: ScanMatrix): ConflictClassification` function plus
+five exported types — `ConflictClassification`, `PickableConflict`,
+`PickableConflictCandidate`, `HardRefuseConflict`, and `HardRefuseReason`.
+The classifier populates `hardRefuses` with one entry per parse-error
+`AgentSnapshot`, per `shape-conflict` row, per `different-settings` row in
+canonical-ready mode (`canonical-settings-drift`), and per same-name
+`extra-in-agent` group spanning both `stdio` and `remote`
+(`mixed-transport-types`). It populates `pickable` only when canonical
+intent is absent: one `PickableConflict` per server-name group with at
+least two non-equal normalized candidates. Output is JSON-serializable
+plain data; ordering is deterministic (`pickable` by server name,
+candidates by matrix agent order; `hardRefuses` by reason, server name,
+agent id). C1 (`overture scan --json`), C2 (human `overture scan`), and
+D2 (bootstrap prompt) consume this contract; B3 implements no CLI,
+prompt, writer, or `conflictPolicy` behavior. Purity guards in
+`packages/scan-matrix/src/scope-guards.spec.ts` keep the classifier free
+of I/O, renderers, async, `JSON.stringify`, and per-agent branches.
 
 ## Track C: read behavior surface
 
