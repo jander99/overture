@@ -4,6 +4,7 @@ import type { OvertureConfig, OvertureMcpServer } from '@overture/config';
 import {
   DEFAULT_REGISTRY_ORDER,
   buildScanMatrix,
+  classifyConflicts,
   compareAgentEntries,
   serverSettingsEqual,
 } from './index.js';
@@ -13,7 +14,12 @@ import type {
   AgentSnapshot,
   BuildScanMatrixInput,
   CompareAgentEntriesInput,
+  ConflictClassification,
+  HardRefuseConflict,
+  HardRefuseReason,
   NormalizedAgentServer,
+  PickableConflict,
+  PickableConflictCandidate,
   ScanMatrix,
   ServerStatus,
   ServerStatusRow,
@@ -1158,5 +1164,113 @@ describe('buildScanMatrix', () => {
 describe('scan-matrix package', () => {
   it('smokes', () => {
     expect(1).toBe(1);
+  });
+});
+
+describe('B3 conflict type contracts', () => {
+  it('HardRefuseReason is the approved four-reason vocabulary', () => {
+    expectTypeOf<HardRefuseReason>().toEqualTypeOf<
+      | 'parse-error'
+      | 'shape-conflict'
+      | 'mixed-transport-types'
+      | 'canonical-settings-drift'
+    >();
+  });
+
+  it('PickableConflictCandidate exposes agentId, displayName, server only', () => {
+    const c: PickableConflictCandidate = {
+      agentId: 'claude-code',
+      displayName: 'Claude Code',
+      server: { type: 'stdio', command: 'x' },
+    };
+    expectTypeOf(c).toMatchTypeOf<PickableConflictCandidate>();
+  });
+
+  it('PickableConflict is serverName + candidates + message', () => {
+    const p: PickableConflict = {
+      serverName: 'memory',
+      candidates: [
+        {
+          agentId: 'claude-code',
+          displayName: 'Claude Code',
+          server: { type: 'stdio', command: 'a' },
+        },
+        {
+          agentId: 'opencode',
+          displayName: 'OpenCode',
+          server: { type: 'stdio', command: 'b' },
+        },
+      ],
+      message: 'pickable: memory',
+    };
+    expectTypeOf(p).toMatchTypeOf<PickableConflict>();
+  });
+
+  it('HardRefuseConflict allows null serverName/agentId/displayName', () => {
+    const h: HardRefuseConflict = {
+      reason: 'parse-error',
+      serverName: null,
+      agentId: 'opencode',
+      displayName: 'OpenCode',
+      message:
+        'Cannot classify MCP conflicts because OpenCode could not parse /home/u/.config/opencode/config.json: Unexpected token.',
+    };
+    expectTypeOf(h).toMatchTypeOf<HardRefuseConflict>();
+  });
+
+  it('ConflictClassification has pickable and hardRefuses arrays only', () => {
+    const cc: ConflictClassification = { pickable: [], hardRefuses: [] };
+    expectTypeOf(cc).toMatchTypeOf<ConflictClassification>();
+  });
+});
+
+describe('classifyConflicts shell', () => {
+  const makeMatrix = (overrides: Partial<ScanMatrix> = {}): ScanMatrix => ({
+    canonicalState: 'ready',
+    canonicalProfileName: 'default',
+    canonicalIntent: {},
+    agents: [],
+    rows: [],
+    ...overrides,
+  });
+
+  it('returns empty arrays for a fully empty ready-state matrix', () => {
+    const result = classifyConflicts(makeMatrix());
+    expect(result).toEqual({ pickable: [], hardRefuses: [] });
+  });
+
+  it('returns empty arrays for an invalid-profile matrix', () => {
+    const result = classifyConflicts(
+      makeMatrix({
+        canonicalState: 'invalid-profile',
+        canonicalProfileName: 'missing',
+      }),
+    );
+    expect(result).toEqual({ pickable: [], hardRefuses: [] });
+  });
+
+  it('returns empty arrays for an absent canonical state', () => {
+    const result = classifyConflicts(
+      makeMatrix({ canonicalState: 'absent', canonicalProfileName: null }),
+    );
+    expect(result).toEqual({ pickable: [], hardRefuses: [] });
+  });
+
+  it('does not mutate the input matrix', () => {
+    const matrix = makeMatrix({
+      agents: [
+        {
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          installed: true,
+          mcpSupport: 'supported',
+          readState: 'read-ok',
+        },
+      ],
+      rows: [],
+    });
+    const snapshot = JSON.stringify(matrix);
+    classifyConflicts(matrix);
+    expect(JSON.stringify(matrix)).toBe(snapshot);
   });
 });

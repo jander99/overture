@@ -685,3 +685,67 @@ export function buildScanMatrix(input: BuildScanMatrixInput): ScanMatrix {
   }
   return result;
 }
+
+/**
+ * B3 - Per-name conflict classification reasons for hard-refuse entries.
+ * Exhaustive union; extend by adding a new literal AND a new message template.
+ */
+export type HardRefuseReason =
+  | 'parse-error'
+  | 'shape-conflict'
+  | 'mixed-transport-types'
+  | 'canonical-settings-drift';
+
+/**
+ * B3 - One candidate entry inside a `PickableConflict.candidates` list.
+ * Carries only stable data that renderers (C1/C2) and the bootstrap prompt (D2) need.
+ */
+export interface PickableConflictCandidate {
+  readonly agentId: string;
+  readonly displayName: string;
+  readonly server: OvertureMcpServer;
+}
+
+/**
+ * B3 - One bootstrap pickable conflict: same server name across two or more agents
+ * with non-equal settings (and only emitted when `matrix.canonicalState === 'absent'`).
+ */
+export interface PickableConflict {
+  readonly serverName: string;
+  readonly candidates: readonly PickableConflictCandidate[];
+  readonly message: string;
+}
+
+/**
+ * B3 - One hard-refuse entry. `serverName`, `agentId`, and `displayName` are nullable
+ * because some reasons span multiple agents without a single agent of blame.
+ */
+export interface HardRefuseConflict {
+  readonly reason: HardRefuseReason;
+  readonly serverName: string | null;
+  readonly agentId: string | null;
+  readonly displayName: string | null;
+  readonly message: string;
+}
+
+/**
+ * B3 - Full classification output. Both arrays are JSON-serializable plain data:
+ * no `Map`, `Set`, `Date`, functions, classes, or `ServerStatusRow` references.
+ */
+export interface ConflictClassification {
+  readonly pickable: readonly PickableConflict[];
+  readonly hardRefuses: readonly HardRefuseConflict[];
+}
+
+/**
+ * B3 - Classify a scan matrix into pickable conflicts and hard-refuse conflicts.
+ * Initial implementation returns empty arrays; Task 2 and Task 3 populate them.
+ *
+ * Pure, synchronous, no I/O. Deterministic ordering:
+ *   - `pickable` sorted by `serverName` ascending.
+ *   - pickable `candidates` sorted by matrix agent order, falling back to `agentId` ascending.
+ *   - `hardRefuses` sorted by `reason`, then `serverName ?? ''`, then `agentId ?? ''`.
+ */
+export function classifyConflicts(matrix: ScanMatrix): ConflictClassification {
+  return { pickable: [], hardRefuses: [] };
+}
