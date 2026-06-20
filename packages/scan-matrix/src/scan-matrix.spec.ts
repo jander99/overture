@@ -2059,3 +2059,80 @@ describe('classifyConflicts bootstrap pickable + mixed-transport (B3 Task 3)', (
     expect(result).toEqual({ pickable: [], hardRefuses: [] });
   });
 });
+
+describe('classifyConflicts determinism (B3 Task 4)', () => {
+  const makeMatrix = (overrides: Partial<ScanMatrix> = {}): ScanMatrix => ({
+    canonicalState: 'ready',
+    canonicalProfileName: 'default',
+    canonicalIntent: {},
+    agents: [],
+    rows: [],
+    ...overrides,
+  });
+
+  const populatedMatrix = (): ScanMatrix =>
+    makeMatrix({
+      canonicalState: 'absent',
+      canonicalProfileName: null,
+      canonicalIntent: {},
+      agents: [
+        {
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          installed: true,
+          mcpSupport: 'supported',
+          readState: 'parse-error',
+          resolvedPath: '/home/u/.claude.json',
+          reason: 'Unexpected token at line 4',
+        },
+      ],
+      rows: [
+        {
+          agentId: 'opencode',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'extra-in-agent',
+          canonicalServer: null,
+          agentServer: { type: 'stdio', command: 'npx', args: ['memory'] },
+          reason: 'Canonical intent has no server named "memory"',
+        },
+        {
+          agentId: 'github-copilot-cli',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'extra-in-agent',
+          canonicalServer: null,
+          agentServer: { type: 'stdio', command: 'node', args: ['mem.js'] },
+          reason: 'Canonical intent has no server named "memory"',
+        },
+      ],
+    });
+
+  it('two calls with the same fixture return deeply equal objects', () => {
+    const matrix = populatedMatrix();
+    const a = classifyConflicts(matrix);
+    const b = classifyConflicts(matrix);
+    expect(a).toEqual(b);
+  });
+
+  it('JSON.stringify output is stable across calls', () => {
+    const matrix = populatedMatrix();
+    const a = JSON.stringify(classifyConflicts(matrix));
+    const b = JSON.stringify(classifyConflicts(matrix));
+    expect(a).toBe(b);
+  });
+
+  it('classifier output is JSON-serializable', () => {
+    const matrix = populatedMatrix();
+    const result = classifyConflicts(matrix);
+    expect(typeof JSON.stringify(result)).toBe('string');
+    for (const entry of result.hardRefuses) {
+      expect(typeof entry.message).toBe('string');
+      expect(typeof entry.reason).toBe('string');
+    }
+    for (const conflict of result.pickable) {
+      expect(typeof conflict.serverName).toBe('string');
+      expect(typeof conflict.message).toBe('string');
+    }
+  });
+});
