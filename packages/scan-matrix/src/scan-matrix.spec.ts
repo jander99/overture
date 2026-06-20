@@ -1274,3 +1274,399 @@ describe('classifyConflicts shell', () => {
     expect(JSON.stringify(matrix)).toBe(snapshot);
   });
 });
+describe('classifyConflicts hard-refuse (B3 Task 2)', () => {
+  // Server fixtures used across the hard-refuse tests. They are small and
+  // distinct so messages remain readable in failure output. Each helper
+  // composes a ScanMatrix by hand so the tests are independent of
+  // buildScanMatrix; B3 is a read model on top of scan-matrix data, not a
+  // pipeline that requires buildScanMatrix to run.
+  const stdioA: OvertureMcpServer = { type: 'stdio', command: 'npx' };
+  const stdioB: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'node',
+    args: ['server.js'],
+  };
+
+  const makeSnapshot = (overrides: Partial<AgentSnapshot>): AgentSnapshot => ({
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    mcpSupport: 'supported',
+    readState: 'read-ok',
+    ...overrides,
+  });
+
+  const makeConfig = (
+    ready: boolean,
+    mcpServers: Record<string, OvertureMcpServer>,
+  ): {
+    canonicalState: 'ready' | 'absent';
+    canonicalProfileName: string | null;
+    canonicalIntent: Record<string, OvertureMcpServer>;
+    agents: AgentSnapshot[];
+    rows: ServerStatusRow[];
+  } => ({
+    canonicalState: ready ? 'ready' : 'absent',
+    canonicalProfileName: ready ? 'default' : null,
+    canonicalIntent: mcpServers,
+    agents: [],
+    rows: [],
+  });
+
+  it('parse-error snapshot produces one hard-refuse using displayName, resolvedPath, and reason verbatim', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [
+        makeSnapshot({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          readState: 'parse-error',
+          resolvedPath: '/home/u/.config/opencode/config.json',
+          reason: 'Unexpected token at position 42',
+        }),
+      ],
+      rows: [],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'parse-error',
+        serverName: null,
+        agentId: 'opencode',
+        displayName: 'OpenCode',
+        message:
+          'Cannot classify MCP conflicts because OpenCode could not parse /home/u/.config/opencode/config.json: Unexpected token at position 42. Fix that config file and retry.',
+      },
+    ]);
+  });
+
+  it('parse-error snapshot without resolvedPath uses <unknown path> fallback', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [
+        makeSnapshot({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          readState: 'parse-error',
+          reason: 'Bad token',
+        }),
+      ],
+      rows: [],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toHaveLength(1);
+    expect(result.hardRefuses[0]?.message).toBe(
+      'Cannot classify MCP conflicts because OpenCode could not parse <unknown path>: Bad token. Fix that config file and retry.',
+    );
+  });
+
+  it('parse-error snapshot without reason uses <no reason provided> fallback', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [
+        makeSnapshot({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          readState: 'parse-error',
+          resolvedPath: '/etc/opencode.json',
+        }),
+      ],
+      rows: [],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toHaveLength(1);
+    expect(result.hardRefuses[0]?.message).toBe(
+      'Cannot classify MCP conflicts because OpenCode could not parse /etc/opencode.json: <no reason provided>. Fix that config file and retry.',
+    );
+  });
+
+  it('shape-conflict row produces one hard-refuse wrapping the B2 reason verbatim', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { memory: stdioA }),
+      agents: [makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' })],
+      rows: [
+        {
+          agentId: 'claude-code',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'shape-conflict',
+          canonicalServer: stdioA,
+          agentServer: null,
+          reason: 'Stdio command is missing or empty.',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'shape-conflict',
+        serverName: 'memory',
+        agentId: 'claude-code',
+        displayName: 'Claude Code',
+        message:
+          'Cannot classify server "memory" from Claude Code: Stdio command is missing or empty.. Fix that config entry and retry.',
+      },
+    ]);
+  });
+
+  it('shape-conflict row in extra-in-agent slot uses agentServerName as the offending server name', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [makeSnapshot({ id: 'opencode', displayName: 'OpenCode' })],
+      rows: [
+        {
+          agentId: 'opencode',
+          canonicalName: null,
+          agentServerName: 'orphan',
+          status: 'shape-conflict',
+          canonicalServer: null,
+          agentServer: null,
+          reason: 'agent entry is missing required "command" field',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'shape-conflict',
+        serverName: 'orphan',
+        agentId: 'opencode',
+        displayName: 'OpenCode',
+        message:
+          'Cannot classify server "orphan" from OpenCode: agent entry is missing required "command" field. Fix that config entry and retry.',
+      },
+    ]);
+  });
+
+  it('different-settings row in canonical ready state produces one canonical-settings-drift hard-refuse', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { memory: stdioA }),
+      agents: [makeSnapshot({ id: 'opencode', displayName: 'OpenCode' })],
+      rows: [
+        {
+          agentId: 'opencode',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'different-settings',
+          canonicalServer: stdioA,
+          agentServer: stdioB,
+          reason: 'Canonical and agent settings differ',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'canonical-settings-drift',
+        serverName: 'memory',
+        agentId: 'opencode',
+        displayName: 'OpenCode',
+        message:
+          'Refusing to continue for server "memory" on OpenCode: canonical and agent settings differ. Update the canonical config or the agent config and retry.',
+      },
+    ]);
+  });
+
+  it('different-settings row in canonical absent state does NOT produce a canonical-settings-drift entry (no canonical to drift from)', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [makeSnapshot({ id: 'opencode', displayName: 'OpenCode' })],
+      rows: [
+        {
+          agentId: 'opencode',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'different-settings',
+          canonicalServer: stdioA,
+          agentServer: stdioB,
+          reason: 'Canonical and agent settings differ',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([]);
+  });
+
+  it('aligned, missing-from-agent, extra-in-agent rows produce no hard-refuse entries', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { memory: stdioA, notes: stdioB }),
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        {
+          agentId: 'claude-code',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'aligned',
+          canonicalServer: stdioA,
+          agentServer: stdioA,
+        },
+        {
+          agentId: 'opencode',
+          canonicalName: 'notes',
+          agentServerName: null,
+          status: 'missing-from-agent',
+          canonicalServer: stdioB,
+          agentServer: null,
+          reason: 'Agent has no server named "notes"',
+        },
+        {
+          agentId: 'claude-code',
+          canonicalName: null,
+          agentServerName: 'bonus',
+          status: 'extra-in-agent',
+          canonicalServer: null,
+          agentServer: stdioB,
+          reason: 'Canonical intent has no server named "bonus"',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([]);
+  });
+
+  it('not-installed, unsupported-agent, not-read, read-empty, read-no-config snapshots produce no hard-refuse entries', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { memory: stdioA }),
+      agents: [
+        makeSnapshot({
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          readState: 'not-installed',
+          installed: false,
+          mcpSupport: 'unknown',
+        }),
+        makeSnapshot({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          readState: 'unsupported-agent',
+          installed: false,
+          mcpSupport: 'unsupported',
+        }),
+        makeSnapshot({ id: 'github-copilot-cli', readState: 'not-read' }),
+        makeSnapshot({ id: 'openai-codex', readState: 'read-empty' }),
+        makeSnapshot({
+          id: 'aider',
+          displayName: 'Aider',
+          readState: 'read-no-config',
+        }),
+      ],
+      rows: [],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([]);
+  });
+
+  it('two hard-refuses sort by (reason, serverName, agentId) ascending', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { alpha: stdioA, beta: stdioB }),
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        // Intentionally reversed canonical name + agentId ordering: alpha/zulu
+        // sorts after bravo/alpha when reason and serverName tie.
+        {
+          agentId: 'opencode',
+          canonicalName: 'beta',
+          agentServerName: 'beta',
+          status: 'different-settings',
+          canonicalServer: stdioB,
+          agentServer: stdioA,
+          reason: 'Canonical and agent settings differ',
+        },
+        {
+          agentId: 'claude-code',
+          canonicalName: 'alpha',
+          agentServerName: 'alpha',
+          status: 'different-settings',
+          canonicalServer: stdioA,
+          agentServer: stdioB,
+          reason: 'Canonical and agent settings differ',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(
+      result.hardRefuses.map((h) => [h.reason, h.serverName, h.agentId]),
+    ).toEqual([
+      ['canonical-settings-drift', 'alpha', 'claude-code'],
+      ['canonical-settings-drift', 'beta', 'opencode'],
+    ]);
+  });
+
+  it('multiple parse-error snapshots produce one hard-refuse per snapshot (no aggregation)', () => {
+    const matrix: ScanMatrix = {
+      ...makeConfig(false, {}),
+      agents: [
+        makeSnapshot({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          readState: 'parse-error',
+          resolvedPath: '/etc/opencode.json',
+          reason: 'bad',
+        }),
+        makeSnapshot({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+          readState: 'parse-error',
+          resolvedPath: '/etc/copilot.json',
+          reason: 'worse',
+        }),
+      ],
+      rows: [],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toHaveLength(2);
+    expect(result.hardRefuses.map((h) => h.agentId)).toEqual([
+      'github-copilot-cli',
+      'opencode',
+    ]);
+    expect(result.hardRefuses[0]?.message).toBe(
+      'Cannot classify MCP conflicts because GitHub Copilot CLI could not parse /etc/copilot.json: worse. Fix that config file and retry.',
+    );
+    expect(result.hardRefuses[1]?.message).toBe(
+      'Cannot classify MCP conflicts because OpenCode could not parse /etc/opencode.json: bad. Fix that config file and retry.',
+    );
+  });
+
+  it('multiple parse-error + one canonical-settings-drift sorts canonical-settings-drift before parse-error (reason key)', () => {
+    // Reason alphabetical: 'canonical-settings-drift' ('c') < 'parse-error' ('p').
+    // The matrix literal lists the parse-error snapshot first to prove the
+    // sort key is the reason string, not insertion order.
+    const matrix: ScanMatrix = {
+      ...makeConfig(true, { memory: stdioA }),
+      agents: [
+        makeSnapshot({
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          readState: 'parse-error',
+          resolvedPath: '/etc/claude.json',
+          reason: 'parse failed',
+        }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        {
+          agentId: 'opencode',
+          canonicalName: 'memory',
+          agentServerName: 'memory',
+          status: 'different-settings',
+          canonicalServer: stdioA,
+          agentServer: stdioB,
+          reason: 'Canonical and agent settings differ',
+        },
+      ],
+    };
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses.map((h) => h.reason)).toEqual([
+      'canonical-settings-drift',
+      'parse-error',
+    ]);
+  });
+});

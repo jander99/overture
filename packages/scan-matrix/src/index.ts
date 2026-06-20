@@ -738,14 +738,114 @@ export interface ConflictClassification {
 }
 
 /**
+ * B3 - Resolve the human-readable display name for a row's agent.
+ *
+ * Looks the agent up in `matrix.agents` by `row.agentId` so the refusal
+ * message names the platform, not the internal id. Falls back to the
+ * `agentId` itself when the snapshot is missing (defensive — callers
+ * must include every agent referenced by the row list).
+ */
+function displayNameFor(matrix: ScanMatrix, agentId: string): string {
+  for (const snapshot of matrix.agents) {
+    if (snapshot.id === agentId) {
+      return snapshot.displayName;
+    }
+  }
+  return agentId;
+}
+
+/**
+ * B3 - Compare two sort keys ascending. Returns the conventional
+ * three-way -1 / 0 / +1 used by `Array.prototype.sort`.
+ */
+function compareStrings(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
+}
+
+/**
  * B3 - Classify a scan matrix into pickable conflicts and hard-refuse conflicts.
- * Initial implementation returns empty arrays; Task 2 and Task 3 populate them.
+ * Task 2 populates `hardRefuses` for parse-error snapshots, shape-conflict rows,
+ * and canonical-settings-drift rows with deterministic ordering. Task 3 will
+ * populate `pickable` and the `mixed-transport-types` reason.
  *
  * Pure, synchronous, no I/O. Deterministic ordering:
  *   - `pickable` sorted by `serverName` ascending.
  *   - pickable `candidates` sorted by matrix agent order, falling back to `agentId` ascending.
  *   - `hardRefuses` sorted by `reason`, then `serverName ?? ''`, then `agentId ?? ''`.
+ *
+ * The implementation never mutates the input matrix: every emitted
+ * `HardRefuseConflict` is built from snapshot/row fields read by value.
  */
 export function classifyConflicts(matrix: ScanMatrix): ConflictClassification {
-  return { pickable: [], hardRefuses: [] };
+  const hardRefuses: HardRefuseConflict[] = [];
+
+  for (const snapshot of matrix.agents) {
+    if (snapshot.readState !== 'parse-error') {
+      continue;
+    }
+    const path = snapshot.resolvedPath ?? '<unknown path>';
+    const reason = snapshot.reason ?? '<no reason provided>';
+    hardRefuses.push({
+      reason: 'parse-error',
+      serverName: null,
+      agentId: snapshot.id,
+      displayName: snapshot.displayName,
+      message: `Cannot classify MCP conflicts because ${snapshot.displayName} could not parse ${path}: ${reason}. Fix that config file and retry.`,
+    });
+  }
+
+  for (const row of matrix.rows) {
+    if (row.status === 'shape-conflict') {
+      const displayName = displayNameFor(matrix, row.agentId);
+      const serverName = row.canonicalName ?? row.agentServerName;
+      hardRefuses.push({
+        reason: 'shape-conflict',
+        serverName,
+        agentId: row.agentId,
+        displayName,
+        message: `Cannot classify server "${serverName}" from ${displayName}: ${row.reason ?? '<no reason>'}. Fix that config entry and retry.`,
+      });
+      continue;
+    }
+    if (
+      row.status === 'different-settings' &&
+      matrix.canonicalState === 'ready'
+    ) {
+      const displayName = displayNameFor(matrix, row.agentId);
+      // `different-settings` rows always carry a non-null `canonicalName`
+      // when canonical is `ready` — the row was emitted from the
+      // canonical-loop branch, never the agent-only extras branch.
+      const serverName = row.canonicalName ?? '';
+      hardRefuses.push({
+        reason: 'canonical-settings-drift',
+        serverName,
+        agentId: row.agentId,
+        displayName,
+        message: `Refusing to continue for server "${serverName}" on ${displayName}: canonical and agent settings differ. Update the canonical config or the agent config and retry.`,
+      });
+    }
+  }
+
+  hardRefuses.sort((left, right) => {
+    const reasonOrder = compareStrings(left.reason, right.reason);
+    if (reasonOrder !== 0) {
+      return reasonOrder;
+    }
+    const serverOrder = compareStrings(
+      left.serverName ?? '',
+      right.serverName ?? '',
+    );
+    if (serverOrder !== 0) {
+      return serverOrder;
+    }
+    return compareStrings(left.agentId ?? '', right.agentId ?? '');
+  });
+
+  return { pickable: [], hardRefuses };
 }
