@@ -7,7 +7,10 @@ import {
   type OvertureConfig,
   type OverturePaths,
 } from '@overture/config';
-import { detectPlatforms } from './platforms/detect.js';
+import {
+  defaultPathResolutionContext,
+  detectPlatforms,
+} from './platforms/detect.js';
 import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
 
@@ -162,9 +165,7 @@ async function runDetect(flags: readonly string[]): Promise<number> {
     );
     return 2;
   }
-  const output = await detectPlatforms(
-    defaultOverturePaths({ workspaceDir: process.cwd() }),
-  );
+  const output = await detectPlatforms(defaultPathResolutionContext());
   if (flags.includes('--json')) {
     process.stdout.write(formatJsonOutput(output));
     return 0;

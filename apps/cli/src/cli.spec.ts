@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -14,8 +20,14 @@ import type {
 describe('run', () => {
   let stdoutSpy: ReturnType<typeof vi.spyOn>;
   let stderrSpy: ReturnType<typeof vi.spyOn>;
+  let originalXdgConfigHome: string | undefined;
+  let originalPath: string | undefined;
+  let tempRoots: string[];
 
   beforeEach(() => {
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+    originalPath = process.env.PATH;
+    tempRoots = [];
     stdoutSpy = vi
       .spyOn(process.stdout, 'write')
       .mockImplementation(() => true);
@@ -25,6 +37,19 @@ describe('run', () => {
   });
 
   afterEach(() => {
+    for (const dir of tempRoots) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+    }
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
     stdoutSpy.mockRestore();
     stderrSpy.mockRestore();
   });
@@ -90,6 +115,56 @@ describe('run', () => {
     expect(code).toBe(2);
     expect(stderrSpy).toHaveBeenCalledWith(
       expect.stringContaining('Unknown flag: --bogus'),
+    );
+  });
+
+  it('detect uses XDG config root for agent MCP paths (regression)', async () => {
+    const xdgConfigHome = mkdtempSync(join(tmpdir(), 'overture-xdg-config-'));
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-path-'));
+    tempRoots.push(xdgConfigHome, pathDir);
+
+    process.env.XDG_CONFIG_HOME = xdgConfigHome;
+    process.env.PATH = `${pathDir}${process.env.PATH ? `:${process.env.PATH}` : ''}`;
+
+    const opencodeDir = join(xdgConfigHome, 'opencode');
+    mkdirSync(opencodeDir, { recursive: true });
+    writeFileSync(
+      join(opencodeDir, 'opencode.jsonc'),
+      '// comment\n{"mcp": {"context7": {"type": "remote", "url": "https://example.test"}}}',
+    );
+
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+
+    const code = await run(['detect', '--json']);
+    expect(code).toBe(0);
+
+    const stdout = (
+      stdoutSpy.mock.calls as ReadonlyArray<ReadonlyArray<unknown>>
+    )
+      .map((call) => String(call[0] ?? ''))
+      .join('');
+    const parsed = JSON.parse(stdout) as {
+      platforms: Array<{
+        id: string;
+        installed: boolean;
+        mcpSupport: string;
+        mcpConfigured: boolean;
+        matchedMcpLocations: Array<{ resolvedPath: string }>;
+      }>;
+    };
+    const opencode = parsed.platforms.find(
+      (platform) => platform.id === 'opencode',
+    );
+
+    expect(opencode).toBeDefined();
+    expect(opencode?.installed).toBe(true);
+    expect(opencode?.mcpSupport).toBe('supported');
+    expect(opencode?.mcpConfigured).toBe(true);
+    expect(opencode?.matchedMcpLocations.length).toBeGreaterThanOrEqual(1);
+    expect(opencode?.matchedMcpLocations[0]?.resolvedPath).toContain(
+      'opencode/opencode.jsonc',
     );
   });
 });
