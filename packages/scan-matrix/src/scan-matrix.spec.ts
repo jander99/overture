@@ -1670,3 +1670,392 @@ describe('classifyConflicts hard-refuse (B3 Task 2)', () => {
     ]);
   });
 });
+
+describe('classifyConflicts bootstrap pickable + mixed-transport (B3 Task 3)', () => {
+  // Server fixtures used across the bootstrap pickable tests. They are
+  // small and distinct so messages remain readable in failure output. Each
+  // helper composes a ScanMatrix by hand so the tests are independent of
+  // buildScanMatrix; B3 is a read model on top of scan-matrix data, not a
+  // pipeline that requires buildScanMatrix to run.
+  const stdioA: OvertureMcpServer = { type: 'stdio', command: 'npx' };
+  const stdioB: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'node',
+    args: ['server.js'],
+  };
+  const stdioC: OvertureMcpServer = {
+    type: 'stdio',
+    command: 'python',
+    args: ['-m', 'memory'],
+    env: { MODE: 'fast' },
+  };
+  const remoteA: OvertureMcpServer = {
+    type: 'remote',
+    url: 'https://example.com/mcp',
+  };
+  const remoteB: OvertureMcpServer = {
+    type: 'remote',
+    url: 'https://other.example.com/mcp',
+  };
+
+  const makeSnapshot = (overrides: Partial<AgentSnapshot>): AgentSnapshot => ({
+    id: 'claude-code',
+    displayName: 'Claude Code',
+    installed: true,
+    mcpSupport: 'supported',
+    readState: 'read-ok',
+    ...overrides,
+  });
+
+  const makeRow = (overrides: Partial<ServerStatusRow>): ServerStatusRow => ({
+    agentId: 'claude-code',
+    canonicalName: null,
+    agentServerName: 'memory',
+    status: 'extra-in-agent',
+    canonicalServer: null,
+    agentServer: stdioA,
+    ...overrides,
+  });
+
+  const makeMatrix = (overrides: Partial<ScanMatrix>): ScanMatrix => ({
+    canonicalState: 'absent',
+    canonicalProfileName: null,
+    canonicalIntent: {},
+    agents: [],
+    rows: [],
+    ...overrides,
+  });
+
+  it('absent canonical + two same-name stdio extras with non-equal settings → one pickable with two candidates', () => {
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: stdioB,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([]);
+    expect(result.pickable).toHaveLength(1);
+    expect(result.pickable[0]?.serverName).toBe('memory');
+    expect(result.pickable[0]?.candidates.map((c) => c.agentId)).toEqual([
+      'claude-code',
+      'opencode',
+    ]);
+    expect(result.pickable[0]?.candidates[0]?.server).toEqual(stdioA);
+    expect(result.pickable[0]?.candidates[1]?.server).toEqual(stdioB);
+    expect(result.pickable[0]?.candidates[0]?.displayName).toBe('Claude Code');
+    expect(result.pickable[0]?.candidates[1]?.displayName).toBe('OpenCode');
+    expect(result.pickable[0]?.message).toBe(
+      'Pickable conflict for "memory" across 2 agents (stdio): choose one canonical entry or skip.',
+    );
+  });
+
+  it('absent canonical + three same-name stdio extras with non-equal settings → one pickable with three candidates', () => {
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+        makeSnapshot({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: stdioB,
+        }),
+        makeRow({
+          agentId: 'github-copilot-cli',
+          agentServerName: 'memory',
+          agentServer: stdioC,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.hardRefuses).toEqual([]);
+    expect(result.pickable).toHaveLength(1);
+    expect(result.pickable[0]?.serverName).toBe('memory');
+    expect(result.pickable[0]?.candidates.map((c) => c.agentId)).toEqual([
+      'claude-code',
+      'opencode',
+      'github-copilot-cli',
+    ]);
+    expect(result.pickable[0]?.message).toBe(
+      'Pickable conflict for "memory" across 3 agents (stdio): choose one canonical entry or skip.',
+    );
+  });
+
+  it('absent canonical + same-name extras with all-equal settings → no pickable, no mixed-transport', () => {
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([]);
+  });
+
+  it('absent canonical + mixed stdio+remote same-name extras → one mixed-transport-types hard-refuse, no pickable', () => {
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: remoteA,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'mixed-transport-types',
+        serverName: 'memory',
+        agentId: null,
+        displayName: null,
+        message:
+          'Cannot classify server "memory" because agents disagree on transport type (remote, stdio). Rename or fix the source entries and retry.',
+      },
+    ]);
+  });
+
+  it('ready canonical + same-name extras → no pickable, no hard-refuses (extras are not conflicts)', () => {
+    const matrix = makeMatrix({
+      canonicalState: 'ready',
+      canonicalProfileName: 'default',
+      canonicalIntent: { notes: stdioB },
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: stdioC,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([]);
+  });
+
+  it('absent canonical + pickable candidates sort by matrix agent order', () => {
+    // The matrix.agents list intentionally puts opencode first, claude-code
+    // second, github-copilot-cli third, but the row array lists them in a
+    // different order. The candidate list must follow matrix.agents order.
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioB,
+        }),
+        makeRow({
+          agentId: 'github-copilot-cli',
+          agentServerName: 'memory',
+          agentServer: stdioC,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toHaveLength(1);
+    expect(result.pickable[0]?.candidates.map((c) => c.agentId)).toEqual([
+      'opencode',
+      'claude-code',
+      'github-copilot-cli',
+    ]);
+  });
+
+  it('absent canonical + pickable list sorts by serverName ascending across multiple groups', () => {
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        // Insert zebra first to prove the sort key is serverName, not row order.
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'zebra',
+          agentServer: stdioC,
+        }),
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'alpha',
+          agentServer: stdioB,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'alpha',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'zebra',
+          agentServer: stdioA,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable.map((p) => p.serverName)).toEqual([
+      'alpha',
+      'zebra',
+    ]);
+    expect(result.pickable[0]?.candidates.map((c) => c.agentId)).toEqual([
+      'claude-code',
+      'opencode',
+    ]);
+    expect(result.pickable[1]?.candidates.map((c) => c.agentId)).toEqual([
+      'claude-code',
+      'opencode',
+    ]);
+  });
+
+  it('ready canonical + same-name extras that are mixed stdio+remote → still one mixed-transport-types hard-refuse', () => {
+    // Mixed-transport detection happens regardless of canonical state: an
+    // agent-only disagreement about transport type is a hard-refuse, even
+    // when canonical intent exists.
+    const matrix = makeMatrix({
+      canonicalState: 'ready',
+      canonicalProfileName: 'default',
+      canonicalIntent: { notes: stdioB },
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        makeRow({
+          agentId: 'opencode',
+          agentServerName: 'memory',
+          agentServer: remoteB,
+        }),
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'mixed-transport-types',
+        serverName: 'memory',
+        agentId: null,
+        displayName: null,
+        message:
+          'Cannot classify server "memory" because agents disagree on transport type (remote, stdio). Rename or fix the source entries and retry.',
+      },
+    ]);
+  });
+
+  it('absent canonical + same-name group with a shape-conflict extra → no pickable (only normalized entries are candidates)', () => {
+    // The shape-conflict row carries agentServer: null (the B2 reason text
+    // already produces a hard-refuse). It is filtered out of the candidate
+    // set, so the remaining single normalized row cannot form a pickable
+    // conflict and the group is silent.
+    const matrix = makeMatrix({
+      agents: [
+        makeSnapshot({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeSnapshot({ id: 'opencode', displayName: 'OpenCode' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          agentServerName: 'memory',
+          agentServer: stdioA,
+        }),
+        {
+          agentId: 'opencode',
+          canonicalName: null,
+          agentServerName: 'memory',
+          status: 'shape-conflict',
+          canonicalServer: null,
+          agentServer: null,
+          reason: 'Stdio command is missing or empty.',
+        },
+      ],
+    });
+    const result = classifyConflicts(matrix);
+    expect(result.pickable).toEqual([]);
+    expect(result.hardRefuses).toEqual([
+      {
+        reason: 'shape-conflict',
+        serverName: 'memory',
+        agentId: 'opencode',
+        displayName: 'OpenCode',
+        message:
+          'Cannot classify server "memory" from OpenCode: Stdio command is missing or empty.. Fix that config entry and retry.',
+      },
+    ]);
+  });
+
+  it('absent canonical + zero rows + zero agents → empty pickable + empty hardRefuses (smoke)', () => {
+    const matrix = makeMatrix({ agents: [], rows: [] });
+    const result = classifyConflicts(matrix);
+    expect(result).toEqual({ pickable: [], hardRefuses: [] });
+  });
+});
