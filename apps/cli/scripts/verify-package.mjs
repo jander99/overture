@@ -208,6 +208,51 @@ try {
   fail(`scan --json output is not valid JSON: ${err.message}`);
 }
 
+// scan smoke: assert the human C2 report is present in the installed
+// package, accepts the blocking exit code, and does not leak JSON-only
+// fragments. Exit code 2 still means the installed package is broken.
+const scanHumanResult = spawnSync('node', [distMain, 'scan'], {
+  encoding: 'utf8',
+});
+if (scanHumanResult.status !== 0 && scanHumanResult.status !== 1) {
+  fail(
+    `scan exited ${scanHumanResult.status} (expected 0 or 1): ${scanHumanResult.stderr}`,
+  );
+}
+const humanHeadings = [
+  'Agents',
+  'Aligned servers',
+  'Missing from agents',
+  'Agent-only servers',
+  'Pickable conflicts',
+  'Hard refuses',
+  'Parse errors',
+];
+const missingHeadings = humanHeadings.filter(
+  (heading) => !scanHumanResult.stdout.includes(heading),
+);
+if (missingHeadings.length > 0) {
+  fail(
+    `scan output missing headings: ${missingHeadings.join(', ')}
+stdout:
+${scanHumanResult.stdout}`,
+  );
+}
+const forbiddenFragments = ['"matrix"', '"canonicalServer"', '"agentServer"'];
+const leakedFragments = forbiddenFragments.filter((fragment) =>
+  scanHumanResult.stdout.includes(fragment),
+);
+if (leakedFragments.length > 0) {
+  fail(
+    `scan output contains JSON fragments: ${leakedFragments.join(', ')}
+stdout:
+${scanHumanResult.stdout}`,
+  );
+}
+console.log(
+  `scan: exit=${scanHumanResult.status} sections=${humanHeadings.length} jsonFragments=0: PASS`,
+);
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });

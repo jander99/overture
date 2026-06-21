@@ -221,6 +221,8 @@ the `matrix` keys (`agents`, `canonicalState`, `canonicalIntent`,
 
 ### C2. Add human `overture scan` output
 
+**Status: completed.**
+
 Render the same scan matrix for humans.
 
 The output should show:
@@ -234,6 +236,17 @@ The output should show:
 
 Expected result: read-only human report that explains what overture sees without
 changing anything.
+
+Delivered: the C2 human renderer now ships in the CLI default `overture scan`
+path, with the installed-package smoke in `apps/cli/scripts/verify-package.mjs`
+covering both `scan --json` and the no-flag detailed report. The sectioned
+output is documented in the root README, stays read-only, and keeps JSON output
+unchanged for machine consumers. Key commits on this branch were `0b18ab11`
+(add detailed human rendering), `822e671d` (wire the default human scan path),
+`f90621df` (lock the report categories), and `159ffc8b` (redact fingerprints).
+Key verification for this slice came from the existing `yarn nx test
+@jander99/overture` / `yarn nx test @overture/scan-matrix` passes, plus
+`yarn prettier --check README.md docs/overture-implementation-slices.md apps/cli/scripts/verify-package.mjs`.
 
 ## Track D: bootstrap
 
