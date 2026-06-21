@@ -61,7 +61,9 @@ export function formatHumanScanDetail(
   conflicts: ConflictClassification,
 ): string {
   const lines: string[] = [];
-  const installedCount = matrix.agents.filter((agent) => agent.installed).length;
+  const installedCount = matrix.agents.filter(
+    (agent) => agent.installed,
+  ).length;
   const blocking =
     matrix.canonicalState === 'invalid-profile' ||
     conflicts.hardRefuses.length > 0;
@@ -149,7 +151,10 @@ function renderAgents(agents: readonly MatrixAgent[]): string[] {
   return lines;
 }
 
-function renderAlignedRows(matrix: ScanMatrix, rows: readonly MatrixRow[]): string[] {
+function renderAlignedRows(
+  matrix: ScanMatrix,
+  rows: readonly MatrixRow[],
+): string[] {
   const lines: string[] = [];
   for (const row of rows) {
     if (row.status !== 'aligned') {
@@ -164,7 +169,10 @@ function renderAlignedRows(matrix: ScanMatrix, rows: readonly MatrixRow[]): stri
   return lines;
 }
 
-function renderMissingRows(matrix: ScanMatrix, rows: readonly MatrixRow[]): string[] {
+function renderMissingRows(
+  matrix: ScanMatrix,
+  rows: readonly MatrixRow[],
+): string[] {
   const lines: string[] = [];
   for (const row of rows) {
     if (row.status !== 'missing-from-agent') {
@@ -179,7 +187,10 @@ function renderMissingRows(matrix: ScanMatrix, rows: readonly MatrixRow[]): stri
   return lines;
 }
 
-function renderExtraRows(matrix: ScanMatrix, rows: readonly MatrixRow[]): string[] {
+function renderExtraRows(
+  matrix: ScanMatrix,
+  rows: readonly MatrixRow[],
+): string[] {
   const lines: string[] = [];
   for (const row of rows) {
     if (row.status !== 'extra-in-agent') {
@@ -296,7 +307,9 @@ function appendCappedSection(
   if (capacity <= 0) {
     cap.capReached = true;
     cap.truncatedLines = body;
-    lines.push(`${CAP_MESSAGE_PREFIX}${remaining} more entries; run "overture scan --json" for full details.`);
+    lines.push(
+      `${CAP_MESSAGE_PREFIX}${remaining} more entries; run "overture scan --json" for full details.`,
+    );
     return;
   }
   if (remaining <= capacity) {
@@ -315,7 +328,10 @@ function appendCappedSection(
 }
 
 function displayNameForRow(matrix: ScanMatrix, row: MatrixRow): string {
-  return matrix.agents.find((agent) => agent.id === row.agentId)?.displayName ?? row.agentId;
+  return (
+    matrix.agents.find((agent) => agent.id === row.agentId)?.displayName ??
+    row.agentId
+  );
 }
 
 function renderFingerprint(server: unknown): string {
@@ -329,7 +345,8 @@ function renderFingerprint(server: unknown): string {
     return `stdio command=${command} args=${args} env=${env}`;
   }
   if (isRemoteRenderableServer(server)) {
-    const headers = server.headers === undefined ? 0 : Object.keys(server.headers).length;
+    const headers =
+      server.headers === undefined ? 0 : Object.keys(server.headers).length;
     return `remote url=${redactUrl(server.url ?? '')} headers=${headers}`;
   }
   if (server.reason !== undefined) {

@@ -170,7 +170,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -228,7 +231,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -270,7 +276,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -312,7 +321,10 @@ Run "overture scan --json" for machine-readable details.`);
           installed: true,
           readState: 'read-ok',
         }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -375,7 +387,10 @@ Run "overture scan --json" for machine-readable details.`);
           installed: true,
           readState: 'read-ok',
         }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -419,7 +434,10 @@ Run "overture scan --json" for machine-readable details.`);
           reason: 'Unexpected token at position 42',
         }),
         makeAgent({ id: 'claude-code', displayName: 'Claude Code' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],
@@ -460,7 +478,10 @@ Run "overture scan --json" for machine-readable details.`);
           installed: true,
           readState: 'parse-error',
         }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],
@@ -491,7 +512,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],
@@ -527,7 +551,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -573,7 +600,10 @@ Run "overture scan --json" for machine-readable details.`);
           mcpSupport: 'unsupported',
           readState: 'unsupported-agent',
         }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],
@@ -606,7 +636,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],
@@ -648,7 +681,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [
@@ -717,7 +753,10 @@ Run "overture scan --json" for machine-readable details.`);
             readState: 'read-ok',
           }),
           makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-          makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+          makeAgent({
+            id: 'github-copilot-cli',
+            displayName: 'GitHub Copilot CLI',
+          }),
           makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
         ],
         rows: [
@@ -726,8 +765,12 @@ Run "overture scan --json" for machine-readable details.`);
             canonicalName: 'badServer',
             agentServerName: 'badServer',
             status: 'aligned',
-            canonicalServer: makeRemoteServer(badUrl, { Authorization: 'Bearer x' }),
-            agentServer: makeRemoteServer(badUrl, { Authorization: 'Bearer x' }),
+            canonicalServer: makeRemoteServer(badUrl, {
+              Authorization: 'Bearer x',
+            }),
+            agentServer: makeRemoteServer(badUrl, {
+              Authorization: 'Bearer x',
+            }),
           }),
         ],
       });
@@ -771,7 +814,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows,
@@ -808,7 +854,10 @@ Run "overture scan --json" for machine-readable details.`);
           readState: 'read-ok',
         }),
         makeAgent({ id: 'claude-code', displayName: 'Claude Code' }),
-        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({
+          id: 'github-copilot-cli',
+          displayName: 'GitHub Copilot CLI',
+        }),
         makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
       ],
       rows: [],

@@ -966,7 +966,9 @@ describe('run: scan', () => {
       .join('');
     expect(out).toContain('Scan completed with blocking issues.');
     expect(out).toContain('Canonical config: invalid-profile');
-    expect(out).toContain('Canonical reason: Default profile "does-not-exist" does not exist');
+    expect(out).toContain(
+      'Canonical reason: Default profile "does-not-exist" does not exist',
+    );
     expect(out).toContain('Hard refuses: 0');
     expect(out).toContain('Parse errors');
   });
