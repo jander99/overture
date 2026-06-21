@@ -137,15 +137,36 @@ overture scan --help
 
 ### Default summary shape
 
-The no-flag path emits five always-present lines (followed by a trailing
-newline):
+The no-flag path emits the C2 detailed report: a plain-text, sectioned view of
+what the scan matrix found. It keeps the same read-only behavior, but instead
+of a five-line summary it renders seven headings and their matching tables or
+notes:
+
+- `Agents`
+- `Aligned servers`
+- `Missing from agents`
+- `Agent-only servers`
+- `Pickable conflicts`
+- `Hard refuses`
+- `Parse errors`
+
+Example shape:
 
 ```
-Scan complete.
-Detected agents: N / 4
-Canonical config: <absent|ready|invalid-profile>
-Hard refuses: <count>
-Run "overture scan --json" for machine-readable details.
+Agents
+...
+Aligned servers
+...
+Missing from agents
+...
+Agent-only servers
+...
+Pickable conflicts
+...
+Hard refuses
+...
+Parse errors
+...
 ```
 
 When `N === 0` an additional install-suggestion block is appended that names
