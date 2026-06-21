@@ -24,6 +24,38 @@ type RenderableServer =
       readonly reason?: string;
     };
 
+/**
+ * Maximum number of detailed entries (rows, conflict entries, parse-error
+ * entries, pickable candidates) rendered across the server / conflict / parse
+ * sections. The Agents summary, section headers, the install suggestion block,
+ * and the final JSON pointer line are NOT counted. When the cap is reached the
+ * renderer appends a single truncation line and stops emitting further entries.
+ *
+ * Locked by the C2 plan; raised only when the user explicitly approves scope
+ * expansion.
+ */
+export const MAX_DETAILED_ENTRIES = 200;
+const CAP_MESSAGE_PREFIX = '  ... and ';
+
+/**
+ * Render the full C2 human report for a `{ matrix, conflicts }` scan result.
+ *
+ * Section order is fixed: summary, Agents, Aligned servers, Missing from
+ * agents, Agent-only servers, Pickable conflicts, Hard refuses, Parse errors,
+ * (zero-agent install suggestion block when applicable), and the final JSON
+ * pointer line. Every section header is always emitted; empty sections show
+ * `  (none)` under the heading.
+ *
+ * Detailed entries (rows, conflicts, parse errors) are capped at
+ * {@link MAX_DETAILED_ENTRIES} across all server / conflict / parse sections.
+ * When the cap is hit, the renderer appends a single
+ * `  ... and N more entries; run "overture scan --json" for full details.`
+ * line at the end of the section that crossed the cap and stops emitting
+ * further entries.
+ *
+ * The function is pure: no I/O, no `process`, no `JSON.stringify`, no `console`.
+ * It never throws for malformed URLs or absent optional fields.
+ */
 export function formatHumanScanDetail(
   matrix: ScanMatrix,
   conflicts: ConflictClassification,
@@ -48,12 +80,44 @@ export function formatHumanScanDetail(
   lines.push(`Hard refuses: ${conflicts.hardRefuses.length}`);
 
   appendSection(lines, 'Agents', renderAgents(matrix.agents));
-  appendSection(lines, 'Aligned servers', renderAlignedRows(matrix, matrix.rows));
-  appendSection(lines, 'Missing from agents', renderMissingRows(matrix, matrix.rows));
-  appendSection(lines, 'Agent-only servers', renderExtraRows(matrix, matrix.rows));
-  appendSection(lines, 'Pickable conflicts', renderPickable(conflicts.pickable));
-  appendSection(lines, 'Hard refuses', renderHardRefuses(conflicts.hardRefuses));
-  appendSection(lines, 'Parse errors', renderParseErrors(matrix.agents));
+
+  const cap = createCap();
+  appendCappedSection(
+    lines,
+    cap,
+    'Aligned servers',
+    renderAlignedRows(matrix, matrix.rows),
+  );
+  appendCappedSection(
+    lines,
+    cap,
+    'Missing from agents',
+    renderMissingRows(matrix, matrix.rows),
+  );
+  appendCappedSection(
+    lines,
+    cap,
+    'Agent-only servers',
+    renderExtraRows(matrix, matrix.rows),
+  );
+  appendCappedSection(
+    lines,
+    cap,
+    'Pickable conflicts',
+    renderPickable(conflicts.pickable),
+  );
+  appendCappedSection(
+    lines,
+    cap,
+    'Hard refuses',
+    renderHardRefuses(conflicts.hardRefuses),
+  );
+  appendCappedSection(
+    lines,
+    cap,
+    'Parse errors',
+    renderParseErrors(matrix.agents),
+  );
 
   if (installedCount === 0) {
     appendBlock(lines, [
@@ -72,7 +136,6 @@ export function formatHumanScanDetail(
   lines.push('Run "overture scan --json" for machine-readable details.');
   return lines.join('\n');
 }
-
 function renderAgents(agents: readonly MatrixAgent[]): string[] {
   const lines: string[] = [];
   for (const agent of agents) {
@@ -186,6 +249,69 @@ function appendBlock(lines: string[], body: readonly string[]): void {
     lines.push('');
   }
   lines.push(...body);
+}
+
+/**
+ * Mutable cap state shared across {@link appendCappedSection} calls. Tracks
+ * how many detailed entries have been emitted so far, whether the cap has
+ * already been reported, and how many entries would still have been rendered
+ * (used to compute the trailing truncation message).
+ */
+interface CapState {
+  readonly limit: number;
+  emitted: number;
+  capReached: boolean;
+  truncatedLines: readonly string[];
+}
+
+function createCap(limit: number = MAX_DETAILED_ENTRIES): CapState {
+  return {
+    limit,
+    emitted: 0,
+    capReached: false,
+    truncatedLines: [],
+  };
+}
+
+function appendCappedSection(
+  lines: string[],
+  cap: CapState,
+  title: string,
+  body: readonly string[],
+): void {
+  if (lines.length > 0) {
+    lines.push('');
+  }
+  lines.push(title);
+  if (cap.capReached) {
+    lines.push('  (none)');
+    return;
+  }
+  if (body.length === 0) {
+    lines.push('  (none)');
+    return;
+  }
+  const remaining = body.length;
+  const capacity = cap.limit - cap.emitted;
+  if (capacity <= 0) {
+    cap.capReached = true;
+    cap.truncatedLines = body;
+    lines.push(`${CAP_MESSAGE_PREFIX}${remaining} more entries; run "overture scan --json" for full details.`);
+    return;
+  }
+  if (remaining <= capacity) {
+    lines.push(...body);
+    cap.emitted += remaining;
+    return;
+  }
+  const head = body.slice(0, capacity);
+  lines.push(...head);
+  cap.emitted += capacity;
+  cap.capReached = true;
+  cap.truncatedLines = body.slice(capacity);
+  lines.push(
+    `${CAP_MESSAGE_PREFIX}${cap.truncatedLines.length} more entries; run "overture scan --json" for full details.`,
+  );
 }
 
 function displayNameForRow(matrix: ScanMatrix, row: MatrixRow): string {

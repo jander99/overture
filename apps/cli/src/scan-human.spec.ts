@@ -623,5 +623,219 @@ Run "overture scan --json" for machine-readable details.`);
     );
     expectSectionOrder(out);
     expectCommonSanitization(out);
+    expectSectionOrder(out);
+    expectCommonSanitization(out);
+  });
+
+  it('redacts env values, header values, arg values, bearer tokens, query and fragment values from stdio/remote output', () => {
+    const secretArg = 'top-secret-arg-value';
+    const bearerA = 'Bearer top-secret-token-a';
+    const bearerB = 'Bearer another-secret-token-b';
+    const matrix = makeMatrix({
+      canonicalState: 'ready',
+      canonicalProfileName: 'default',
+      canonicalIntent: {
+        secretServer: makeStdioServer('node', [secretArg], {
+          Authorization: bearerA,
+          DEBUG: '1',
+        }),
+      },
+      agents: [
+        makeAgent({
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          installed: true,
+          readState: 'read-ok',
+        }),
+        makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
+        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
+      ],
+      rows: [
+        makeRow({
+          agentId: 'claude-code',
+          canonicalName: 'secretServer',
+          agentServerName: 'secretServer',
+          status: 'aligned',
+          canonicalServer: makeStdioServer('node', [secretArg], {
+            Authorization: bearerA,
+            DEBUG: '1',
+          }),
+          agentServer: makeStdioServer('node', [secretArg], {
+            Authorization: bearerA,
+            DEBUG: '1',
+          }),
+        }),
+        makeRow({
+          agentId: 'claude-code',
+          canonicalName: 'remoteSecret',
+          agentServerName: 'remoteSecret',
+          status: 'aligned',
+          canonicalServer: makeRemoteServer(
+            'https://api.example.com/mcp?token=secret-query&key=value#frag=secret-fragment',
+            { Authorization: bearerB, 'X-Trace': 'yes' },
+          ),
+          agentServer: makeRemoteServer(
+            'https://api.example.com/mcp?token=secret-query&key=value#frag=secret-fragment',
+            { Authorization: bearerB, 'X-Trace': 'yes' },
+          ),
+        }),
+      ],
+    });
+
+    const conflicts = classifyConflicts(matrix);
+    const out = formatHumanScanDetail(matrix, conflicts);
+
+    expect(out).toContain('stdio command=node args=1 env=2');
+    expect(out).toContain(
+      'remote url=https://api.example.com/mcp?…#… headers=2',
+    );
+    expect(out).not.toContain(secretArg);
+    expect(out).not.toContain(bearerA);
+    expect(out).not.toContain(bearerB);
+    expect(out).not.toContain('secret-query');
+    expect(out).not.toContain('key=value');
+    expect(out).not.toContain('frag=secret-fragment');
+    expect(out).not.toContain('token=secret-query');
+    expect(out).not.toContain('DEBUG=1');
+    expectCommonSanitization(out);
+  });
+
+  it('renders <invalid-url> for malformed URLs and never throws', () => {
+    for (const badUrl of ['not a valid url', '', 'http://', 'ht!tp://x']) {
+      const matrix = makeMatrix({
+        canonicalState: 'ready',
+        canonicalProfileName: 'default',
+        canonicalIntent: {
+          badServer: makeRemoteServer(badUrl, { Authorization: 'Bearer x' }),
+        },
+        agents: [
+          makeAgent({
+            id: 'claude-code',
+            displayName: 'Claude Code',
+            installed: true,
+            readState: 'read-ok',
+          }),
+          makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
+          makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+          makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
+        ],
+        rows: [
+          makeRow({
+            agentId: 'claude-code',
+            canonicalName: 'badServer',
+            agentServerName: 'badServer',
+            status: 'aligned',
+            canonicalServer: makeRemoteServer(badUrl, { Authorization: 'Bearer x' }),
+            agentServer: makeRemoteServer(badUrl, { Authorization: 'Bearer x' }),
+          }),
+        ],
+      });
+      const conflicts = classifyConflicts(matrix);
+      let out = '';
+      expect(() => {
+        out = formatHumanScanDetail(matrix, conflicts);
+      }).not.toThrow();
+      expect(out).toContain('remote url=<invalid-url>');
+      expect(out).not.toContain('Bearer x');
+    }
+  });
+
+  it('truncates output to 200 detailed entries and appends the JSON pointer cap message', () => {
+    const totalRows = 250;
+    const rows: ServerStatusRow[] = [];
+    const canonicalIntent: Record<string, OvertureMcpServer> = {};
+    for (let i = 0; i < totalRows; i += 1) {
+      const name = `server-${String(i).padStart(3, '0')}`;
+      canonicalIntent[name] = makeStdioServer('node', ['server.js']);
+      rows.push(
+        makeRow({
+          agentId: 'claude-code',
+          canonicalName: name,
+          agentServerName: name,
+          status: 'aligned',
+          canonicalServer: makeStdioServer('node', ['server.js']),
+          agentServer: makeStdioServer('node', ['server.js']),
+        }),
+      );
+    }
+    const matrix = makeMatrix({
+      canonicalState: 'ready',
+      canonicalProfileName: 'default',
+      canonicalIntent,
+      agents: [
+        makeAgent({
+          id: 'claude-code',
+          displayName: 'Claude Code',
+          installed: true,
+          readState: 'read-ok',
+        }),
+        makeAgent({ id: 'opencode', displayName: 'OpenCode' }),
+        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
+      ],
+      rows,
+    });
+
+    const conflicts = classifyConflicts(matrix);
+    const out = formatHumanScanDetail(matrix, conflicts);
+
+    expect(out).toContain(
+      '  ... and 50 more entries; run "overture scan --json" for full details.',
+    );
+    const alignedSection = out.split('Aligned servers\n')[1] ?? '';
+    const alignedLines = alignedSection.split('\n');
+    const entryLines = alignedLines.filter(
+      (line) => line.startsWith('  - ') || line.startsWith('    candidate '),
+    );
+    expect(entryLines.length).toBe(200);
+    // Once the cap fires, later sections show `(none)` and are NOT emitted.
+    expect(out).toContain('Missing from agents\n  (none)');
+    expect(out).toContain('Pickable conflicts\n  (none)');
+    expect(out).toContain('Parse errors\n  (none)');
+    expectCommonSanitization(out);
+  });
+
+  it('renders shape-conflict fingerprint with reason', () => {
+    const matrix = makeMatrix({
+      canonicalState: 'absent',
+      canonicalProfileName: null,
+      agents: [
+        makeAgent({
+          id: 'opencode',
+          displayName: 'OpenCode',
+          installed: true,
+          readState: 'read-ok',
+        }),
+        makeAgent({ id: 'claude-code', displayName: 'Claude Code' }),
+        makeAgent({ id: 'github-copilot-cli', displayName: 'GitHub Copilot CLI' }),
+        makeAgent({ id: 'openai-codex', displayName: 'OpenAI Codex' }),
+      ],
+      rows: [],
+    });
+    const shapeConflict = {
+      type: 'unknown-transport',
+      reason: 'invalid transport discriminator',
+    } as unknown as OvertureMcpServer;
+    const matrixWithShape: ScanMatrix = {
+      ...matrix,
+      rows: [
+        makeRow({
+          agentId: 'opencode',
+          canonicalName: 'broken',
+          agentServerName: 'broken',
+          status: 'aligned',
+          canonicalServer: shapeConflict,
+          agentServer: shapeConflict,
+        }),
+      ],
+    };
+    const conflicts = classifyConflicts(matrixWithShape);
+    const out = formatHumanScanDetail(matrixWithShape, conflicts);
+
+    expect(out).toContain(
+      '  - broken on OpenCode (opencode): shape-conflict reason=invalid transport discriminator',
+    );
+    expectCommonSanitization(out);
   });
 });
