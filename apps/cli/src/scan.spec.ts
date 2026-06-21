@@ -13,16 +13,14 @@ import { buildScanJsonOutput } from './scan.js';
 import type { ScanInput } from './scan.js';
 import { defaultPathResolutionContext } from './platforms/detect.js';
 import { agentRegistry } from '@overture/agents';
+import type { AgentSnapshot, ScanMatrix } from '@overture/scan-matrix';
 
 /**
  * Helper: collect the snapshot for `agentId` from a built matrix.
  * Throws if the snapshot is missing so call sites can chain `?.` safely
  * and stay readable.
  */
-function snapshotFor(
-  matrix: { agents: readonly { id: string }[] },
-  agentId: string,
-) {
+function snapshotFor(matrix: ScanMatrix, agentId: string): AgentSnapshot {
   const snapshot = matrix.agents.find((a) => a.id === agentId);
   if (snapshot === undefined) {
     throw new Error(`expected snapshot for agent '${agentId}'`);
