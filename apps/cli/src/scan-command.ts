@@ -5,6 +5,7 @@ import {
 } from '@overture/config';
 import { defaultPathResolutionContext } from './platforms/detect.js';
 import { buildScanJsonOutput, type ScanJsonOutput } from './scan.js';
+import { formatHumanScanDetail } from './scan-human.js';
 
 export interface StringWriter {
   write(chunk: string): boolean;
@@ -33,58 +34,6 @@ export function exitCodeForScan(
   if (matrix.canonicalState === 'invalid-profile') return 1;
   if (conflicts.hardRefuses.length > 0) return 1;
   return 0;
-}
-
-/**
- * Render the default-human summary for `overture scan` (the no-flag path).
- *
- * Always emitted lines:
- * - `Scan complete.`                          — `exitCodeForScan === 0`
- *   OR `Scan completed with blocking issues.` — `exitCodeForScan === 1`.
- * - `Detected agents: N / 4`                  — count of `matrix.agents`
- *   entries with `installed === true`. The `/ 4` denominator is the
- *   canonical four-agent registry (claude-code, opencode,
- *   github-copilot-cli, openai-codex).
- * - `Canonical config: <state>`              — verbatim `matrix.canonicalState`
- *   (`absent` | `ready` | `invalid-profile`).
- * - `Hard refuses: <count>`                   — `conflicts.hardRefuses.length`.
- * - `Run "overture scan --json" ...`          — pointer to the machine-readable
- *   path so terminal users always know where to go next.
- *
- * When zero agents are detected, an additional install-suggestion block is
- * appended that names the four supported CLIs and the host OSes overture
- * runs on. The block is suppressed when at least one agent is installed
- * because the inventory already proves the user's platform supports one.
- *
- * Output is plain text: no ANSI escape sequences, no trailing newline.
- * The dispatcher in {@link runScan} appends the final `\n` when writing to
- * stdout.
- */
-export function formatHumanScanSummary(
-  matrix: ScanJsonOutput['matrix'],
-  conflicts: ScanJsonOutput['conflicts'],
-): string {
-  const installedCount = matrix.agents.filter((a) => a.installed).length;
-  const blocking = exitCodeForScan(matrix, conflicts) === 1;
-  const lines: string[] = [
-    blocking ? 'Scan completed with blocking issues.' : 'Scan complete.',
-    `Detected agents: ${installedCount} / 4`,
-    `Canonical config: ${matrix.canonicalState}`,
-    `Hard refuses: ${conflicts.hardRefuses.length}`,
-    'Run "overture scan --json" for machine-readable details.',
-  ];
-  if (installedCount === 0) {
-    lines.push(
-      '',
-      'No supported MCP-capable agents detected.',
-      'Install one of these CLI agents on a supported OS (linux/darwin):',
-      '  - Claude Code',
-      '  - OpenCode',
-      '  - GitHub Copilot CLI',
-      '  - OpenAI Codex',
-    );
-  }
-  return lines.join('\n');
 }
 
 /**
@@ -168,6 +117,6 @@ export async function runScan(
     return 2;
   }
   const { matrix, conflicts } = scanOutput;
-  stdout.write(formatHumanScanSummary(matrix, conflicts) + '\n');
+  stdout.write(formatHumanScanDetail(matrix, conflicts) + '\n');
   return exitCodeForScan(matrix, conflicts);
 }
