@@ -206,6 +206,58 @@ function exitCodeForScan(
 }
 
 /**
+ * Render the default-human summary for `overture scan` (the no-flag path).
+ *
+ * Always emitted lines:
+ * - `Scan complete.`                          — `exitCodeForScan === 0`
+ *   OR `Scan completed with blocking issues.` — `exitCodeForScan === 1`.
+ * - `Detected agents: N / 4`                  — count of `matrix.agents`
+ *   entries with `installed === true`. The `/ 4` denominator is the
+ *   canonical four-agent registry (claude-code, opencode,
+ *   github-copilot-cli, openai-codex).
+ * - `Canonical config: <state>`              — verbatim `matrix.canonicalState`
+ *   (`absent` | `ready` | `invalid-profile`).
+ * - `Hard refuses: <count>`                   — `conflicts.hardRefuses.length`.
+ * - `Run "overture scan --json" ...`          — pointer to the machine-readable
+ *   path so terminal users always know where to go next.
+ *
+ * When zero agents are detected, an additional install-suggestion block is
+ * appended that names the four supported CLIs and the host OSes overture
+ * runs on. The block is suppressed when at least one agent is installed
+ * because the inventory already proves the user's platform supports one.
+ *
+ * Output is plain text: no ANSI escape sequences, no trailing newline.
+ * The dispatcher in {@link runScan} appends the final `\n` when writing to
+ * stdout.
+ */
+export function formatHumanScanSummary(
+  matrix: ScanJsonOutput['matrix'],
+  conflicts: ScanJsonOutput['conflicts'],
+): string {
+  const installedCount = matrix.agents.filter((a) => a.installed).length;
+  const blocking = exitCodeForScan(matrix, conflicts) === 1;
+  const lines: string[] = [
+    blocking ? 'Scan completed with blocking issues.' : 'Scan complete.',
+    `Detected agents: ${installedCount} / 4`,
+    `Canonical config: ${matrix.canonicalState}`,
+    `Hard refuses: ${conflicts.hardRefuses.length}`,
+    'Run "overture scan --json" for machine-readable details.',
+  ];
+  if (installedCount === 0) {
+    lines.push(
+      '',
+      'No supported MCP-capable agents detected.',
+      'Install one of these CLI agents on a supported OS (linux/darwin):',
+      '  - Claude Code',
+      '  - OpenCode',
+      '  - GitHub Copilot CLI',
+      '  - OpenAI Codex',
+    );
+  }
+  return lines.join('\n');
+}
+
+/**
  * Dispatch the `overture scan` subcommand. Mirrors the {@link runDetect}
  * shape but routes through {@link buildScanJsonOutput} so the JSON output is
  * the same model the C1 adapter exposes to other consumers.
@@ -213,7 +265,7 @@ function exitCodeForScan(
  * Exit codes:
  * - `0` — clean scan (no invalid-profile state, no hard-refuse conflicts),
  *   including the "no agents installed" case; also returned for `--help` /
- *   `-h` and the no-flag placeholder that Task 5 will replace.
+ *   `-h` and the no-flag human summary path.
  * - `1` — scan ran but produced a `matrix.canonicalState === 'invalid-profile'`
  *   state, or `conflicts.hardRefuses` is non-empty. The JSON envelope is
  *   still emitted to stdout before the non-zero exit so consumers can read
@@ -266,8 +318,28 @@ async function runScan(
     stdout.write(JSON.stringify({ matrix, conflicts }, null, 2) + '\n');
     return exitCodeForScan(matrix, conflicts);
   }
-  // No flag (default): Task 5 will replace this with the human formatter.
-  return 0;
+  let config: OvertureConfig | null;
+  try {
+    config = await loadOvertureConfig(defaultOverturePaths());
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    stderr.write(`${message}\n`);
+    return 2;
+  }
+  let scanOutput: ScanJsonOutput;
+  try {
+    scanOutput = await buildScanJsonOutput({
+      ctx: defaultPathResolutionContext(),
+      config,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    stderr.write(`${message}\n`);
+    return 2;
+  }
+  const { matrix, conflicts } = scanOutput;
+  stdout.write(formatHumanScanSummary(matrix, conflicts) + '\n');
+  return exitCodeForScan(matrix, conflicts);
 }
 function renderConfigNotFound(paths: OverturePaths): string {
   return (

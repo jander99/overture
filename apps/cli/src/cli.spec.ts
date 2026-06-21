@@ -741,11 +741,6 @@ describe('run: scan', () => {
     expect(err).toContain('Usage: overture scan');
   });
 
-  it('with no flag returns 0 (placeholder for the Task 5 human formatter)', async () => {
-    const code = await run(['scan']);
-    expect(code).toBe(0);
-  });
-
   it('--json with no agents installed returns 0 and emits the matrix envelope', async () => {
     // Scrub PATH and any XDG agent config dirs to guarantee "no agents
     // installed". The dev machine may have opencode/claude/codex/copilot
@@ -893,6 +888,98 @@ describe('run: scan', () => {
         (h) => h.agentId === 'opencode',
       );
       expect(opencodeRefuse?.reason).toBe('parse-error');
+    } finally {
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+      rmSync(pathDir, { recursive: true, force: true });
+    }
+  });
+  it('no-flag scan with no installed agents returns 0 and writes the human summary', async () => {
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-hum-path-'));
+    const prevPath = process.env.PATH;
+    process.env.PATH = pathDir;
+    try {
+      const code = await run(['scan']);
+      expect(code).toBe(0);
+      const out = stdoutSpy.mock.calls
+        .map((c: readonly unknown[]) => c[0] as string)
+        .join('');
+      expect(out).toContain('Scan complete.');
+      expect(out).toContain('Detected agents: 0 / 4');
+      expect(out).toContain('Canonical config: absent');
+      expect(out).toContain('Hard refuses: 0');
+      expect(out).toContain(
+        'Run "overture scan --json" for machine-readable details.',
+      );
+      expect(out).toContain('Claude Code');
+      expect(out).toContain('OpenCode');
+      expect(out).toContain('GitHub Copilot CLI');
+      expect(out).toContain('OpenAI Codex');
+      expect(out).toContain('linux');
+      expect(out).toContain('darwin');
+      expect(out).toContain('No supported MCP-capable agents detected.');
+      expect(out).not.toMatch(/\x1b\[/);
+      expect(out).not.toContain('\x1b');
+    } finally {
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+      rmSync(pathDir, { recursive: true, force: true });
+    }
+  });
+
+  it('no-flag scan with parse-error agent config returns 1 and writes the blocking summary', async () => {
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-hum-hardref-'));
+    const prevPath = process.env.PATH;
+    process.env.PATH = `${pathDir}${prevPath ? `:${prevPath}` : ''}`;
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+    const opencodeDir = join(tempDir, 'opencode');
+    mkdirSync(opencodeDir, { recursive: true });
+    writeFileSync(
+      join(opencodeDir, 'opencode.jsonc'),
+      '{ "mcp": { this is not valid jsonc',
+      'utf8',
+    );
+    try {
+      const code = await run(['scan']);
+      expect(code).toBe(1);
+      const out = stdoutSpy.mock.calls
+        .map((c: readonly unknown[]) => c[0] as string)
+        .join('');
+      expect(out).toContain('Scan completed with blocking issues.');
+      expect(out).toContain('Hard refuses: 1');
+      expect(out).not.toContain('"matrix"');
+    } finally {
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+      rmSync(pathDir, { recursive: true, force: true });
+    }
+  });
+
+  it('no-flag scan with OpenCode installed returns 0 and includes "Scan complete."', async () => {
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-hum-opencode-'));
+    const prevPath = process.env.PATH;
+    process.env.PATH = `${pathDir}${prevPath ? `:${prevPath}` : ''}`;
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+    try {
+      const code = await run(['scan']);
+      expect(code).toBe(0);
+      const out = stdoutSpy.mock.calls
+        .map((c: readonly unknown[]) => c[0] as string)
+        .join('');
+      expect(out).toContain('Scan complete.');
     } finally {
       if (prevPath === undefined) {
         delete process.env.PATH;
