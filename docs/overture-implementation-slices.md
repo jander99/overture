@@ -192,6 +192,33 @@ canonical intent is absent.
 
 Expected result: first real implementation of the vision's Read behavior.
 
+**Status: completed.**
+
+Delivered: commits `d0125bbc`, `6ef584f8`, `7202c7ba`, `b43159a0`, `9981b24d`
+on branch `feat/c1-scan-json` ship the C1 adapter. The `@overture/scan-matrix`
+B1 model is now wired into the CLI through `apps/cli/src/scan.ts`, which
+exposes a pure `buildScanJsonOutput({ ctx, config })` returning a
+`ScanJsonOutput = { matrix: ScanMatrix, conflicts: ConflictClassification }`
+envelope (no `version` / `generatedAt` / `duration` fields, by design — see
+the `ScanJsonOutput` doc comment). The CLI dispatch in
+`apps/cli/src/cli.ts::runScan` covers three exit codes: `0` for a clean scan
+(empty inventory included), `1` when
+`matrix.canonicalState === 'invalid-profile'` or
+`conflicts.hardRefuses.length > 0` (the JSON envelope is still written to
+stdout), and `2` for usage errors and pre-model orchestration failures (no
+matrix emitted). The default-summary human renderer
+(`formatHumanScanSummary`) always emits five lines (status, agent count,
+canonical state, hard-refuse count, `scan --json` pointer), with an extra
+install-suggestion block when zero agents are detected. Acceptance notes:
+`yarn nx test @jander99/overture` covers both exit-code branches in
+`apps/cli/src/scan.spec.ts` and the default-summary contract; the package
+smoke `apps/cli/scripts/verify-package.mjs` exercises `scan --json` against
+the installed tarball, asserts the top-level `{ matrix, conflicts }` shape,
+the `matrix` keys (`agents`, `canonicalState`, `canonicalIntent`,
+`canonicalProfileName`, `rows`), and the `conflicts` keys (`pickable`,
+`hardRefuses`); and `yarn prettier --check .` plus `yarn nx lint
+@jander99/overture` keep the docs and code style in CI shape.
+
 ### C2. Add human `overture scan` output
 
 Render the same scan matrix for humans.
