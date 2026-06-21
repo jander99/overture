@@ -42,6 +42,9 @@ export function formatHumanScanDetail(
   if (matrix.canonicalProfileName !== null) {
     lines.push(`Canonical profile: ${matrix.canonicalProfileName}`);
   }
+  if (matrix.reason !== undefined) {
+    lines.push(`Canonical reason: ${matrix.reason}`);
+  }
   lines.push(`Hard refuses: ${conflicts.hardRefuses.length}`);
 
   appendSection(lines, 'Agents', renderAgents(matrix.agents));
@@ -193,13 +196,13 @@ function renderFingerprint(server: unknown): string {
   if (!isRenderableServer(server)) {
     return '<unknown>';
   }
-  if (server.type === 'stdio') {
+  if (isStdioRenderableServer(server)) {
     const command = server.command ?? '<unknown>';
     const args = server.args?.length ?? 0;
     const env = server.env === undefined ? 0 : Object.keys(server.env).length;
     return `stdio command=${command} args=${args} env=${env}`;
   }
-  if (server.type === 'remote') {
+  if (isRemoteRenderableServer(server)) {
     const headers = server.headers === undefined ? 0 : Object.keys(server.headers).length;
     return `remote url=${redactUrl(server.url ?? '')} headers=${headers}`;
   }
@@ -211,6 +214,18 @@ function renderFingerprint(server: unknown): string {
 
 function isRenderableServer(server: unknown): server is RenderableServer {
   return typeof server === 'object' && server !== null;
+}
+
+function isStdioRenderableServer(
+  server: RenderableServer,
+): server is Extract<RenderableServer, { readonly type: 'stdio' }> {
+  return server.type === 'stdio';
+}
+
+function isRemoteRenderableServer(
+  server: RenderableServer,
+): server is Extract<RenderableServer, { readonly type: 'remote' }> {
+  return server.type === 'remote';
 }
 
 function redactUrl(raw: string): string {

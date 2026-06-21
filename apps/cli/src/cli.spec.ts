@@ -911,6 +911,12 @@ describe('run: scan', () => {
       expect(out).toContain('Detected agents: 0 / 4');
       expect(out).toContain('Canonical config: absent');
       expect(out).toContain('Hard refuses: 0');
+      expect(out).toContain('Agents');
+      expect(out).toContain('Aligned servers');
+      expect(out).toContain('Missing from agents');
+      expect(out).toContain('Agent-only servers');
+      expect(out).toContain('Pickable conflicts');
+      expect(out).toContain('Parse errors');
       expect(out).toContain(
         'Run "overture scan --json" for machine-readable details.',
       );
@@ -931,6 +937,38 @@ describe('run: scan', () => {
       }
       rmSync(pathDir, { recursive: true, force: true });
     }
+  });
+
+  it('no-flag scan with invalid profile returns 1 and surfaces the canonical reason', async () => {
+    const configDir = join(tempDir, 'overture');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      join(configDir, 'overture.jsonc'),
+      JSON.stringify({
+        version: 1,
+        settings: { defaultProfile: 'does-not-exist' },
+        profiles: {
+          default: {
+            mcpServers: {},
+            sync: { targets: [] },
+            skills: [],
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const code = await run(['scan']);
+    expect(code).toBe(1);
+
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(out).toContain('Scan completed with blocking issues.');
+    expect(out).toContain('Canonical config: invalid-profile');
+    expect(out).toContain('Canonical reason: Default profile "does-not-exist" does not exist');
+    expect(out).toContain('Hard refuses: 0');
+    expect(out).toContain('Parse errors');
   });
 
   it('no-flag scan with parse-error agent config returns 1 and writes the blocking summary', async () => {
@@ -955,6 +993,8 @@ describe('run: scan', () => {
         .join('');
       expect(out).toContain('Scan completed with blocking issues.');
       expect(out).toContain('Hard refuses: 1');
+      expect(out).toContain('Parse errors');
+      expect(out).toContain('  - OpenCode (opencode):');
       expect(out).not.toContain('"matrix"');
     } finally {
       if (prevPath === undefined) {
