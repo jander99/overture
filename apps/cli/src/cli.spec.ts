@@ -745,4 +745,161 @@ describe('run: scan', () => {
     const code = await run(['scan']);
     expect(code).toBe(0);
   });
+
+  it('--json with no agents installed returns 0 and emits the matrix envelope', async () => {
+    // Scrub PATH and any XDG agent config dirs to guarantee "no agents
+    // installed". The dev machine may have opencode/claude/codex/copilot
+    // on the real PATH; we explicitly do NOT want them showing up in the
+    // matrix for this contract test.
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-empty-path-'));
+    const prevPath = process.env.PATH;
+    process.env.PATH = pathDir;
+    try {
+      const code = await run(['scan', '--json']);
+      expect(code).toBe(0);
+
+      const out = stdoutSpy.mock.calls
+        .map((c: readonly unknown[]) => c[0] as string)
+        .join('');
+      const parsed = JSON.parse(out) as {
+        matrix: {
+          canonicalState: string;
+          agents: { id: string; installed: boolean; readState: string }[];
+        };
+        conflicts: { hardRefuses: unknown[]; pickable: unknown[] };
+      };
+
+      expect(parsed.matrix.canonicalState).toBe('absent');
+      expect(parsed.matrix.agents.length).toBeGreaterThanOrEqual(1);
+      for (const agent of parsed.matrix.agents) {
+        expect(agent.installed).toBe(false);
+        expect(agent.readState).toBe('not-installed');
+      }
+      expect(parsed.conflicts.hardRefuses).toEqual([]);
+    } finally {
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+      rmSync(pathDir, { recursive: true, force: true });
+    }
+  });
+  it('--json returns 2 and writes the parse error to stderr when overture.jsonc is malformed', async () => {
+    const configDir = join(tempDir, 'overture');
+    mkdirSync(configDir, { recursive: true });
+    // Broken JSONC: a string that is not valid JSON, so jsonc-parser will
+    // report an error and the loader will throw.
+    writeFileSync(
+      join(configDir, 'overture.jsonc'),
+      '{ "version": 1, "profiles": ',
+      'utf8',
+    );
+
+    const code = await run(['scan', '--json']);
+    expect(code).toBe(2);
+
+    const err = stderrSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(err.length).toBeGreaterThan(0);
+    expect(err.toLowerCase()).toContain('overture.jsonc');
+
+    // The pre-model orchestration failure must NOT emit a fake matrix.
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(out).not.toContain('{');
+  });
+
+  it('--json returns 1 and reports invalid-profile when the named default profile does not exist', async () => {
+    const configDir = join(tempDir, 'overture');
+    mkdirSync(configDir, { recursive: true });
+    // Valid schema (version: 1, a `default` profile so refine() passes),
+    // but `settings.defaultProfile` points at a profile the map does not
+    // contain. The scan-matrix resolver turns this into
+    // `canonicalState: 'invalid-profile'`, which the helper maps to exit 1.
+    writeFileSync(
+      join(configDir, 'overture.jsonc'),
+      JSON.stringify({
+        version: 1,
+        settings: { defaultProfile: 'does-not-exist' },
+        profiles: {
+          default: {
+            mcpServers: {},
+            sync: { targets: [] },
+            skills: [],
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const code = await run(['scan', '--json']);
+    expect(code).toBe(1);
+
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    const parsed = JSON.parse(out) as {
+      matrix: { canonicalState: string };
+      conflicts: { hardRefuses: unknown[] };
+    };
+    expect(parsed.matrix.canonicalState).toBe('invalid-profile');
+    // invalid-profile is its own signal; no parse-error refuses should
+    // also be emitted because no agent config files exist in tempDir.
+    expect(parsed.conflicts.hardRefuses).toEqual([]);
+  });
+
+  it('--json returns 1 and emits a parse-error hardRefuse when an agent config is malformed', async () => {
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-path-'));
+    const prevPath = process.env.PATH;
+    process.env.PATH = `${pathDir}${prevPath ? `:${prevPath}` : ''}`;
+    // opencode is binary-first, so install a fake binary on a temp PATH
+    // entry first to make the agent 'installed' from the detector's POV.
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+
+    // Then drop a malformed JSONC at the first opencode mcpLocation. The
+    // agent's `mcp.read` will throw a parseError, which `classifyConflicts`
+    // turns into a `parse-error` hardRefuse — exit 1.
+    const opencodeDir = join(tempDir, 'opencode');
+    mkdirSync(opencodeDir, { recursive: true });
+    writeFileSync(
+      join(opencodeDir, 'opencode.jsonc'),
+      '{ "mcp": { this is not valid jsonc',
+      'utf8',
+    );
+
+    try {
+      const code = await run(['scan', '--json']);
+      expect(code).toBe(1);
+
+      const out = stdoutSpy.mock.calls
+        .map((c: readonly unknown[]) => c[0] as string)
+        .join('');
+      const parsed = JSON.parse(out) as {
+        matrix: { agents: { id: string; readState: string }[] };
+        conflicts: {
+          hardRefuses: { reason: string; agentId: string | null }[];
+        };
+      };
+
+      const opencode = parsed.matrix.agents.find((a) => a.id === 'opencode');
+      expect(opencode?.readState).toBe('parse-error');
+      expect(parsed.conflicts.hardRefuses.length).toBeGreaterThanOrEqual(1);
+      const opencodeRefuse = parsed.conflicts.hardRefuses.find(
+        (h) => h.agentId === 'opencode',
+      );
+      expect(opencodeRefuse?.reason).toBe('parse-error');
+    } finally {
+      if (prevPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = prevPath;
+      }
+      rmSync(pathDir, { recursive: true, force: true });
+    }
+  });
 });
