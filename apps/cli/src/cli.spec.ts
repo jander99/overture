@@ -658,3 +658,91 @@ describe('run (config show)', () => {
     expect(err).toContain('config');
   });
 });
+
+describe('run: scan', () => {
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+  let tempDir: string;
+  let prevHome: string | undefined;
+  let prevXdgConfig: string | undefined;
+  let prevXdgState: string | undefined;
+  let prevXdgCache: string | undefined;
+
+  beforeEach(() => {
+    stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+    tempDir = mkdtempSync(join(tmpdir(), 'overture-scan-'));
+    prevHome = process.env.HOME;
+    prevXdgConfig = process.env.XDG_CONFIG_HOME;
+    prevXdgState = process.env.XDG_STATE_HOME;
+    prevXdgCache = process.env.XDG_CACHE_HOME;
+    process.env.HOME = tempDir;
+    process.env.XDG_CONFIG_HOME = tempDir;
+    process.env.XDG_STATE_HOME = tempDir;
+    process.env.XDG_CACHE_HOME = tempDir;
+    __setPlatformForTests('linux');
+  });
+
+  afterEach(() => {
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+    __setPlatformForTests(null);
+    if (prevHome === undefined) delete process.env.HOME;
+    else process.env.HOME = prevHome;
+    if (prevXdgConfig === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = prevXdgConfig;
+    if (prevXdgState === undefined) delete process.env.XDG_STATE_HOME;
+    else process.env.XDG_STATE_HOME = prevXdgState;
+    if (prevXdgCache === undefined) delete process.env.XDG_CACHE_HOME;
+    else process.env.XDG_CACHE_HOME = prevXdgCache;
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('--json returns 0 and writes parseable JSON with only matrix and conflicts keys', async () => {
+    const code = await run(['scan', '--json']);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    const parsed = JSON.parse(out) as Record<string, unknown>;
+    expect(Object.keys(parsed).sort()).toEqual(['conflicts', 'matrix']);
+    expect(parsed).not.toHaveProperty('version');
+    expect(parsed).not.toHaveProperty('generatedAt');
+    expect(parsed).not.toHaveProperty('duration');
+  });
+
+  it('--help returns 0 and prints the scan usage line', async () => {
+    const code = await run(['scan', '--help']);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: overture scan [--json]'),
+    );
+  });
+
+  it('-h returns 0 and prints the scan usage line', async () => {
+    const code = await run(['scan', '-h']);
+    expect(code).toBe(0);
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: overture scan [--json]'),
+    );
+  });
+
+  it('--bogus returns 2 and mentions the bad flag plus the usage line', async () => {
+    const code = await run(['scan', '--bogus']);
+    expect(code).toBe(2);
+    const err = stderrSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(err).toContain('--bogus');
+    expect(err).toContain('Usage: overture scan');
+  });
+
+  it('with no flag returns 0 (placeholder for the Task 5 human formatter)', async () => {
+    const code = await run(['scan']);
+    expect(code).toBe(0);
+  });
+});

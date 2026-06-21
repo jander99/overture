@@ -11,6 +11,7 @@ import {
   defaultPathResolutionContext,
   detectPlatforms,
 } from './platforms/detect.js';
+import { buildScanJsonOutput } from './scan.js';
 import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
 
@@ -151,7 +152,8 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
 const USAGE =
   'Usage: overture <command> [flags]\n\nCommands:\n' +
   '  detect [--json]   Detect installed MCP-capable platforms.\n' +
-  '  config show       Print the resolved user-level overture config.\n';
+  '  config show       Print the resolved user-level overture config.\n' +
+  '  scan [--json]     Build the installed MCP server matrix.\n';
 
 async function runDetect(flags: readonly string[]): Promise<number> {
   if (flags.includes('--help') || flags.includes('-h')) {
@@ -171,6 +173,56 @@ async function runDetect(flags: readonly string[]): Promise<number> {
     return 0;
   }
   process.stdout.write(formatHumanOutput(output));
+  return 0;
+}
+
+type StringWriter = { write(chunk: string): boolean };
+
+/**
+ * Dispatch the `overture scan` subcommand. Mirrors the {@link runDetect}
+ * shape but routes through {@link buildScanJsonOutput} so the JSON output is
+ * the same model the C1 adapter exposes to other consumers.
+ *
+ * Flags:
+ * - `--help` / `-h` — print the scan usage line and exit 0.
+ * - `--json`       — write `{ matrix, conflicts }` to stdout and exit 0.
+ * - (no flag)      — placeholder for Task 5's human formatter; exit 0.
+ * - anything else  — write a usage hint to stderr and exit 2.
+ *
+ * `stdout` / `stderr` are injected so tests can pass mocks; the production
+ * dispatcher in {@link run} always passes `process.stdout` / `process.stderr`.
+ */
+async function runScan(
+  args: readonly string[],
+  stdout: StringWriter,
+  stderr: StringWriter,
+): Promise<number> {
+  if (args.includes('--help') || args.includes('-h')) {
+    stdout.write('Usage: overture scan [--json]\n');
+    return 0;
+  }
+  const unknownFlags = args.filter((f) => f !== '--json');
+  if (unknownFlags.length > 0) {
+    stderr.write(
+      `Unknown flag: ${unknownFlags[0]}\nUsage: overture scan [--json]\n`,
+    );
+    return 2;
+  }
+  if (args.includes('--json')) {
+    let config: OvertureConfig | null = null;
+    try {
+      config = await loadOvertureConfig(defaultOverturePaths());
+    } catch {
+      config = null;
+    }
+    const { matrix, conflicts } = await buildScanJsonOutput({
+      ctx: defaultPathResolutionContext(),
+      config,
+    });
+    stdout.write(JSON.stringify({ matrix, conflicts }, null, 2) + '\n');
+    return 0;
+  }
+  // No flag (default): Task 5 will replace this with the human formatter.
   return 0;
 }
 
@@ -257,6 +309,10 @@ export async function run(args: readonly string[]): Promise<number> {
 
   if (args[0] === 'config') {
     return runConfig(args.slice(1));
+  }
+
+  if (args[0] === 'scan') {
+    return runScan(args.slice(1), process.stdout, process.stderr);
   }
 
   process.stderr.write(`Unknown command: ${args[0]}\n${USAGE}`);
