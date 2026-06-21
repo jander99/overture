@@ -20,6 +20,9 @@
     },
     {
       "path": "../../packages/os"
+    },
+    {
+      "path": "../../packages/scan-matrix"
     }
   ],
   "include": [
