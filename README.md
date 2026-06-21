@@ -107,6 +107,110 @@ those not installed, with flat additive fields (`detectionStrategy`,
 
 `detect` will not write to or modify any of the files it inspects, and it makes no writes anywhere.
 
+## The `scan` command
+
+`overture scan` is a **read-only** inspection of the relationship between the
+canonical user-level `overture.jsonc` config and each installed agent's MCP
+server configuration. Like `detect`, it never writes, syncs, or modifies any
+configuration file — it only reports what it sees.
+
+The command exposes the scan matrix built by the `@overture/scan-matrix`
+package: the four-agent registry (claude-code, opencode, github-copilot-cli,
+openai-codex) is walked in canonical order, each agent's MCP config is read
+and normalized into canonical server entries, and the resulting matrix is
+classified into pickable conflicts and hard refuses. A future bootstrap or
+apply command will consume this matrix; today it is the first implementation
+of the vision's Read behavior.
+
+### Usage
+
+```bash
+# Print a human-readable summary (default summary shape)
+overture scan
+
+# Machine-readable: full scan matrix + conflict classification as JSON
+overture scan --json
+
+# Print usage and exit 0
+overture scan --help
+```
+
+### Default summary shape
+
+The no-flag path emits five always-present lines (followed by a trailing
+newline):
+
+```
+Scan complete.
+Detected agents: N / 4
+Canonical config: <absent|ready|invalid-profile>
+Hard refuses: <count>
+Run "overture scan --json" for machine-readable details.
+```
+
+When `N === 0` an additional install-suggestion block is appended that names
+the four supported CLIs and the host OSes overture runs on. The summary line
+becomes `Scan completed with blocking issues.` when the exit code is `1`; the
+JSON pointer line is always emitted last so terminal users always know where
+to go next. No ANSI color is emitted; the output is plain text suitable for
+piping.
+
+### JSON output shape
+
+`overture scan --json` emits exactly two top-level keys (no version envelope,
+no `generatedAt`, no `duration`):
+
+```json
+{
+  "matrix": {
+    "canonicalState": "absent",
+    "canonicalProfileName": null,
+    "canonicalIntent": {},
+    "agents": [
+      /* AgentSnapshot[] */
+    ],
+    "rows": [
+      /* ServerStatusRow[] */
+    ]
+  },
+  "conflicts": {
+    "pickable": [
+      /* PickableConflict[] */
+    ],
+    "hardRefuses": [
+      /* HardRefuseConflict[] */
+    ]
+  }
+}
+```
+
+- `matrix.canonicalState` is one of `absent` (no config written),
+  `ready` (config + profile resolved), or `invalid-profile` (config
+  present but default profile missing).
+- `matrix.canonicalIntent` is `{}` when the user has not written a canonical
+  config; pre-canonical users still get a meaningful inventory scan.
+- `matrix.agents` is the four-agent registry in canonical order, regardless
+  of how many are installed.
+- `matrix.rows` is the per-server status classification (`aligned`,
+  `missing-from-agent`, `extra-in-agent`, `different-settings`,
+  `shape-conflict`, `parse-error`, `unsupported-agent`, `not-installed`).
+- `conflicts.pickable` is populated only when canonical intent is absent:
+  one entry per server-name group with at least two non-equal normalized
+  candidates.
+- `conflicts.hardRefuses` covers parse errors, shape conflicts, canonical
+  settings drift, and same-name groups spanning both `stdio` and `remote`
+  transports.
+
+### Exit codes
+
+| Exit code | Meaning                                                                                                                                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`       | Scan ran cleanly. No `invalid-profile` state, no `hardRefuses`. The "no agents installed" case also returns `0` because an empty inventory is a valid scan result, not an error.                                |
+| `1`       | Scan ran but produced a blocking state: `matrix.canonicalState === 'invalid-profile'` OR `conflicts.hardRefuses.length > 0`. The JSON envelope is still written to stdout so consumers can inspect what failed. |
+| `2`       | Usage error (unknown flag) or pre-model orchestration failure (canonical config parse / validation error, unexpected thrown error). No scan matrix is emitted to stdout; the message goes to stderr.            |
+
+`scan` will not write to or modify any of the files it inspects, and it makes no writes anywhere.
+
 ## Repository layout
 
 ```

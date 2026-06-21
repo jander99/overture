@@ -150,6 +150,64 @@ try {
   fail(`detect --json output is not valid JSON: ${err.message}`);
 }
 
+// scan --json smoke: assert the C1 envelope shape and a non-error exit
+// code. C1 accepts exit codes 0 (clean scan) and 1 (blocking state —
+// invalid-profile or hard-refuse). Exit code 2 is reserved for usage
+// errors and pre-model orchestration failures; if we see 2 here, the
+// installed package is broken.
+const scanResult = spawnSync('node', [distMain, 'scan', '--json'], {
+  encoding: 'utf8',
+});
+if (scanResult.status !== 0 && scanResult.status !== 1) {
+  fail(
+    `scan --json exited ${scanResult.status} (expected 0 or 1): ${scanResult.stderr}`,
+  );
+}
+try {
+  const scan = JSON.parse(scanResult.stdout);
+  const topKeys = Object.keys(scan).sort();
+  const expectedTopKeys = ['conflicts', 'matrix'];
+  if (
+    topKeys.length !== expectedTopKeys.length ||
+    !expectedTopKeys.every((k) => topKeys.includes(k))
+  ) {
+    fail(
+      `scan --json top-level keys are [${topKeys.join(', ')}]; expected exactly [${expectedTopKeys.join(', ')}]`,
+    );
+  }
+  const matrixKeys = Object.keys(scan.matrix).sort();
+  const expectedMatrixKeys = [
+    'agents',
+    'canonicalIntent',
+    'canonicalProfileName',
+    'canonicalState',
+    'rows',
+  ];
+  if (
+    matrixKeys.length !== expectedMatrixKeys.length ||
+    !expectedMatrixKeys.every((k) => matrixKeys.includes(k))
+  ) {
+    fail(
+      `scan --json matrix keys are [${matrixKeys.join(', ')}]; expected exactly [${expectedMatrixKeys.join(', ')}]`,
+    );
+  }
+  const conflictsKeys = Object.keys(scan.conflicts).sort();
+  const expectedConflictsKeys = ['hardRefuses', 'pickable'];
+  if (
+    conflictsKeys.length !== expectedConflictsKeys.length ||
+    !expectedConflictsKeys.every((k) => conflictsKeys.includes(k))
+  ) {
+    fail(
+      `scan --json conflicts keys are [${conflictsKeys.join(', ')}]; expected exactly [${expectedConflictsKeys.join(', ')}]`,
+    );
+  }
+  console.log(
+    `scan --json: exit=${scanResult.status} matrix.agents=${scan.matrix.agents.length} pickable=${scan.conflicts.pickable.length} hardRefuses=${scan.conflicts.hardRefuses.length}: PASS`,
+  );
+} catch (err) {
+  fail(`scan --json output is not valid JSON: ${err.message}`);
+}
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });
