@@ -7,7 +7,7 @@ import type {
   ServerStatusRow,
 } from '@overture/scan-matrix';
 
-import type { ScanJsonOutput } from './scan.js';
+import type { ScanJsonOutput } from '../src/scan.js';
 
 export const SCHEMA_URL =
   'https://raw.githubusercontent.com/jander99/overture/main/schemas/overture.config.schema.json';
