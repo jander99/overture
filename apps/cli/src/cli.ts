@@ -17,11 +17,6 @@ import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
 import { runBootstrap } from './bootstrap-command.js';
 import { runScan } from './scan-command.js';
-/**
- * Indirection over `process.platform` so tests can force a specific host
- * (e.g. `win32`) without having to mutate Node's global state. Production
- * callers always see the real value.
- */
 let platformOverride: HostPlatform | null = null;
 export function __setPlatformForTests(p: HostPlatform | null): void {
   platformOverride = p;
@@ -33,13 +28,6 @@ function currentPlatform(): HostPlatform {
 export function formatJsonOutput(output: DetectJsonOutput): string {
   return JSON.stringify(output, null, 2) + '\n';
 }
-
-/**
- * Render a single `McpServerEntry` for human-readable output. Local
- * servers show the argv vector joined with spaces; remote servers show
- * the URL. Returns the text without the leading indentation (caller
- * adds it).
- */
 function formatServerLine(entry: McpServerEntry): string {
   if (entry.transport === 'remote') {
     return `- ${entry.name}  (remote)   ${entry.url ?? ''}`;
@@ -48,15 +36,6 @@ function formatServerLine(entry: McpServerEntry): string {
     entry.command && entry.command.length > 0 ? entry.command.join(' ') : '';
   return `- ${entry.name}  (local)   ${cmd}`;
 }
-
-/**
- * Look up an agent by id in the static registry and, if it exposes a
- * `parseServers` handler, return the parsed server list for the given
- * config file path. Returns an empty array when the agent is not found
- * or doesn't implement `parseServers`. Centralized here so the
- * per-platform loop in `formatHumanOutput` doesn't need to know about
- * any specific agent.
- */
 function parseServersForAgent(
   agentId: string,
   resolvedPath: string,
@@ -76,8 +55,6 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
     return 'No supported MCP-capable platforms detected.\n';
   }
   const sections: string[] = [];
-
-  // Section 1: installed platforms with MCP support (or unknown status)
   const detected = installed.filter((p) => p.mcpSupport !== 'unsupported');
   if (detected.length > 0) {
     const lines: string[] = ['Detected MCP-capable platforms:'];
@@ -101,7 +78,6 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
         ? platform.matchedMcpLocations[0]?.resolvedPath
         : null;
       lines.push(`    mcp:   ${mcpPath ?? '(not configured)'}`);
-      // Render the agent's parsed server list (if it implements one).
       if (mcpPath) {
         const servers = parseServersForAgent(platform.id, mcpPath);
         for (const s of servers) {
@@ -111,8 +87,6 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
     }
     sections.push(lines.join('\n'));
   }
-
-  // Section 2: installed platforms without MCP support
   const unsupported = installed.filter((p) => p.mcpSupport === 'unsupported');
   if (unsupported.length > 0) {
     const lines: string[] = [
@@ -130,8 +104,6 @@ export function formatHumanOutput(output: DetectJsonOutput): string {
     }
     sections.push(lines.join('\n'));
   }
-
-  // Section 3: orphaned MCP configurations (no platform installed)
   const orphans: { path: string; platformId: string }[] = [];
   for (const platform of output.platforms) {
     for (const orphan of platform.orphanedMcpLocations) {
@@ -238,9 +210,6 @@ async function runConfig(subArgs: readonly string[]): Promise<number> {
 }
 
 export async function run(args: readonly string[]): Promise<number> {
-  // Platform gate: only linux (incl. WSL1/WSL2) and darwin are supported
-  // in v1. We surface this as a clean stdout message + exit 0 so users
-  // running on Windows see an explanation, not a stack trace.
   const platform = currentPlatform();
   if (!isSupportedPlatform(platform)) {
     const message =

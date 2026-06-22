@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   chmodSync,
   existsSync,
@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -20,42 +21,39 @@ import {
   runBootstrap,
 } from './bootstrap-command.js';
 import { buildBootstrapPlan } from './bootstrap.js';
+import {
+  BufferWriter,
+  validCanonicalConfigJson,
+} from './bootstrap-test-support.js';
 
-class BufferWriter {
-  public readonly chunks: string[] = [];
-  public write(chunk: string): boolean {
-    this.chunks.push(chunk);
-    return true;
-  }
-  public text(): string {
-    return this.chunks.join('');
-  }
+function createBootstrapTempEnv(): {
+  readonly home: string;
+  readonly xdgConfigHome: string;
+  readonly pathDir: string;
+  readonly env: NodeJS.ProcessEnv;
+  readonly cleanup: readonly string[];
+} {
+  const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
+  const xdgConfigHome = mkdtempSync(join(tmpdir(), 'overture-bootstrap-xdg-'));
+  const pathDir = mkdtempSync(join(tmpdir(), 'overture-bootstrap-path-'));
+  return {
+    home,
+    xdgConfigHome,
+    pathDir,
+    env: {
+      ...process.env,
+      HOME: home,
+      XDG_CONFIG_HOME: xdgConfigHome,
+      PATH: pathDir,
+    },
+    cleanup: [home, xdgConfigHome, pathDir],
+  };
 }
 
-function validCanonicalConfigJson(): string {
-  return JSON.stringify(
-    {
-      version: 1,
-      settings: {
-        defaultProfile: 'default',
-        dryRunByDefault: true,
-        backupBeforeWrite: true,
-        conflictPolicy: 'refuse',
-      },
-      profiles: {
-        default: {
-          mcpServers: {},
-          sync: {
-            targets: [],
-            disabledServers: [],
-          },
-          skills: [],
-        },
-      },
-    },
-    null,
-    2,
-  );
+function seedFakeOpencodeBin(pathDir: string): void {
+  const opencodeBin = join(pathDir, 'opencode');
+  writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+  chmodSync(opencodeBin, 0o755);
 }
 
 function opencodeFixtureJsonc(): string {
@@ -71,103 +69,70 @@ function opencodeFixtureJsonc(): string {
   }`;
 }
 
+function seedBootstrapAgentConfig(xdgConfigHome: string): string {
+  const opencodeDir = join(xdgConfigHome, 'opencode');
+  mkdirSync(opencodeDir, { recursive: true });
+  const agentConfigPath = join(opencodeDir, 'opencode.jsonc');
+  writeFileSync(agentConfigPath, opencodeFixtureJsonc());
+  return agentConfigPath;
+}
+
 describe('runBootstrap', () => {
-  let originalHome: string | undefined;
-  let originalXdgConfigHome: string | undefined;
-  let originalPath: string | undefined;
-  let tempRoots: string[];
+  let cleanupDirs: readonly string[] = [];
 
   beforeEach(() => {
-    originalHome = process.env.HOME;
-    originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
-    originalPath = process.env.PATH;
-    tempRoots = [];
+    cleanupDirs = [];
   });
 
   afterEach(() => {
-    for (const dir of tempRoots) {
+    for (const dir of cleanupDirs)
       rmSync(dir, { recursive: true, force: true });
-    }
-    if (originalHome === undefined) {
-      delete process.env.HOME;
-    } else {
-      process.env.HOME = originalHome;
-    }
-    if (originalXdgConfigHome === undefined) {
-      delete process.env.XDG_CONFIG_HOME;
-    } else {
-      process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
-    }
-    if (originalPath === undefined) {
-      delete process.env.PATH;
-    } else {
-      process.env.PATH = originalPath;
-    }
   });
 
-  it('returns 0 and prints usage for --help', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
+  it.each([['--help'], ['-h']])(
+    'returns 0 and prints usage for %s',
+    async (flag) => {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
 
-    const code = await runBootstrap(['--help'], stdout, stderr);
+      const code = await runBootstrap([flag], stdout, stderr);
 
-    expect(code).toBe(0);
-    expect(stdout.text()).toBe(BOOTSTRAP_USAGE);
-    expect(stderr.text()).toBe('');
-  });
+      expect(code).toBe(0);
+      expect(stdout.text()).toBe(BOOTSTRAP_USAGE);
+      expect(stderr.text()).toBe('');
+    },
+  );
 
-  it('returns 0 and prints usage for -h', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
+  it.each([
+    { args: [], stderr: BOOTSTRAP_RESERVED_MESSAGE, code: 2 },
+    { args: ['--json'], stderr: '--dry-run', code: 2 },
+    { args: ['--bogus'], stderr: 'Unknown flag: --bogus', code: 2 },
+  ])(
+    'reserved and invalid flags are rejected',
+    async ({ args, stderr, code }) => {
+      const stdout = new BufferWriter();
+      const err = new BufferWriter();
 
-    const code = await runBootstrap(['-h'], stdout, stderr);
+      const result = await runBootstrap(args, stdout, err);
 
-    expect(code).toBe(0);
-    expect(stdout.text()).toBe(BOOTSTRAP_USAGE);
-    expect(stderr.text()).toBe('');
-  });
-
-  it('returns 2 for the no-flag reserved bootstrap path', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-
-    const code = await runBootstrap([], stdout, stderr);
-
-    expect(code).toBe(2);
-    expect(stdout.text()).toBe('');
-    expect(stderr.text()).toBe(BOOTSTRAP_RESERVED_MESSAGE);
-  });
-
-  it('returns 2 for --json without --dry-run', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-
-    const code = await runBootstrap(['--json'], stdout, stderr);
-
-    expect(code).toBe(2);
-    expect(stderr.text()).toContain('--dry-run');
-    expect(stdout.text()).toBe('');
-  });
+      expect(result).toBe(code);
+      expect(stdout.text()).toBe('');
+      expect(err.text()).toContain(stderr);
+    },
+  );
 
   it('renders the human dry-run proposal and returns a proposal-dependent exit code', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
-    const xdgConfigHome = mkdtempSync(
-      join(tmpdir(), 'overture-bootstrap-xdg-'),
-    );
-    const pathDir = mkdtempSync(join(tmpdir(), 'overture-bootstrap-path-'));
-    tempRoots.push(home, xdgConfigHome, pathDir);
+    const { home, xdgConfigHome, pathDir, cleanup, env } =
+      createBootstrapTempEnv();
+    cleanupDirs = cleanup;
+    seedFakeOpencodeBin(pathDir);
 
     process.env.HOME = home;
     process.env.XDG_CONFIG_HOME = xdgConfigHome;
     process.env.PATH = pathDir;
 
-    const opencodeBin = join(pathDir, 'opencode');
-    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
-    chmodSync(opencodeBin, 0o755);
-
     const stdout = new BufferWriter();
     const stderr = new BufferWriter();
-
     const code = await runBootstrap(['--dry-run'], stdout, stderr);
 
     expect(code).toBeGreaterThanOrEqual(0);
@@ -175,48 +140,28 @@ describe('runBootstrap', () => {
     expect(stderr.text()).toBe('');
     expect(stdout.text()).toContain('Bootstrap proposal (dry-run)');
     expect(stdout.text()).toContain('No files were written.');
-    expect(existsSync(defaultOverturePaths().configFile)).toBe(false);
-  });
-
-  it('returns 2 for an unknown flag', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-
-    const code = await runBootstrap(['--bogus'], stdout, stderr);
-
-    expect(code).toBe(2);
-    expect(stderr.text()).toContain('Unknown flag: --bogus');
-    expect(stdout.text()).toBe('');
+    expect(existsSync(defaultOverturePaths(env).configFile)).toBe(false);
   });
 
   it('emits machine JSON, does not create overture.jsonc, and leaves seeded agent config unchanged', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
-    const xdgConfigHome = mkdtempSync(
-      join(tmpdir(), 'overture-bootstrap-xdg-'),
-    );
-    const pathDir = mkdtempSync(join(tmpdir(), 'overture-bootstrap-path-'));
-    tempRoots.push(home, xdgConfigHome, pathDir);
+    const { home, xdgConfigHome, pathDir, cleanup, env } =
+      createBootstrapTempEnv();
+    cleanupDirs = cleanup;
+    seedFakeOpencodeBin(pathDir);
+    const agentConfigPath = seedBootstrapAgentConfig(xdgConfigHome);
 
     process.env.HOME = home;
     process.env.XDG_CONFIG_HOME = xdgConfigHome;
     process.env.PATH = pathDir;
 
-    const opencodeBin = join(pathDir, 'opencode');
-    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
-    chmodSync(opencodeBin, 0o755);
-
-    const opencodeDir = join(xdgConfigHome, 'opencode');
-    mkdirSync(opencodeDir, { recursive: true });
-    const agentConfigPath = join(opencodeDir, 'opencode.jsonc');
-    const agentConfigBefore = opencodeFixtureJsonc();
-    writeFileSync(agentConfigPath, agentConfigBefore);
-
-    const paths = defaultOverturePaths();
+    const paths = defaultOverturePaths(env);
     expect(existsSync(paths.configFile)).toBe(false);
+
+    const agentBefore = readFileSync(agentConfigPath, 'utf8');
+    const beforeStat = statSync(agentConfigPath);
 
     const stdout = new BufferWriter();
     const stderr = new BufferWriter();
-
     const code = await runBootstrap(['--dry-run', '--json'], stdout, stderr);
 
     expect(code).toBeGreaterThanOrEqual(0);
@@ -235,58 +180,49 @@ describe('runBootstrap', () => {
     ]);
     expect(parsed.proposal.configPath).toBe(paths.configFile);
     expect(existsSync(paths.configFile)).toBe(false);
-    expect(readFileSync(agentConfigPath, 'utf8')).toBe(agentConfigBefore);
+    expect(readFileSync(agentConfigPath, 'utf8')).toBe(agentBefore);
+    expect(statSync(agentConfigPath).size).toBe(beforeStat.size);
   });
 
-  it('returns 1 and rejects an existing canonical config', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
-    const xdgConfigHome = mkdtempSync(
-      join(tmpdir(), 'overture-bootstrap-xdg-'),
-    );
-    tempRoots.push(home, xdgConfigHome);
+  it.each([
+    [
+      'existing canonical config',
+      validCanonicalConfigJson(),
+      1,
+      'Existing canonical config already exists',
+    ],
+    [
+      'invalid canonical config',
+      '{"version":1',
+      2,
+      'Failed to parse overture config',
+    ],
+  ])(
+    'returns the expected exit for %s',
+    async (_label, json, code, message) => {
+      const { home, xdgConfigHome, cleanup, env } = createBootstrapTempEnv();
+      cleanupDirs = cleanup;
+      process.env.HOME = home;
+      process.env.XDG_CONFIG_HOME = xdgConfigHome;
+      process.env.PATH = '';
 
-    process.env.HOME = home;
-    process.env.XDG_CONFIG_HOME = xdgConfigHome;
-    process.env.PATH = '';
+      const paths = defaultOverturePaths(env);
+      mkdirSync(paths.configDir, { recursive: true });
+      writeFileSync(paths.configFile, json);
 
-    const paths = defaultOverturePaths();
-    mkdirSync(paths.configDir, { recursive: true });
-    writeFileSync(paths.configFile, validCanonicalConfigJson());
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const result = await runBootstrap(
+        ['--dry-run', '--json'],
+        stdout,
+        stderr,
+      );
 
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-
-    const code = await runBootstrap(['--dry-run', '--json'], stdout, stderr);
-
-    expect(code).toBe(1);
-    expect(stdout.text()).toBe('');
-    expect(stderr.text()).toContain('Existing canonical config already exists');
-  });
-
-  it('returns 2 for an invalid canonical config', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
-    const xdgConfigHome = mkdtempSync(
-      join(tmpdir(), 'overture-bootstrap-xdg-'),
-    );
-    tempRoots.push(home, xdgConfigHome);
-
-    process.env.HOME = home;
-    process.env.XDG_CONFIG_HOME = xdgConfigHome;
-    process.env.PATH = '';
-
-    const paths = defaultOverturePaths();
-    mkdirSync(paths.configDir, { recursive: true });
-    writeFileSync(paths.configFile, '{"version":1');
-
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-
-    const code = await runBootstrap(['--dry-run', '--json'], stdout, stderr);
-
-    expect(code).toBe(2);
-    expect(stdout.text()).toBe('');
-    expect(stderr.text()).toContain('Failed to parse overture config');
-  });
+      expect(result).toBe(code);
+      expect(stdout.text()).toBe('');
+      expect(stderr.text()).toContain(message);
+    },
+  );
 
   it('exitCodeForBootstrap mirrors proposal status', () => {
     expect(
