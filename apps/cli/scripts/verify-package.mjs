@@ -64,6 +64,7 @@ function resolvePathsForEnv(home, xdgConfigHome) {
 }
 
 logStep('Step 1 — Build');
+rmSync(join(cliDir, 'dist'), { recursive: true, force: true });
 run('yarn', ['nx', 'build', '@jander99/overture', '--skip-nx-cache'], {
   cwd: repoRoot,
 });

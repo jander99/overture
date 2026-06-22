@@ -20,7 +20,7 @@ import {
   scanOutput,
   UPSTASH_CONTEXT7_STDIO,
   ZETA_STDIO,
-} from './bootstrap-test-support.js';
+} from '../test-support/bootstrap-test-support.js';
 
 describe('buildBootstrapPlan', () => {
   it('adopts singleton and all-equal groups, then sorts adopted servers and targets', () => {

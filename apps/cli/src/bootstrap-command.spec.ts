@@ -24,7 +24,7 @@ import { buildBootstrapPlan } from './bootstrap.js';
 import {
   BufferWriter,
   validCanonicalConfigJson,
-} from './bootstrap-test-support.js';
+} from '../test-support/bootstrap-test-support.js';
 
 function createBootstrapTempEnv(): {
   readonly home: string;
