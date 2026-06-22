@@ -15,6 +15,7 @@ import {
 
 import { agentRegistry, type McpServerEntry } from '@overture/agents';
 import type { DetectJsonOutput } from './platforms/types.js';
+import { runBootstrap } from './bootstrap-command.js';
 import { runScan } from './scan-command.js';
 /**
  * Indirection over `process.platform` so tests can force a specific host
@@ -154,7 +155,8 @@ const USAGE =
   'Usage: overture <command> [flags]\n\nCommands:\n' +
   '  detect [--json]   Detect installed MCP-capable platforms.\n' +
   '  config show       Print the resolved user-level overture config.\n' +
-  '  scan [--json]     Build the installed MCP server matrix.\n';
+  '  scan [--json]     Build the installed MCP server matrix.\n' +
+  '  bootstrap [--dry-run] [--json]   Preview the canonical config that D3 would write.\n';
 
 async function runDetect(flags: readonly string[]): Promise<number> {
   if (flags.includes('--help') || flags.includes('-h')) {
@@ -264,6 +266,10 @@ export async function run(args: readonly string[]): Promise<number> {
 
   if (args[0] === 'scan') {
     return runScan(args.slice(1), process.stdout, process.stderr);
+  }
+
+  if (args[0] === 'bootstrap') {
+    return runBootstrap(args.slice(1), process.stdout, process.stderr);
   }
 
   process.stderr.write(`Unknown command: ${args[0]}\n${USAGE}`);
