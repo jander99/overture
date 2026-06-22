@@ -28,6 +28,8 @@ npx @jander99/overture@latest --help
 - `overture detect --json` — full 4-platform inventory with all additive
   fields.
 - `overture config show` — print the resolved user-level `overture.jsonc`.
+- `overture bootstrap --dry-run [--json]` — preview the canonical bootstrap
+  proposal without writing any files.
 - `overture detect --help` / `overture --help` — print usage and exit 0.
 
 `detect` is read-only: it makes no writes and spawns no subprocesses.

@@ -253,12 +253,17 @@ Key verification for this slice came from the existing `yarn nx test
 Bootstrap creates canonical intent from existing agents. It does not modify agent
 configs.
 
-### D1. Bootstrap planner
+### D1. Bootstrap planner (D1 — shipped on feat/d1-bootstrap-planner)
 
 When no overture config exists, build a proposed canonical config from the union
 of all readable agent MCP configs.
 
 Expected result: dry-run proposal only; no writes.
+
+D1 ships `overture bootstrap --dry-run [--json]` as a read-only preview. D2
+will add the interactive prompt UX, and D3 will add the write step.
+
+**Status: completed on feat/d1-bootstrap-planner.**
 
 ### D2. Bootstrap conflict prompt
 

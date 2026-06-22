@@ -13,7 +13,14 @@
 // Exits non-zero on any failure. Does NOT publish.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,7 +46,25 @@ function run(cmd, args, opts = {}) {
   }
 }
 
+function spawnWithEnv(args, env) {
+  return spawnSync(process.execPath, args, {
+    encoding: 'utf8',
+    env,
+  });
+}
+
+function resolvePathsForEnv(home, xdgConfigHome) {
+  return {
+    configFile: join(
+      xdgConfigHome || join(home, '.config'),
+      'overture',
+      'overture.jsonc',
+    ),
+  };
+}
+
 logStep('Step 1 — Build');
+rmSync(join(cliDir, 'dist'), { recursive: true, force: true });
 run('yarn', ['nx', 'build', '@jander99/overture', '--skip-nx-cache'], {
   cwd: repoRoot,
 });
@@ -253,9 +278,194 @@ console.log(
   `scan: exit=${scanHumanResult.status} sections=${humanHeadings.length} jsonFragments=0: PASS`,
 );
 
+logStep('Bootstrap smoke tests');
+const bootstrapHome = mkdtempSync('/tmp/overture-verify-bootstrap-home-');
+const bootstrapXdg = mkdtempSync('/tmp/overture-verify-bootstrap-xdg-');
+const bootstrapPath = mkdtempSync('/tmp/overture-verify-bootstrap-path-');
+const bootstrapEnv = {
+  ...process.env,
+  HOME: bootstrapHome,
+  XDG_CONFIG_HOME: bootstrapXdg,
+  PATH: bootstrapPath,
+};
+const bootstrapPaths = resolvePathsForEnv(bootstrapHome, bootstrapXdg);
+const bootstrapAgentDir = join(bootstrapXdg, 'opencode');
+const bootstrapAgentConfig = join(bootstrapAgentDir, 'opencode.jsonc');
+mkdirSync(bootstrapAgentDir, { recursive: true });
+const bootstrapAgentConfigBefore = `{
+  // package smoke fixture
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home"],
+      "environment": { "NODE_ENV": "production" }
+    }
+  }
+}`;
+writeFileSync(bootstrapAgentConfig, bootstrapAgentConfigBefore);
+const bootstrapAgentBeforeStat = statSync(bootstrapAgentConfig);
+
+const bootstrapBin = [distMain];
+const bootstrapJsonResult = spawnWithEnv(
+  [...bootstrapBin, 'bootstrap', '--dry-run', '--json'],
+  bootstrapEnv,
+);
+if (bootstrapJsonResult.status !== 0 && bootstrapJsonResult.status !== 1) {
+  fail(
+    `bootstrap --dry-run --json exited ${bootstrapJsonResult.status} (expected 0 or 1): ${bootstrapJsonResult.stderr}`,
+  );
+}
+try {
+  const parsed = JSON.parse(bootstrapJsonResult.stdout);
+  const topKeys = Object.keys(parsed).sort();
+  const expectedTopKeys = ['blockers', 'conflicts', 'proposal'];
+  if (
+    topKeys.length !== expectedTopKeys.length ||
+    !expectedTopKeys.every((k) => topKeys.includes(k))
+  ) {
+    fail(
+      `bootstrap --dry-run --json top-level keys are [${topKeys.join(', ')}]; expected exactly [${expectedTopKeys.join(', ')}]\nstdout:\n${bootstrapJsonResult.stdout}\nstderr:\n${bootstrapJsonResult.stderr}`,
+    );
+  }
+  if (
+    typeof parsed.proposal?.configPath !== 'string' ||
+    parsed.proposal.configPath.length === 0
+  ) {
+    fail(
+      `bootstrap --dry-run --json missing configPath\nstdout:\n${bootstrapJsonResult.stdout}\nstderr:\n${bootstrapJsonResult.stderr}`,
+    );
+  }
+  if (statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
+    fail(
+      `bootstrap --dry-run --json unexpectedly created ${bootstrapPaths.configFile}`,
+    );
+  }
+  const bootstrapAgentAfterStat = statSync(bootstrapAgentConfig);
+  if (
+    bootstrapAgentAfterStat.size !== bootstrapAgentBeforeStat.size ||
+    bootstrapAgentAfterStat.mtimeMs !== bootstrapAgentBeforeStat.mtimeMs
+  ) {
+    fail(
+      `bootstrap --dry-run --json modified seeded agent config\nbefore: size=${bootstrapAgentBeforeStat.size} mtime=${bootstrapAgentBeforeStat.mtimeMs}\nafter: size=${bootstrapAgentAfterStat.size} mtime=${bootstrapAgentAfterStat.mtimeMs}`,
+    );
+  }
+  console.log(
+    `bootstrap --dry-run --json: exit=${bootstrapJsonResult.status} keys=${topKeys.join(', ')} noWrite=PASS`,
+  );
+} catch (err) {
+  fail(
+    `bootstrap --dry-run --json output is not valid JSON: ${err.message}\nstdout:\n${bootstrapJsonResult.stdout}\nstderr:\n${bootstrapJsonResult.stderr}`,
+  );
+}
+
+const bootstrapHumanResult = spawnWithEnv(
+  [...bootstrapBin, 'bootstrap', '--dry-run'],
+  bootstrapEnv,
+);
+if (bootstrapHumanResult.status !== 0 && bootstrapHumanResult.status !== 1) {
+  fail(
+    `bootstrap --dry-run exited ${bootstrapHumanResult.status} (expected 0 or 1): ${bootstrapHumanResult.stderr}`,
+  );
+}
+const bootstrapHumanHeadings = [
+  'Bootstrap proposal (dry-run)',
+  'Config path:',
+  'Proposal status:',
+  'Target agents:',
+  'Adopted servers:',
+  'Pickable conflicts:',
+  'Hard refuses:',
+  'Blockers:',
+  'No files were written.',
+  'Run "overture bootstrap --dry-run --json" for machine-readable details.',
+];
+const missingBootstrapHeadings = bootstrapHumanHeadings.filter(
+  (heading) => !bootstrapHumanResult.stdout.includes(heading),
+);
+if (missingBootstrapHeadings.length > 0) {
+  fail(
+    `bootstrap --dry-run missing headings: ${missingBootstrapHeadings.join(', ')}\nstdout:\n${bootstrapHumanResult.stdout}\nstderr:\n${bootstrapHumanResult.stderr}`,
+  );
+}
+const forbiddenBootstrapFragments = [
+  '"matrix"',
+  '"canonicalServer"',
+  '"agentServer"',
+  '"$schema"',
+];
+const leakedBootstrapFragments = forbiddenBootstrapFragments.filter(
+  (fragment) => bootstrapHumanResult.stdout.includes(fragment),
+);
+if (leakedBootstrapFragments.length > 0) {
+  fail(
+    `bootstrap --dry-run contains forbidden fragments: ${leakedBootstrapFragments.join(', ')}\nstdout:\n${bootstrapHumanResult.stdout}`,
+  );
+}
+if (/\x1b\[[0-9;]*m/.test(bootstrapHumanResult.stdout)) {
+  fail(
+    `bootstrap --dry-run emitted ANSI escape codes\nstdout:\n${bootstrapHumanResult.stdout}`,
+  );
+}
+if (statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
+  fail(`bootstrap --dry-run unexpectedly created ${bootstrapPaths.configFile}`);
+}
+console.log(
+  `bootstrap --dry-run: exit=${bootstrapHumanResult.status} headings=${bootstrapHumanHeadings.length} noWrite=PASS`,
+);
+
+const bootstrapReservedResult = spawnWithEnv(
+  [...bootstrapBin, 'bootstrap'],
+  bootstrapEnv,
+);
+if (bootstrapReservedResult.status !== 2) {
+  fail(
+    `bootstrap (no flags) exited ${bootstrapReservedResult.status} (expected 2): ${bootstrapReservedResult.stderr}`,
+  );
+}
+if (
+  !bootstrapReservedResult.stderr.includes(
+    'Bootstrap writes are not implemented yet. Run "overture bootstrap --dry-run"',
+  )
+) {
+  fail(
+    `bootstrap (no flags) stderr missing reserved message\nstderr:\n${bootstrapReservedResult.stderr}`,
+  );
+}
+if (bootstrapReservedResult.stdout.trim() !== '') {
+  fail(
+    `bootstrap (no flags) unexpectedly wrote stdout:\n${bootstrapReservedResult.stdout}`,
+  );
+}
+console.log('bootstrap (no flags): exit=2 reserved-message=PASS');
+
+const bootstrapHelpResult = spawnWithEnv(
+  [...bootstrapBin, 'bootstrap', '--help'],
+  bootstrapEnv,
+);
+if (bootstrapHelpResult.status !== 0) {
+  fail(
+    `bootstrap --help exited ${bootstrapHelpResult.status} (expected 0): ${bootstrapHelpResult.stderr}`,
+  );
+}
+if (
+  !bootstrapHelpResult.stdout.includes(
+    'Usage: overture bootstrap --dry-run [--json]',
+  )
+) {
+  fail(
+    `bootstrap --help stdout missing usage\nstdout:\n${bootstrapHelpResult.stdout}`,
+  );
+}
+console.log('bootstrap --help: exit=0 usage=PASS');
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });
+rmSync(bootstrapHome, { recursive: true, force: true });
+rmSync(bootstrapXdg, { recursive: true, force: true });
+rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
-console.log('All verifications passed. The tarball is ready to publish.');
+console.log(
+  'All verifications passed. The tarball is ready to publish, including bootstrap smoke checks.',
+);
