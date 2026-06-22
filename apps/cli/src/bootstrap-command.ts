@@ -7,6 +7,7 @@ import {
 import { defaultPathResolutionContext } from './platforms/detect.js';
 import { buildScanJsonOutput } from './scan.js';
 import { buildBootstrapPlan, type BootstrapPlan } from './bootstrap.js';
+import { formatHumanBootstrapProposal } from './bootstrap-human.js';
 export type { StringWriter } from './scan-command.js';
 import type { StringWriter } from './scan-command.js';
 
@@ -14,9 +15,6 @@ export const BOOTSTRAP_USAGE = 'Usage: overture bootstrap --dry-run [--json]\n';
 
 export const BOOTSTRAP_RESERVED_MESSAGE =
   'Bootstrap writes are not implemented yet. Run "overture bootstrap --dry-run" to preview the proposal.\n';
-
-const BOOTSTRAP_HUMAN_RESERVED_MESSAGE =
-  'Human output is not implemented in D1 yet. Run "overture bootstrap --dry-run --json" for the machine-readable plan.\n';
 
 const BOOTSTRAP_INVALID_COMBINATION_MESSAGE =
   'Invalid flag combination: --json requires --dry-run.\n';
@@ -68,10 +66,6 @@ export async function runBootstrap(
     return 2;
   }
 
-  if (!hasJson) {
-    return runBootstrapHuman(stdout, stderr);
-  }
-
   const paths = defaultOverturePaths();
   let config: OvertureConfig | null;
   try {
@@ -102,6 +96,10 @@ export async function runBootstrap(
     configPath: paths.configFile,
   });
 
+  if (!hasJson) {
+    return runBootstrapHuman(stdout, plan);
+  }
+
   stdout.write(
     JSON.stringify(
       {
@@ -116,9 +114,9 @@ export async function runBootstrap(
   return exitCodeForBootstrap(plan);
 }
 
-function runBootstrapHuman(stdout: StringWriter, stderr: StringWriter): 2 {
-  stderr.write(BOOTSTRAP_HUMAN_RESERVED_MESSAGE);
-  return 2;
+function runBootstrapHuman(stdout: StringWriter, plan: BootstrapPlan): 0 | 1 {
+  stdout.write(formatHumanBootstrapProposal(plan));
+  return exitCodeForBootstrap(plan);
 }
 
 function messageForError(err: unknown): string {

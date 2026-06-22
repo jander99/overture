@@ -149,17 +149,33 @@ describe('runBootstrap', () => {
     expect(stdout.text()).toBe('');
   });
 
-  it('returns 2 for the D1 dry-run stub without --json', async () => {
+  it('renders the human dry-run proposal and returns a proposal-dependent exit code', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'overture-bootstrap-home-'));
+    const xdgConfigHome = mkdtempSync(
+      join(tmpdir(), 'overture-bootstrap-xdg-'),
+    );
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-bootstrap-path-'));
+    tempRoots.push(home, xdgConfigHome, pathDir);
+
+    process.env.HOME = home;
+    process.env.XDG_CONFIG_HOME = xdgConfigHome;
+    process.env.PATH = pathDir;
+
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+
     const stdout = new BufferWriter();
     const stderr = new BufferWriter();
 
     const code = await runBootstrap(['--dry-run'], stdout, stderr);
 
-    expect(code).toBe(2);
-    expect(stdout.text()).toBe('');
-    expect(stderr.text()).toContain(
-      'Human output is not implemented in D1 yet.',
-    );
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+    expect(stderr.text()).toBe('');
+    expect(stdout.text()).toContain('Bootstrap proposal (dry-run)');
+    expect(stdout.text()).toContain('No files were written.');
+    expect(existsSync(defaultOverturePaths().configFile)).toBe(false);
   });
 
   it('returns 2 for an unknown flag', async () => {
