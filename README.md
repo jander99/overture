@@ -3,9 +3,10 @@
 `overture` is a CLI utility that scans your machine for MCP-capable LLM coding
 platforms and reports the state of each platform's MCP server configuration.
 
-The currently-shipped commands are `overture detect` (read-only inventory)
-and `overture config show` (print the resolved user-level `overture.jsonc`).
-No command writes, syncs, or modifies any configuration file.
+The currently-shipped commands are `overture detect` (read-only inventory),
+`overture config show` (print the resolved user-level `overture.jsonc`), and
+`overture bootstrap` (read-only bootstrap preview). No command writes, syncs,
+or modifies any configuration file.
 
 ## Install
 
@@ -231,6 +232,89 @@ no `generatedAt`, no `duration`):
 | `2`       | Usage error (unknown flag) or pre-model orchestration failure (canonical config parse / validation error, unexpected thrown error). No scan matrix is emitted to stdout; the message goes to stderr.            |
 
 `scan` will not write to or modify any of the files it inspects, and it makes no writes anywhere.
+
+## The `bootstrap` command
+
+`overture bootstrap` is a **read-only** preview of the canonical user-level
+`overture.jsonc` config that a future bootstrap write step (Track D3, not yet
+implemented) would produce from the agents' current MCP server inventories.
+
+D1 is the **planner** phase of bootstrap. It does not write, prompt, or
+modify any file. D2 will add the interactive prompt UX, and D3 will add the
+actual write step.
+
+### Usage
+
+```bash
+# Preview the proposed canonical config (human-readable)
+overture bootstrap --dry-run
+
+# Machine-readable: full proposal + conflicts + blockers
+overture bootstrap --dry-run --json
+
+# Print usage and exit 0
+overture bootstrap --help
+```
+
+The no-flag `overture bootstrap` and `--dry-run` (without `--json`) are
+reserved for D2/D3 and exit `2` with a guidance message; they do not perform a
+write today.
+
+### Default summary shape
+
+The no-`--json` path emits a plain-text, sectioned preview:
+
+- `Bootstrap proposal (dry-run)` (heading)
+- `Config path:` — the resolved XDG `overture.jsonc` path
+- `Proposal status:` — `ready` or `blocked`
+- `Target agents:` — comma-separated agent ids
+- `Adopted servers:` — count + one indented bullet per adopted server
+- `Pickable conflicts:` — count + bullet per pickable conflict
+- `Hard refuses:` — count + bullet per hard refuse
+- `Blockers:` — count + bullet per blocker (e.g. `no-readable-agents`)
+- Footer: `No files were written.` and `Run "overture bootstrap --dry-run --json" for machine-readable details.`
+
+No ANSI color is emitted; the output is plain text suitable for piping.
+Server details (env, headers, args) are never rendered; only redacted
+fingerprints.
+
+### JSON output shape
+
+`overture bootstrap --dry-run --json` emits exactly three top-level keys:
+
+```json
+{
+  "proposal": {
+    "status": "ready | blocked",
+    "configPath": "/absolute/path/to/overture.jsonc",
+    "config": { "version": 1, "settings": {}, "profiles": {} },
+    "adoptedServers": [
+      {
+        "name": "filesystem",
+        "source": "single-agent | all-agents-equal",
+        "agentIds": ["claude-code"]
+      }
+    ],
+    "targetAgents": ["claude-code"]
+  },
+  "conflicts": {
+    "pickable": [],
+    "hardRefuses": []
+  },
+  "blockers": []
+}
+```
+
+### Exit codes
+
+| Exit code | Meaning                                                                                                                                                                            |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`       | Help, or dry-run proposal status `ready`.                                                                                                                                          |
+| `1`       | Dry-run proposal emitted but status `blocked` (pickables, hard refuses, no readable agents, or existing valid config).                                                             |
+| `2`       | Usage error, invalid flag combination (`--json` without `--dry-run`), `--dry-run` reserved for D3, invalid/parse-error existing canonical config, or unexpected pre-model failure. |
+
+`bootstrap` will not write to or modify any of the files it inspects, and it
+makes no writes anywhere.
 
 ## Repository layout
 
