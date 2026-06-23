@@ -239,14 +239,19 @@ no `generatedAt`, no `duration`):
 `overture.jsonc` config that a future bootstrap write step (Track D3, not yet
 implemented) would produce from the agents' current MCP server inventories.
 
-D1 is the **planner** phase of bootstrap. It does not write, prompt, or
-modify any file. D2 will add the interactive prompt UX, and D3 will add the
-actual write step.
+D1 is the **planner** phase of bootstrap. D2 is the **interactive conflict
+prompt** phase: it walks the user through pickable conflicts one at a time,
+applies the chosen candidate or `skip` in memory, and prints a read-only
+summary. D2 still writes no files. D3 will add the actual write step.
 
 ### Usage
 
 ```bash
-# Preview the proposed canonical config (human-readable)
+# D2 interactive read-only: walk pickable conflicts one at a time, then print
+# a read-only summary. Does NOT write any file. D3 will own the write step.
+overture bootstrap
+
+# Non-interactive human-readable preview of the proposed canonical config
 overture bootstrap --dry-run
 
 # Machine-readable: full proposal + conflicts + blockers
@@ -256,9 +261,12 @@ overture bootstrap --dry-run --json
 overture bootstrap --help
 ```
 
-The no-flag `overture bootstrap` and `--dry-run` (without `--json`) are
-reserved for D2/D3 and exit `2` with a guidance message; they do not perform a
-write today.
+The no-flag `overture bootstrap` is the D2 read-only interactive prompt. It
+walks the user through pickable conflicts one at a time, applies the chosen
+candidate or `skip`, and prints a read-only summary. It does NOT write any
+file. Use `overture bootstrap --dry-run` for a non-interactive preview. The
+no-flag path exits `2` when stdin is not a TTY (hint: `Run overture bootstrap
+--dry-run for a non-interactive preview.`).
 
 ### Default summary shape
 
@@ -307,14 +315,14 @@ fingerprints.
 
 ### Exit codes
 
-| Exit code | Meaning                                                                                                                                                                            |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0`       | Help, or dry-run proposal status `ready`.                                                                                                                                          |
-| `1`       | Dry-run proposal emitted but status `blocked` (pickables, hard refuses, no readable agents, or existing valid config).                                                             |
-| `2`       | Usage error, invalid flag combination (`--json` without `--dry-run`), `--dry-run` reserved for D3, invalid/parse-error existing canonical config, or unexpected pre-model failure. |
+| Exit code | Meaning                                                                                                                                                                                                                                                                                                                          |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`       | `--help`, `--dry-run [--json]` proposal status `ready`, or no-flag interactive run with no hard refuses/blockers remaining.                                                                                                                                                                                                      |
+| `1`       | Dry-run proposal emitted but status `blocked` (pickables, hard refuses, no readable agents, or existing valid config), OR no-flag interactive run whose plan is still blocked (hard refuses / blockers).                                                                                                                         |
+| `2`       | Usage error (unknown flag), invalid flag combination (`--json` without `--dry-run`), invalid/parse-error existing canonical config, non-TTY no-flag run with at least one pickable conflict (suggests rerunning with `overture bootstrap --dry-run`), user abort during the interactive prompt, or unexpected pre-model failure. |
 
 `bootstrap` will not write to or modify any of the files it inspects, and it
-makes no writes anywhere.
+makes no writes anywhere. D2 still writes no files; D3 will own the write step.
 
 ## Repository layout
 

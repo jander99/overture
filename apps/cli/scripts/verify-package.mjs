@@ -412,31 +412,66 @@ if (statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
 console.log(
   `bootstrap --dry-run: exit=${bootstrapHumanResult.status} headings=${bootstrapHumanHeadings.length} noWrite=PASS`,
 );
-
-const bootstrapReservedResult = spawnWithEnv(
+const bootstrapInteractiveResult = spawnWithEnv(
   [...bootstrapBin, 'bootstrap'],
   bootstrapEnv,
 );
-if (bootstrapReservedResult.status !== 2) {
+if (bootstrapInteractiveResult.status !== 1) {
   fail(
-    `bootstrap (no flags) exited ${bootstrapReservedResult.status} (expected 2): ${bootstrapReservedResult.stderr}`,
+    `bootstrap (no flags) exited ${bootstrapInteractiveResult.status} (expected 1): stderr:\n${bootstrapInteractiveResult.stderr}\nstdout:\n${bootstrapInteractiveResult.stdout}`,
   );
 }
+if (!bootstrapInteractiveResult.stdout.includes('Bootstrap proposal')) {
+  fail(
+    `bootstrap (no flags) stdout missing "Bootstrap proposal" heading\nstdout:\n${bootstrapInteractiveResult.stdout}`,
+  );
+}
+const forbiddenStderrFragments = [
+  'BOOTSTRAP_RESERVED_MESSAGE',
+  'Bootstrap writes are not implemented yet',
+];
+const leakedStderrFragments = forbiddenStderrFragments.filter((fragment) =>
+  bootstrapInteractiveResult.stderr.includes(fragment),
+);
+if (leakedStderrFragments.length > 0) {
+  fail(
+    `bootstrap (no flags) stderr contains forbidden fragments: ${leakedStderrFragments.join(', ')}\nstderr:\n${bootstrapInteractiveResult.stderr}`,
+  );
+}
+const forbiddenStdoutFragments = [
+  'Pickable conflict:',
+  'api_key=',
+  'Bearer ',
+  '$schema',
+  'matrix',
+  'agentServer',
+  'canonicalServer',
+];
+const leakedStdoutFragments = forbiddenStdoutFragments.filter((fragment) =>
+  bootstrapInteractiveResult.stdout.includes(fragment),
+);
+if (leakedStdoutFragments.length > 0) {
+  fail(
+    `bootstrap (no flags) stdout contains forbidden fragments: ${leakedStdoutFragments.join(', ')}\nstdout:\n${bootstrapInteractiveResult.stdout}`,
+  );
+}
+if (statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
+  fail(
+    `bootstrap (no flags) unexpectedly created ${bootstrapPaths.configFile}`,
+  );
+}
+const bootstrapAgentAfterStat = statSync(bootstrapAgentConfig);
 if (
-  !bootstrapReservedResult.stderr.includes(
-    'Bootstrap writes are not implemented yet. Run "overture bootstrap --dry-run"',
-  )
+  bootstrapAgentAfterStat.size !== bootstrapAgentBeforeStat.size ||
+  bootstrapAgentAfterStat.mtimeMs !== bootstrapAgentBeforeStat.mtimeMs
 ) {
   fail(
-    `bootstrap (no flags) stderr missing reserved message\nstderr:\n${bootstrapReservedResult.stderr}`,
+    `bootstrap (no flags) modified seeded agent config\nbefore: size=${bootstrapAgentBeforeStat.size} mtime=${bootstrapAgentBeforeStat.mtimeMs}\nafter: size=${bootstrapAgentAfterStat.size} mtime=${bootstrapAgentAfterStat.mtimeMs}`,
   );
 }
-if (bootstrapReservedResult.stdout.trim() !== '') {
-  fail(
-    `bootstrap (no flags) unexpectedly wrote stdout:\n${bootstrapReservedResult.stdout}`,
-  );
-}
-console.log('bootstrap (no flags): exit=2 reserved-message=PASS');
+console.log(
+  `bootstrap (no flags): exit=${bootstrapInteractiveResult.status} proposalHeading=PASS noReserved=PASS noLeak=PASS noWrite=PASS`,
+);
 
 const bootstrapHelpResult = spawnWithEnv(
   [...bootstrapBin, 'bootstrap', '--help'],

@@ -277,6 +277,9 @@ Approval gate: prompt UX and skip semantics.
 
 Expected result: interactive selection behavior covered by tests.
 
+D2 implementation merged in this PR (2026-06-23).
+QY|
+
 ### D3. Bootstrap write
 
 Write the canonical `overture.jsonc` after the plan is conflict-free or all
