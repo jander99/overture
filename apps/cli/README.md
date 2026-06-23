@@ -28,6 +28,10 @@ npx @jander99/overture@latest --help
 - `overture detect --json` — full 4-platform inventory with all additive
   fields.
 - `overture config show` — print the resolved user-level `overture.jsonc`.
+- `overture bootstrap` (no flag, D2 interactive read-only) — walk pickable
+  conflicts one at a time, apply the chosen candidate or `skip` in memory,
+  and print a read-only summary. Does NOT write any file. Exits `2` when
+  stdin is not a TTY. D3 (future write step) will own the actual write.
 - `overture bootstrap --dry-run [--json]` — preview the canonical bootstrap
   proposal without writing any files.
 - `overture detect --help` / `overture --help` — print usage and exit 0.

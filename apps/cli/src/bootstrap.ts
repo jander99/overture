@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
 
 export interface BootstrapAdoptedServer {
   readonly name: string;
-  readonly source: 'single-agent' | 'all-agents-equal';
+  readonly source: 'single-agent' | 'all-agents-equal' | 'selected-conflict';
   readonly agentIds: readonly string[];
 }
 
