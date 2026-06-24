@@ -31,10 +31,13 @@ const smolTomlCjsModule = createRequire(__filename)('smol-toml') as unknown as {
 };
 
 /**
- * Determines which checks apply for a given format. JSONC adds the
- * `comments` check; JSON skips it (JSON has no comments); TOML and YAML
- * add the `comments` check; every supported format runs the other
- * four checks.
+ * Determines which checks apply for a given format. JSONC and TOML add
+ * the `comments` check; JSON skips it (JSON has no comments). YAML is
+ * not yet supported by any E1 agent (opencode, claude-code,
+ * copilot-cli, codex are JSON/JSONC/TOML only) and returns no
+ * advertised checks. Every supported format runs the base set
+ * (topLevelKeys, keyOrder, mcpServers, formatting) plus `rawBytes`
+ * and `idempotency` (which are always invoked from `runPreservationChecks`).
  */
 export function checksForFormat(
   format: McpLocationFormat,
@@ -578,26 +581,26 @@ function jsonFormattingCheck(
   written: string,
   targetPath: TargetPath,
 ): PreservationCheckResult {
-  const targetRange = findJsonTargetPathRange(original, targetPath);
-  const origLines = original.split('\n');
-  const writtenLines = written.split('\n');
-  // Determine which lines of `original` are inside targetPath.
-  const insideTarget = new Set<number>();
-  if (targetRange !== null) {
-    const [start, end] = targetRange;
-    let pos = 0;
-    for (let i = 0; i < origLines.length; i++) {
-      const lineStart = pos;
-      const lineEnd = pos + origLines[i]!.length + 1;
-      pos = lineEnd;
-      const lineMid = Math.floor((lineStart + lineEnd) / 2);
-      if (lineMid >= start && lineMid < end) insideTarget.add(i);
-    }
+  // Compute target ranges INDEPENDENTLY in original and written. A
+  // length-changing inside-target mutation (e.g. adding a field to
+  // the target server) shifts line indices; using only the original
+  // range would mark the wrong lines as "inside target" and compare
+  // outside lines at shifted indices, falsely firing.
+  const origRange = findJsonTargetPathRange(original, targetPath);
+  const writtenRange = findJsonTargetPathRange(written, targetPath);
+  if (origRange === null || writtenRange === null) {
+    return skippedCheck('formatting');
   }
+  const [origStart, origEnd] = origRange;
+  const [writtenStart, writtenEnd] = writtenRange;
+  const origOutside = original.slice(0, origStart) + original.slice(origEnd);
+  const writtenOutside =
+    written.slice(0, writtenStart) + written.slice(writtenEnd);
+  const origLines = origOutside.split('\n');
+  const writtenLines = writtenOutside.split('\n');
   const diffs: string[] = [];
   const maxLines = Math.min(origLines.length, writtenLines.length);
   for (let i = 0; i < maxLines; i++) {
-    if (insideTarget.has(i)) continue;
     const origLeading = origLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
     const writtenLeading = writtenLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
     if (origLeading !== writtenLeading) {
@@ -606,7 +609,6 @@ function jsonFormattingCheck(
       );
     }
   }
-  // Trailing newline check.
   if (original.endsWith('\n') !== written.endsWith('\n')) {
     diffs.push(
       `trailing newline: original=${original.endsWith('\n')}, written=${written.endsWith('\n')}`,
@@ -1090,17 +1092,36 @@ function tomlFormattingCheck(
   written: string,
   targetPath: TargetPath,
 ): PreservationCheckResult {
+  // Compute target line ranges INDEPENDENTLY in original and written.
+  // A length-changing inside-target mutation shifts line indices; using
+  // only the original range would mark the wrong lines as inside.
   const origLineRange = findTomlTargetPathLineRange(original, targetPath);
+  const writtenLineRange = findTomlTargetPathLineRange(written, targetPath);
+  if (origLineRange === null || writtenLineRange === null) {
+    return skippedCheck('formatting');
+  }
+  const [origStart, origEnd] = origLineRange;
+  const [writtenStart, writtenEnd] = writtenLineRange;
   const origLines = original.split('\n');
   const writtenLines = written.split('\n');
+  const origOutside = [
+    ...origLines.slice(0, origStart),
+    ...origLines.slice(origEnd),
+  ].join('\n');
+  const writtenOutside = [
+    ...writtenLines.slice(0, writtenStart),
+    ...writtenLines.slice(writtenEnd),
+  ].join('\n');
+  const origOutsideLines = origOutside.split('\n');
+  const writtenOutsideLines = writtenOutside.split('\n');
   const diffs: string[] = [];
-  for (let i = 0; i < Math.min(origLines.length, writtenLines.length); i++) {
-    if (origLineRange !== null) {
-      const [s, e] = origLineRange;
-      if (i >= s && i < e) continue;
-    }
-    const origLeading = origLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
-    const writtenLeading = writtenLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
+  for (
+    let i = 0;
+    i < Math.min(origOutsideLines.length, writtenOutsideLines.length);
+    i++
+  ) {
+    const origLeading = origOutsideLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
+    const writtenLeading = writtenOutsideLines[i]!.match(/^[ \t]*/)?.[0] ?? '';
     if (origLeading !== writtenLeading) {
       diffs.push(
         `line ${i + 1}: leading whitespace ${JSON.stringify(origLeading)} vs ${JSON.stringify(writtenLeading)}`,
@@ -1173,8 +1194,8 @@ function findTomlTargetPathLineRange(
     // Find [parent] or [parent.*] headers
     let startLine = -1;
     let endLine = lines.length;
-    const explicitRe = new RegExp(`^\\[${escapeRegExp(parent)}\\]$`);
-    const subRe = new RegExp(`^\\[${escapeRegExp(parent)}\\.[^\\]]+\\]$`);
+    const explicitRe = new RegExp(`^\\s*\\[${escapeRegExp(parent)}\\]$`);
+    const subRe = new RegExp(`^\\s*\\[${escapeRegExp(parent)}\\.[^\\]]+\\]$`);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
       if (startLine === -1 && (explicitRe.test(line) || subRe.test(line))) {
@@ -1198,7 +1219,7 @@ function findTomlTargetPathLineRange(
     const parent = targetPath[0]!;
     const child = targetPath[1]!;
     const headerRe = new RegExp(
-      `^\\[${escapeRegExp(parent)}\\.${escapeRegExp(child)}\\]$`,
+      `^\\s*\\[${escapeRegExp(parent)}\\.${escapeRegExp(child)}\\]$`,
     );
     let startLine = -1;
     let endLine = lines.length;

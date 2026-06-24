@@ -13,7 +13,7 @@
  *   S7  idempotency check fires when second apply drifts
  *   S8  targeted key reorder inside targetPath is NOT flagged
  *   S9  non-target-path comment edits fail
- *   S10 all four formats are covered
+ *   S10 every supported format (json/jsonc/toml) is covered end-to-end
  *
  * The byte-mutators from `byte-mutators.ts` produce the
  * known-broken inputs.
@@ -436,12 +436,14 @@ describe('S11 — rawBytes check is the primary E1 contract', () => {
     expect(findCheck(report, 'rawBytes').pass).toBe(true);
   });
 
-  it('rawBytes: length-changing legitimate target mutation passes', () => {
+  it('length-changing legitimate target mutation: full report passes', () => {
     // Add a new key to the target server. The target's byte length
-    // changes (longer written subtree). The fix in rawBytesCheck is to
-    // compute the target range independently in both original and
-    // written; using the original range for the written side would
-    // slice into the wrong content and falsely fire.
+    // changes (longer written subtree). Both rawBytes and formatting
+    // compute their target ranges independently in original and
+    // written; using only the original range would slice into the
+    // wrong content / shift line indices and falsely fire. Assert the
+    // FULL report passes, not just rawBytes, so a regression in
+    // formatting or any other check surfaces here.
     const written = claudeCode.replace(
       '"LOG_LEVEL": "info"',
       '"LOG_LEVEL": "info",\n        "TIMEOUT": 30',
@@ -450,7 +452,8 @@ describe('S11 — rawBytes check is the primary E1 contract', () => {
       'mcpServers',
       'filesystem',
     ]);
-    expect(findCheck(report, 'rawBytes').pass).toBe(true);
+    expect(report.allPassed).toBe(true);
+    expect(report.allPassed).toBe(true);
   });
 
   it('rawBytes: inter-value spacing change outside target fires (the false-negative structural checks miss)', () => {
@@ -548,7 +551,7 @@ describe('S11 — rawBytes check is the primary E1 contract', () => {
   });
 });
 
-describe('S10 — all four formats are covered end-to-end', () => {
+describe('S10 — every supported format (json/jsonc/toml) is covered end-to-end', () => {
   it('opencode (jsonc) identity write passes', () => {
     const report = check('jsonc', opencode, opencode, ['mcp', 'filesystem']);
     expect(report.allPassed).toBe(true);
