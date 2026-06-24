@@ -57,9 +57,9 @@ export function checksForFormat(
 
 /**
  * Build the result of a skipped check — the check was not applicable
- * for this format, or the optional input was not supplied. The
- * `details` field is empty and `pass` is true (skipping is not a
- * failure).
+ * for this format (e.g. `comments` for JSON, or the target is the
+ * whole document). The `details` field is empty and `pass` is true
+ * (skipping is not a failure).
  */
 export function skippedCheck(
   name: PreservationCheckName,
