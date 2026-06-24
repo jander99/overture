@@ -57,7 +57,8 @@ export function runPreservationChecks(
 ): PreservationReport {
   const { format, targetPath, original, written, rewritten } = input;
   // Short-circuit when the writer was allowed to mutate the whole
-  // document — there is nothing to preserve.
+  // document — every structural check is trivially inapplicable, but
+  // idempotency still runs (rewritten is required).
   if (targetPath.length === 0) {
     const checks: PreservationCheckResult[] = [
       {
@@ -90,12 +91,7 @@ export function runPreservationChecks(
         details: '',
         skipped: true,
       },
-      {
-        name: 'idempotency',
-        pass: true,
-        details: '',
-        skipped: false,
-      },
+      idempotencyCheck(written, rewritten),
       {
         name: 'rawBytes',
         pass: true,
@@ -104,7 +100,7 @@ export function runPreservationChecks(
       },
     ];
     return {
-      allPassed: true,
+      allPassed: checks.every((c) => c.pass),
       checks,
     };
   }

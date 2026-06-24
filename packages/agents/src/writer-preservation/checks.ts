@@ -204,8 +204,14 @@ export function rawBytesCheck(
 ): PreservationCheckResult {
   if (targetPath.length === 0) return skippedCheck('rawBytes');
   if (format === 'json' || format === 'jsonc') {
-    const range = findJsonTargetPathRange(original, targetPath);
-    if (range === null) {
+    // Compute the target range INDEPENDENTLY in both original and
+    // written. A writer that adds fields to the target server (e.g. a
+    // new "env" entry) changes the target's length; using the original
+    // range for the written side would then slice into the wrong
+    // content and falsely fire.
+    const origRange = findJsonTargetPathRange(original, targetPath);
+    const writtenRange = findJsonTargetPathRange(written, targetPath);
+    if (origRange === null) {
       return {
         name: 'rawBytes',
         pass: false,
@@ -213,9 +219,19 @@ export function rawBytesCheck(
         skipped: false,
       };
     }
-    const [start, end] = range;
-    const origOutside = original.slice(0, start) + original.slice(end);
-    const writtenOutside = written.slice(0, start) + written.slice(end);
+    if (writtenRange === null) {
+      return {
+        name: 'rawBytes',
+        pass: false,
+        details: `targetPath ${JSON.stringify(targetPath)} not found in written document — writer removed the target subtree entirely`,
+        skipped: false,
+      };
+    }
+    const [origStart, origEnd] = origRange;
+    const [writtenStart, writtenEnd] = writtenRange;
+    const origOutside = original.slice(0, origStart) + original.slice(origEnd);
+    const writtenOutside =
+      written.slice(0, writtenStart) + written.slice(writtenEnd);
     if (origOutside === writtenOutside) {
       return { name: 'rawBytes', pass: true, details: '', skipped: false };
     }
@@ -223,14 +239,16 @@ export function rawBytesCheck(
       'rawBytes',
       origOutside,
       writtenOutside,
-      start,
-      end,
+      origStart,
+      origEnd,
       format,
     );
   }
   if (format === 'toml') {
-    const lineRange = findTomlTargetPathLineRange(original, targetPath);
-    if (lineRange === null) {
+    // Same independence requirement for TOML line ranges.
+    const origLineRange = findTomlTargetPathLineRange(original, targetPath);
+    const writtenLineRange = findTomlTargetPathLineRange(written, targetPath);
+    if (origLineRange === null) {
       return {
         name: 'rawBytes',
         pass: false,
@@ -238,7 +256,16 @@ export function rawBytesCheck(
         skipped: false,
       };
     }
-    const [startLine, endLine] = lineRange;
+    if (writtenLineRange === null) {
+      return {
+        name: 'rawBytes',
+        pass: false,
+        details: `targetPath ${JSON.stringify(targetPath)} not found in written TOML document — writer removed the target subtree entirely`,
+        skipped: false,
+      };
+    }
+    const [startLine, endLine] = origLineRange;
+    const [writtenStartLine, writtenEndLine] = writtenLineRange;
     const origLines = original.split('\n');
     const writtenLines = written.split('\n');
     const origOutside = [
@@ -246,8 +273,8 @@ export function rawBytesCheck(
       ...origLines.slice(endLine),
     ].join('\n');
     const writtenOutside = [
-      ...writtenLines.slice(0, startLine),
-      ...writtenLines.slice(endLine),
+      ...writtenLines.slice(0, writtenStartLine),
+      ...writtenLines.slice(writtenEndLine),
     ].join('\n');
     if (origOutside === writtenOutside) {
       return { name: 'rawBytes', pass: true, details: '', skipped: false };

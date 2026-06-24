@@ -418,6 +418,54 @@ describe('S11 — rawBytes check is the primary E1 contract', () => {
     expect(findCheck(report, 'rawBytes').pass).toBe(true);
   });
 
+  it('rawBytes: length-changing legitimate target mutation passes', () => {
+    // Add a new key to the target server. The target's byte length
+    // changes (longer written subtree). The fix in rawBytesCheck is to
+    // compute the target range independently in both original and
+    // written; using the original range for the written side would
+    // slice into the wrong content and falsely fire.
+    const written = claudeCode.replace(
+      '"LOG_LEVEL": "info"',
+      '"LOG_LEVEL": "info",\n        "TIMEOUT": 30',
+    );
+    const report = check('jsonc', claudeCode, written, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(true);
+  });
+
+  it('rawBytes: inter-value spacing change outside target fires (the false-negative structural checks miss)', () => {
+    // This is the false-negative test. The structured checks all pass:
+    //   - comments: comment set is unchanged
+    //   - topLevelKeys: deep equality holds (42 === 42, "enabled" === "enabled")
+    //   - keyOrder: key order is unchanged
+    //   - mcpServers: only the filesystem server is touched, the others
+    //     have equal content
+    //   - formatting: line-leading whitespace and trailing newline are
+    //     unchanged
+    // But the spacing between ":" and the value changed from " " to "  "
+    // (double space), which is an out-of-scope byte change. rawBytes
+    // catches it; the structured checks do not.
+    const written = claudeCode.replace(
+      '"numStartups": 42',
+      '"numStartups":  42',
+    );
+    const report = check('jsonc', claudeCode, written, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    // rawBytes must fire.
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
+    // None of the structural checks fire — this is the false-negative
+    // scenario rawBytes exists to close.
+    expect(findCheck(report, 'comments').pass).toBe(true);
+    expect(findCheck(report, 'topLevelKeys').pass).toBe(true);
+    expect(findCheck(report, 'keyOrder').pass).toBe(true);
+    expect(findCheck(report, 'mcpServers').pass).toBe(true);
+    expect(findCheck(report, 'formatting').pass).toBe(true);
+  });
+
   it('rawBytes (toml): identity write preserves every outside byte', () => {
     const report = check('toml', codex, codex, ['mcp_servers', 'filesystem']);
     expect(findCheck(report, 'rawBytes').pass).toBe(true);
