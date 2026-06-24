@@ -13,6 +13,8 @@
  */
 import {
   parse as parseJsonc,
+  parseTree,
+  type Node,
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
 import { createRequire } from 'node:module';
@@ -344,126 +346,61 @@ function parseJsoncStrict(text: string): unknown {
 }
 
 /**
- * Find a top-level JSON/JSONC property's byte range `[start, end)`.
- * The range covers the property's key (including opening quote) and
- * its value. If the property is followed by a comma, the comma is
- * included. Returns `null` if the property is not present.
- */
-function findJsonTopLevelRange(
-  text: string,
-  key: string,
-): readonly [number, number] | null {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const keyPattern = new RegExp(`"${escaped}"\\s*:`, 'g');
-  const match = keyPattern.exec(text);
-  if (match === null) return null;
-  const keyStart = match.index;
-  let i = match.index + match[0].length;
-  while (i < text.length && (text[i] === ' ' || text[i] === '\t')) i++;
-  if (i >= text.length) return null;
-  const valueEnd = scanJsonValueEnd(text, i);
-  if (valueEnd === -1) return null;
-  let j = valueEnd;
-  while (
-    j < text.length &&
-    (text[j] === ' ' ||
-      text[j] === '\t' ||
-      text[j] === '\n' ||
-      text[j] === '\r')
-  ) {
-    j++;
-  }
-  let endOffset = valueEnd;
-  if (text[j] === ',') endOffset = j + 1;
-  return [keyStart, endOffset] as const;
-}
-
-function scanJsonValueEnd(text: string, start: number): number {
-  if (start >= text.length) return -1;
-  const c = text[start];
-  if (c === '"' || c === "'") {
-    let i = start + 1;
-    while (i < text.length) {
-      if (text[i] === '\\') {
-        i += 2;
-        continue;
-      }
-      if (text[i] === c) return i + 1;
-      i++;
-    }
-    return -1;
-  }
-  if (c === '{' || c === '[') {
-    const open = c;
-    const close = c === '{' ? '}' : ']';
-    let depth = 1;
-    let i = start + 1;
-    let inString = false;
-    let stringChar = '';
-    while (i < text.length && depth > 0) {
-      const ch = text[i];
-      if (inString) {
-        if (ch === '\\') {
-          i += 2;
-          continue;
-        }
-        if (ch === stringChar) inString = false;
-        i++;
-        continue;
-      }
-      if (ch === '"' || ch === "'") {
-        inString = true;
-        stringChar = ch;
-        i++;
-        continue;
-      }
-      if (ch === open) depth++;
-      else if (ch === close) depth--;
-      i++;
-    }
-    return depth === 0 ? i : -1;
-  }
-  let i = start;
-  while (i < text.length) {
-    const ch = text[i];
-    if (
-      ch === ' ' ||
-      ch === '\t' ||
-      ch === '\n' ||
-      ch === '\r' ||
-      ch === ',' ||
-      ch === '}' ||
-      ch === ']'
-    )
-      return i;
-    i++;
-  }
-  return i;
-}
-
-/**
  * Find the byte range of the targetPath subtree in a JSON/JSONC
  * document. Returns `[start, end)` where the range covers the entire
- * subtree including its enclosing braces. Returns `null` if the
- * path doesn't exist.
+ * subtree (the final value node) plus a trailing comma if present.
+ * Returns `null` if the path doesn't exist.
+ *
+ * Walks the AST once (no re-parsing of sliced text). This is correct
+ * even when an unrelated earlier object contains a nested key whose
+ * name collides with `targetPath[0]` (the regex-first-match bug), and
+ * it doesn't depend on a brace-counting scanner that would miscount
+ * braces inside comments.
  */
 function findJsonTargetPathRange(
   text: string,
   targetPath: TargetPath,
 ): readonly [number, number] | null {
   if (targetPath.length === 0) return null;
-  const initialRange = findJsonTopLevelRange(text, targetPath[0]!);
-  if (initialRange === null) return null;
-  let currentRange: readonly [number, number] = initialRange;
-  for (let i = 1; i < targetPath.length; i++) {
-    const key = targetPath[i]!;
-    const [start, end] = currentRange;
-    const inner = text.slice(start, end);
-    const innerRange = findJsonTopLevelRange(inner, key);
-    if (innerRange === null) return null;
-    currentRange = [start + innerRange[0], start + innerRange[1]] as const;
+  const errors: ParseError[] = [];
+  const root = parseTree(text, errors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+  if (root === undefined) return null;
+  if (errors.length > 0) return null;
+  if (root.type !== 'object') return null;
+  let currentNode: Node = root;
+  for (const segment of targetPath) {
+    if (currentNode.type !== 'object' || currentNode.children === undefined) {
+      return null;
+    }
+    let found: Node | undefined;
+    for (const property of currentNode.children) {
+      if (property.type !== 'property' || property.children === undefined) {
+        continue;
+      }
+      const keyNode = property.children[0];
+      if (keyNode !== undefined && keyNode.value === segment) {
+        found = property;
+        break;
+      }
+    }
+    if (found === undefined) return null;
+    // Descend into the property's value node for the next segment.
+    if (found.children === undefined) return null;
+    const valueNode = found.children[1];
+    if (valueNode === undefined) return null;
+    currentNode = valueNode;
   }
-  return currentRange;
+  // The final node is the target value. Compute its byte range plus
+  // any trailing comma.
+  let endOffset = currentNode.offset + currentNode.length;
+  while (endOffset < text.length && /\s/.test(text[endOffset]!)) {
+    endOffset++;
+  }
+  if (text[endOffset] === ',') endOffset++;
+  return [currentNode.offset, endOffset] as const;
 }
 
 function jsonTopLevelKeysCheck(

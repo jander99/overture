@@ -45,12 +45,13 @@ export { checksForFormat } from './checks.js';
  *
  * - `original` is the file the writer started from.
  * - `written` is the output of the writer after a single apply.
- * - `rewritten` (optional) is the output of applying the writer a
- *   second time to `written`; when supplied, the idempotency check
- *   verifies the second apply is a no-op.
+ * - `rewritten` is the output of applying the writer a second time to
+ *   `written`. Required input — the E1 contract mandates that every
+ *   future per-agent writer prove idempotency. Callers that don't
+ *   exercise a second apply can pass `written` again.
  * - `targetPath` is the path inside the document the writer was
- *   allowed to mutate. Empty array = whole document allowed (every
- *   check passes trivially).
+ *   allowed to mutate. Empty array = whole document allowed; every
+ *   structural check is skipped, but idempotency still runs.
  */
 export function runPreservationChecks(
   input: PreservationCheckInput,

@@ -489,6 +489,56 @@ describe('S11 — rawBytes check is the primary E1 contract', () => {
     expect(findCheck(report, 'rawBytes').pass).toBe(true);
   });
 
+  it('rawBytes: AST path resolution finds the right top-level mcpServers (regression for nested-collision bug)', () => {
+    // A config that has an unrelated top-level key BEFORE the real
+    // mcpServers. The unrelated key's value contains a nested
+    // mcpServers.filesystem. A regex first-match would find the
+    // nested one; the AST walk must find the real top-level one.
+    const configWithCollision = `{
+  "unrelatedConfig": {
+    "mcpServers": {
+      "filesystem": {
+        "command": "fake",
+        "args": ["--nested"]
+      }
+    }
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "real",
+      "args": ["--real"]
+    }
+  }
+}
+`;
+    // 1) Edit only the NESTED filesystem (change a command arg). The
+    //    real target is the top-level mcpServers.filesystem, so the
+    //    change is OUTSIDE the target. rawBytes must fire.
+    const writtenNestedEdit = configWithCollision.replace(
+      '"--nested"',
+      '"--nested-edited"',
+    );
+    const reportNested = check(
+      'jsonc',
+      configWithCollision,
+      writtenNestedEdit,
+      ['mcpServers', 'filesystem'],
+    );
+    expect(findCheck(reportNested, 'rawBytes').pass).toBe(false);
+
+    // 2) Edit only the REAL filesystem (change a command arg). The
+    //    change is INSIDE the target. rawBytes must pass.
+    const writtenRealEdit = configWithCollision.replace(
+      '"--real"',
+      '"--real-edited"',
+    );
+    const reportReal = check('jsonc', configWithCollision, writtenRealEdit, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    expect(findCheck(reportReal, 'rawBytes').pass).toBe(true);
+  });
+
   it('rawBytes (toml): edited scalar outside target fires', () => {
     // model is outside targetPath[0]=mcp_servers. A writer that changes
     // its value must fire rawBytes.
