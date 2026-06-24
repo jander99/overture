@@ -19,8 +19,10 @@ import type { McpLocationFormat } from '../types.js';
  * Path the writer was allowed to mutate. JSON-pointer-like; supports
  * both object key paths (e.g. `['mcpServers', 'filesystem']`) and TOML
  * table paths (e.g. `['mcp_servers', 'filesystem']`). An empty array
- * means the writer was allowed to mutate the entire document — no
- * preservation checks apply and the harness short-circuits to PASS.
+ * means the writer was allowed to mutate the entire document. Every
+ * structural preservation check is trivially inapplicable, but
+ * idempotency still runs — the harness is not a free pass when
+ * the writer was allowed to mutate the whole document.
  */
 export type TargetPath = readonly string[];
 

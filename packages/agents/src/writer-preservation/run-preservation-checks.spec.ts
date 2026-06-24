@@ -342,6 +342,24 @@ describe('S8 — targeted mutations inside targetPath do NOT fire checks', () =>
     expect(idem!.skipped).toBe(false);
     expect(idem!.pass).toBe(true);
   });
+
+  it('jsonc: empty targetPath + rewritten !== written fires idempotency (regression)', () => {
+    // Regression test for the Oracle round-2 finding: the empty-target
+    // short-circuit must NOT hardcode idempotency pass. If the writer
+    // produced different bytes on a second apply, the harness must
+    // catch it even when the writer was allowed to mutate the whole doc.
+    const report = runPreservationChecks({
+      format: 'jsonc',
+      original: claudeCode,
+      written: claudeCode,
+      rewritten: claudeCode + '\n',
+      targetPath: [],
+    });
+    expect(report.allPassed).toBe(false);
+    const idem = report.checks.find((c) => c.name === 'idempotency');
+    expect(idem!.skipped).toBe(false);
+    expect(idem!.pass).toBe(false);
+  });
 });
 
 describe('S9 — non-target-path comment edits fail', () => {
