@@ -2,13 +2,12 @@
 
 `overture` is a CLI utility that scans your machine for MCP-capable LLM coding
 platforms and reports the state of each platform's MCP server configuration.
-
 The currently-shipped commands are `overture detect` (read-only inventory),
 `overture config show` (print the resolved user-level `overture.jsonc`), and
-`overture bootstrap` (read-only bootstrap preview). No command writes, syncs,
-or modifies any configuration file.
-
-## Install
+`overture bootstrap` (one-time setup: writes the canonical `overture.jsonc`
+on success when run without flags). `overture detect`, `overture config
+show`, and `overture bootstrap --dry-run [--json]` never write or modify
+any file.
 
 `overture` is published to npm as `@jander99/overture`.
 
@@ -235,44 +234,52 @@ no `generatedAt`, no `duration`):
 
 ## The `bootstrap` command
 
-`overture bootstrap` is a **read-only** preview of the canonical user-level
-`overture.jsonc` config that a future bootstrap write step (Track D3, not yet
-implemented) would produce from the agents' current MCP server inventories.
+`overture bootstrap` is a **one-time setup** command: it produces the
+canonical user-level `overture.jsonc` config from the agents' current MCP
+server inventories and writes it to the resolved XDG path on success.
 
 D1 is the **planner** phase of bootstrap. D2 is the **interactive conflict
-prompt** phase: it walks the user through pickable conflicts one at a time,
-applies the chosen candidate or `skip` in memory, and prints a read-only
-summary. D2 still writes no files. D3 will add the actual write step.
+prompt** phase: it walks the user through pickable conflicts one at a time
+and applies the chosen candidate or `skip` in memory. D3 adds the
+**write** phase: when the no-flag interactive run completes with no hard
+refuses/blockers remaining, it writes the canonical `overture.jsonc`.
 
 ### Usage
 
 ```bash
-# D2 interactive read-only: walk pickable conflicts one at a time, then print
-# a read-only summary. Does NOT write any file. D3 will own the write step.
+# D3 one-time setup: walks pickable conflicts one at a time, then writes the
+# canonical `overture.jsonc` to the resolved XDG path on success. Prints
+# `Wrote config: <absolute path>` on stdout. Does NOT modify any agent config.
 overture bootstrap
 
-# Non-interactive human-readable preview of the proposed canonical config
+# Non-interactive human-readable preview of the proposed canonical config.
+# Does NOT write any file.
 overture bootstrap --dry-run
 
-# Machine-readable: full proposal + conflicts + blockers
+# Machine-readable: full proposal + conflicts + blockers. Does NOT write.
 overture bootstrap --dry-run --json
 
 # Print usage and exit 0
 overture bootstrap --help
 ```
 
-The no-flag `overture bootstrap` is the D2 read-only interactive prompt. It
-walks the user through pickable conflicts one at a time, applies the chosen
-candidate or `skip`, and prints a read-only summary. It does NOT write any
-file. Use `overture bootstrap --dry-run` for a non-interactive preview. The
-no-flag path exits `2` when stdin is not a TTY (hint: `Run overture bootstrap
---dry-run for a non-interactive preview.`).
+The no-flag `overture bootstrap` is the D3 one-time setup. It walks the user
+through pickable conflicts one at a time, applies the chosen candidate or
+`skip`, and on success writes the canonical `overture.jsonc` to the
+resolved XDG path, printing `Wrote config: <absolute path>` on stdout. Use
+`overture bootstrap --dry-run` for a non-interactive preview that does NOT
+write any file. The no-flag path exits `2` when stdin is not a TTY (hint:
+`Run overture bootstrap --dry-run for a non-interactive preview.`).
 
 ### Default summary shape
 
-The no-`--json` path emits a plain-text, sectioned preview:
+The no-`--json` paths emit plain-text, sectioned previews. The no-flag
+interactive run writes the canonical `overture.jsonc` and prints
+`Wrote config: <absolute path>` on stdout; the `--dry-run` path emits the
+preview only and does NOT write any file.
 
-- `Bootstrap proposal (dry-run)` (heading)
+- `Bootstrap proposal (dry-run)` (heading) — `--dry-run` only
+- `Bootstrap proposal` (heading) — no-flag interactive run
 - `Config path:` — the resolved XDG `overture.jsonc` path
 - `Proposal status:` — `ready` or `blocked`
 - `Target agents:` — comma-separated agent ids
@@ -280,7 +287,8 @@ The no-`--json` path emits a plain-text, sectioned preview:
 - `Pickable conflicts:` — count + bullet per pickable conflict
 - `Hard refuses:` — count + bullet per hard refuse
 - `Blockers:` — count + bullet per blocker (e.g. `no-readable-agents`)
-- Footer: `No files were written.` and `Run "overture bootstrap --dry-run --json" for machine-readable details.`
+- Footer (no-flag, success): `Wrote config: <absolute path>`
+- Footer (`--dry-run`): `No files were written.` and `Run "overture bootstrap --dry-run --json" for machine-readable details.`
 
 No ANSI color is emitted; the output is plain text suitable for piping.
 Server details (env, headers, args) are never rendered; only redacted
@@ -317,12 +325,14 @@ fingerprints.
 
 | Exit code | Meaning                                                                                                                                                                                                                                                                                                                          |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0`       | `--help`, `--dry-run [--json]` proposal status `ready`, or no-flag interactive run with no hard refuses/blockers remaining.                                                                                                                                                                                                      |
+| `0`       | `--help`; `--dry-run [--json]` proposal status `ready`; or no-flag interactive run with no hard refuses/blockers remaining (writes the canonical config).                                                                                                                                                                        |
 | `1`       | Dry-run proposal emitted but status `blocked` (pickables, hard refuses, no readable agents, or existing valid config), OR no-flag interactive run whose plan is still blocked (hard refuses / blockers).                                                                                                                         |
 | `2`       | Usage error (unknown flag), invalid flag combination (`--json` without `--dry-run`), invalid/parse-error existing canonical config, non-TTY no-flag run with at least one pickable conflict (suggests rerunning with `overture bootstrap --dry-run`), user abort during the interactive prompt, or unexpected pre-model failure. |
 
-`bootstrap` will not write to or modify any of the files it inspects, and it
-makes no writes anywhere. D2 still writes no files; D3 will own the write step.
+`bootstrap --dry-run` will not write to or modify any of the files it
+inspects, and it makes no writes anywhere. D3 writes the canonical config on
+success;
+D4/E/F are future work.
 
 ## Repository layout
 

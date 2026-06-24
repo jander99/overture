@@ -11,8 +11,10 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-
-import { defaultOverturePaths } from '@overture/config';
+// Deep import mirrors `packages/config/src/loader.ts`: the package root
+// re-exports through a UMD wrapper that uses relative `require()` calls.
+import { parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js';
+import { defaultOverturePaths, parseOvertureConfig } from '@overture/config';
 
 import {
   BOOTSTRAP_USAGE,
@@ -381,7 +383,7 @@ describe('D2 interactive', () => {
     });
   }
 
-  it('renders a dry-run proposal without prompting when args are empty and no conflicts exist', async () => {
+  it('writes the canonical config and prints the success footer when no-flag bootstrap has no pickables', async () => {
     const { home, xdgConfigHome, pathDir, cleanup, env } =
       createBootstrapTempEnv();
     cleanupDirs = cleanup;
@@ -399,14 +401,65 @@ describe('D2 interactive', () => {
       prompt,
     });
 
+    const paths = defaultOverturePaths(env);
     expect(code).toBe(0);
     expect(stderr.text()).toBe('');
     expect(prompt).not.toHaveBeenCalled();
-    expect(stdout.text()).toContain('Bootstrap proposal (dry-run)');
     expect(stdout.text()).toContain('Proposal status: ready');
     expect(stdout.text()).toContain('Pickable conflicts: 0');
-    expect(stdout.text()).toContain('No files were written.');
-    expect(existsSync(defaultOverturePaths(env).configFile)).toBe(false);
+    expect(stdout.text()).toContain(`Wrote config: ${paths.configFile}`);
+    expect(stdout.text()).not.toContain('No files were written.');
+    expect(existsSync(paths.configFile)).toBe(true);
+    const written = readFileSync(paths.configFile, 'utf8');
+    // Parse the JSONC body (writer emits // comments) with jsonc-parser,
+    // then validate the parsed shape with parseOvertureConfig.
+    const jsoncErrors: import('jsonc-parser/lib/esm/main.js').ParseError[] = [];
+    const writtenParsed: unknown = parseJsonc(written, jsoncErrors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+    });
+    expect(jsoncErrors).toEqual([]);
+    const validated = parseOvertureConfig(writtenParsed);
+    expect(validated.version).toBe(1);
+    expect(validated.profiles.default.mcpServers.filesystem?.type).toBe(
+      'stdio',
+    );
+
+    expect(readFileSync(agentConfigPath, 'utf8')).toBe(agentBefore);
+    expect(statSync(agentConfigPath).size).toBe(beforeStat.size);
+    expect(statSync(agentConfigPath).mtimeMs).toBe(beforeStat.mtimeMs);
+  });
+
+  it('returns exit 2 and does not write the config when the write step fails', async () => {
+    const { home, xdgConfigHome, pathDir, cleanup, env } =
+      createBootstrapTempEnv();
+    cleanupDirs = cleanup;
+    useBootstrapEnv({ home, xdgConfigHome, pathDir });
+    seedFakeOpencodeBin(pathDir);
+    const agentConfigPath = seedBootstrapAgentConfig(xdgConfigHome);
+    const agentBefore = readFileSync(agentConfigPath, 'utf8');
+    const beforeStat = statSync(agentConfigPath);
+    const prompt = queuedPrompt(['1']);
+
+    // Pre-create a directory at the final config path so the writer's
+    // rename must fail (EISDIR). The CLI must surface a clear failure
+    // message on stderr, NOT claim success on stdout, and leave the
+    // pre-existing directory in place.
+    const paths = defaultOverturePaths(env);
+    mkdirSync(paths.configFile, { recursive: true });
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runBootstrap([], stdout, stderr, {
+      isTTY: true,
+      prompt,
+    });
+
+    expect(code).toBe(2);
+    expect(stderr.text()).toMatch(/Failed to write overture config/);
+    expect(stdout.text()).not.toContain('Wrote config:');
+    expect(stdout.text()).not.toContain('No files were written.');
+    expect(statSync(paths.configFile).isDirectory()).toBe(true);
     expect(readFileSync(agentConfigPath, 'utf8')).toBe(agentBefore);
     expect(statSync(agentConfigPath).size).toBe(beforeStat.size);
     expect(statSync(agentConfigPath).mtimeMs).toBe(beforeStat.mtimeMs);
@@ -447,7 +500,21 @@ describe('D2 interactive', () => {
     expect(stdout.text()).toContain('Skipped conflicts: 0');
     expect(stdout.text()).toContain('selected-conflict');
     expect(stdout.text()).toContain('filesystem: Claude Code (claude-code)');
-    expect(existsSync(defaultOverturePaths(env).configFile)).toBe(false);
+    const paths = defaultOverturePaths(env);
+    expect(existsSync(paths.configFile)).toBe(true);
+    expect(stdout.text()).toContain(`Wrote config: ${paths.configFile}`);
+    expect(stdout.text()).not.toContain('No files were written.');
+    const written = readFileSync(paths.configFile, 'utf8');
+    const jsoncErrors: import('jsonc-parser/lib/esm/main.js').ParseError[] = [];
+    const writtenParsed: unknown = parseJsonc(written, jsoncErrors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+    });
+    expect(jsoncErrors).toEqual([]);
+    const validated = parseOvertureConfig(writtenParsed);
+    expect(validated.profiles.default.mcpServers.filesystem?.type).toBe(
+      'stdio',
+    );
     expect(readFileSync(opencodeConfigPath, 'utf8')).toBe(opencodeBefore);
     expect(readFileSync(claudeConfigPath, 'utf8')).toBe(claudeBefore);
     expect(statSync(opencodeConfigPath).size).toBe(opencodeStat.size);
@@ -491,7 +558,22 @@ describe('D2 interactive', () => {
     expect(stdout.text()).toContain('Resolved conflicts: 1');
     expect(stdout.text()).toContain('Skipped conflicts: 1');
     expect(stdout.text()).toContain('selected-conflict');
-    expect(existsSync(defaultOverturePaths(env).configFile)).toBe(false);
+    const paths = defaultOverturePaths(env);
+    expect(existsSync(paths.configFile)).toBe(true);
+    expect(stdout.text()).toContain(`Wrote config: ${paths.configFile}`);
+    expect(stdout.text()).not.toContain('No files were written.');
+    const written = readFileSync(paths.configFile, 'utf8');
+    const jsoncErrors: import('jsonc-parser/lib/esm/main.js').ParseError[] = [];
+    const writtenParsed: unknown = parseJsonc(written, jsoncErrors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+    });
+    expect(jsoncErrors).toEqual([]);
+    const validated = parseOvertureConfig(writtenParsed);
+    expect(validated.profiles.default.mcpServers).toHaveProperty('filesystem');
+    expect(validated.profiles.default.mcpServers).not.toHaveProperty(
+      'context7',
+    );
     expect(readFileSync(opencodeConfigPath, 'utf8')).toBe(opencodeBefore);
     expect(readFileSync(claudeConfigPath, 'utf8')).toBe(claudeBefore);
     expect(statSync(opencodeConfigPath).size).toBe(opencodeStat.size);

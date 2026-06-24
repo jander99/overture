@@ -288,6 +288,8 @@ pickable conflicts have been resolved/skipped.
 Expected result: bootstrap writes only the overture config file. It does not
 modify any agent config.
 
+**Status: completed on feat/d3-bootstrap-write.**
+
 ## Track E: write safety
 
 These slices must precede real apply behavior.

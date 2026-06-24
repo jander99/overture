@@ -6,8 +6,16 @@ import type { InteractiveResolutionResult } from './bootstrap-resolution.js';
 type PickableConflictList = BootstrapPlan['conflicts']['pickable'];
 type HardRefuseConflictList = BootstrapPlan['conflicts']['hardRefuses'];
 
-export function formatHumanBootstrapProposal(plan: BootstrapPlan): string {
-  const lines: string[] = ['Bootstrap proposal (dry-run)'];
+export type ProposalFooterKind = 'dry-run' | 'wrote';
+
+export function formatHumanBootstrapProposal(
+  plan: BootstrapPlan,
+  options?: { readonly footer?: ProposalFooterKind },
+): string {
+  const isWrote = options?.footer === 'wrote';
+  const lines: string[] = [
+    isWrote ? 'Bootstrap proposal' : 'Bootstrap proposal (dry-run)',
+  ];
 
   lines.push(`Config path: ${plan.proposal.configPath}`);
   lines.push(`Proposal status: ${plan.proposal.status}`);
@@ -48,15 +56,17 @@ export function formatHumanBootstrapProposal(plan: BootstrapPlan): string {
     lines.push(`  - ${renderBlocker(blocker)}`);
   }
 
-  lines.push('No files were written.');
-  lines.push(
-    'Run "overture bootstrap --dry-run --json" for machine-readable details.',
-  );
+  if (!isWrote) {
+    lines.push('No files were written.');
+    lines.push(
+      'Run "overture bootstrap --dry-run --json" for machine-readable details.',
+    );
+  }
   return `${lines.join('\n')}\n`;
 }
 
 /**
- * D2 - Render the final read-only interactive summary. A sibling renderer to
+ * D3 - Render the final interactive summary. A sibling renderer to
  * `formatHumanBootstrapProposal`: the dry-run path emits the full proposal
  * (config preview, target agents, pickable candidate fingerprints), while
  * this interactive path emits a tighter summary that surfaces only the
@@ -66,17 +76,23 @@ export function formatHumanBootstrapProposal(plan: BootstrapPlan): string {
  * Section ordering (fixed):
  *   heading, config path, status, adopted servers, pickable conflicts,
  *   hard refuses, blockers, resolved conflicts, skipped conflicts,
- *   no-files footer.
+ *   footer (suppressed when options.footer === 'wrote').
  *
  * Deterministic, plain-text, no ANSI. URL-bearing messages from hard
  * refuses are redacted via `redactMessageUrls`. No raw env/headers/full
  * URLs/`$schema`/`matrix`/`agentServer`/`canonicalServer` is ever emitted.
- * No files are written; the footer reflects that explicitly.
+ * The no-write footer is emitted unless `options.footer === 'wrote'`;
+ * when suppressed, the caller emits `Wrote config: <path>` after a
+ * successful write.
  */
 export function formatHumanInteractiveResult(
   result: InteractiveResolutionResult,
+  options?: { readonly footer?: ProposalFooterKind },
 ): string {
-  const lines: string[] = ['Bootstrap proposal (interactive)'];
+  const isWrote = options?.footer === 'wrote';
+  const lines: string[] = [
+    isWrote ? 'Bootstrap proposal' : 'Bootstrap proposal (interactive)',
+  ];
 
   lines.push(`Config path: ${result.plan.proposal.configPath}`);
   lines.push(`Proposal status: ${result.plan.proposal.status}`);
@@ -116,7 +132,9 @@ export function formatHumanInteractiveResult(
     lines.push(`  - ${name}`);
   }
 
-  lines.push('No files were written.');
+  if (!isWrote) {
+    lines.push('No files were written.');
+  }
 
   return `${lines.join('\n')}\n`;
 }
