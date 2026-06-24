@@ -1,0 +1,37 @@
+{
+  // ~/.claude.json — Claude Code MCP config
+  // Top-level keys are general Claude Code state, not MCP config.
+  "numStartups": 42,
+  "autoUpdaterStatus": "enabled",
+  "userID": "abc123def456",
+  "hasCompletedOnboarding": true,
+  "lastOnboardingVersion": "1.0.17",
+  /* MCP server inventory (canonical top-level key: "mcpServers") */
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user/projects",
+      ],
+      "env": {
+        "LOG_LEVEL": "info",
+      },
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "env": {
+        // Forward from the parent shell.
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}",
+      },
+    },
+    "remote-bridge": {
+      "url": "https://mcp.example.com/bridge",
+      "headers": {
+        "Authorization": "Bearer ${MCP_BRIDGE_TOKEN}",
+      },
+    },
+  },
+}

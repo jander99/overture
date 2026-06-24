@@ -76,6 +76,23 @@ export {
 
 export { asRegistryNormalizeHandler } from './normalize-mcp-config.js';
 
+/**
+ * Writer preservation harness — the E1 safety gate every future per-agent
+ * MCP writer (E2 OpenCode, E3 Claude Code + Copilot CLI, E4 remaining) must
+ * pass before it is considered safe. See
+ * `packages/agents/src/writer-preservation/README` (in the doc comment) and
+ * `docs/overture-implementation-slices.md` for the full contract.
+ */
+export {
+  runPreservationChecks,
+  checksForFormat,
+  type PreservationCheckInput,
+  type PreservationCheckName,
+  type PreservationCheckResult,
+  type PreservationReport,
+  type TargetPath,
+} from './writer-preservation/index.js';
+
 import { claudeCode } from './claude-code.js';
 import { opencode } from './opencode.js';
 import { githubCopilotCli } from './github-copilot-cli.js';
