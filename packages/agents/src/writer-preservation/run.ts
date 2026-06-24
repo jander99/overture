@@ -21,6 +21,7 @@ import {
   idempotencyCheck,
   keyOrderCheck,
   mcpServersCheck,
+  rawBytesCheck,
   topLevelKeysCheck,
 } from './checks.js';
 import type {
@@ -93,7 +94,13 @@ export function runPreservationChecks(
         name: 'idempotency',
         pass: true,
         details: '',
-        skipped: rewritten === undefined,
+        skipped: false,
+      },
+      {
+        name: 'rawBytes',
+        pass: true,
+        details: '',
+        skipped: true,
       },
     ];
     return {
@@ -103,6 +110,10 @@ export function runPreservationChecks(
   }
 
   const checks: PreservationCheckResult[] = [];
+  // rawBytes runs first because it is the strongest preservation
+  // guarantee (byte-for-byte) and surfaces regressions the structured
+  // checks might miss.
+  checks.push(rawBytesCheck(original, written, targetPath, format));
   for (const name of checksForFormat(format)) {
     if (name === 'comments') {
       checks.push(commentsCheck(original, written, targetPath, format));
@@ -116,8 +127,8 @@ export function runPreservationChecks(
       checks.push(formattingCheck(original, written, targetPath, format));
     }
   }
-  // Idempotency is always part of the report; it is skipped when
-  // `rewritten` is not supplied.
+  // Idempotency is always part of the report; `rewritten` is a
+  // required input so the check always runs.
   checks.push(idempotencyCheck(written, rewritten));
 
   const allPassed = checks.every((c) => c.pass);

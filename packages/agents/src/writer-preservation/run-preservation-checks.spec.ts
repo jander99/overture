@@ -18,10 +18,6 @@
  * The byte-mutators from `byte-mutators.ts` produce the
  * known-broken inputs.
  */
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -34,19 +30,18 @@ import {
   swapMcpServers,
   swapTopLevelKeys,
 } from './byte-mutators.js';
+import {
+  CLAUDE_CODE_FIXTURE,
+  CODEX_FIXTURE,
+  COPILOT_CLI_FIXTURE,
+  OPENCODE_FIXTURE,
+} from './fixtures.js';
 import { runPreservationChecks } from './run.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE_DIR = join(__dirname, 'fixtures');
-
-function loadFixture(name: string): string {
-  return readFileSync(join(FIXTURE_DIR, name), 'utf8');
-}
-
-const opencode = loadFixture('opencode.jsonc');
-const claudeCode = loadFixture('claude-code.jsonc');
-const copilotCli = loadFixture('copilot-cli.jsonc');
-const codex = loadFixture('codex.toml');
+const opencode = OPENCODE_FIXTURE;
+const claudeCode = CLAUDE_CODE_FIXTURE;
+const copilotCli = COPILOT_CLI_FIXTURE;
+const codex = CODEX_FIXTURE;
 
 /** Convenience: run the harness with just original/written. */
 function check(
@@ -55,7 +50,13 @@ function check(
   written: string,
   targetPath: readonly string[],
 ): ReturnType<typeof runPreservationChecks> {
-  return runPreservationChecks({ format, original, written, targetPath });
+  return runPreservationChecks({
+    format,
+    original,
+    written,
+    rewritten: written,
+    targetPath,
+  });
 }
 
 /** Find a check by name in a report. */
@@ -289,15 +290,20 @@ describe('S7 — idempotency check fires when second apply drifts', () => {
     expect(findCheck(report, 'idempotency').pass).toBe(true);
   });
 
-  it('jsonc: rewritten omitted → idempotency is skipped', () => {
+  it('jsonc: rewritten=written → idempotency trivially holds', () => {
+    // `rewritten` is now a required input. Callers that don't exercise
+    // a second apply pass `written` again — the check then holds
+    // trivially and the report is honest about it.
     const report = runPreservationChecks({
       format: 'jsonc',
       original: claudeCode,
       written: claudeCode,
+      rewritten: claudeCode,
       targetPath: ['mcpServers', 'filesystem'],
     });
-    expect(findCheck(report, 'idempotency').skipped).toBe(true);
-    expect(findCheck(report, 'idempotency').pass).toBe(true);
+    const idem = findCheck(report, 'idempotency');
+    expect(idem.skipped).toBe(false);
+    expect(idem.pass).toBe(true);
   });
 });
 
@@ -325,12 +331,16 @@ describe('S8 — targeted mutations inside targetPath do NOT fire checks', () =>
     expect(report.allPassed).toBe(true);
   });
 
-  it('jsonc: empty targetPath means whole document may change — every check is skipped', () => {
+  it('jsonc: empty targetPath means whole document may change — all structural checks are skipped; idempotency still runs (rewritten is required)', () => {
     const report = check('jsonc', claudeCode, claudeCode, []);
     expect(report.allPassed).toBe(true);
     for (const c of report.checks) {
+      if (c.name === 'idempotency') continue;
       expect(c.skipped).toBe(true);
     }
+    const idem = report.checks.find((c) => c.name === 'idempotency');
+    expect(idem!.skipped).toBe(false);
+    expect(idem!.pass).toBe(true);
   });
 });
 
@@ -347,6 +357,78 @@ describe('S9 — non-target-path comment edits fail', () => {
     ]);
     expect(report.allPassed).toBe(false);
     expect(findCheck(report, 'comments').pass).toBe(false);
+  });
+});
+
+describe('S11 — rawBytes check is the primary E1 contract', () => {
+  it('rawBytes: identity write preserves every outside byte (jsonc)', () => {
+    const report = check('jsonc', claudeCode, claudeCode, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(true);
+  });
+
+  it('rawBytes: edited comment text fires (not just removed comments)', () => {
+    // The structured `comments` check uses a set comparison: as long as the
+    // same comments exist somewhere, it passes. rawBytes is stricter: any
+    // byte change outside targetPath fires. This test edits the text of a
+    // non-target comment (keeps the same set) and proves rawBytes catches it.
+    const written = claudeCode.replace(
+      '// Top-level keys are general Claude Code state, not MCP config.',
+      '// (edited for the test)',
+    );
+    const report = check('jsonc', claudeCode, written, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
+  });
+
+  it('rawBytes: unrelated top-level key value change fires', () => {
+    // numStartups is outside targetPath[0]=mcpServers. A writer that
+    // changes its value (without deleting or reordering) must fire rawBytes
+    // even though the structured `topLevelKeys` check only verifies the key
+    // exists with equal content (which it would, since the value is still a
+    // number).
+    const written = claudeCode.replace(
+      '"numStartups": 42',
+      '"numStartups": 43',
+    );
+    const report = check('jsonc', claudeCode, written, [
+      'mcpServers',
+      'filesystem',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
+  });
+
+  it('rawBytes: legitimate inside-target mutation passes', () => {
+    // Swap two MCP servers inside the target subtree. targetPath is the
+    // whole mcpServers subtree (so the swap is fully inside the target).
+    // rawBytes compares only the bytes OUTSIDE the target, so an
+    // inside-target swap must pass.
+    const written = swapMcpServers(
+      claudeCode,
+      'jsonc',
+      'mcpServers',
+      'filesystem',
+      'context7',
+    );
+    const report = check('jsonc', claudeCode, written, ['mcpServers']);
+    expect(findCheck(report, 'rawBytes').pass).toBe(true);
+  });
+
+  it('rawBytes (toml): identity write preserves every outside byte', () => {
+    const report = check('toml', codex, codex, ['mcp_servers', 'filesystem']);
+    expect(findCheck(report, 'rawBytes').pass).toBe(true);
+  });
+
+  it('rawBytes (toml): edited scalar outside target fires', () => {
+    // model is outside targetPath[0]=mcp_servers. A writer that changes
+    // its value must fire rawBytes.
+    const written = codex.replace('model = "gpt-5"', 'model = "gpt-6"');
+    const report = check('toml', codex, written, ['mcp_servers', 'filesystem']);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
   });
 });
 

@@ -12,9 +12,6 @@
  * expected preservation check. This proves the harness works against
  * real writer-shaped code, not just raw byte-mutator outputs.
  */
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -59,7 +56,7 @@ function applyAndCheck(
   );
   const rewritten = applyWriterTwice
     ? writer(written, scenario.format, scenario.targetPath)
-    : undefined;
+    : written;
   return runPreservationChecks({
     format: scenario.format,
     original: scenario.original,
@@ -201,18 +198,23 @@ describe('contract — nonIdempotentWriter fires idempotency', () => {
     expectCheckFails(report, 'idempotency');
   });
 
-  it('jsonc (claude-code): single apply + rewritten=undefined skips idempotency', () => {
+  it('jsonc (claude-code): single apply + rewritten=written trivially passes idempotency, but rawBytes fires on the appended newline', () => {
+    // nonIdempotentWriter appends '\n' to the output. The newline is at
+    // the very end, outside any target subtree, so:
+    //   - rawBytes fires (the appended byte is outside targetPath)
+    //   - idempotency trivially holds (rewritten === written)
+    //   - allPassed is false because rawBytes caught a real regression
     const report = applyAndCheck(
       { original: claudeCode, format: 'jsonc', targetPath: JSONC_TARGET },
       nonIdempotentWriter,
       /* applyWriterTwice */ false,
     );
-    // The single apply didn't break anything outside targetPath (the
-    // appended newline is at the very end, outside any target subtree).
-    // So all checks should still pass; idempotency is skipped.
-    expect(report.allPassed).toBe(true);
+    expect(report.allPassed).toBe(false);
     const idem = report.checks.find((c) => c.name === 'idempotency');
-    expect(idem!.skipped).toBe(true);
+    expect(idem!.skipped).toBe(false);
+    expect(idem!.pass).toBe(true);
+    const raw = report.checks.find((c) => c.name === 'rawBytes');
+    expect(raw!.pass).toBe(false);
   });
 });
 

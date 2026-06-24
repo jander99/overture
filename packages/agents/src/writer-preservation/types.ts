@@ -34,7 +34,8 @@ export type TargetPath = readonly string[];
  * - `keyOrder`          — outside targetPath, the parsed key order must match between `original` and `written`.
  * - `mcpServers`        — every MCP server name outside targetPath[1] (within the targetPath[0] subtree) must exist in `written` with equal parsed content.
  * - `formatting`        — outside targetPath, line-leading whitespace and trailing newline must match.
- * - `idempotency`       — `rewritten` (the output of a second apply) must equal `written` byte-for-byte; only runs when `rewritten` is supplied.
+ * - `idempotency`       — `rewritten` (the output of a second apply) must equal `written` byte-for-byte; required input.
+ * - `rawBytes`          — every byte outside the targetPath subtree must be byte-identical between `original` and `written`. This is the strongest preservation guarantee and is the primary E1 contract.
  */
 export type PreservationCheckName =
   | 'comments'
@@ -42,11 +43,16 @@ export type PreservationCheckName =
   | 'keyOrder'
   | 'mcpServers'
   | 'formatting'
-  | 'idempotency';
+  | 'idempotency'
+  | 'rawBytes';
 
 /**
- * Input to {@link runPreservationChecks}. All fields are required
- * except `rewritten` (idempotency check is opt-in).
+ * Input to {@link runPreservationChecks}. All fields are required.
+ *
+ * `rewritten` is mandatory (not optional): the E1 contract requires every
+ * future per-agent writer to prove idempotency across a second apply,
+ * and an optional `rewritten` would let a writer skip the check entirely.
+ * Callers that don't care about idempotency can pass `written` again.
  */
 export interface PreservationCheckInput {
   readonly format: McpLocationFormat;
@@ -58,11 +64,11 @@ export interface PreservationCheckInput {
   readonly written: string;
   /**
    * Output bytes after applying the writer a second time to `written`.
-   * When supplied, the harness runs the `idempotency` check
-   * (`rewritten === written` byte-for-byte). When omitted, the
-   * idempotency check is skipped and reported as `pass: true, skipped: true`.
+   * The harness always runs the `idempotency` check
+   * (`rewritten === written` byte-for-byte). To opt out, pass `written`
+   * again — the harness will then trivially pass the check.
    */
-  readonly rewritten?: string;
+  readonly rewritten: string;
 }
 
 /**

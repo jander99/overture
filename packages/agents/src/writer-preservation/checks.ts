@@ -45,8 +45,12 @@ export function checksForFormat(
   ];
   if (format === 'json') return base;
   if (format === 'jsonc') return ['comments', ...base];
-  if (format === 'toml' || format === 'yaml') return ['comments', ...base];
-  return base;
+  if (format === 'toml') return ['comments', ...base];
+  // YAML: no supported agent uses YAML yet (E1 scope = opencode, claude-code,
+  // copilot-cli, codex). When a YAML agent is added (E4) this branch must
+  // gain real checks. Until then, no checks are advertised so callers cannot
+  // assume coverage they don't have.
+  return [];
 }
 
 /**
@@ -155,17 +159,140 @@ export function formattingCheck(
 }
 
 export function idempotencyCheck(
-  written: string | undefined,
-  rewritten: string | undefined,
+  written: string,
+  rewritten: string,
 ): PreservationCheckResult {
-  if (rewritten === undefined) return skippedCheck('idempotency');
   if (rewritten === written) {
     return { name: 'idempotency', pass: true, details: '', skipped: false };
   }
   return {
     name: 'idempotency',
     pass: false,
-    details: `Second apply produced different bytes than first apply (length: ${written?.length ?? 0} vs ${rewritten.length})`,
+    details: `Second apply produced different bytes than first apply (length: ${written.length} vs ${rewritten.length})`,
+    skipped: false,
+  };
+}
+
+/**
+ * Strongest preservation guarantee: every byte outside the targetPath
+ * subtree must be byte-identical between `original` and `written`.
+ *
+ * This is the primary E1 contract. The structured checks (comments,
+ * topLevelKeys, keyOrder, mcpServers, formatting) are diagnostic
+ * aids that name *which* property regressed; this check is the
+ * catch-all that fires on any out-of-scope byte change those
+ * structural checks might miss (e.g. a comment text change that keeps
+ * the same set, or a value-type swap in a non-target top-level key
+ * that keeps structural equality).
+ *
+ * For JSON/JSONC: extract the targetPath subtree's byte range, then
+ * compare `original[0..start] + original[end..]` byte-for-byte against
+ * the same concatenation from `written`.
+ *
+ * For TOML: same approach but the targetPath range is a line range,
+ * converted to a byte range.
+ *
+ * For empty targetPath: skipped (whole document was allowed).
+ *
+ * For YAML: skipped (no supported agent uses YAML yet).
+ */
+export function rawBytesCheck(
+  original: string,
+  written: string,
+  targetPath: TargetPath,
+  format: McpLocationFormat,
+): PreservationCheckResult {
+  if (targetPath.length === 0) return skippedCheck('rawBytes');
+  if (format === 'json' || format === 'jsonc') {
+    const range = findJsonTargetPathRange(original, targetPath);
+    if (range === null) {
+      return {
+        name: 'rawBytes',
+        pass: false,
+        details: `targetPath ${JSON.stringify(targetPath)} not found in original document`,
+        skipped: false,
+      };
+    }
+    const [start, end] = range;
+    const origOutside = original.slice(0, start) + original.slice(end);
+    const writtenOutside = written.slice(0, start) + written.slice(end);
+    if (origOutside === writtenOutside) {
+      return { name: 'rawBytes', pass: true, details: '', skipped: false };
+    }
+    return diffResult(
+      'rawBytes',
+      origOutside,
+      writtenOutside,
+      start,
+      end,
+      format,
+    );
+  }
+  if (format === 'toml') {
+    const lineRange = findTomlTargetPathLineRange(original, targetPath);
+    if (lineRange === null) {
+      return {
+        name: 'rawBytes',
+        pass: false,
+        details: `targetPath ${JSON.stringify(targetPath)} not found in original TOML document`,
+        skipped: false,
+      };
+    }
+    const [startLine, endLine] = lineRange;
+    const origLines = original.split('\n');
+    const writtenLines = written.split('\n');
+    const origOutside = [
+      ...origLines.slice(0, startLine),
+      ...origLines.slice(endLine),
+    ].join('\n');
+    const writtenOutside = [
+      ...writtenLines.slice(0, startLine),
+      ...writtenLines.slice(endLine),
+    ].join('\n');
+    if (origOutside === writtenOutside) {
+      return { name: 'rawBytes', pass: true, details: '', skipped: false };
+    }
+    return diffResult(
+      'rawBytes',
+      origOutside,
+      writtenOutside,
+      startLine,
+      endLine,
+      format,
+    );
+  }
+  return skippedCheck('rawBytes');
+}
+
+function diffResult(
+  name: PreservationCheckName,
+  origOutside: string,
+  writtenOutside: string,
+  start: number,
+  end: number,
+  format: McpLocationFormat,
+): PreservationCheckResult {
+  // Find the first divergent byte to give a useful diagnostic.
+  let divergeAt = 0;
+  const minLen = Math.min(origOutside.length, writtenOutside.length);
+  while (
+    divergeAt < minLen &&
+    origOutside[divergeAt] === writtenOutside[divergeAt]
+  ) {
+    divergeAt++;
+  }
+  const lenDelta = writtenOutside.length - origOutside.length;
+  const snippet = origOutside.slice(
+    Math.max(0, divergeAt - 20),
+    divergeAt + 20,
+  );
+  return {
+    name,
+    pass: false,
+    details:
+      `Bytes outside targetPath[${format === 'toml' ? 'line' : 'byte'} ${start}\u2013${end}] differ: ` +
+      `first divergence at offset ${divergeAt} (len delta: ${lenDelta}), ` +
+      `snippet: ${JSON.stringify(snippet)}`,
     skipped: false,
   };
 }
