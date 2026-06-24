@@ -2,7 +2,7 @@
  * Individual preservation checks for the writer preservation harness.
  *
  * Each check is a pure function: it takes the original bytes, the
- * written bytes, the optional rewritten bytes (for idempotency), and
+ * written bytes, the required rewritten bytes (for idempotency), and
  * the targetPath the writer was allowed to mutate. It returns a
  * {@link PreservationCheckResult} with pass/fail and diagnostic details.
  *
