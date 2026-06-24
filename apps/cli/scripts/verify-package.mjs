@@ -19,8 +19,10 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  chmodSync,
   writeFileSync,
 } from 'node:fs';
+
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -304,8 +306,15 @@ const bootstrapAgentConfigBefore = `{
 }`;
 writeFileSync(bootstrapAgentConfig, bootstrapAgentConfigBefore);
 const bootstrapAgentBeforeStat = statSync(bootstrapAgentConfig);
+// Seed a fake opencode binary on the bootstrap PATH so the CLI marks
+// the opencode agent as installed and can read its config (otherwise
+// the plan is blocked by 'no-readable-agents').
+const bootstrapOpencodeBin = join(bootstrapPath, 'opencode');
+writeFileSync(bootstrapOpencodeBin, '#!/bin/sh\nexit 0\n');
+chmodSync(bootstrapOpencodeBin, 0o755);
 
 const bootstrapBin = [distMain];
+
 const bootstrapJsonResult = spawnWithEnv(
   [...bootstrapBin, 'bootstrap', '--dry-run', '--json'],
   bootstrapEnv,
@@ -416,9 +425,9 @@ const bootstrapInteractiveResult = spawnWithEnv(
   [...bootstrapBin, 'bootstrap'],
   bootstrapEnv,
 );
-if (bootstrapInteractiveResult.status !== 1) {
+if (bootstrapInteractiveResult.status !== 0) {
   fail(
-    `bootstrap (no flags) exited ${bootstrapInteractiveResult.status} (expected 1): stderr:\n${bootstrapInteractiveResult.stderr}\nstdout:\n${bootstrapInteractiveResult.stdout}`,
+    `bootstrap (no flags) exited ${bootstrapInteractiveResult.status} (expected 0): stderr:\n${bootstrapInteractiveResult.stderr}\nstdout:\n${bootstrapInteractiveResult.stdout}`,
   );
 }
 if (!bootstrapInteractiveResult.stdout.includes('Bootstrap proposal')) {
@@ -426,20 +435,56 @@ if (!bootstrapInteractiveResult.stdout.includes('Bootstrap proposal')) {
     `bootstrap (no flags) stdout missing "Bootstrap proposal" heading\nstdout:\n${bootstrapInteractiveResult.stdout}`,
   );
 }
-const forbiddenStderrFragments = [
+const bootstrapWroteFragment = `Wrote config: ${bootstrapPaths.configFile}`;
+if (!bootstrapInteractiveResult.stdout.includes(bootstrapWroteFragment)) {
+  fail(
+    `bootstrap (no flags) stdout missing "${bootstrapWroteFragment}"\nstdout:\n${bootstrapInteractiveResult.stdout}`,
+  );
+}
+if (!statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
+  fail(
+    `bootstrap (no flags) expected to write ${bootstrapPaths.configFile}, but it was not created`,
+  );
+}
+// The writer emits JSONC with `//` comments. Use the CJS jsonc-parser
+// via createRequire (the ESM build has broken relative imports).
+import { createRequire } from 'node:module';
+const requireVerify = createRequire(import.meta.url);
+const { parse: parseJsoncVerify } = requireVerify('jsonc-parser');
+const bootstrapWrittenConfig = parseJsoncVerify(
+  readFileSync(bootstrapPaths.configFile, 'utf8'),
+  [],
+  { allowTrailingComma: true, disallowComments: false },
+);
+
+if (
+  typeof bootstrapWrittenConfig.version !== 'number' ||
+  typeof bootstrapWrittenConfig.settings !== 'object' ||
+  bootstrapWrittenConfig.settings === null ||
+  typeof bootstrapWrittenConfig.profiles !== 'object' ||
+  bootstrapWrittenConfig.profiles === null ||
+  typeof bootstrapWrittenConfig.profiles.default !== 'object' ||
+  bootstrapWrittenConfig.profiles.default === null ||
+  typeof bootstrapWrittenConfig.profiles.default.mcpServers !== 'object' ||
+  bootstrapWrittenConfig.profiles.default.mcpServers === null
+) {
+  fail(
+    `bootstrap (no flags) wrote config missing required keys (version, settings, profiles.default.mcpServers)\nconfig:\n${JSON.stringify(bootstrapWrittenConfig, null, 2)}`,
+  );
+}
+const reservedStderrFragments = [
   'BOOTSTRAP_RESERVED_MESSAGE',
   'Bootstrap writes are not implemented yet',
 ];
-const leakedStderrFragments = forbiddenStderrFragments.filter((fragment) =>
-  bootstrapInteractiveResult.stderr.includes(fragment),
+const leakedReservedStderrFragments = reservedStderrFragments.filter(
+  (fragment) => bootstrapInteractiveResult.stderr.includes(fragment),
 );
-if (leakedStderrFragments.length > 0) {
+if (leakedReservedStderrFragments.length > 0) {
   fail(
-    `bootstrap (no flags) stderr contains forbidden fragments: ${leakedStderrFragments.join(', ')}\nstderr:\n${bootstrapInteractiveResult.stderr}`,
+    `bootstrap (no flags) stderr contains reserved fragments: ${leakedReservedStderrFragments.join(', ')}\nstderr:\n${bootstrapInteractiveResult.stderr}`,
   );
 }
 const forbiddenStdoutFragments = [
-  'Pickable conflict:',
   'api_key=',
   'Bearer ',
   '$schema',
@@ -455,11 +500,6 @@ if (leakedStdoutFragments.length > 0) {
     `bootstrap (no flags) stdout contains forbidden fragments: ${leakedStdoutFragments.join(', ')}\nstdout:\n${bootstrapInteractiveResult.stdout}`,
   );
 }
-if (statSync(bootstrapPaths.configFile, { throwIfNoEntry: false })) {
-  fail(
-    `bootstrap (no flags) unexpectedly created ${bootstrapPaths.configFile}`,
-  );
-}
 const bootstrapAgentAfterStat = statSync(bootstrapAgentConfig);
 if (
   bootstrapAgentAfterStat.size !== bootstrapAgentBeforeStat.size ||
@@ -470,7 +510,7 @@ if (
   );
 }
 console.log(
-  `bootstrap (no flags): exit=${bootstrapInteractiveResult.status} proposalHeading=PASS noReserved=PASS noLeak=PASS noWrite=PASS`,
+  `bootstrap (no flags): exit=${bootstrapInteractiveResult.status} proposalHeading=PASS wroteConfig=PASS noReserved=PASS noLeak=PASS agentUntouched=PASS`,
 );
 
 const bootstrapHelpResult = spawnWithEnv(

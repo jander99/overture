@@ -1,7 +1,12 @@
+import { statSync } from 'node:fs';
 import {
   defaultOverturePaths,
   loadOvertureConfig,
   type OvertureConfig,
+  type OverturePaths,
+  writeOvertureConfig,
+  InvalidOvertureConfigError,
+  OvertureConfigWriteError,
 } from '@overture/config';
 
 import { defaultPathResolutionContext } from './platforms/detect.js';
@@ -26,12 +31,8 @@ import type { StringWriter } from './scan-command.js';
 
 export const BOOTSTRAP_USAGE = 'Usage: overture bootstrap --dry-run [--json]\n';
 
-// D2 - the no-flag path is now an interactive read-only dispatch.
-// This constant remains exported so the bootstrap-command spec (which task 5
-// will rewrite) can keep referencing the historical message while it is
-// phased out.
-export const BOOTSTRAP_RESERVED_MESSAGE =
-  'Bootstrap writes are not implemented yet. Run "overture bootstrap --dry-run" to preview the proposal.\n';
+const BOOTSTRAP_WROTE_FOOTER = (path: string): string =>
+  `Wrote config: ${path}\n`;
 
 const BOOTSTRAP_INVALID_COMBINATION_MESSAGE =
   'Invalid flag combination: --json requires --dry-run.\n';
@@ -91,11 +92,17 @@ export async function runBootstrap(
 
   const paths = defaultOverturePaths();
   let config: OvertureConfig | null;
-  try {
-    config = await loadOvertureConfig(paths);
-  } catch (err) {
-    stderr.write(`${messageForError(err)}\n`);
-    return 2;
+  // Treat a directory at the canonical config path as "no config yet" so
+  // bootstrap can proceed and the writer can attempt (and surface EISDIR).
+  if (isDirectoryAt(paths.configFile)) {
+    config = null;
+  } else {
+    try {
+      config = await loadOvertureConfig(paths);
+    } catch (err) {
+      stderr.write(`${messageForError(err)}\n`);
+      return 2;
+    }
   }
 
   if (config !== null) {
@@ -120,7 +127,7 @@ export async function runBootstrap(
   });
 
   if (!hasDryRun) {
-    return runBootstrapInteractive(stdout, stderr, plan, options);
+    return runBootstrapInteractive(stdout, stderr, plan, paths, options);
   }
 
   if (!hasJson) {
@@ -147,22 +154,25 @@ function runBootstrapHuman(stdout: StringWriter, plan: BootstrapPlan): 0 | 1 {
 }
 
 /**
- * D2 - Interactive read-only dispatch for the no-flag path.
+ * D3 - Interactive dispatch for the no-flag path. Writes the canonical
+ * `overture.jsonc` on success when the plan is ready.
  *
- * Decision tree (matches the D2 plan exactly):
+ * Decision tree (matches the D3 plan exactly):
  *   1. hard refuses OR blockers -> print proposal and return 1; never prompt.
  *   2. pickables AND non-TTY -> print TTY hint to stderr and return 2.
  *   3. pickables AND TTY     -> prompt each conflict in order, collect
- *      decisions, apply them in-memory, print interactive summary, return
- *      1 if the resulting plan is still blocked, else 0.
- *   4. otherwise (no conflicts of any kind) -> print proposal, return 0.
+ *      decisions, apply them in-memory, write the config if the resulting
+ *      plan is ready, return 1 if still blocked, else 0.
+ *   4. otherwise (no conflicts of any kind) -> write the config, return 0.
  *
- * No filesystem writes happen here.
+ * Writes only `overture.jsonc` via `writeOvertureConfig`; never touches
+ * any agent config.
  */
 async function runBootstrapInteractive(
   stdout: StringWriter,
   stderr: StringWriter,
   plan: BootstrapPlan,
+  paths: OverturePaths,
   options: RunBootstrapOptions,
 ): Promise<number> {
   if (plan.conflicts.hardRefuses.length > 0 || plan.blockers.length > 0) {
@@ -171,7 +181,20 @@ async function runBootstrapInteractive(
   }
 
   if (plan.conflicts.pickable.length === 0) {
-    stdout.write(formatHumanBootstrapProposal(plan));
+    stdout.write(formatHumanBootstrapProposal(plan, { footer: 'wrote' }));
+    try {
+      await writeOvertureConfig({ paths, config: plan.proposal.config });
+    } catch (err) {
+      if (
+        err instanceof InvalidOvertureConfigError ||
+        err instanceof OvertureConfigWriteError
+      ) {
+        stderr.write(`${err.message}\n`);
+        return 2;
+      }
+      throw err;
+    }
+    stdout.write(BOOTSTRAP_WROTE_FOOTER(paths.configFile));
     return 0;
   }
 
@@ -233,10 +256,44 @@ async function runBootstrapInteractive(
     return 2;
   }
 
+  if (result.plan.proposal.status === 'ready') {
+    stdout.write(formatHumanInteractiveResult(result, { footer: 'wrote' }));
+    try {
+      await writeOvertureConfig({ paths, config: result.plan.proposal.config });
+    } catch (err) {
+      if (
+        err instanceof InvalidOvertureConfigError ||
+        err instanceof OvertureConfigWriteError
+      ) {
+        stderr.write(`${err.message}\n`);
+        return 2;
+      }
+      throw err;
+    }
+    stdout.write(BOOTSTRAP_WROTE_FOOTER(paths.configFile));
+    return 0;
+  }
+
   stdout.write(formatHumanInteractiveResult(result));
-  return result.plan.proposal.status === 'blocked' ? 1 : 0;
+  return 1;
 }
 
 function messageForError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+function isDirectoryAt(targetPath: string): boolean {
+  try {
+    return statSync(targetPath).isDirectory();
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      'code' in err &&
+      typeof err.code === 'string' &&
+      err.code === 'ENOENT'
+    ) {
+      return false;
+    }
+    throw err;
+  }
 }
