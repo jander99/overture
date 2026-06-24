@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "system",
+  "provider": {
+    "default": "anthropic",
+  },
+  // MCP servers (canonical: "mcp" top-level key)
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user/projects",
+      ],
+      "environment": {
+        "LOG_LEVEL": "info",
+      },
+      "enabled": true,
+    },
+    /* second server, unrelated to the touch target */
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp@latest"],
+      "environment": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}",
+      },
+      "enabled": true,
+      "timeout": 30,
+    },
+    "remote-bridge": {
+      "type": "remote",
+      "url": "https://mcp.example.com/bridge",
+      "headers": {
+        "Authorization": "Bearer ${MCP_BRIDGE_TOKEN}",
+      },
+      "enabled": true,
+    },
+  },
+}

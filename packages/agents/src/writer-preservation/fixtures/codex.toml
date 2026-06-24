@@ -1,0 +1,30 @@
+# ~/.codex/config.toml — OpenAI Codex config
+# Top-level keys are general Codex state, not MCP config.
+model = "gpt-5"
+model_provider = "openai"
+approval_mode = "on-request"
+
+[sandbox]
+mode = "workspace-write"
+network_access = false
+
+# MCP server inventory (canonical top-level key: "mcp_servers")
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+startup_timeout_sec = 30
+
+# A second server, unrelated to the touch target.
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+
+# Forward from the parent shell.
+[mcp_servers.context7.env]
+CONTEXT7_API_KEY = "${CONTEXT7_API_KEY}"
+
+[mcp_servers.remote-bridge]
+url = "https://mcp.example.com/bridge"
+bearer_token_env_var = "MCP_BRIDGE_TOKEN"
