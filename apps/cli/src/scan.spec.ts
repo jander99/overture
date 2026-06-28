@@ -307,7 +307,7 @@ describe('buildScanJsonOutput (OpenCode no config)', () => {
     // Red-phase assertions (intentionally failing on current behavior):
     expect(opencodeSnapshot.installed).toBe(false);
     expect(opencodeSnapshot.readState).toBe('not-installed');
-    expect(opencodeSnapshot.servers).toBeUndefined();
+    expect('servers' in opencodeSnapshot).toBe(false);
     expect(opencodeSnapshot.resolvedPath).toBeUndefined();
     expect(matrix.rows.filter((r) => r.agentId === 'opencode')).toEqual([]);
     // No canonical intent + only not-installed agents => empty conflicts.
@@ -364,6 +364,6 @@ describe('buildScanJsonOutput (OpenCode no config)', () => {
     expect(['read-empty', 'read-no-config']).toContain(
       opencodeSnapshot.readState,
     );
-    expect(opencodeSnapshot.servers).toBeUndefined();
+    expect('servers' in opencodeSnapshot).toBe(false);
   });
 });
