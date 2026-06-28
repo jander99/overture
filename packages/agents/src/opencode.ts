@@ -1,5 +1,6 @@
 // OpenCode agent definition.
 import { parseOpenCodeMcpServerMap } from './parse-mcp-servers.js';
+import { opencodeWriteMcpConfig } from './opencode-write.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
 import {
@@ -271,6 +272,7 @@ export const opencode: AgentDefinition = defineAgent({
   mcp: {
     parseServers: parseOpenCodeMcpServers,
     normalize: asRegistryNormalizeHandler(normalizeOpenCodeMcpServers),
+    write: opencodeWriteMcpConfig,
   },
 });
 

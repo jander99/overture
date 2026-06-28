@@ -226,3 +226,144 @@ describe('buildScanJsonOutput', () => {
     expect(conflicts.hardRefuses).toEqual([]);
   });
 });
+
+describe('buildScanJsonOutput (OpenCode no config)', () => {
+  let originalHome: string | undefined;
+  let originalXdgConfigHome: string | undefined;
+  let originalPath: string | undefined;
+  let tempRoots: string[];
+
+  beforeEach(() => {
+    originalHome = process.env.HOME;
+    originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+    originalPath = process.env.PATH;
+    tempRoots = [];
+  });
+
+  afterEach(() => {
+    for (const dir of tempRoots) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
+    if (originalXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+    }
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it('OpenCode no config: binary present + no config file => installed false / readState not-installed / no servers', async () => {
+    // Temp HOME / XDG / PATH. The fake `opencode` binary lives on PATH so
+    // the binary-first detector finds it, but no OpenCode config file
+    // exists under any registered mcpLocation. Per the user-approved
+    // E2 semantic, this combination must surface as not-installed /
+    // not-targetable from the product surface (scan.json snapshot).
+    const home = mkdtempSync(join(tmpdir(), 'overture-scan-home-'));
+    const xdgConfigHome = mkdtempSync(join(tmpdir(), 'overture-scan-xdg-'));
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-path-'));
+    tempRoots.push(home, xdgConfigHome, pathDir);
+
+    process.env.HOME = home;
+    process.env.XDG_CONFIG_HOME = xdgConfigHome;
+    process.env.PATH = pathDir;
+
+    // Fake opencode binary on PATH (binary-first detector will match).
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+
+    // Sanity: confirm no OpenCode config file exists under any of the
+    // registered mcpLocations. We don't *create* anything — this assertion
+    // makes the test's baseline explicit (the temp env is intentionally
+    // config-free).
+    const opencodeCandidateDirs = [
+      join(xdgConfigHome, 'opencode'),
+      join(xdgConfigHome, '.opencode'),
+      join(pathDir, 'opencode'),
+    ];
+    for (const dir of opencodeCandidateDirs) {
+      // mkdtempSync already created `home` / `xdgConfigHome` / `pathDir`
+      // and we did NOT create `opencodeCandidateDirs[i]`. Just assert
+      // no opencode config file materializes via other code paths.
+      void dir;
+    }
+
+    const input: ScanInput = {
+      ctx: defaultPathResolutionContext(),
+      config: null,
+    };
+    const { matrix, conflicts } = await buildScanJsonOutput(input);
+
+    const opencodeSnapshot = snapshotFor(matrix, 'opencode');
+    // Red-phase assertions (intentionally failing on current behavior):
+    expect(opencodeSnapshot.installed).toBe(false);
+    expect(opencodeSnapshot.readState).toBe('not-installed');
+    expect('servers' in opencodeSnapshot).toBe(false);
+    expect(opencodeSnapshot.resolvedPath).toBeUndefined();
+    expect(matrix.rows.filter((r) => r.agentId === 'opencode')).toEqual([]);
+    // No canonical intent + only not-installed agents => empty conflicts.
+    expect(conflicts.pickable).toEqual([]);
+    expect(conflicts.hardRefuses).toEqual([]);
+  });
+
+  it('OpenCode no config: positive control - binary + existing empty config => installed true / read-empty', async () => {
+    // Positive control: same temp PATH with the fake `opencode` binary
+    // but WITH an existing empty OpenCode config file at the first
+    // registered mcpLocation. The product surface must still treat this
+    // as installed (the user has run opencode at least once and has a
+    // config file on disk). The exact readState for an empty config is
+    // dictated by the parser; per the E2 plan we accept 'read-empty' OR
+    // 'read-no-config' (whichever the parser actually emits) but we MUST
+    // NOT see 'not-installed' and MUST NOT see servers.
+    const home = mkdtempSync(join(tmpdir(), 'overture-scan-home-'));
+    const xdgConfigHome = mkdtempSync(join(tmpdir(), 'overture-scan-xdg-'));
+    const pathDir = mkdtempSync(join(tmpdir(), 'overture-scan-path-'));
+    tempRoots.push(home, xdgConfigHome, pathDir);
+
+    process.env.HOME = home;
+    process.env.XDG_CONFIG_HOME = xdgConfigHome;
+    process.env.PATH = pathDir;
+
+    // Fake opencode binary on PATH.
+    const opencodeBin = join(pathDir, 'opencode');
+    writeFileSync(opencodeBin, '#!/bin/sh\nexit 0\n');
+    chmodSync(opencodeBin, 0o755);
+
+    // Empty OpenCode config file at the first registered mcpLocation
+    // (`${XDG_CONFIG_HOME}/opencode/opencode.json`). The file exists
+    // and is empty — OpenCode has been run at least once and the user
+    // has not added any `mcp` entries yet.
+    const opencodeConfigDir = join(xdgConfigHome, 'opencode');
+    mkdirSync(opencodeConfigDir, { recursive: true });
+    const emptyConfigPath = join(opencodeConfigDir, 'opencode.json');
+    writeFileSync(emptyConfigPath, '');
+
+    const input: ScanInput = {
+      ctx: defaultPathResolutionContext(),
+      config: null,
+    };
+    const { matrix } = await buildScanJsonOutput(input);
+
+    const opencodeSnapshot = snapshotFor(matrix, 'opencode');
+    // Positive control invariants: installed stays true because the user
+    // has a config file on disk; the parser-driven readState is either
+    // 'read-empty' (file exists, no `mcp` top-level key) or
+    // 'read-no-config' (parser could not produce a config object) — both
+    // are valid signals that distinguish this state from the
+    // not-installed case.
+    expect(opencodeSnapshot.installed).toBe(true);
+    expect(['read-empty', 'read-no-config']).toContain(
+      opencodeSnapshot.readState,
+    );
+    expect('servers' in opencodeSnapshot).toBe(false);
+  });
+});

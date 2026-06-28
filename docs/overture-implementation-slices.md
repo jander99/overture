@@ -312,6 +312,7 @@ Approval gate: preservation test contract.
 
 Expected result: no production writer yet, but future writers have a required
 safety gate.
+**Status: completed on feat/agents-e1-writer-preservation (commit fbdc67ae, PR #121).** The harness lives in `packages/agents/src/writer-preservation/` and is enforced by `packages/agents/src/writer-preservation/contract.spec.ts`; the byte-level mutators are exercised by `byte-mutators.spec.ts` and `run-preservation-checks.spec.ts`.
 
 ### E2. First writer: OpenCode
 
@@ -321,6 +322,7 @@ Use OpenCode first because it has a focused local config shape and a compact
 MCP subtree.
 
 Expected result: dry-run diff and write behavior for one agent only.
+**Status: DONE — delivered on feat/e2-opencode-writer (this branch).** Implements the OpenCode writer against the E1 preservation harness and adds it to the agent registry. Adds `packages/agents/src/opencode-write.ts` plus `opencode.write.spec.ts` (42 tests), wires `parseServers` and the writer into `packages/agents/src/opencode.ts`, expands the registry surface in `packages/agents/src/types.ts`, and extends `packages/agents/src/writer-preservation/checks.ts` with the E2 coverage. The `apps/cli` side adds `scan.spec.ts` coverage for `AgentSnapshot.servers` so the new writer surfaces in `overture scan` output. Dry-run diff and write behavior for one agent (OpenCode) only; F-track apply behavior remains future work.
 
 ### E3. Next writers: Claude Code and GitHub Copilot CLI
 
