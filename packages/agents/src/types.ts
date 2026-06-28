@@ -116,15 +116,71 @@ export interface AgentMcpReadResult<TConfig = unknown> {
   }>;
 }
 
-/** Write input for a per-agent MCP write. Placeholder for now. */
-export interface AgentMcpWriteInput {
-  servers: readonly unknown[];
+/**
+ * Named canonical server entry passed to a per-agent MCP write.
+ * The `name` field is the server's canonical key in the agent's config.
+ */
+export interface AgentMcpWriteServer {
+  readonly name: string;
+  readonly server: OvertureMcpServer;
 }
 
-/** Write result. Placeholder for now. */
-export interface AgentMcpWriteResult {
-  written: number;
+/** Write input for a per-agent MCP write. */
+export interface AgentMcpWriteInput {
+  /** Canonical named MCP server entries to write. */
+  readonly servers: readonly AgentMcpWriteServer[];
+  /** When true, compute metadata without writing. Default: false. */
+  readonly dryRun?: boolean;
 }
+
+/**
+ * Metadata-only write result for a per-agent MCP write.
+ *
+ * Safe metadata only — no raw config bytes, no original/written content.
+ * The `reason` field covers all failure modes:
+ * - `not-targetable`   — no applicable config location exists.
+ * - `parse-error`      — config file exists but could not be parsed.
+ * - `unsupported-format` — config format is not writable (e.g. YAML/TOML).
+ * - `unsupported-shape` — top-level config structure cannot accept MCP entries.
+ * - `no-change`        — write was a no-op (target state already matches).
+ */
+export interface AgentMcpWriteResult {
+  /** Number of server entries written. */
+  readonly written: number;
+  /** Whether the target file was modified. */
+  readonly changed: boolean;
+  /** Echo of the input dry-run flag. */
+  readonly dryRun: boolean;
+  /** Names of servers that were written. */
+  readonly serversWritten: readonly string[];
+  /** Resolved write locations in registry order. */
+  readonly targetPaths: readonly TargetPath[];
+  /** Optional resolved absolute path of the target file. */
+  readonly resolvedPath?: string;
+  /** Detected config format of the target file. */
+  readonly format?: McpLocationFormat;
+  /** Total byte delta of the write operation. */
+  readonly bytesChanged?: number;
+  /** Structured reason when write was not applicable. */
+  readonly reason?: WriteReason;
+}
+
+/**
+ * Subset of McpLocation fields surfaced in write results.
+ */
+export interface TargetPath {
+  readonly scope: McpLocationScope;
+  readonly base: PathBase;
+  readonly path: string;
+}
+
+/** Union of structured write failure reasons. */
+export type WriteReason =
+  | 'not-targetable'
+  | 'parse-error'
+  | 'unsupported-format'
+  | 'unsupported-shape'
+  | 'no-change';
 
 /**
  * Per-agent typed read handler. Each per-agent file can also export a
