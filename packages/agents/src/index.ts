@@ -105,9 +105,10 @@ export {
   readClaudeCodeMcpConfig,
 } from './claude-code.js';
 export type { ClaudeCodeMcpConfig } from './claude-code.js';
-
 export { parseOpenCodeMcpServers, readOpenCodeMcpConfig } from './opencode.js';
 export type { OpenCodeMcpConfig } from './opencode.js';
+export { opencodeWriteMcpConfig } from './opencode-write.js';
+export type { OpenCodeWritableMcpServer } from './opencode-write.js';
 
 export {
   parseGitHubCopilotCliMcpServers,
