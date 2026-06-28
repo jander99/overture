@@ -127,5 +127,23 @@ describe('agentRegistry', () => {
         expect(result).toHaveProperty('nonEmpty');
       }
     });
+
+    it('opencode.mcp.write is the real OpenCode writer (not the default not-implemented stub)', async () => {
+      const entry = agentRegistry.find((e) => e.id === 'opencode');
+      expect(entry).toBeDefined();
+      expect(typeof entry!.mcp.write).toBe('function');
+      // The real writer resolves with a result; the stub throws with the
+      // 'not implemented yet' message. Calling with an empty servers list
+      // is a no-change no-op that exercises the real writer path.
+      const ctx = {
+        homeDir: '',
+        configDir: '',
+        workspaceDir: '',
+        platform: 'linux' as const,
+      };
+      await expect(entry!.mcp.write(ctx, { servers: [] })).resolves.not.toThrow(
+        /not implemented yet/i,
+      );
+    });
   });
 });

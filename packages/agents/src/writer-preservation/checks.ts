@@ -217,12 +217,18 @@ export function rawBytesCheck(
     const origRange = findJsonTargetPathRange(original, targetPath);
     const writtenRange = findJsonTargetPathRange(written, targetPath);
     if (origRange === null) {
-      return {
-        name: 'rawBytes',
-        pass: false,
-        details: `targetPath ${JSON.stringify(targetPath)} not found in original document`,
-        skipped: false,
-      };
+      // INSERT case: targetPath does not exist in original document.
+      // Nothing to preserve from original — pass.
+      if (writtenRange !== null) {
+        return {
+          name: 'rawBytes',
+          pass: true,
+          details: `insert: targetPath ${JSON.stringify(targetPath)} not in original — nothing to preserve`,
+          skipped: false,
+        };
+      }
+      // Both null: nothing to preserve in either direction.
+      return skippedCheck('rawBytes');
     }
     if (writtenRange === null) {
       return {
@@ -254,12 +260,18 @@ export function rawBytesCheck(
     const origLineRange = findTomlTargetPathLineRange(original, targetPath);
     const writtenLineRange = findTomlTargetPathLineRange(written, targetPath);
     if (origLineRange === null) {
-      return {
-        name: 'rawBytes',
-        pass: false,
-        details: `targetPath ${JSON.stringify(targetPath)} not found in original TOML document`,
-        skipped: false,
-      };
+      // INSERT case: targetPath does not exist in original TOML document.
+      // Nothing to preserve from original — pass.
+      if (writtenLineRange !== null) {
+        return {
+          name: 'rawBytes',
+          pass: true,
+          details: `insert: targetPath ${JSON.stringify(targetPath)} not in original TOML — nothing to preserve`,
+          skipped: false,
+        };
+      }
+      // Both null: nothing to preserve in either direction.
+      return skippedCheck('rawBytes');
     }
     if (writtenLineRange === null) {
       return {

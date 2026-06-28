@@ -142,6 +142,20 @@ async function buildAgentInput(
   const readResult = await agent.mcp.read(ctx);
   const readState = readStateFor(readResult);
 
+  if (
+    agent.id === 'opencode' &&
+    readState === 'read-no-config' &&
+    readResult.location === undefined
+  ) {
+    return {
+      id: agent.id,
+      displayName: agent.displayName,
+      installed: false,
+      mcpSupport,
+      readState: 'not-installed',
+    };
+  }
+
   const resolvedPath = readResult.location?.resolvedPath;
   const reason = readResult.parseError;
 
