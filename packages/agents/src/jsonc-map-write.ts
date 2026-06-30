@@ -5,7 +5,10 @@
  * comments, formatting, BOM, and trailing newline. Does NOT use full
  * document parse + reserialize.
  */
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser/lib/esm/main.js';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 
 export interface JsoncMapEditOk {
   readonly kind: 'ok';
@@ -31,11 +34,13 @@ export interface EditJsoncMapInput {
   readonly patch: Readonly<Record<string, unknown>>;
 }
 
-export function editJsoncMap(
-  input: EditJsoncMapInput,
-): JsoncMapEditResult {
+export function editJsoncMap(input: EditJsoncMapInput): JsoncMapEditResult {
   if (input.targetPath.length === 0) {
-    return { kind: 'error', reason: 'unsupported-path', detail: 'empty target path' };
+    return {
+      kind: 'error',
+      reason: 'unsupported-path',
+      detail: 'empty target path',
+    };
   }
   const text = new TextDecoder('utf-8').decode(input.original);
   const errors: ParseError[] = [];
@@ -45,27 +50,50 @@ export function editJsoncMap(
   }) as unknown;
 
   if (errors.length > 0) {
-    return { kind: 'error', reason: 'parse-error', detail: String(errors[0]?.error) };
+    return {
+      kind: 'error',
+      reason: 'parse-error',
+      detail: String(errors[0]?.error),
+    };
   }
   if (parsed === undefined || parsed === null) {
-    return { kind: 'error', reason: 'unsupported-shape', detail: 'empty document' };
+    return {
+      kind: 'error',
+      reason: 'unsupported-shape',
+      detail: 'empty document',
+    };
   }
 
   // Walk to the target container. Returns undefined if any segment missing.
   let container: unknown = parsed;
   for (const seg of input.targetPath) {
-    if (container === null || typeof container !== 'object') return { kind: 'error', reason: 'unsupported-path', detail: seg };
+    if (container === null || typeof container !== 'object')
+      return { kind: 'error', reason: 'unsupported-path', detail: seg };
     container = (container as Record<string, unknown>)[seg];
   }
   if (container === undefined) {
-    return { kind: 'error', reason: 'unsupported-path', detail: 'target container not found' };
+    return {
+      kind: 'error',
+      reason: 'unsupported-path',
+      detail: 'target container not found',
+    };
   }
-  if (container === null || typeof container !== 'object' || Array.isArray(container)) {
-    return { kind: 'error', reason: 'unsupported-shape', detail: 'target is not a map' };
+  if (
+    container === null ||
+    typeof container !== 'object' ||
+    Array.isArray(container)
+  ) {
+    return {
+      kind: 'error',
+      reason: 'unsupported-shape',
+      detail: 'target is not a map',
+    };
   }
 
   const before = JSON.stringify(container);
-  const next: Record<string, unknown> = { ...(container as Record<string, unknown>) };
+  const next: Record<string, unknown> = {
+    ...(container as Record<string, unknown>),
+  };
   for (const [k, v] of Object.entries(input.patch)) {
     if (v === undefined) continue;
     next[k] = v;

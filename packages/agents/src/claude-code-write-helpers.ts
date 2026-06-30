@@ -20,7 +20,11 @@ import type { PathResolutionContext } from './types.js';
 export type ClaudeCodeWriteTarget =
   | { readonly kind: 'project'; readonly path: string }
   | { readonly kind: 'user-top'; readonly path: string }
-  | { readonly kind: 'user-projects'; readonly path: string; readonly workspaceKey: string }
+  | {
+      readonly kind: 'user-projects';
+      readonly path: string;
+      readonly workspaceKey: string;
+    }
   | { readonly kind: 'none'; readonly path: '' };
 
 async function exists(path: string): Promise<boolean> {
