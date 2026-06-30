@@ -11,6 +11,7 @@ import {
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import { writeGitHubCopilotCliMcpConfig } from './github-copilot-cli-write.js';
 import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
@@ -135,6 +136,7 @@ export const githubCopilotCli: AgentDefinition = defineAgent({
   mcp: {
     parseServers: parseGitHubCopilotCliMcpServers,
     normalize: asRegistryNormalizeHandler(normalizeGitHubCopilotCliMcpServers),
+    write: writeGitHubCopilotCliMcpConfig,
   },
 });
 
@@ -167,4 +169,47 @@ export async function readGitHubCopilotCliMcpConfig(
   return readAgentMcpConfig(githubCopilotCli, ctx) as Promise<
     AgentMcpReadResult<GitHubCopilotCliMcpConfig>
   >;
+}
+
+export async function pickGithubCopilotCliMcpConfigTarget(
+  ctx: PathResolutionContext,
+): Promise<{
+  readonly target: 'workspace' | 'user' | 'none';
+  readonly paths: readonly string[];
+}> {
+  const { access } = await import('node:fs/promises');
+  const home = typeof ctx.homeDir === 'string' ? ctx.homeDir : '';
+  const wsDir = typeof ctx.workspaceDir === 'string' ? ctx.workspaceDir : '';
+  const workspacePath = wsDir.length > 0 ? `${wsDir}/.github/mcp.json` : '';
+  const userPath = home.length > 0 ? `${home}/.copilot/mcp-config.json` : '';
+  const paths: string[] = [];
+  if (workspacePath.length > 0) paths.push(workspacePath);
+  if (userPath.length > 0) paths.push(userPath);
+
+  let workspaceExists = false;
+  let userExists = false;
+  if (workspacePath.length > 0) {
+    try {
+      await access(workspacePath);
+      workspaceExists = true;
+    } catch {
+      workspaceExists = false;
+    }
+  }
+  if (userPath.length > 0) {
+    try {
+      await access(userPath);
+      userExists = true;
+    } catch {
+      userExists = false;
+    }
+  }
+
+  if (workspaceExists) {
+    return { target: 'workspace', paths };
+  }
+  if (userExists) {
+    return { target: 'user', paths };
+  }
+  return { target: 'none', paths };
 }

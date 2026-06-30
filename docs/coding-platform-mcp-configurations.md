@@ -205,6 +205,9 @@ Notes:
   `${VAR:-default}` in supported fields.
 - Claude Code can import Claude Desktop MCP servers.
 - Claude Code can also run as an MCP server via `claude mcp serve`.
+- Local project-private MCP servers may also nest under
+  `projects[<workspaceDir>].mcpServers` inside `~/.claude.json`. E3 supports
+  detecting this section without creating new entries.
 
 ### OpenCode
 
@@ -302,6 +305,10 @@ Caveat: repository files such as `.github/mcp.json` appear in GitHub/Copilot MCP
 workflows and were present in this repository, but current official Copilot CLI
 docs identify `~/.copilot/mcp-config.json` as the user config path. Verify the
 installed CLI before relying on workspace behavior.
+
+- Workspace-local `.github/mcp.json` is supported (CLI reads from it; cloud
+  agent/code-review use web UI instead). Workspace file wins precedence over user
+  `~/.copilot/mcp-config.json`.
 
 ### OpenAI Codex
 

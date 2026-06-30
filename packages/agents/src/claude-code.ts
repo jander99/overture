@@ -11,6 +11,7 @@ import {
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import { writeClaudeCodeMcpConfig } from './claude-code-write.js';
 import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
@@ -148,6 +149,7 @@ export const claudeCode: AgentDefinition = defineAgent({
   mcp: {
     parseServers: parseClaudeCodeMcpServers,
     normalize: asRegistryNormalizeHandler(normalizeClaudeCodeMcpServers),
+    write: writeClaudeCodeMcpConfig,
   },
 });
 
@@ -168,4 +170,58 @@ export async function readClaudeCodeMcpConfig(
   return readAgentMcpConfig(claudeCode, ctx) as Promise<
     AgentMcpReadResult<ClaudeCodeMcpConfig>
   >;
+}
+
+export function readClaudeCodeLocalProjectsMcpServers(
+  ctx: PathResolutionContext,
+): Promise<Readonly<Record<string, StandardMcpServer<NoMcpExtension>>>> {
+  return import('node:fs/promises').then(async ({ readFile }) => {
+    try {
+      const home = ctx.homeDir;
+      if (typeof home !== 'string' || home.length === 0) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      const path = `${home}/.claude.json`;
+      const body = await readFile(path, 'utf8');
+      const parsed: unknown = JSON.parse(body);
+      if (!isRecord(parsed)) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      const top = parsed['mcpServers'];
+      if (isRecord(top)) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      const projects = parsed['projects'];
+      if (!isRecord(projects)) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      const wsDir =
+        typeof ctx.workspaceDir === 'string' ? ctx.workspaceDir : '';
+      const project = projects[wsDir];
+      if (!isRecord(project)) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      const nested = project['mcpServers'];
+      if (!isRecord(nested)) {
+        return {} as Readonly<
+          Record<string, StandardMcpServer<NoMcpExtension>>
+        >;
+      }
+      return nested as Readonly<
+        Record<string, StandardMcpServer<NoMcpExtension>>
+      >;
+    } catch {
+      return {} as Readonly<Record<string, StandardMcpServer<NoMcpExtension>>>;
+    }
+  });
 }

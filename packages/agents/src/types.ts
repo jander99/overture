@@ -131,6 +131,12 @@ export interface AgentMcpWriteInput {
   readonly servers: readonly AgentMcpWriteServer[];
   /** When true, compute metadata without writing. Default: false. */
   readonly dryRun?: boolean;
+  /**
+   * Optional path resolution context. Self-contained writers (E3 era)
+   * consume this directly so the caller can pass a single object.
+   * Writers that take ctx as a separate argument ignore it.
+   */
+  readonly pathContext?: PathResolutionContext;
 }
 
 /**
