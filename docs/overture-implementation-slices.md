@@ -331,6 +331,10 @@ Add writers for the next highest-value local agents.
 Expected result: each writer passes the same preservation harness and produces
 predictable dry-run output.
 
+**Status: E3 — Claude Code and GitHub Copilot CLI writers wired (writers
+return `not-targetable` / `parse-error` stub result while byte-splice TDD grows
+in follow-up).**
+
 ### E4. Remaining writers by format family
 
 Add the rest in batches grouped by native config format:

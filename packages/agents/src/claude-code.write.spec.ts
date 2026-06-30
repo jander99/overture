@@ -17,6 +17,13 @@ import type {
   PathResolutionContext,
 } from './types.js';
 
+const EMPTY_CTX = {
+  homeDir: '',
+  configDir: '',
+  workspaceDir: '',
+  platform: 'linux' as const,
+} satisfies PathResolutionContext;
+
 let scratchDir = '';
 
 beforeEach(async () => {
@@ -52,7 +59,10 @@ function makeInput(
 
 describe('writeClaudeCodeMcpConfig', () => {
   it('returns not-targetable when no applicable target exists', async () => {
-    const result = await writeClaudeCodeMcpConfig(makeInput(makeCtx()));
+    const result = await writeClaudeCodeMcpConfig(
+      makeCtx(),
+      makeInput(undefined),
+    );
 
     expect(result.written).toBe(0);
     expect(result.changed).toBe(false);
@@ -63,7 +73,10 @@ describe('writeClaudeCodeMcpConfig', () => {
   });
 
   it('returns not-targetable when pathContext is omitted', async () => {
-    const result = await writeClaudeCodeMcpConfig(makeInput(undefined));
+    const result = await writeClaudeCodeMcpConfig(
+      EMPTY_CTX,
+      makeInput(undefined),
+    );
 
     expect(result.reason).toBe('not-targetable');
     expect(result.targetPaths).toEqual([]);
@@ -71,7 +84,8 @@ describe('writeClaudeCodeMcpConfig', () => {
 
   it('respects dryRun when no target', async () => {
     const result = await writeClaudeCodeMcpConfig(
-      makeInput(makeCtx(), true),
+      makeCtx(),
+      makeInput(undefined, true),
     );
 
     expect(result.dryRun).toBe(true);
@@ -81,7 +95,8 @@ describe('writeClaudeCodeMcpConfig', () => {
 
   it('returns metadata (no raw bytes) regardless of reason', async () => {
     const result: AgentMcpWriteResult = await writeClaudeCodeMcpConfig(
-      makeInput(makeCtx()),
+      makeCtx(),
+      makeInput(undefined),
     );
 
     const forbidden = [

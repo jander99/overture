@@ -11,6 +11,14 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeGitHubCopilotCliMcpConfig } from './github-copilot-cli-write.js';
+import type { PathResolutionContext } from './types.js';
+
+const EMPTY_CTX = {
+  homeDir: '',
+  configDir: '',
+  workspaceDir: '',
+  platform: 'linux' as const,
+} satisfies PathResolutionContext;
 
 async function tmp(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'copilot-write-'));
@@ -18,7 +26,7 @@ async function tmp(): Promise<string> {
 
 describe('writeGitHubCopilotCliMcpConfig', () => {
   it('returns not-targetable when no pathContext', async () => {
-    const res = await writeGitHubCopilotCliMcpConfig({
+    const res = await writeGitHubCopilotCliMcpConfig(EMPTY_CTX, {
       servers: [],
     });
     expect(res.reason).toBe('not-targetable');
@@ -29,9 +37,14 @@ describe('writeGitHubCopilotCliMcpConfig', () => {
   it('returns not-targetable when neither workspace nor user config exists', async () => {
     const home = await tmp();
     try {
-      const res = await writeGitHubCopilotCliMcpConfig({
+      const ctx = {
+        homeDir: home,
+        configDir: home,
+        workspaceDir: '/nonexistent',
+        platform: 'linux' as const,
+      };
+      const res = await writeGitHubCopilotCliMcpConfig(ctx, {
         servers: [],
-        pathContext: { homeDir: home, configDir: home, workspaceDir: '/nonexistent', platform: 'linux' },
       });
       expect(res.reason).toBe('not-targetable');
     } finally {
@@ -47,15 +60,24 @@ describe('writeGitHubCopilotCliMcpConfig', () => {
       await mkdir(copilotDir, { recursive: true });
       const userConfig = join(copilotDir, 'mcp-config.json');
       await writeFile(userConfig, '{"mcpServers":{}}');
-      const res = await writeGitHubCopilotCliMcpConfig({
+      const ctx = {
+        homeDir: home,
+        configDir: home,
+        workspaceDir: ws,
+        platform: 'linux' as const,
+      };
+      const res = await writeGitHubCopilotCliMcpConfig(ctx, {
         servers: [],
-        pathContext: { homeDir: home, configDir: home, workspaceDir: ws, platform: 'linux' },
         dryRun: true,
       });
       expect(res.dryRun).toBe(true);
       // No raw bytes field; only metadata.
-      expect((res as unknown as { original?: unknown }).original).toBeUndefined();
-      expect((res as unknown as { written_bytes?: unknown }).written_bytes).toBeUndefined();
+      expect(
+        (res as unknown as { original?: unknown }).original,
+      ).toBeUndefined();
+      expect(
+        (res as unknown as { written_bytes?: unknown }).written_bytes,
+      ).toBeUndefined();
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });
