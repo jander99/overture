@@ -11,13 +11,18 @@
  * confirming the target exists so the wiring is exercised end-to-end
  * without performing any destructive IO.
  */
-import type { AgentMcpWriteInput, AgentMcpWriteResult } from './types.js';
+import type {
+  AgentMcpWriteInput,
+  AgentMcpWriteResult,
+  PathResolutionContext,
+} from './types.js';
 import {
   pickCopilotWriteTarget,
   targetPathFor,
 } from './github-copilot-cli-write-helpers.js';
 
 export async function writeGitHubCopilotCliMcpConfig(
+  _ctx: PathResolutionContext,
   input: AgentMcpWriteInput,
 ): Promise<AgentMcpWriteResult> {
   const dryRun = input.dryRun ?? false;

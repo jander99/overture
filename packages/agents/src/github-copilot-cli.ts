@@ -11,6 +11,7 @@ import {
 import { parseJsoncMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
 import { defineAgent } from './define-agent.js';
+import { writeGitHubCopilotCliMcpConfig } from './github-copilot-cli-write.js';
 import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentDefinition,
@@ -135,6 +136,7 @@ export const githubCopilotCli: AgentDefinition = defineAgent({
   mcp: {
     parseServers: parseGitHubCopilotCliMcpServers,
     normalize: asRegistryNormalizeHandler(normalizeGitHubCopilotCliMcpServers),
+    write: writeGitHubCopilotCliMcpConfig,
   },
 });
 

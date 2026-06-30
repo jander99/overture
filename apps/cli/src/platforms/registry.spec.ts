@@ -145,5 +145,35 @@ describe('agentRegistry', () => {
         /not implemented yet/i,
       );
     });
+
+    it('claude-code.mcp.write is the real writer (not the default not-implemented stub)', async () => {
+      const entry = agentRegistry.find((e) => e.id === 'claude-code');
+      expect(entry).toBeDefined();
+      expect(typeof entry!.mcp.write).toBe('function');
+      const ctx = {
+        homeDir: '',
+        configDir: '',
+        workspaceDir: '',
+        platform: 'linux' as const,
+      };
+      await expect(entry!.mcp.write(ctx, { servers: [] })).resolves.not.toThrow(
+        /not implemented yet/i,
+      );
+    });
+
+    it('github-copilot-cli.mcp.write is the real writer (not the default not-implemented stub)', async () => {
+      const entry = agentRegistry.find((e) => e.id === 'github-copilot-cli');
+      expect(entry).toBeDefined();
+      expect(typeof entry!.mcp.write).toBe('function');
+      const ctx = {
+        homeDir: '',
+        configDir: '',
+        workspaceDir: '',
+        platform: 'linux' as const,
+      };
+      await expect(entry!.mcp.write(ctx, { servers: [] })).resolves.not.toThrow(
+        /not implemented yet/i,
+      );
+    });
   });
 });

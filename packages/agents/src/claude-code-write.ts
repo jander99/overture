@@ -14,6 +14,7 @@
 import type {
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  PathResolutionContext,
   TargetPath,
 } from './types.js';
 import {
@@ -28,6 +29,7 @@ function targetPathFor(
 }
 
 export async function writeClaudeCodeMcpConfig(
+  _ctx: PathResolutionContext,
   input: AgentMcpWriteInput,
 ): Promise<AgentMcpWriteResult> {
   const dryRun = input.dryRun ?? false;
