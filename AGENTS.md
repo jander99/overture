@@ -2,6 +2,28 @@
 
 Compact guide for AI agents working in the `overture` repository.
 
+## Execution policy (read first)
+
+`overture bootstrap` (no flag) writes `overture.jsonc` to the user's config
+dir. The agent `mcp.write` functions (opencode, claude-code,
+github-copilot-cli) are wired into the registry but currently unreachable
+from the CLI; do not invoke them programmatically without explicit user
+authorization and a test-only fixture.
+
+- **Default to `--dry-run`.** For `overture bootstrap` and any future
+  inspect/apply command, always pass `--dry-run` (and `--json` if you want
+  machine-readable output). Read-only commands (`detect`, `scan`,
+  `config show`) are safe and need no flag.
+- **Never run a write path without `--dry-run` unless the user explicitly
+  asks.** A terse "go ahead", "do it", or "yes, run it" is enough
+  authorization. Absent that, do not execute. Silence is not consent.
+- **Even with explicit approval, double-check before invoking.** Re-read
+  the exact command, confirm the write target and what it will create or
+  modify, and surface that in plain language before pressing enter.
+- If you are unsure whether a command writes, audit the code first (grep
+  for `writeFile`, `rename`, `child_process`, etc.) and stop until you
+  can answer with confidence.
+
 ## What this repo is
 
 Yarn 4 (Corepack) + Nx 22 monorepo. The shipped artifact today is the
