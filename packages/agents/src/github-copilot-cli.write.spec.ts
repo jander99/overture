@@ -10,7 +10,10 @@ import { describe, it, expect } from 'vitest';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeGitHubCopilotCliMcpConfig, toGitHubCopilotCliMcpServer } from './github-copilot-cli-write.js';
+import {
+  writeGitHubCopilotCliMcpConfig,
+  toGitHubCopilotCliMcpServer,
+} from './github-copilot-cli-write.js';
 import type { PathResolutionContext } from './types.js';
 import type { OvertureMcpServer } from '@overture/config';
 import {
@@ -107,7 +110,11 @@ describe('toGitHubCopilotCliMcpServer', () => {
       throw new Error('Expected local server');
     }
     expect(native.command).toBe('npx');
-    expect(native.args).toEqual(['-y', '@modelcontextprotocol/server-filesystem', '/tmp']);
+    expect(native.args).toEqual([
+      '-y',
+      '@modelcontextprotocol/server-filesystem',
+      '/tmp',
+    ]);
     expect(native.env).toEqual({ NODE_ENV: 'production' });
 
     const parsed = normalizeGitHubCopilotCliMcpServers({
@@ -198,9 +205,14 @@ describe('toGitHubCopilotCliMcpServer', () => {
     expect(result.command).toBe('npx');
     expect(result.args).toEqual(['-y', 'server']);
     expect(result.env).toEqual({ NEW_ENV: 'value' });
-    expect((result as Record<string, unknown>)['tools']).toEqual(['read', 'write']);
+    expect((result as Record<string, unknown>)['tools']).toEqual([
+      'read',
+      'write',
+    ]);
     expect((result as Record<string, unknown>)['cwd']).toBe('/project');
-    expect((result as Record<string, unknown>)['unknownField']).toBe('preserved');
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
   });
 
   it('extension preservation: existing remote entry keeps tools and unknown fields', () => {
@@ -226,6 +238,8 @@ describe('toGitHubCopilotCliMcpServer', () => {
     expect(result.url).toBe('https://new.example.com');
     expect(result.headers).toEqual({ Authorization: 'Bearer new' });
     expect((result as Record<string, unknown>)['tools']).toEqual(['read']);
-    expect((result as Record<string, unknown>)['unknownField']).toBe('preserved');
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
   });
 });

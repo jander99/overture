@@ -42,11 +42,9 @@ interface PlannedEdit {
   readonly replacement: string;
 }
 
-function findChildProperty(
-  parent: Node,
-  key: string,
-): Node | undefined {
-  if (parent.type !== 'object' || parent.children === undefined) return undefined;
+function findChildProperty(parent: Node, key: string): Node | undefined {
+  if (parent.type !== 'object' || parent.children === undefined)
+    return undefined;
   for (const prop of parent.children) {
     if (prop.type !== 'property' || prop.children === undefined) continue;
     const keyNode = prop.children[0];
@@ -67,14 +65,12 @@ function findPropertyByteRange(
   return { start, end };
 }
 
-function applyEdits(
-  text: string,
-  edits: readonly PlannedEdit[],
-): string {
+function applyEdits(text: string, edits: readonly PlannedEdit[]): string {
   const sorted = [...edits].sort((a, b) => b.start - a.start);
   let result = text;
   for (const edit of sorted) {
-    result = result.slice(0, edit.start) + edit.replacement + result.slice(edit.end);
+    result =
+      result.slice(0, edit.start) + edit.replacement + result.slice(edit.end);
   }
   return result;
 }
@@ -85,7 +81,8 @@ function walkToNode(
 ): Node | undefined {
   let current: Node = root;
   for (const seg of targetPath) {
-    if (current.type !== 'object' || current.children === undefined) return undefined;
+    if (current.type !== 'object' || current.children === undefined)
+      return undefined;
     const prop = findChildProperty(current, seg);
     if (prop === undefined || prop.children === undefined) return undefined;
     const valueNode = prop.children[1];
@@ -170,10 +167,18 @@ export function editJsoncMap(input: EditJsoncMapInput): JsoncMapEditResult {
     disallowComments: false,
   });
   if (parseErrors.length > 0 || treeRoot === undefined) {
-    return { kind: 'error', reason: 'parse-error', detail: String(parseErrors[0]?.error) };
+    return {
+      kind: 'error',
+      reason: 'parse-error',
+      detail: String(parseErrors[0]?.error),
+    };
   }
   if (treeRoot.type !== 'object') {
-    return { kind: 'error', reason: 'unsupported-shape', detail: 'root is not an object' };
+    return {
+      kind: 'error',
+      reason: 'unsupported-shape',
+      detail: 'root is not an object',
+    };
   }
 
   const containerNode = walkToNode(treeRoot, input.targetPath);
@@ -203,7 +208,11 @@ export function editJsoncMap(input: EditJsoncMapInput): JsoncMapEditResult {
       };
     }
     const range = findPropertyByteRange(text, prop);
-    edits.push({ start: range.start, end: range.end, replacement: JSON.stringify(newValue) });
+    edits.push({
+      start: range.start,
+      end: range.end,
+      replacement: JSON.stringify(newValue),
+    });
   }
 
   if (edits.length === 0) {
@@ -211,5 +220,9 @@ export function editJsoncMap(input: EditJsoncMapInput): JsoncMapEditResult {
   }
 
   const spliced = applyEdits(text, edits);
-  return { kind: 'ok', nextBytes: new TextEncoder().encode(spliced), changed: true };
+  return {
+    kind: 'ok',
+    nextBytes: new TextEncoder().encode(spliced),
+    changed: true,
+  };
 }

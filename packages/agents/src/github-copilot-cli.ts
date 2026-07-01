@@ -178,4 +178,3 @@ export async function readGitHubCopilotCliMcpConfig(
     AgentMcpReadResult<GitHubCopilotCliMcpConfig>
   >;
 }
-

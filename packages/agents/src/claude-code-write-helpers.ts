@@ -80,7 +80,11 @@ export async function pickClaudeCodeTarget(
           if (isRecord(project)) {
             const nested = project['mcpServers'];
             if (isRecord(nested)) {
-              return { kind: 'user-projects', path: userPath, workspaceKey: wsKey };
+              return {
+                kind: 'user-projects',
+                path: userPath,
+                workspaceKey: wsKey,
+              };
             }
           }
         }

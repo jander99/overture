@@ -10,7 +10,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeClaudeCodeMcpConfig, toClaudeCodeMcpServer } from './claude-code-write.js';
+import {
+  writeClaudeCodeMcpConfig,
+  toClaudeCodeMcpServer,
+} from './claude-code-write.js';
 import type {
   AgentMcpWriteInput,
   AgentMcpWriteResult,
@@ -143,7 +146,11 @@ describe('toClaudeCodeMcpServer', () => {
       throw new Error('Expected stdio server');
     }
     expect(native.command).toBe('npx');
-    expect(native.args).toEqual(['-y', '@modelcontextprotocol/server-filesystem', '/tmp']);
+    expect(native.args).toEqual([
+      '-y',
+      '@modelcontextprotocol/server-filesystem',
+      '/tmp',
+    ]);
     expect(native.env).toEqual({ NODE_ENV: 'production' });
 
     // Simulate parse-back via normalizeClaudeCodeMcpServers
@@ -234,7 +241,9 @@ describe('toClaudeCodeMcpServer', () => {
     expect(result.command).toBe('npx');
     expect(result.args).toEqual(['-y', 'server']);
     expect(result.env).toEqual({ NEW_ENV: 'value' });
-    expect((result as Record<string, unknown>)['unknownField']).toBe('preserved');
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
   });
 
   it('extension preservation: existing remote entry keeps unknown fields', () => {
@@ -258,6 +267,8 @@ describe('toClaudeCodeMcpServer', () => {
     }
     expect(result.url).toBe('https://new.example.com');
     expect(result.headers).toEqual({ Authorization: 'Bearer new' });
-    expect((result as Record<string, unknown>)['unknownField']).toBe('preserved');
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
   });
 });
