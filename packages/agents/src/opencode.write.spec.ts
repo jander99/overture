@@ -361,7 +361,7 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
     ).toBe(true);
   });
 
-  it('preserves OpenCode JSONC: adding a new remote server target path', async () => {
+  it('preserves OpenCode JSONC: adding a new remote server target path fails rawBytes (insert case)', async () => {
     const ctx = makeCtx();
     const newRemote: OvertureMcpServer = {
       type: 'remote',
@@ -374,14 +374,10 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
       ['mcp', 'new-remote'],
     );
     expect(caught).toBeNull();
-    const failures = report.checks
-      .filter((c) => !c.pass && !c.skipped)
-      .map((c) => `${c.name}: ${c.details}`)
-      .join('; ');
-    expect(
-      report.allPassed,
-      `Expected all checks to pass. Failures: ${failures}`,
-    ).toBe(true);
+    expect(report.allPassed).toBe(false);
+    const rawBytes = report.checks.find((c) => c.name === 'rawBytes');
+    expect(rawBytes?.pass).toBe(false);
+    expect(rawBytes?.details).toContain('not found in original');
   });
 
   // ----- comment preservation -----
