@@ -45,7 +45,7 @@ describe('editJsoncMap', () => {
     }
   });
 
-  it('returns ok:changed=true when patch differs', () => {
+  it('returns ok:changed=true when patch differs and nextBytes differ', () => {
     const original = '{"mcpServers":{"alpha":{"command":"echo"}}}';
     const res = editJsoncMap({
       original: new TextEncoder().encode(original),
@@ -55,6 +55,22 @@ describe('editJsoncMap', () => {
     expect(res.kind).toBe('ok');
     if (res.kind === 'ok') {
       expect(res.changed).toBe(true);
+      // The key contract: changed=true means bytes actually differ
+      expect(new TextDecoder().decode(res.nextBytes)).not.toBe(original);
+    }
+  });
+
+  it('returns unsupported-path when patch key is missing from container', () => {
+    const original = '{"mcpServers":{"alpha":{"command":"echo"}}}';
+    const res = editJsoncMap({
+      original: new TextEncoder().encode(original),
+      targetPath: ['mcpServers'],
+      // 'beta' does not exist in mcpServers — update-only scope
+      patch: { beta: { command: 'ls' } },
+    });
+    expect(res.kind).toBe('error');
+    if (res.kind === 'error') {
+      expect(res.reason).toBe('unsupported-path');
     }
   });
 

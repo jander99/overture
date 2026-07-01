@@ -331,9 +331,20 @@ Add writers for the next highest-value local agents.
 Expected result: each writer passes the same preservation harness and produces
 predictable dry-run output.
 
-**Status: E3 — Claude Code and GitHub Copilot CLI writers wired (writers
-return `not-targetable` / `parse-error` stub result while byte-splice TDD grows
-in follow-up).**
+**Status: E3 — Claude Code and GitHub Copilot CLI writer scaffolding landed:
+real canonical-to-native conversion helpers (`toClaudeCodeMcpServer`,
+`toGitHubCopilotCliMcpServer`) with inverse-normalization round-trip tests;
+registry metadata aligned to `format: 'jsonc'` for Claude (user + project) and
+Copilot (user + workspace) so preservation checks exercise the right surface;
+Copilot workspace `.github/mcp.json` added to `mcpLocations` with workspace
+precedence over the user-level file; Claude picker decision table
+(project `.mcp.json` → user-top → user-projects[workspaceDir] → none) and
+legacy `pickGithubCopilotCliMcpConfigTarget` removed in favor of the
+writer-helper shape. The writers themselves still return
+`reason: 'parse-error'` after target confirmation; the real byte-splice TDD
+(`editJsoncMap`-backed splice of `mcpServers.<server>` with extension
+preservation on existing entries) is deferred to a follow-up slice. Apply
+remains future work.**
 
 ### E4. Remaining writers by format family
 

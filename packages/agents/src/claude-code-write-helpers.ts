@@ -7,14 +7,16 @@
  *   3. `<homeDir>/.claude.json` `projects[<workspaceDir>].mcpServers`
  *
  * The picker is conservative: it returns a descriptor that records the
- * path it found and the section the writer must walk to. It never reads
- * the file itself; the writer is responsible for the byte-level splice.
+ * path it found and the section the writer must walk to. It reads the
+ * user file to determine whether top-level mcpServers or nested
+ * projects[workspaceDir].mcpServers is present.
  *
  * No creation. If no applicable target exists, the picker returns
  * `{ kind: 'none', path: '' }` so the writer can surface
  * `reason: 'not-targetable'`.
  */
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
+import { isRecord } from './normalize-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
 export type ClaudeCodeWriteTarget =
@@ -36,6 +38,13 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+/**
+ * Decision table for Claude Code write target:
+ * - project `.mcp.json` exists → project
+ * - else `~/.claude.json` with top-level `mcpServers` → user-top
+ * - else `~/.claude.json.projects[workspaceDir].mcpServers` exists → user-projects
+ * - else none
+ */
 export async function pickClaudeCodeTarget(
   ctx: PathResolutionContext,
 ): Promise<ClaudeCodeWriteTarget> {
@@ -49,12 +58,41 @@ export async function pickClaudeCodeTarget(
     return { kind: 'project', path: projectPath };
   }
 
-  // Then ~/.claude.json top-level mcpServers.
+  // Then check user file for top-level or nested mcpServers.
   if (userPath.length > 0 && (await exists(userPath))) {
-    // We keep the picker conservative: only flag 'user-top' here when
-    // we can confirm top-level mcpServers exists. Otherwise defer to
-    // the writer to walk projects[ctx.workspaceDir].
-    return { kind: 'user-top', path: userPath };
+    try {
+      const body = await readFile(userPath, 'utf8');
+      const parsed: unknown = JSON.parse(body);
+      if (!isRecord(parsed)) {
+        return { kind: 'none', path: '' };
+      }
+      const top = parsed['mcpServers'];
+      if (isRecord(top)) {
+        // Top-level mcpServers exists → user-top
+        return { kind: 'user-top', path: userPath };
+      }
+      // Check nested projects[workspaceDir].mcpServers
+      const wsKey = wsDir.length > 0 ? wsDir : '';
+      if (wsKey.length > 0) {
+        const projects = parsed['projects'];
+        if (isRecord(projects)) {
+          const project = projects[wsKey];
+          if (isRecord(project)) {
+            const nested = project['mcpServers'];
+            if (isRecord(nested)) {
+              return {
+                kind: 'user-projects',
+                path: userPath,
+                workspaceKey: wsKey,
+              };
+            }
+          }
+        }
+      }
+    } catch {
+      // File read/parse failed → not targetable
+      return { kind: 'none', path: '' };
+    }
   }
 
   return { kind: 'none', path: '' };

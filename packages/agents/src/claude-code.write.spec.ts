@@ -10,12 +10,21 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeClaudeCodeMcpConfig } from './claude-code-write.js';
+import {
+  writeClaudeCodeMcpConfig,
+  toClaudeCodeMcpServer,
+} from './claude-code-write.js';
 import type {
   AgentMcpWriteInput,
   AgentMcpWriteResult,
   PathResolutionContext,
 } from './types.js';
+import type { OvertureMcpServer } from '@overture/config';
+import {
+  normalizeClaudeCodeMcpServers,
+  type ClaudeCodeMcpConfig,
+} from './claude-code.js';
+import type { AgentMcpReadResult } from './types.js';
 
 const EMPTY_CTX = {
   homeDir: '',
@@ -118,5 +127,148 @@ describe('writeClaudeCodeMcpConfig', () => {
     const rawPattern = /original|writtenBytes|raw|contents/i;
     const rawKeys = keys.filter((k) => rawPattern.test(k));
     expect(rawKeys).toHaveLength(0);
+  });
+});
+
+describe('toClaudeCodeMcpServer', () => {
+  it('canonical stdio round-trips: stdio → native → parse-back → equal', () => {
+    const canonical: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
+      env: { NODE_ENV: 'production' },
+    };
+
+    const native = toClaudeCodeMcpServer(canonical);
+
+    expect(native.type).toBe('stdio');
+    if (native.type !== 'stdio') {
+      throw new Error('Expected stdio server');
+    }
+    expect(native.command).toBe('npx');
+    expect(native.args).toEqual([
+      '-y',
+      '@modelcontextprotocol/server-filesystem',
+      '/tmp',
+    ]);
+    expect(native.env).toEqual({ NODE_ENV: 'production' });
+
+    // Simulate parse-back via normalizeClaudeCodeMcpServers
+    const parsed = normalizeClaudeCodeMcpServers({
+      config: { mcpServers: { srv: native } } as ClaudeCodeMcpConfig,
+      nonEmpty: true,
+    } satisfies AgentMcpReadResult<ClaudeCodeMcpConfig>);
+
+    expect(parsed['srv']).toEqual({
+      state: 'normalized',
+      server: canonical,
+    });
+  });
+
+  it('canonical remote round-trips: remote → native → parse-back → equal', () => {
+    const canonical: OvertureMcpServer = {
+      type: 'remote',
+      url: 'https://mcp.example.com/bridge',
+      headers: { Authorization: 'Bearer token' },
+    };
+
+    const native = toClaudeCodeMcpServer(canonical);
+
+    expect(native.type).toBe('http');
+    if (native.type !== 'http') {
+      throw new Error('Expected http server');
+    }
+    expect(native.url).toBe('https://mcp.example.com/bridge');
+    expect(native.headers).toEqual({ Authorization: 'Bearer token' });
+
+    // Simulate parse-back
+    const parsed = normalizeClaudeCodeMcpServers({
+      config: { mcpServers: { srv: native } } as ClaudeCodeMcpConfig,
+      nonEmpty: true,
+    } satisfies AgentMcpReadResult<ClaudeCodeMcpConfig>);
+
+    expect(parsed['srv']).toEqual({
+      state: 'normalized',
+      server: canonical,
+    });
+  });
+
+  it('canonical remote without headers round-trips correctly', () => {
+    const canonical: OvertureMcpServer = {
+      type: 'remote',
+      url: 'https://mcp.example.com/bridge',
+    };
+
+    const native = toClaudeCodeMcpServer(canonical);
+
+    expect(native.type).toBe('http');
+    if (native.type !== 'http') {
+      throw new Error('Expected http server');
+    }
+    expect(native.url).toBe('https://mcp.example.com/bridge');
+    expect(Object.hasOwn(native, 'headers')).toBe(false);
+
+    const parsed = normalizeClaudeCodeMcpServers({
+      config: { mcpServers: { srv: native } } as ClaudeCodeMcpConfig,
+      nonEmpty: true,
+    } satisfies AgentMcpReadResult<ClaudeCodeMcpConfig>);
+
+    expect(parsed['srv']).toEqual({
+      state: 'normalized',
+      server: canonical,
+    });
+  });
+
+  it('extension preservation: existing stdio entry keeps unknown fields', () => {
+    const canonical: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', 'server'],
+      env: { NEW_ENV: 'value' },
+    };
+    const existing = {
+      type: 'stdio' as const,
+      command: 'old-command',
+      unknownField: 'preserved',
+    };
+
+    const result = toClaudeCodeMcpServer(canonical, existing);
+
+    expect(result.type).toBe('stdio');
+    if (result.type !== 'stdio') {
+      throw new Error('Expected stdio server');
+    }
+    expect(result.command).toBe('npx');
+    expect(result.args).toEqual(['-y', 'server']);
+    expect(result.env).toEqual({ NEW_ENV: 'value' });
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
+  });
+
+  it('extension preservation: existing remote entry keeps unknown fields', () => {
+    const canonical: OvertureMcpServer = {
+      type: 'remote',
+      url: 'https://new.example.com',
+      headers: { Authorization: 'Bearer new' },
+    };
+    const existing = {
+      type: 'http' as const,
+      url: 'https://old.example.com',
+      headers: { Authorization: 'Bearer old' },
+      unknownField: 'preserved',
+    };
+
+    const result = toClaudeCodeMcpServer(canonical, existing);
+
+    expect(result.type).toBe('http');
+    if (result.type !== 'http') {
+      throw new Error('Expected http server');
+    }
+    expect(result.url).toBe('https://new.example.com');
+    expect(result.headers).toEqual({ Authorization: 'Bearer new' });
+    expect((result as Record<string, unknown>)['unknownField']).toBe(
+      'preserved',
+    );
   });
 });
