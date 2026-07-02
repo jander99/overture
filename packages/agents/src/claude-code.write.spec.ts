@@ -343,18 +343,8 @@ const CLAUDE_CODE_USER_PROJECTS_FIXTURE = `
  */
 describe('claudeCode.mcp.write (E3 byte-splice)', () => {
   // ----- helpers -----
-  function makeInput(
-    servers: readonly { name: string; server: OvertureMcpServer }[] = [],
-    pathCtx?: PathResolutionContext,
-    dryRun?: boolean,
-  ): AgentMcpWriteInput {
-    return {
-      servers,
-      ...(dryRun !== undefined ? { dryRun } : {}),
-      ...(pathCtx !== undefined ? { pathContext: pathCtx } : {}),
-    };
-  }
 
+  /**
   /**
    * writeAndHarness for Claude Code — mirrors opencode writeAndHarness pattern.
    *
