@@ -9,7 +9,7 @@
  *
  * The real writer implementation lands in subsequent todos.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -300,37 +300,53 @@ async function writeAndHarness(
   caught: unknown;
   report: ReturnType<typeof runPreservationChecks>;
   written: string;
+  rewritten: string;
 }> {
-  let caught: unknown = null;
+  const fixturePath = join(ctx.configDir, 'opencode', 'opencode.jsonc');
+
+  // ----- First apply -----
+  let firstCaught: unknown = null;
   try {
     await opencode.mcp.write(ctx, { servers });
   } catch (err) {
-    caught = err;
+    firstCaught = err;
   }
 
-  // Read whatever is on disk (stub leaves the seeded fixture untouched)
-  const fixturePath = join(ctx.configDir, 'opencode', 'opencode.jsonc');
-  let writtenBytes = OPENCODE_FIXTURE;
+  let firstWritten = OPENCODE_FIXTURE;
   try {
-    writtenBytes = await readFile(fixturePath, 'utf-8');
+    firstWritten = await readFile(fixturePath, 'utf-8');
   } catch {
-    // stub rejected before any IO
+    // stub rejected before any IO; bytes on disk are the seeded fixture
+  }
+
+  // ----- Second apply: real second invocation for idempotency proof -----
+  let secondCaught: unknown = null;
+  try {
+    await opencode.mcp.write(ctx, { servers });
+  } catch (err) {
+    secondCaught = err;
+  }
+
+  let secondWritten = firstWritten;
+  try {
+    secondWritten = await readFile(fixturePath, 'utf-8');
+  } catch {
+    // stub rejected before any IO during the second apply
   }
 
   const original = OPENCODE_FIXTURE;
-  // For idempotency: rewritten = written (second apply of a no-op writer
-  // produces the same bytes; a broken writer would produce different bytes)
-  const rewritten = writtenBytes;
-
   const report = runPreservationChecks({
     format: 'jsonc',
     original,
-    written: writtenBytes,
-    rewritten,
+    written: firstWritten,
+    rewritten: secondWritten,
     targetPath,
   });
 
-  return { caught, report, written: writtenBytes };
+  // Surface first error if both threw; otherwise surface whichever threw.
+  const caught = firstCaught ?? secondCaught;
+
+  return { caught, report, written: firstWritten, rewritten: secondWritten };
 }
 
 describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
@@ -469,25 +485,57 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
         '/home/user/projects',
       ],
     };
-    // First apply
-    await writeAndHarness(
-      ctx,
-      [{ name: 'filesystem', server: filesystemServer }],
-      ['mcp', 'filesystem'],
-    );
-    // Read the result for the second apply
-    const fixturePath = join(ctx.configDir, 'opencode', 'opencode.jsonc');
-    const firstWritten = await readFile(fixturePath, 'utf-8');
-    // Second apply — writer applied to its own output
-    const secondReport = runPreservationChecks({
-      format: 'jsonc',
-      original: OPENCODE_FIXTURE,
-      written: firstWritten,
-      rewritten: firstWritten,
-      targetPath: ['mcp', 'filesystem'],
-    });
-    const idem = secondReport.checks.find((c) => c.name === 'idempotency');
+    // writeAndHarness now performs a REAL second apply: the helper invokes
+    // opencode.mcp.write twice and reports both written and rewritten bytes.
+    const { report, written: firstWritten, rewritten: secondWritten } =
+      await writeAndHarness(
+        ctx,
+        [{ name: 'filesystem', server: filesystemServer }],
+        ['mcp', 'filesystem'],
+      );
+    expect(secondWritten).toBe(firstWritten);
+    const idem = report.checks.find((c) => c.name === 'idempotency');
     expect(idem?.pass, `idempotency check failed: ${idem?.details}`).toBe(true);
+  });
+
+  // ----- second-apply helper backfill (Todo 1 red-state proof) -----
+
+  it('E1 helper: opencode.mcp.write is invoked exactly twice for real second-apply idempotency', async () => {
+    const ctx = makeCtx();
+    const filesystemServer: OvertureMcpServer = {
+      type: 'stdio',
+      command: 'npx',
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-filesystem',
+        '/home/user/projects',
+      ],
+    };
+
+    // Spy on opencode.mcp.write BEFORE invoking the helper so we count real calls.
+    const writeSpy = vi.spyOn(opencode.mcp, 'write');
+
+    try {
+      const { report } = await writeAndHarness(
+        ctx,
+        [{ name: 'filesystem', server: filesystemServer }],
+        ['mcp', 'filesystem'],
+      );
+
+      // RED state: current `writeAndHarness` (opencode.write.spec.ts:295-334) calls
+      // `opencode.mcp.write` exactly ONCE and uses the on-disk bytes as `rewritten`.
+      // The Todo 2 fix makes the helper invoke the writer a SECOND time so the
+      // idempotency assertion proves a real second apply, not a trivial byte reuse.
+      expect(
+        writeSpy.mock.calls.length,
+        `Expected opencode.mcp.write to be invoked exactly twice (once for written, once for rewritten), but it was invoked ${writeSpy.mock.calls.length} time(s). The current writeAndHarness helper reuses on-disk bytes as rewritten instead of performing a real second apply.`,
+      ).toBe(2);
+
+      // Sanity: the preservation report still passes identity for the opencode writer.
+      expect(report.allPassed).toBe(true);
+    } finally {
+      writeSpy.mockRestore();
+    }
   });
 
   // ----- extension field preservation (TODO-6 pending) -----

@@ -47,8 +47,11 @@ export { checksForFormat } from './checks.js';
  * - `written` is the output of the writer after a single apply.
  * - `rewritten` is the output of applying the writer a second time to
  *   `written`. Required input — the E1 contract mandates that every
- *   future per-agent writer prove idempotency. Callers that don't
- *   exercise a second apply can pass `written` again.
+ *   real per-agent writer spec prove idempotency by supplying bytes
+ *   from a real second writer invocation. Reusing `written` as
+ *   `rewritten` is only acceptable for pure harness / no-op scenarios
+ *   (tests of this function, where no writer is exercised); doing so
+ *   in a real writer spec defeats the safety gate.
  * - `targetPath` is the path inside the document the writer was
  *   allowed to mutate. Empty array = whole document allowed; every
  *   structural check is skipped, but idempotency still runs.
@@ -124,8 +127,10 @@ export function runPreservationChecks(
       checks.push(formattingCheck(original, written, targetPath, format));
     }
   }
-  // Idempotency is always part of the report; `rewritten` is a
-  // required input so the check always runs.
+  // Idempotency is always part of the report. `rewritten` is a required
+  // input so the check always runs — but callers must supply bytes from
+  // a real second writer invocation. Reusing `written` as `rewritten`
+  // makes this check trivially pass; see PreservationCheckInput.rewritten.
   checks.push(idempotencyCheck(written, rewritten));
 
   const allPassed = checks.every((c) => c.pass);

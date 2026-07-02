@@ -54,7 +54,14 @@ export type PreservationCheckName =
  * `rewritten` is mandatory (not optional): the E1 contract requires every
  * future per-agent writer to prove idempotency across a second apply,
  * and an optional `rewritten` would let a writer skip the check entirely.
- * Callers that don't care about idempotency can pass `written` again.
+ *
+ * **Real per-agent writer specs MUST supply bytes produced by a real
+ * second apply** of the writer to its own output. Reusing `written` as
+ * `rewritten` is only acceptable for *pure harness / no-op scenarios*
+ * — tests of `runPreservationChecks` itself, where no writer is in the
+ * loop. Reusing `written` in a real writer spec silently turns the
+ * `idempotency` check into a tautology (`written === written`) and
+ * defeats the E1 safety gate.
  */
 export interface PreservationCheckInput {
   readonly format: McpLocationFormat;
@@ -65,10 +72,18 @@ export interface PreservationCheckInput {
   /** Output bytes after the writer ran once. */
   readonly written: string;
   /**
-   * Output bytes after applying the writer a second time to `written`.
+   * Output bytes after applying the writer a SECOND time to `written`.
+   *
+   * For real per-agent writer specs, `rewritten` must come from a real
+   * second invocation of the writer against the same scratch config and
+   * the same input — not from `written` reused. For pure harness / no-op
+   * specs (tests of `runPreservationChecks` itself), reusing `written`
+   * is acceptable because there is no writer in the loop.
+   *
    * The harness always runs the `idempotency` check
-   * (`rewritten === written` byte-for-byte). To opt out, pass `written`
-   * again — the harness will then trivially pass the check.
+   * (`rewritten === written` byte-for-byte); it cannot distinguish the
+   * two cases, so the contract is enforced by spec discipline, not by
+   * types.
    */
   readonly rewritten: string;
 }
