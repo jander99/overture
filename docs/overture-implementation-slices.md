@@ -355,6 +355,8 @@ Add the rest in batches grouped by native config format:
 Expected result: each batch extends coverage without changing the writer safety
 contract.
 
+**Status: completed on feat/e4-openai-codex-toml-writer (this slice).** Delivered the OpenAI Codex TOML update-only writer against the E1 writer-preservation harness. The writer is an E3-style byte splice (no whole-document TOML reserialization) that preserves comments, key order, and unrelated top-level Codex config; native Codex extension fields (`env_vars`, `enabled_tools`, `disabled_tools`, `scopes`, `startup_timeout_sec`, `tool_timeout_sec`, `oauth_resource`, `required`, `enabled`, `bearer_token_env_var`, `cwd`, `env_http_headers`, `http_headers`, `url`, `command`, `args`, `env`) are preserved when compatible, and incompatible transport fields are intentionally dropped on transport switch. New harness coverage in `packages/agents/src/writer-preservation/` now treats descendant server subtables (e.g. `[mcp_servers.context7.env]`) as inside the touched server target, including bare-key and quoted-key table headers (`[mcp_servers."server.with.dot"]`); a quoted-key fixture ships with `CODEX_FIXTURE`. Non-contiguous target-descendant layouts are refused at the writer level as `unsupported-shape` (the harness is intentionally single-range). E4 is update-only: no missing-file, missing-container, or missing-server creation, no apply/backup/undo surface. Next slice: **F1 (`overture apply --dry-run`)**.
+
 ## Track F: apply behavior
 
 Apply uses canonical intent to update clients.
