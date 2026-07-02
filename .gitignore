@@ -13,6 +13,9 @@
 .worktrees/
 
 .claude/settings.local.json
+
+.codegraph/
+.cortexkit/
 vitest.config.*.timestamp*
 
 node_modules
