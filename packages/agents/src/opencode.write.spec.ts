@@ -487,12 +487,15 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
     };
     // writeAndHarness now performs a REAL second apply: the helper invokes
     // opencode.mcp.write twice and reports both written and rewritten bytes.
-    const { report, written: firstWritten, rewritten: secondWritten } =
-      await writeAndHarness(
-        ctx,
-        [{ name: 'filesystem', server: filesystemServer }],
-        ['mcp', 'filesystem'],
-      );
+    const {
+      report,
+      written: firstWritten,
+      rewritten: secondWritten,
+    } = await writeAndHarness(
+      ctx,
+      [{ name: 'filesystem', server: filesystemServer }],
+      ['mcp', 'filesystem'],
+    );
     expect(secondWritten).toBe(firstWritten);
     const idem = report.checks.find((c) => c.name === 'idempotency');
     expect(idem?.pass, `idempotency check failed: ${idem?.details}`).toBe(true);
