@@ -14,7 +14,6 @@ import { mkdtemp, writeFile, readFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openaiCodex } from './openai-codex.js';
-import type { OpenAICodexMcpConfig } from './openai-codex.js';
 import type { PathResolutionContext } from './types.js';
 import type { OvertureMcpServer } from '@overture/config';
 import { runPreservationChecks } from './writer-preservation/run.js';
