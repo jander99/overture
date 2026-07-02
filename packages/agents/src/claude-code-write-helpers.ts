@@ -16,6 +16,10 @@
  * `reason: 'not-targetable'`.
  */
 import { access, readFile } from 'node:fs/promises';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import { isRecord } from './normalize-mcp-config.js';
 import type { PathResolutionContext } from './types.js';
 
@@ -28,6 +32,15 @@ export type ClaudeCodeWriteTarget =
       readonly workspaceKey: string;
     }
   | { readonly kind: 'none'; readonly path: '' };
+
+function isENOENT(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    typeof (err as Record<string, unknown>)['code'] === 'string' &&
+    (err as Record<string, unknown>)['code'] === 'ENOENT'
+  );
+}
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -62,8 +75,18 @@ export async function pickClaudeCodeTarget(
   if (userPath.length > 0 && (await exists(userPath))) {
     try {
       const body = await readFile(userPath, 'utf8');
-      const parsed: unknown = JSON.parse(body);
+      const parseErrors: ParseError[] = [];
+      const parsed: unknown = parseJsonc(body, parseErrors, {
+        allowTrailingComma: true,
+        disallowComments: false,
+      });
+      if (parseErrors.length > 0) {
+        throw new Error(
+          `jsonc parse error: ${parseErrors[0]?.error ?? 'unknown'} at offset ${parseErrors[0]?.offset ?? 0}`,
+        );
+      }
       if (!isRecord(parsed)) {
+        // Top-level is not an object → unsupported
         return { kind: 'none', path: '' };
       }
       const top = parsed['mcpServers'];
@@ -79,7 +102,10 @@ export async function pickClaudeCodeTarget(
           const project = projects[wsKey];
           if (isRecord(project)) {
             const nested = project['mcpServers'];
-            if (isRecord(nested)) {
+            if (nested !== undefined) {
+              // The container exists. The writer will surface 'unsupported-shape'
+              // when nested is not a Record. Return user-projects so it can run
+              // shape detection; absent here returns none.
               return {
                 kind: 'user-projects',
                 path: userPath,
@@ -89,9 +115,13 @@ export async function pickClaudeCodeTarget(
           }
         }
       }
-    } catch {
-      // File read/parse failed → not targetable
-      return { kind: 'none', path: '' };
+    } catch (err) {
+      // Only catch file-not-found (ENOENT) — re-throw parse errors so
+      // the writer can distinguish 'parse-error' from 'not-targetable'.
+      if (isENOENT(err)) {
+        return { kind: 'none', path: '' };
+      }
+      throw err;
     }
   }
 

@@ -2,56 +2,48 @@
  * GitHub Copilot CLI MCP writer (E3 slice).
  *
  * Self-contained writer: it carries its own path resolution via
- * `input.pathContext`, resolves the on-disk target via
+ * `ctx` (the first argument), resolves the on-disk target via
  * `pickCopilotWriteTarget`, and refuses to create missing files.
  *
- * This slice establishes the wiring contract only — the byte-level
- * splice lands in the follow-up TDD step once `jsonc-map-write`
- * grows real byte splices. The function returns `parse-error` after
- * confirming the target exists so the wiring is exercised end-to-end
- * without performing any destructive IO.
+ * Byte-level splice via `editJsoncMap` (value-node-only replacement) which
+ * preserves comments, whitespace, BOM, trailing newlines, and unrelated keys.
  */
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
-import type {
-  AgentMcpWriteInput,
-  AgentMcpWriteResult,
-  PathResolutionContext,
-  StringMap,
-  ToolList,
-} from './types.js';
+import { editJsoncMap } from './jsonc-map-write.js';
 import {
   pickCopilotWriteTarget,
   targetPathFor,
 } from './github-copilot-cli-write-helpers.js';
-import type { JsonValue } from './types.js';
+import type {
+  AgentMcpWriteInput,
+  AgentMcpWriteResult,
+  McpLocationFormat,
+  PathResolutionContext,
+  WriteReason,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
-// Canonical-to-native conversion
+// Types and converter
 // ---------------------------------------------------------------------------
 
-export type GitHubCopilotCliWritableLocalServer = {
-  readonly type: 'local';
-  readonly command: string;
-  readonly args?: readonly string[];
-  readonly env?: StringMap;
-  readonly tools?: ToolList;
-  readonly cwd?: string;
-  readonly [key: string]: JsonValue | undefined;
+export type GitHubCopilotCliWritableMcpServer = {
+  type: 'local' | 'http';
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
+  [key: string]: unknown;
 };
 
-export type GitHubCopilotCliWritableRemoteServer = {
-  readonly type: 'http';
-  readonly url: string;
-  readonly headers?: StringMap;
-  readonly tools?: ToolList;
-  readonly [key: string]: JsonValue | undefined;
-};
-
-export type GitHubCopilotCliWritableMcpServer =
-  | GitHubCopilotCliWritableLocalServer
-  | GitHubCopilotCliWritableRemoteServer;
-
-const COPILOT_CANONICAL_FIELD_NAMES = new Set<string>([
+const GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES = new Set<string>([
   'type',
   'command',
   'args',
@@ -62,14 +54,14 @@ const COPILOT_CANONICAL_FIELD_NAMES = new Set<string>([
 
 function collectExtensions(
   existing: GitHubCopilotCliWritableMcpServer | undefined,
-): Record<string, JsonValue> {
-  const extensions: Record<string, JsonValue> = {};
+): Record<string, unknown> {
+  const extensions: Record<string, unknown> = {};
   if (existing === undefined) {
     return extensions;
   }
 
   for (const key of Object.keys(existing)) {
-    if (COPILOT_CANONICAL_FIELD_NAMES.has(key)) {
+    if (GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES.has(key)) {
       continue;
     }
     const value = existing[key];
@@ -81,57 +73,106 @@ function collectExtensions(
   return extensions;
 }
 
-/**
- * Convert a canonical `OvertureMcpServer` to a GitHub Copilot CLI native server.
- *
- * - stdio → `{ type: 'local', command: string, args?: string[], env?: StringMap }`
- * - remote → `{ type: 'http', url: string, headers?: StringMap }`
- *
- * Preserves `tools` and `cwd` extension fields from `existing`, as well as
- * any other non-canonical keys the user may have added.
- */
 export function toGitHubCopilotCliMcpServer(
   server: OvertureMcpServer,
   existing?: GitHubCopilotCliWritableMcpServer,
 ): GitHubCopilotCliWritableMcpServer {
   const extensions = collectExtensions(existing);
 
+  // Canonical fields first, extensions last — preserves the existing entry's
+  // JSON key order so JSON.stringify(a) === JSON.stringify(b) is true when the
+  // canonical is byte-equivalent to the existing native entry.
   if (server.type === 'stdio') {
     return {
-      ...extensions,
       type: 'local',
       command: server.command,
       ...(server.args === undefined ? {} : { args: server.args }),
       ...(server.env === undefined ? {} : { env: server.env }),
+      ...extensions,
     };
   }
 
   return {
-    ...extensions,
     type: 'http',
     url: server.url,
     ...(server.headers === undefined ? {} : { headers: server.headers }),
+    ...extensions,
   };
 }
 
+// ---------------------------------------------------------------------------
+// Atomic write
+// ---------------------------------------------------------------------------
+
+async function atomicWrite(
+  targetPath: string,
+  contents: string,
+): Promise<void> {
+  await mkdir(dirname(targetPath), { recursive: true });
+  const tempPath = join(
+    dirname(targetPath),
+    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  try {
+    await writeFile(tempPath, contents, 'utf8');
+    await rename(tempPath, targetPath);
+  } catch (err) {
+    try {
+      await rm(tempPath, { force: true });
+    } catch {
+      /* best-effort cleanup */
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Deep equal for no-change detection
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Deep equal for no-change detection
+// ---------------------------------------------------------------------------
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// ---------------------------------------------------------------------------
+// Reader (mirrors opencode-write pattern)
+// ---------------------------------------------------------------------------
+
+async function readIfExists(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch (err) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      typeof (err as Record<string, unknown>)['code'] === 'string' &&
+      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
+        (err as Record<string, string>)['code'],
+      )
+    ) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Writer
+// ---------------------------------------------------------------------------
+
 export async function writeGitHubCopilotCliMcpConfig(
-  _ctx: PathResolutionContext,
+  ctx: PathResolutionContext,
   input: AgentMcpWriteInput,
 ): Promise<AgentMcpWriteResult> {
   const dryRun = input.dryRun ?? false;
 
-  if (input.pathContext === undefined) {
-    return {
-      written: 0,
-      changed: false,
-      dryRun,
-      serversWritten: [],
-      targetPaths: [],
-      reason: 'not-targetable',
-    };
-  }
+  // pathContext is always provided by the orchestrator — no early-return needed.
 
-  const target = await pickCopilotWriteTarget(input.pathContext);
+  const target = await pickCopilotWriteTarget(ctx);
   if (target.kind === 'none') {
     return {
       written: 0,
@@ -139,18 +180,201 @@ export async function writeGitHubCopilotCliMcpConfig(
       dryRun,
       serversWritten: [],
       targetPaths: [],
-      reason: 'not-targetable',
+      reason: 'not-targetable' as WriteReason,
     };
   }
 
-  // Stub: confirm target exists, return parse-error placeholder while
-  // jsonc-map-write grows real byte splices (same pattern as claude-code).
+  const targetPath = target.path;
+  const original = await readIfExists(targetPath);
+  if (original === null) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      reason: 'not-targetable' as WriteReason,
+    };
+  }
+
+  // Parse and validate structure
+  const parseErrors: ParseError[] = [];
+  const parsed = parseJsonc(original, parseErrors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+  if (parseErrors.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason: 'parse-error' as WriteReason,
+    };
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason: 'unsupported-shape' as WriteReason,
+    };
+  }
+
+  const doc = parsed as Record<string, unknown>;
+  const mcpServers = doc['mcpServers'];
+  if (
+    typeof mcpServers !== 'object' ||
+    mcpServers === null ||
+    Array.isArray(mcpServers)
+  ) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason: 'unsupported-shape' as WriteReason,
+    };
+  }
+
+  const mcpServersObj = mcpServers as Record<string, unknown>;
+
+  // Check all requested servers exist in the container (update-only: no creation)
+  for (const entry of input.servers) {
+    if (!Object.prototype.hasOwnProperty.call(mcpServersObj, entry.name)) {
+      return {
+        written: 0,
+        changed: false,
+        dryRun,
+        serversWritten: [],
+        targetPaths: [targetPathFor(target)],
+        resolvedPath: targetPath,
+        format: 'jsonc' as McpLocationFormat,
+        reason: 'not-targetable' as WriteReason,
+      };
+    }
+  }
+
+  // Build native patches, reading existing entries for extension preservation
+  const patches: Record<string, GitHubCopilotCliWritableMcpServer> = {};
+  const touched: string[] = [];
+
+  for (const entry of input.servers) {
+    const existingNative = mcpServersObj[entry.name] as
+      | GitHubCopilotCliWritableMcpServer
+      | undefined;
+    const nextServer = toGitHubCopilotCliMcpServer(
+      entry.server,
+      existingNative,
+    );
+
+    // No-change check: compare serialized forms
+    if (existingNative !== undefined && deepEqual(existingNative, nextServer)) {
+      continue;
+    }
+
+    patches[entry.name] = nextServer;
+    touched.push(entry.name);
+  }
+
+  if (Object.keys(patches).length === 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      bytesChanged: 0,
+      reason: 'no-change' as WriteReason,
+    };
+  }
+
+  // Apply patches via editJsoncMap (value-node-only replacement)
+  const editResult = editJsoncMap({
+    original: new TextEncoder().encode(original),
+    targetPath: ['mcpServers'],
+    patch: patches,
+  });
+
+  if (editResult.kind === 'error') {
+    const reason: WriteReason =
+      editResult.reason === 'parse-error'
+        ? 'parse-error'
+        : editResult.reason === 'unsupported-shape'
+          ? 'unsupported-shape'
+          : editResult.reason === 'unsupported-path'
+            ? 'not-targetable'
+            : 'unsupported-shape';
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason,
+    };
+  }
+
+  if (!editResult.changed) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      bytesChanged: 0,
+      reason: 'no-change' as WriteReason,
+    };
+  }
+
+  const nextBytes = editResult.nextBytes;
+  const nextText = new TextDecoder('utf-8').decode(nextBytes);
+
+  // No-change check: compare full serialized bytes before attempting patch
+  if (nextText === original) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      bytesChanged: 0,
+      reason: 'no-change' as WriteReason,
+    };
+  }
+
+  if (!dryRun) {
+    await atomicWrite(targetPath, nextText);
+  }
+
   return {
-    written: 0,
-    changed: false,
+    written: touched.length,
+    changed: true,
     dryRun,
-    serversWritten: [],
+    serversWritten: touched,
     targetPaths: [targetPathFor(target)],
-    reason: 'parse-error',
+    resolvedPath: targetPath,
+    format: 'jsonc' as McpLocationFormat,
+    bytesChanged: Math.abs(
+      nextBytes.length - new TextEncoder().encode(original).length,
+    ),
   };
 }

@@ -2,19 +2,26 @@
  * Claude Code MCP writer (E3 slice).
  *
  * Self-contained writer: it carries its own path resolution via
- * `input.pathContext`, resolves the on-disk target via
- * `pickClaudeCodeTarget`, and refuses to create missing files.
+ * `ctx` (the first argument), resolves the on-disk target via
+ * `pickClaudeCodeTarget`, and refuses to create missing files,
+ * missing containers, or missing server entries.
  *
- * This slice establishes the wiring contract only — the byte-level
- * splice lands in the follow-up TDD step once `jsonc-map-write`
- * grows real byte splices. The function returns `parse-error` after
- * confirming the target exists so the wiring is exercised end-to-end
- * without performing any destructive IO.
+ * Uses `editJsoncMap` as the byte-splice primitive to surgically
+ * replace only the touched server-entry value nodes, preserving
+ * surrounding comments, formatting, key order, and unrelated content.
  */
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
+import {
+  parse as parseJsonc,
+  type ParseError,
+} from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
 import type {
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  McpLocationFormat,
   PathResolutionContext,
   StringMap,
   TargetPath,
@@ -24,13 +31,18 @@ import {
   type ClaudeCodeWriteTarget,
 } from './claude-code-write-helpers.js';
 import type { JsonValue } from './types.js';
+import { editJsoncMap } from './jsonc-map-write.js';
 
 // ---------------------------------------------------------------------------
 // Canonical-to-native conversion
 // ---------------------------------------------------------------------------
 
 export type ClaudeCodeWritableStdioServer = {
-  readonly type: 'stdio';
+  // `type` is optional in the native shape: Claude Code treats `type: 'stdio'`
+  // as the implicit default and existing entries in the wild commonly omit it.
+  // toClaudeCodeMcpServer preserves byte-equivalence with the existing entry,
+  // so the emitted `type` is conditional on whether the existing entry had one.
+  readonly type?: 'stdio';
   readonly command: string;
   readonly args?: readonly string[];
   readonly env?: StringMap;
@@ -92,11 +104,16 @@ export function toClaudeCodeMcpServer(
   existing?: ClaudeCodeWritableMcpServer,
 ): ClaudeCodeWritableMcpServer {
   const extensions = collectExtensions(existing);
+  // Claude Code treats `type: 'stdio'` as the implicit default — fixtures in the wild
+  // commonly omit it. Preserve byte-equivalence with the existing entry on update:
+  // when existing is provided AND lacks `type`, omit `type` from the new value.
+  const shouldEmitType =
+    existing === undefined || 'type' in (existing as Record<string, unknown>);
 
   if (server.type === 'stdio') {
     return {
       ...extensions,
-      type: 'stdio',
+      ...(shouldEmitType ? { type: 'stdio' as const } : {}),
       command: server.command,
       ...(server.args === undefined ? {} : { args: server.args }),
       ...(server.env === undefined ? {} : { env: server.env }),
@@ -111,54 +128,366 @@ export function toClaudeCodeMcpServer(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Writer helpers
+// ---------------------------------------------------------------------------
+
 function targetPathFor(
   target: Exclude<ClaudeCodeWriteTarget, { kind: 'none' }>,
 ): TargetPath {
-  return { scope: 'user', base: 'home', path: target.path };
+  switch (target.kind) {
+    case 'project':
+      return { scope: 'project', base: 'workspace', path: target.path };
+    case 'user-top':
+      return { scope: 'user', base: 'home', path: target.path };
+    case 'user-projects':
+      return { scope: 'user', base: 'home', path: target.path };
+  }
 }
 
+/**
+ * Returns the JSON pointer path segments to the mcpServers container
+ * (excluding the server-name leaf, which is passed separately to
+ * editJsoncMap as the map key to patch).
+ */
+function targetPathSegmentsFor(
+  target: Exclude<ClaudeCodeWriteTarget, { kind: 'none' }>,
+): readonly string[] {
+  switch (target.kind) {
+    case 'project':
+    case 'user-top':
+      return ['mcpServers'];
+    case 'user-projects':
+      return ['projects', target.workspaceKey, 'mcpServers'];
+  }
+}
+
+async function readIfExists(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch (err) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      typeof (err as Record<string, unknown>)['code'] === 'string' &&
+      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
+        (err as Record<string, unknown>)['code'] as string,
+      )
+    ) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function atomicWrite(
+  targetPath: string,
+  contents: string,
+): Promise<void> {
+  await mkdir(dirname(targetPath), { recursive: true });
+  const tempPath = join(
+    dirname(targetPath),
+    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  try {
+    await writeFile(tempPath, contents, 'utf8');
+    await rename(tempPath, targetPath);
+  } catch (err) {
+    try {
+      await rm(tempPath, { force: true });
+    } catch {
+      /* best-effort cleanup */
+    }
+    throw err;
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function validateContainer(
+  parsed: unknown,
+  segments: readonly string[],
+): 'unsupported-shape' | null {
+  let container: unknown = parsed;
+  for (const seg of segments) {
+    if (container === null || typeof container !== 'object') {
+      return 'unsupported-shape';
+    }
+    container = (container as Record<string, unknown>)[seg];
+  }
+  if (container === undefined || !isObject(container)) {
+    return 'unsupported-shape';
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Writer
+// ---------------------------------------------------------------------------
+
 export async function writeClaudeCodeMcpConfig(
-  _ctx: PathResolutionContext,
+  ctx: PathResolutionContext,
   input: AgentMcpWriteInput,
 ): Promise<AgentMcpWriteResult> {
-  const dryRun = input.dryRun ?? false;
+  const dryRun = input.dryRun === true;
 
-  if (input.pathContext === undefined) {
+  // pathContext is always provided by the orchestrator — no early-return needed.
+
+  // Discover target. pickClaudeCodeTarget re-throws parse errors so we can
+  // surface 'parse-error' instead of silently treating them as not-targetable.
+  let target: Exclude<ClaudeCodeWriteTarget, { kind: 'none' }>;
+  try {
+    const picked = await pickClaudeCodeTarget(ctx);
+    if (picked.kind === 'none') {
+      // No applicable target found. Try to read the file to detect parse errors.
+      if (picked.path.length > 0) {
+        const existing = await readIfExists(picked.path);
+        if (existing !== null) {
+          const parseErrors: ParseError[] = [];
+          parseJsonc(existing, parseErrors, {
+            allowTrailingComma: true,
+            disallowComments: false,
+          });
+          if (parseErrors.length > 0) {
+            return {
+              written: 0,
+              changed: false,
+              dryRun,
+              serversWritten: [],
+              targetPaths: [{ scope: 'user', base: 'home', path: picked.path }],
+              resolvedPath: picked.path,
+              format: 'jsonc' as McpLocationFormat,
+              reason: 'parse-error',
+            };
+          }
+        }
+      }
+      return {
+        written: 0,
+        changed: false,
+        dryRun,
+        serversWritten: [],
+        targetPaths: [],
+        reason: 'not-targetable',
+      };
+    }
+    target = picked;
+  } catch {
     return {
       written: 0,
       changed: false,
       dryRun,
       serversWritten: [],
       targetPaths: [],
-      reason: 'not-targetable',
+      reason: 'parse-error',
     };
   }
 
-  // Discover target (./mcp.json OR ~/.claude.json top-level OR ~/.claude.json/projects[ws]/).
-  // No creation: if no applicable target exists, return reason: 'not-targetable'.
-  // No raw bytes in result.
-  const target = await pickClaudeCodeTarget(input.pathContext);
-  if (target.kind === 'none') {
+  const resolvedPath = target.path;
+
+  // Read the target file defensively.
+  const original = await readIfExists(resolvedPath);
+  if (original === null) {
     return {
       written: 0,
       changed: false,
       dryRun,
       serversWritten: [],
-      targetPaths: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
       reason: 'not-targetable',
     };
   }
 
-  // For E3 stub: refuse to write; return parse-error after confirming
-  // the target exists. Full per-server byte splicing arrives when
-  // jsonc-map-write grows real byte splices; this slice establishes the
-  // wiring contract.
+  // Parse the file to validate it and locate the container.
+  const parseErrors: ParseError[] = [];
+  const parsed = parseJsonc(original, parseErrors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  }) as unknown;
+
+  if (parseErrors.length > 0 || parsed === undefined || !isObject(parsed)) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason: 'parse-error',
+    };
+  }
+
+  // Walk into the correct container based on target kind.
+  const segments = targetPathSegmentsFor(target);
+  const shapeErr = validateContainer(parsed, segments);
+  if (shapeErr === 'unsupported-shape') {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
+      reason: 'unsupported-shape',
+    };
+  }
+
+  let container: unknown = parsed;
+  for (const seg of segments) {
+    container = (container as Record<string, unknown>)[seg];
+  }
+
+  // Build per-server patches: check existence and read existing native entries.
+  type ServerPatch = {
+    name: string;
+    native: ClaudeCodeWritableMcpServer;
+  };
+  const patches: ServerPatch[] = [];
+
+  for (const entry of input.servers) {
+    // Server must exist in container (update-only policy).
+    if (
+      !isObject(container) ||
+      !(entry.name in (container as Record<string, unknown>))
+    ) {
+      return {
+        written: 0,
+        changed: false,
+        dryRun,
+        serversWritten: [],
+        targetPaths: [targetPathFor(target)],
+        resolvedPath,
+        format: 'jsonc' as McpLocationFormat,
+        reason: 'not-targetable',
+      };
+    }
+
+    // Read existing native entry for extension preservation.
+    const existingEntry = (container as Record<string, unknown>)[entry.name];
+    const existingNative = isObject(existingEntry)
+      ? (existingEntry as unknown as ClaudeCodeWritableMcpServer)
+      : undefined;
+    const native = toClaudeCodeMcpServer(entry.server, existingNative);
+    // Skip no-op patches byte-equivalent to the existing entry (Claude Code
+    // canonical writers add fields like `type: 'stdio'` that some existing
+    // entries may already omit; byte-equivalence is the source of truth).
+    if (JSON.stringify(native) === JSON.stringify(existingEntry)) {
+      continue;
+    }
+    patches.push({ name: entry.name, native });
+  }
+
+  // Apply each patch via editJsoncMap using the container path only.
+  // editJsoncMap returns 'unsupported-path' when the server key is absent
+  // from the container — treat that as 'not-targetable' (update-only policy).
+  const originalBytes = new TextEncoder().encode(original);
+  let accumulated = originalBytes;
+  let anyChanged = false;
+  let finalBytesLength = originalBytes.length;
+
+  for (const patch of patches) {
+    const result = editJsoncMap({
+      original: accumulated,
+      targetPath: segments,
+      patch: { [patch.name]: patch.native },
+    });
+
+    if (result.kind === 'error') {
+      if (result.reason === 'parse-error') {
+        return {
+          written: 0,
+          changed: false,
+          dryRun,
+          serversWritten: [],
+          targetPaths: [targetPathFor(target)],
+          resolvedPath,
+          format: 'jsonc' as McpLocationFormat,
+          reason: 'parse-error',
+        };
+      }
+      if (result.reason === 'unsupported-shape') {
+        return {
+          written: 0,
+          changed: false,
+          dryRun,
+          serversWritten: [],
+          targetPaths: [targetPathFor(target)],
+          resolvedPath,
+          format: 'jsonc' as McpLocationFormat,
+          reason: 'unsupported-shape',
+        };
+      }
+      // unsupported-path: server absent — update-only refusal
+      return {
+        written: 0,
+        changed: false,
+        dryRun,
+        serversWritten: [],
+        targetPaths: [targetPathFor(target)],
+        resolvedPath,
+        format: 'jsonc' as McpLocationFormat,
+        reason: 'not-targetable',
+      };
+    }
+
+    if (result.changed) {
+      anyChanged = true;
+      finalBytesLength = result.nextBytes.length;
+      accumulated = result.nextBytes as Uint8Array<ArrayBuffer>;
+    }
+  }
+
+  // Dry-run: return planned metadata without writing.
+  if (dryRun) {
+    // Dry-run reports zero actual disk writes; planned targets + names
+    // are surfaced via serversWritten/targetPaths.
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: anyChanged ? patches.map((p) => p.name) : [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
+      bytesChanged: anyChanged
+        ? Math.abs(finalBytesLength - originalBytes.length)
+        : 0,
+    };
+  }
+
+  // No-change check.
+  const newContent = new TextDecoder('utf-8').decode(accumulated);
+  if (!anyChanged || newContent === original) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
+      bytesChanged: 0,
+      reason: 'no-change',
+    };
+  }
+
+  // Atomic write: temp file + rename.
+  await atomicWrite(resolvedPath, newContent);
+
   return {
-    written: 0,
-    changed: false,
+    written: patches.length,
+    changed: true,
     dryRun,
-    serversWritten: [],
+    serversWritten: patches.map((p) => p.name),
     targetPaths: [targetPathFor(target)],
-    reason: 'parse-error',
+    resolvedPath,
+    format: 'jsonc' as McpLocationFormat,
+    bytesChanged: Math.abs(finalBytesLength - originalBytes.length),
   };
 }
