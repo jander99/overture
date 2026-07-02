@@ -178,3 +178,68 @@ CONTEXT7_API_KEY = "\${CONTEXT7_API_KEY}"
 url = "https://mcp.example.com/bridge"
 bearer_token_env_var = "MCP_BRIDGE_TOKEN"
 `;
+export const CODEX_DESCENDANT_FIXTURE = `# Codex config with descendant subtables for both target AND a sibling.
+# Used by S12 to prove the harness treats descendant subtables of the
+# target as inside the target, while descendant subtables of a SIBLING
+# (filesystem.env) are correctly treated as outside.
+model = "gpt-5"
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem"]
+
+[mcp_servers.filesystem.env]
+LOG_LEVEL = "info"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.context7.env]
+CONTEXT7_API_KEY = "\${CONTEXT7_API_KEY}"
+
+[mcp_servers.remote-bridge]
+url = "https://mcp.example.com/bridge"
+`;
+
+export const CODEX_QUOTED_KEY_FIXTURE = `# Codex config with a quoted-key MCP server name (dot in name).
+# Used by S13 to prove the harness parses [mcp_servers."server.with.dot"]
+# as path segments ["mcp_servers", "server.with.dot"] (not four segments
+# split on the literal dot).
+model = "gpt-5"
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem"]
+
+[mcp_servers."server.with.dot"]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+startup_timeout_sec = 15
+
+[mcp_servers."server.with.dot".env]
+API_KEY = "\${API_KEY}"
+
+[mcp_servers.remote-bridge]
+url = "https://mcp.example.com/bridge"
+`;
+
+export const CODEX_NON_CONTIGUOUS_FIXTURE = `# Codex config with a non-contiguous descendant layout.
+# The harness uses a single contiguous line range, so when a target
+# descendant ([mcp_servers.foo.env]) appears AFTER a sibling
+# ([mcp_servers.bar]), the harness range stops at the sibling and the
+# descendant is OUTSIDE the range. The writer (Todo 2) rejects this
+# layout as unsupported-shape; the harness simply reports the descendant
+# as outside the allowed mutation zone.
+[mcp_servers.foo]
+command = "npx"
+args = ["-y", "foo-mcp"]
+
+[mcp_servers.bar]
+command = "npx"
+args = ["-y", "bar-mcp"]
+
+# This descendant appears AFTER a sibling — outside the harness range.
+[mcp_servers.foo.env]
+FOO_API_KEY = "\${FOO_API_KEY}"
+`;

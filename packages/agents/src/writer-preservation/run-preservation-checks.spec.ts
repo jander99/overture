@@ -33,6 +33,9 @@ import {
 import {
   CLAUDE_CODE_FIXTURE,
   CODEX_FIXTURE,
+  CODEX_DESCENDANT_FIXTURE,
+  CODEX_NON_CONTIGUOUS_FIXTURE,
+  CODEX_QUOTED_KEY_FIXTURE,
   COPILOT_CLI_FIXTURE,
   OPENCODE_FIXTURE,
 } from './fixtures.js';
@@ -591,5 +594,69 @@ describe('S10 — every supported format (json/jsonc/toml) is covered end-to-end
       'filesystem',
     ]);
     expect(findCheck(report, 'comments').pass).toBe(false);
+  });
+});
+
+describe('S12 — TOML descendant tables inside target', () => {
+  it('A: mutate CONTEXT7_API_KEY (inside target descendant) → allPassed', () => {
+    const original = CODEX_DESCENDANT_FIXTURE;
+    const written = original.replace(
+      'CONTEXT7_API_KEY = "${CONTEXT7_API_KEY}"',
+      'CONTEXT7_API_KEY = "NEW_VALUE"',
+    );
+    const report = check('toml', original, written, [
+      'mcp_servers',
+      'context7',
+    ]);
+    expect(report.allPassed).toBe(true);
+  });
+
+  it('B: mutate filesystem command (outside target) → rawBytes fails', () => {
+    const original = CODEX_DESCENDANT_FIXTURE;
+    const written = original.replace('command = "npx"', 'command = "deno"');
+    const report = check('toml', original, written, [
+      'mcp_servers',
+      'context7',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
+  });
+});
+
+describe('S13 — TOML quoted keys', () => {
+  it('A: mutate API_KEY inside quoted-key server → allPassed', () => {
+    const original = CODEX_QUOTED_KEY_FIXTURE;
+    const written = original.replace(
+      'API_KEY = "${API_KEY}"',
+      'API_KEY = "NEW_VALUE"',
+    );
+    const report = check('toml', original, written, [
+      'mcp_servers',
+      'server.with.dot',
+    ]);
+    expect(report.allPassed).toBe(true);
+  });
+
+  it('B: mutate filesystem command (outside quoted-key target) → rawBytes fails', () => {
+    const original = CODEX_QUOTED_KEY_FIXTURE;
+    const written = original.replace('command = "npx"', 'command = "deno"');
+    const report = check('toml', original, written, [
+      'mcp_servers',
+      'server.with.dot',
+    ]);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
+  });
+});
+
+describe('S14 — TOML non-contiguous descendants', () => {
+  it('mutate FOO_API_KEY where descendant appears after sibling → rawBytes fails', () => {
+    // [mcp_servers.foo.env] appears AFTER [mcp_servers.bar]. The harness
+    // range stops at [mcp_servers.bar], so foo.env is OUTSIDE the target.
+    const original = CODEX_NON_CONTIGUOUS_FIXTURE;
+    const written = original.replace(
+      'FOO_API_KEY = "${FOO_API_KEY}"',
+      'FOO_API_KEY = "NEW_VALUE"',
+    );
+    const report = check('toml', original, written, ['mcp_servers', 'foo']);
+    expect(findCheck(report, 'rawBytes').pass).toBe(false);
   });
 });

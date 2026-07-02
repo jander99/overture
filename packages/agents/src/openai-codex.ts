@@ -10,6 +10,7 @@ import {
 } from './normalize-mcp-config.js';
 import { parseTomlMcpServerMap } from './parse-mcp-servers.js';
 import { readAgentMcpConfig } from './read-mcp-config.js';
+import { writeOpenAICodexMcpConfig } from './openai-codex-write.js';
 import { defineAgent } from './define-agent.js';
 import type { OvertureMcpServer } from '@overture/config';
 import type {
@@ -166,6 +167,7 @@ export const openaiCodex: AgentDefinition = defineAgent({
   mcp: {
     parseServers: parseOpenAICodexMcpServers,
     normalize: asRegistryNormalizeHandler(normalizeOpenAICodexMcpServers),
+    write: writeOpenAICodexMcpConfig,
   },
 });
 
