@@ -11,16 +11,16 @@
   },
   "references": [
     {
-      "path": "../../packages/agents"
+      "path": "../../packages/agents/tsconfig.lib.json"
     },
     {
-      "path": "../../packages/config"
+      "path": "../../packages/config/tsconfig.lib.json"
     },
     {
-      "path": "../../packages/os"
+      "path": "../../packages/os/tsconfig.lib.json"
     },
     {
-      "path": "../../packages/scan-matrix"
+      "path": "../../packages/scan-matrix/tsconfig.lib.json"
     }
   ],
   "include": ["src/**/*.ts"],
