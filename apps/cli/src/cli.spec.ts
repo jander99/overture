@@ -667,6 +667,7 @@ describe('run: scan', () => {
   let prevXdgConfig: string | undefined;
   let prevXdgState: string | undefined;
   let prevXdgCache: string | undefined;
+  let prevCwd: string;
 
   beforeEach(() => {
     stdoutSpy = vi
@@ -676,6 +677,8 @@ describe('run: scan', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
     tempDir = mkdtempSync(join(tmpdir(), 'overture-scan-'));
+    prevCwd = process.cwd();
+    process.chdir(tempDir);
     prevHome = process.env.HOME;
     prevXdgConfig = process.env.XDG_CONFIG_HOME;
     prevXdgState = process.env.XDG_STATE_HOME;
@@ -699,6 +702,7 @@ describe('run: scan', () => {
     else process.env.XDG_STATE_HOME = prevXdgState;
     if (prevXdgCache === undefined) delete process.env.XDG_CACHE_HOME;
     else process.env.XDG_CACHE_HOME = prevXdgCache;
+    process.chdir(prevCwd);
     rmSync(tempDir, { recursive: true, force: true });
   });
 
