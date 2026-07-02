@@ -53,18 +53,6 @@ function findChildProperty(parent: Node, key: string): Node | undefined {
   return undefined;
 }
 
-function findPropertyByteRange(
-  text: string,
-  prop: Node,
-): { readonly start: number; readonly end: number } {
-  let end = prop.offset + prop.length;
-  while (end < text.length && /\s/.test(text[end]!)) end++;
-  if (text[end] === ',') end++;
-  let start = prop.offset;
-  while (start > 0 && /\s/.test(text[start - 1]!)) start--;
-  return { start, end };
-}
-
 function applyEdits(text: string, edits: readonly PlannedEdit[]): string {
   const sorted = [...edits].sort((a, b) => b.start - a.start);
   let result = text;
@@ -207,10 +195,26 @@ export function editJsoncMap(input: EditJsoncMapInput): JsoncMapEditResult {
         detail: `server entry '${key}' not found in container`,
       };
     }
-    const range = findPropertyByteRange(text, prop);
+    if (prop.children === undefined) {
+      return {
+        kind: 'error',
+        reason: 'unsupported-path',
+        detail: `value node missing for '${key}'`,
+      };
+    }
+    const valueNode = prop.children[1];
+    if (valueNode === undefined) {
+      return {
+        kind: 'error',
+        reason: 'unsupported-path',
+        detail: `value node missing for '${key}'`,
+      };
+    }
+    // Replace only the value node range, not the full property (key + colon + value).
+    // This preserves the property key and surrounding whitespace/punctuation.
     edits.push({
-      start: range.start,
-      end: range.end,
+      start: valueNode.offset,
+      end: valueNode.offset + valueNode.length,
       replacement: JSON.stringify(newValue),
     });
   }
