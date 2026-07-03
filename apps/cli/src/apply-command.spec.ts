@@ -53,11 +53,7 @@ import { tmpdir } from 'node:os';
 
 import { defaultOverturePaths } from '@overture/config';
 import { agentRegistry } from '@overture/agents';
-import type {
-  AgentDefinition,
-  AgentMcpWriteResult,
-  PlatformId,
-} from '@overture/agents';
+import type { AgentDefinition, PlatformId } from '@overture/agents';
 
 import {
   APPLY_USAGE,
@@ -184,7 +180,7 @@ function buildCanonicalConfigJson(
     },
   };
   if (profileName !== 'default') {
-    profiles['default'] = {
+    profiles.default = {
       mcpServers: {},
       sync: { targets: [], disabledServers: [] },
       skills: [],
@@ -537,12 +533,12 @@ describe('runApply (F1 dry-run contract)', () => {
     expect(Object.keys(envelope).sort()).toEqual(
       ['configPath', 'disabledServers', 'profile', 'results'].sort(),
     );
-    expect(typeof envelope['profile']).toBe('string');
-    expect(typeof envelope['configPath']).toBe('string');
-    expect(Array.isArray(envelope['disabledServers'])).toBe(true);
-    expect(Array.isArray(envelope['results'])).toBe(true);
+    expect(typeof envelope.profile).toBe('string');
+    expect(typeof envelope.configPath).toBe('string');
+    expect(Array.isArray(envelope.disabledServers)).toBe(true);
+    expect(Array.isArray(envelope.results)).toBe(true);
 
-    const results = envelope['results'] as readonly ApplyDryRunAgentResult[];
+    const results = envelope.results as readonly ApplyDryRunAgentResult[];
     expect(results.length).toBe(2);
 
     // Each result must carry agentId, displayName, status, result.
@@ -558,9 +554,9 @@ describe('runApply (F1 dry-run contract)', () => {
         'unsupported-format',
       ]).toContain(r.status);
       expect(r.result).toBeTypeOf('object');
-      expect(typeof (r.result as AgentMcpWriteResult).written).toBe('number');
-      expect(typeof (r.result as AgentMcpWriteResult).changed).toBe('boolean');
-      expect(typeof (r.result as AgentMcpWriteResult).dryRun).toBe('boolean');
+      expect(typeof (r.result).written).toBe('number');
+      expect(typeof (r.result).changed).toBe('boolean');
+      expect(typeof (r.result).dryRun).toBe('boolean');
     }
 
     // No raw-bytes leak: walk the JSON tree and assert the forbidden keys
@@ -783,9 +779,7 @@ describe('runApply (F1 dry-run contract)', () => {
     );
     expect(claudeResult).toBeDefined();
     expect(claudeResult?.status).toBe('parse-error');
-    expect((claudeResult?.result as AgentMcpWriteResult).reason).toBe(
-      'parse-error',
-    );
+    expect(claudeResult?.result?.reason).toBe('parse-error');
   });
 
   // -------------------------------------------------------------------------
@@ -831,8 +825,8 @@ describe('runApply (F1 dry-run contract)', () => {
     expect(envelope.results.length).toBe(1);
     const claudeResult = envelope.results[0];
     expect(claudeResult?.status).toBe('no-change');
-    expect((claudeResult?.result as AgentMcpWriteResult).changed).toBe(false);
-    expect((claudeResult?.result as AgentMcpWriteResult).dryRun).toBe(true);
+    expect(claudeResult?.result?.changed).toBe(false);
+    expect(claudeResult?.result?.dryRun).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -899,7 +893,7 @@ describe('runApply (F1 dry-run contract)', () => {
     // The core regression assertion: differing content + Claude's
     // `changed: false` convention must still classify as `would-update`.
     expect(claudeResult?.status).toBe('would-update');
-    const writer = claudeResult?.result as AgentMcpWriteResult;
+    const writer = claudeResult?.result;
     expect(writer.changed).toBe(false);
     expect(writer.dryRun).toBe(true);
     expect(writer.serversWritten).toEqual(['filesystem']);
