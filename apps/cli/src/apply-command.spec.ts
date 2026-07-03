@@ -554,9 +554,9 @@ describe('runApply (F1 dry-run contract)', () => {
         'unsupported-format',
       ]).toContain(r.status);
       expect(r.result).toBeTypeOf('object');
-      expect(typeof (r.result).written).toBe('number');
-      expect(typeof (r.result).changed).toBe('boolean');
-      expect(typeof (r.result).dryRun).toBe('boolean');
+      expect(typeof r.result.written).toBe('number');
+      expect(typeof r.result.changed).toBe('boolean');
+      expect(typeof r.result.dryRun).toBe('boolean');
     }
 
     // No raw-bytes leak: walk the JSON tree and assert the forbidden keys

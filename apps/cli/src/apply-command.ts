@@ -103,7 +103,7 @@ export interface ApplyDryRunResult {
  * (e.g. `pathContextFactory`, `prompt`); keeping the interface exported
  * lets future tests reference it without churn.
  */
- 
+
 export interface RunApplyOptions {
   readonly prompt?: unknown;
 }
