@@ -377,6 +377,71 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
     ).toBe(true);
   });
 
+  // Regression for the F2 / Case 14 key-drop bug. The historical
+  // `findServerPropertyRange` returned a range that covered the WHOLE
+  // property (key + value + trailing comma); the replacement
+  // (`renderServer(next)` = JSON.stringify(value, null, 2)) was value-only,
+  // so the property key vanished on update. A stdio canonical updating
+  // an existing local entry produced `{\n  "type": "remote"\n}` in
+  // place of the value, leaving the JSON malformed. The fix narrows
+  // the range to the value node only; this test pins the new contract
+  // with a direct fs-level assertion (independent of the harness) so
+  // a regression cannot hide behind harness lenience.
+  it('opencode writer: existing local entry updated by stdio canonical preserves the property key', async () => {
+    const ctx = makeCtx();
+    const fixturePath = join(ctx.configDir, 'opencode', 'opencode.json');
+    await mkdir(join(ctx.configDir, 'opencode'), { recursive: true });
+    await writeFile(
+      fixturePath,
+      JSON.stringify(
+        {
+          mcp: {
+            filesystem: { type: 'local', command: ['old'] },
+            context7: { type: 'local', command: ['ctx'] },
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+
+    await opencode.mcp.write(ctx, {
+      servers: [
+        {
+          name: 'filesystem',
+          server: {
+            type: 'stdio',
+            command: 'node',
+            args: ['/tmp/foo'],
+          },
+        },
+      ],
+    });
+
+    const written = await readFile(fixturePath, 'utf8');
+    // The property key must still be present (regression of the F2
+    // key-drop: writer was splicing over the entire property).
+    expect(written).toContain('"filesystem"');
+    expect(written).toContain('"context7"');
+    // Re-parse the written file to assert it's still valid JSON
+    // (the historical bug left the document malformed).
+    expect(() => JSON.parse(written)).not.toThrow();
+    const parsed = JSON.parse(written) as {
+      mcp: Record<string, unknown>;
+    };
+    expect(parsed.mcp).toHaveProperty('filesystem');
+    expect(parsed.mcp).toHaveProperty('context7');
+    // The filesystem entry should now reflect the canonical stdio →
+    // local conversion: command vector = ['node', '/tmp/foo'].
+    const fs = parsed.mcp.filesystem as {
+      type: string;
+      command: string[];
+    };
+    expect(fs.type).toBe('local');
+    expect(fs.command).toEqual(['node', '/tmp/foo']);
+  });
+
   it('preserves OpenCode JSONC: adding a new remote server target path fails rawBytes (insert case)', async () => {
     const ctx = makeCtx();
     const newRemote: OvertureMcpServer = {

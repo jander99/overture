@@ -41,7 +41,7 @@ const CANONICAL_FIELD_NAMES = new Set<string>([
 ]);
 
 export function toOpenCodeMcpServer(
-  server: OvertureMcpServer,
+  server: OvertureMcpServer | OpenCodeMcpServer,
   existing?: OpenCodeWritableMcpServer,
 ): OpenCodeWritableMcpServer {
   const extensions = collectExtensions(existing);
@@ -52,6 +52,23 @@ export function toOpenCodeMcpServer(
       type: 'local',
       command: [server.command, ...(server.args ?? [])],
       ...(server.env === undefined ? {} : { environment: server.env }),
+    };
+  }
+
+  // OpenCode native `local` entry: the caller pre-converted the canonical
+  // server via `toOpenCodeMcpServer` before handing it to `planEdits`, and
+  // the planner re-invokes this helper for extension preservation. Without
+  // this branch the function fell through to the `remote` branch below and
+  // emitted `{ type: 'remote' }` for any stdio canonical updating an
+  // existing local entry (see F2 / Case 14 regression).
+  if (server.type === 'local') {
+    return {
+      ...extensions,
+      type: 'local',
+      command: [...server.command],
+      ...(server.environment === undefined
+        ? {}
+        : { environment: server.environment }),
     };
   }
 
@@ -201,17 +218,21 @@ function findServerPropertyRange(
     if (property.type !== 'property' || property.children === undefined)
       continue;
     const keyNode = property.children[0];
+    const valueNode = property.children[1];
     if (keyNode === undefined || keyNode.value !== serverName) continue;
-    let end = property.offset + property.length;
-    while (end < text.length && /[ \t]/.test(text[end]!)) {
-      end++;
-    }
-    if (text[end] === ',') end++;
-    let start = property.offset;
-    while (start > 0 && /[ \t]/.test(text[start - 1]!)) {
-      start--;
-    }
-    return { start, end };
+    if (valueNode === undefined) continue;
+    // Return the value-node range ONLY so the caller can splice in
+    // JSON.stringify(value, null, 2) without dropping the property key
+    // (see F2 / Case 14 regression: a stdio canonical updating an
+    // existing local entry used to splice over the entire property and
+    // produce `{\n  "type": "remote"\n}` in place of the value, leaving
+    // the JSON malformed). The key, surrounding whitespace, and any
+    // trailing comma stay in place — same approach as the sibling
+    // E3 helper `jsonc-map-write.ts::editJsoncMap`.
+    return {
+      start: valueNode.offset,
+      end: valueNode.offset + valueNode.length,
+    };
   }
   return null;
 }
