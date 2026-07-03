@@ -57,6 +57,94 @@ All commands run from the repo root.
 - Verify a local npm pack + install + smoke (no publish):
   `node apps/cli/scripts/verify-package.mjs`.
 
+## Pre-PR checklist
+
+Before pushing a PR, run the full CI gate stack locally and confirm
+every command exits 0. These commands match `.github/workflows/ci.yml`
+exactly (same order, same flags); a local green light is necessary
+but not sufficient — CI may still differ if your environment drifted.
+
+**Always use the workspace-pinned versions of these tools.** RTK's
+runtime versions of `prettier`, `eslint`, `tsc`, `vitest`, and `nx`
+may not match the versions this workspace pins in `package.json`;
+CI always uses the pinned versions, so the local pre-PR run must
+too. Invoke them through `yarn` (which resolves to the workspace pin)
+or directly via `./node_modules/.bin/<tool>`. See the RTK section
+below for the full rationale.
+
+```bash
+# Run from the repo root or the worktree that owns the branch.
+
+# Quality Gates (job: quality)
+yarn nx lint @jander99/overture --skip-nx-cache    # ESLint (lint step)
+npx tsc -b apps/cli/tsconfig.json                  # typecheck (typecheck step)
+yarn prettier --check .                            # format (format step — WHOLE REPO)
+
+# Test (job: test)
+yarn nx test @jander99/overture
+
+# Package verification (job: package-verify)
+node apps/cli/scripts/verify-package.mjs
+
+# Build & detect (job: build-and-detect)
+yarn nx build @jander99/overture --skip-nx-cache   # build step
+node apps/cli/dist/main.js detect --json           # runtime smoke (see below)
+```
+
+The runtime smoke step mirrors the CI assertion at
+`.github/workflows/ci.yml:171-182`: the built binary, run on a
+clean environment with no installed MCP agents, must report all
+4 registry entries with `installed: false` and no `parseError`.
+Locally that translates to:
+
+```bash
+node apps/cli/dist/main.js detect --json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+assert isinstance(data.get('platforms'), list)
+assert len(data['platforms']) == 4
+for p in data['platforms']:
+    assert p.get('installed') is False, f'{p[\"id\"]} reports installed locally'
+    assert not p.get('parseError'), f'{p[\"id\"]} has parseError'
+print('OK')
+"
+```
+
+**What each gate catches**
+
+- `nx lint` — `@nx/eslint:lint` (target in `apps/cli/package.json`,
+  `maxWarnings: 0`) against `eslint.config.mjs` (type-aware
+  `recommendedTypeChecked` + `stylisticTypeChecked`). Catches type
+  errors `tsc` misses, unused locals/vars, non-null on optional
+  chains, unsafe `any` casts, dot-notation violations.
+- `tsc -b apps/cli/tsconfig.json` — `tsconfig.base.json` enforces
+  `strict`, `noUnusedLocals`, `noImplicitReturns`,
+  `noImplicitOverride`, `noFallthroughCasesInSwitch`,
+  `noEmitOnError`. Catches the rest of the type errors. Composite
+  projects require declaration emit; **do not pass `--noEmit`**.
+- `prettier --check .` — whole-repo formatting check. **Selective
+  subsets ship drift.** CI uses `.`; do the same locally.
+- `nx test` — Vitest 4 (`apps/cli/vitest.config.mts`); `jsdom` env,
+  `globals: true`.
+- `verify-package.mjs` — packs the workspace tarball, installs it
+  in a clean location, smoke-tests the installed binary (currently
+  `overture detect` and `overture bootstrap --dry-run`).
+- `nx build` — esbuild bundle. `--skip-nx-cache` catches `^build`
+  regressions (the `@overture/agents` package must build before
+  `apps/cli`).
+- `node dist/main.js detect --json` smoke — catches missing runtime
+  deps (e.g. `smol-toml`), broken Yarn workspace symlinks, and
+  other pipeline breakage the unit tests don't see.
+
+**Commit hygiene**
+
+- Stage only intended files. Never stage untracked `ARCHITECTURE.md`,
+  `STRUCTURE.md`, `.codegraph/`, `.cortexkit/`, or `.omo/evidence/`.
+- Each commit must be self-contained: the diff between any two
+  consecutive commits must compile, lint, format-check, test, and
+  build cleanly. CI runs against the merge-base, but reviewers read
+  commit-by-commit.
+
 ## RTK
 
 RTK intercepts shell commands at runtime — `git status` becomes
@@ -88,19 +176,23 @@ is what CI runs and what should gate a commit.
   any package that ends up using `import ... from 'pkg'`.
 - **CI is correct now.** `.github/workflows/ci.yml` uses `setup-node` with
   Node 24 LTS and `yarn install --immutable` via Corepack. The Quality Gates
-  job runs `npx prettier --check .`; the Lint step is a tracked-no-op until
-  a lint target is added (see `.omo/plans/`). The Test job runs
-  `npx nx test @jander99/overture`. A new `package-verify` job runs
-  `node apps/cli/scripts/verify-package.mjs` to assert the npm pack tarball
-  shape, smoke-tests the installed binary, and guards the published
+  job runs `npx prettier --check .` and `npx nx lint @jander99/overture
+--skip-nx-cache` (type-aware ESLint via `eslint.config.mjs` at the repo
+  root; the `@nx/eslint:lint` target in `apps/cli/package.json` is wired
+  with `maxWarnings: 0` so any lint error or warning fails the gate). The
+  Test job runs `npx nx test @jander99/overture`. A `package-verify` job
+  runs `node apps/cli/scripts/verify-package.mjs` to assert the npm pack
+  tarball shape, smoke-tests the installed binary, and guards the published
   contract. Local dev mirrors these: `yarn install --immutable`,
   `yarn nx test @jander99/overture`, `yarn nx build @jander99/overture`,
-  `yarn prettier --check .`.
-- **Lint target is not configured.** `npx nx run-many -t lint --all` will
-  fail until a `lint` target is added to `apps/cli` (and the corresponding
-  ESLint toolchain). The CI step is currently a tracked no-op. Don't try to
-  silence it with `|| true`; either wire the target or leave the
-  no-op-and-log.
+  `yarn prettier --check .`, `yarn nx lint @jander99/overture --skip-nx-cache`.
+- **Lint target is wired (since #74).** `apps/cli/package.json` declares a
+  `lint` target using `@nx/eslint:lint` with `lintFilePatterns:
+['apps/cli/**/*.ts']`. The flat config at `eslint.config.mjs` enables
+  `typescript-eslint`'s `recommendedTypeChecked` + `stylisticTypeChecked`
+  presets, so most spec/implementation issues surface here rather than at
+  `tsc` time. New code must pass `yarn nx lint @jander99/overture
+--skip-nx-cache` before merge.
 - **`bin` points at the built artifact.** `overture` won't work after a
   fresh checkout until you `yarn nx run @jander99/overture:link` (which
   builds + `npm link`s). The bundle is **partially** vendored: `jsonc-parser`
