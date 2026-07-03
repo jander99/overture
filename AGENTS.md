@@ -88,19 +88,23 @@ is what CI runs and what should gate a commit.
   any package that ends up using `import ... from 'pkg'`.
 - **CI is correct now.** `.github/workflows/ci.yml` uses `setup-node` with
   Node 24 LTS and `yarn install --immutable` via Corepack. The Quality Gates
-  job runs `npx prettier --check .`; the Lint step is a tracked-no-op until
-  a lint target is added (see `.omo/plans/`). The Test job runs
-  `npx nx test @jander99/overture`. A new `package-verify` job runs
-  `node apps/cli/scripts/verify-package.mjs` to assert the npm pack tarball
-  shape, smoke-tests the installed binary, and guards the published
+  job runs `npx prettier --check .` and `npx nx lint @jander99/overture
+--skip-nx-cache` (type-aware ESLint via `eslint.config.mjs` at the repo
+  root; the `@nx/eslint:lint` target in `apps/cli/package.json` is wired
+  with `maxWarnings: 0` so any lint error or warning fails the gate). The
+  Test job runs `npx nx test @jander99/overture`. A `package-verify` job
+  runs `node apps/cli/scripts/verify-package.mjs` to assert the npm pack
+  tarball shape, smoke-tests the installed binary, and guards the published
   contract. Local dev mirrors these: `yarn install --immutable`,
   `yarn nx test @jander99/overture`, `yarn nx build @jander99/overture`,
-  `yarn prettier --check .`.
-- **Lint target is not configured.** `npx nx run-many -t lint --all` will
-  fail until a `lint` target is added to `apps/cli` (and the corresponding
-  ESLint toolchain). The CI step is currently a tracked no-op. Don't try to
-  silence it with `|| true`; either wire the target or leave the
-  no-op-and-log.
+  `yarn prettier --check .`, `yarn nx lint @jander99/overture --skip-nx-cache`.
+- **Lint target is wired (since #74).** `apps/cli/package.json` declares a
+  `lint` target using `@nx/eslint:lint` with `lintFilePatterns:
+['apps/cli/**/*.ts']`. The flat config at `eslint.config.mjs` enables
+  `typescript-eslint`'s `recommendedTypeChecked` + `stylisticTypeChecked`
+  presets, so most spec/implementation issues surface here rather than at
+  `tsc` time. New code must pass `yarn nx lint @jander99/overture
+--skip-nx-cache` before merge.
 - **`bin` points at the built artifact.** `overture` won't work after a
   fresh checkout until you `yarn nx run @jander99/overture:link` (which
   builds + `npm link`s). The bundle is **partially** vendored: `jsonc-parser`
