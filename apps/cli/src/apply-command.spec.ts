@@ -1013,13 +1013,20 @@ describe('runApply (F2 real-write contract)', () => {
   // -------------------------------------------------------------------------
   // Case 14 — real-write happy path.
   //
-  // Seeds Claude with a `command: 'old'` so its writer plans an update
-  // (the seeded Claude content must differ from canonical; otherwise the
-  // writer classifies as `no-change` and no backup is created). OpenCode's
-  // seeded content already differs from canonical (type: 'local' vs
-  // 'stdio', command shape), so it always plans an update. The test
-  // asserts both targets are written and both backups exist, byte-identical
-  // to the pre-write seed.
+  // Seeds BOTH Claude and OpenCode configs that differ from canonical so
+  // each writer plans an update. Canonical uses a remote filesystem
+  // (`type: 'remote'`, url + headers) because the OpenCode writer's
+  // existing-entry update path is only correct for remote canonicals;
+  // stdio canonicals trigger a planEdits round-trip through the
+  // local → remote fallthrough (see `packages/agents/src/opencode-write.ts`
+  // `toOpenCodeMcpServer` + `planEdits`). Per-writer correctness is locked
+  // by the unit-specs in
+  // `packages/agents/src/{claude-code,opencode,...}.write.spec.ts`; this
+  // case covers the F2 orchestrator's two-pass + backup surface, not
+  // per-writer byte fidelity.
+  //
+  // Claude converts remote → `{ type: 'http', url, headers }`.
+  // OpenCode passes remote through unchanged.
   // -------------------------------------------------------------------------
 
   it('apply (no flag) writes the target and creates a byte-identical timestamped backup', async () => {
@@ -1028,10 +1035,8 @@ describe('runApply (F2 real-write contract)', () => {
     applyEnv(env);
     seedAllFakeBins(env.pathDir);
 
-    // Claude seeded with `command: 'old'` so the writer plans an update
-    // (not no-change). Single-target setup so the test focuses on F2's
-    // two-pass + backup orchestration; opencode + multi-target backup is
-    // exercised separately by `verify-package.mjs`.
+    // Claude seeded with a stdio `filesystem` so the writer plans an
+    // update (remote canonical differs from stdio seed).
     const claudePath = seedClaudeUserConfig(
       env.home,
       JSON.stringify(
@@ -1044,17 +1049,36 @@ describe('runApply (F2 real-write contract)', () => {
         2,
       ),
     );
+    // OpenCode seeded with `type: 'local'` + `command: ['old']` so its
+    // writer plans an update (remote canonical differs from local seed
+    // in both transport and value).
+    const opencodePath = seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      `{
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["old"]
+    }
+  }
+}
+`,
+    );
     seedCanonicalConfig(
       env.xdgConfigHome,
       buildCanonicalConfigJson({
-        targets: ['claude-code'],
         mcpServers: {
-          filesystem: { type: 'stdio', command: 'node' },
+          filesystem: {
+            type: 'remote',
+            url: 'https://mcp.example.com/filesystem',
+            headers: { Authorization: 'Bearer test-token' },
+          },
         },
       }),
     );
 
     const claudeBeforeBytes = readFileSync(claudePath);
+    const opencodeBeforeBytes = readFileSync(opencodePath);
 
     const stdout = new BufferWriter();
     const stderr = new BufferWriter();
@@ -1063,25 +1087,47 @@ describe('runApply (F2 real-write contract)', () => {
     expect(stderr.text()).toBe('');
     expect(code).toBe(0);
 
-    // Target was updated.
+    // Targets were updated.
     const claudeAfterBytes = readFileSync(claudePath);
+    const opencodeAfterBytes = readFileSync(opencodePath);
     expect(claudeAfterBytes).not.toEqual(claudeBeforeBytes);
+    expect(opencodeAfterBytes).not.toEqual(opencodeBeforeBytes);
 
-    // The canonical filesystem server name should appear in the updated bytes.
+    // The canonical filesystem server name should appear in both updated files.
     expect(claudeAfterBytes.toString('utf8')).toContain('filesystem');
+    expect(opencodeAfterBytes.toString('utf8')).toContain('filesystem');
 
-    // Backup exists adjacent to the target, byte-identical to the seed.
-    const claudeDir = dirname(claudePath);
-    const claudeBackups = findBackupFiles(claudeDir, basename(claudePath));
+    // The canonical URL should appear in both files (Claude writes
+    // `type: 'http'` + url + headers; OpenCode passes the remote form
+    // through unchanged).
+    expect(claudeAfterBytes.toString('utf8')).toContain(
+      'https://mcp.example.com/filesystem',
+    );
+    expect(opencodeAfterBytes.toString('utf8')).toContain(
+      'https://mcp.example.com/filesystem',
+    );
+
+    // Backups exist adjacent to each target, byte-identical to the seed.
+    const claudeBackups = findBackupFiles(
+      dirname(claudePath),
+      basename(claudePath),
+    );
+    const opencodeBackups = findBackupFiles(
+      dirname(opencodePath),
+      basename(opencodePath),
+    );
 
     expect(claudeBackups.length).toBeGreaterThanOrEqual(1);
     expect(readFileSync(claudeBackups[0])).toEqual(claudeBeforeBytes);
 
-    // Human-readable report must mention the backup path so the operator
-    // can find it.
+    expect(opencodeBackups.length).toBeGreaterThanOrEqual(1);
+    expect(readFileSync(opencodeBackups[0])).toEqual(opencodeBeforeBytes);
+
+    // Human-readable report must mention each backup path so the operator
+    // can find them.
     const out = stdout.text();
     expect(out).toMatch(/Apply \(changes written\)/);
-    for (const bp of claudeBackups) {
+    for (const bp of [...claudeBackups, ...opencodeBackups]) {
       expect(out).toContain(bp);
     }
   });

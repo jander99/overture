@@ -541,14 +541,13 @@ logStep('Apply real-write smoke (F2)');
 // byte-identical contents to the pre-write seed. End-to-end guard for
 // the F2 two-pass (dryRun → backup → real) orchestration.
 //
-// Claude Code is the chosen target because its writer preserves the
-// existing entry's KEY when replacing the value (verified by the
-// F2 spec Case 14 + Case 18 contracts). The OpenCode writer's
-// `findServerPropertyRange` / `renderServer` interaction drops the
-// server key for existing entries (see `packages/agents/src/opencode-write.ts`
-// line 345), so exercising it here would surface a writer-side quirk
-// rather than the F2 orchestrator surface. The unit-spec opencode
-// coverage lives in `packages/agents/src/opencode.write.spec.ts`.
+// Claude Code is the chosen target because it is the simplest single-
+// target writer (one file per call), making the F2 surface easy to
+// verify end-to-end. OpenCode is covered by the F2 spec Case 14 in
+// apps/cli/src/apply-command.spec.ts (real-write happy path covers
+// both Claude and OpenCode side-by-side). GitHub Copilot CLI and
+// OpenAI Codex are covered by their unit-specs (see
+// packages/agents/src/{github-copilot-cli,openai-codex}.write.spec.ts).
 const applyHome = mkdtempSync('/tmp/overture-verify-apply-home-');
 const applyXdg = mkdtempSync('/tmp/overture-verify-apply-xdg-');
 const applyPath = mkdtempSync('/tmp/overture-verify-apply-path-');
