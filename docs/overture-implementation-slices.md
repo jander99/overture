@@ -394,6 +394,26 @@ Then apply only the canonical MCP entries to the target MCP subtree.
 
 Expected result: real write behavior with backup creation.
 
+**Status: completed on feat/f2-apply-with-backups (this slice).** Delivered
+the `overture apply` real-write path with adjacent timestamped backups.
+Each per-agent write runs in two passes: Pass 1 (`dryRun: true`) discovers
+the target paths and change decision; if Pass 1 plans an update, the
+orchestrator snapshots each target via `fs.copyFile` to
+`<target>.bak.<YYYYMMDD-HHmmssSSS>` with a `-<randomHex(4)>` collision
+suffix (3 retries); only then does Pass 2 (`dryRun: false`) perform the
+real write. `settings.backupBeforeWrite` (default `true`) gates the
+backup step — when `false`, Pass 2 runs without a snapshot. Refusal
+statuses (`not-targetable`, `parse-error`, `unsupported-shape`,
+`unsupported-format`) skip both the backup step and Pass 2. Backup
+failures surface as a CLI-local `status: 'backup-failed'` (never widening
+`WriteReason` in `@overture/agents`). The new `ApplyResult` envelope
+(profile, configPath, disabledServers, backupBeforeWrite, results) is
+human-only per gate F2-4 — `--json` stays dry-run-only. The four writers
+in `@overture/agents` are untouched; the E1 preservation harness and
+E2/E3/E4 byte-splice semantics carry over for free. Conflict refusal
+(F3) and the G-track (state file + restore + human logs) remain future
+work.
+
 ### F3. Refuse settings conflicts during apply
 
 If a target agent already has the same server name with different settings,
