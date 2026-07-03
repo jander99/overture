@@ -26,6 +26,7 @@ export type {
   AgentMcpWriteHandler,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentMcpWriteServer,
   AgentNormalizedMcpServer,
   JsonPrimitive,
   JsonValue,
