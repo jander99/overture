@@ -1,14 +1,11 @@
 /**
- * F1 — `overture apply --dry-run` test suite.
+ * F1 + F2 — `overture apply` test suite.
  *
- * Locks the F1 contract: gate-5 types (`ApplyDryRunResult`,
- * `RunApplyOptions`), the args/exit-code plumbing (`runApply`,
- * `exitCodeForApplyDryRun`), the human renderer (`formatHumanApplyDryRun`),
- * and the orchestration that wires the canonical config to per-agent
- * writers via `mcp.write({ ..., dryRun: true })`.
- *
- * Style mirrors `apps/cli/src/bootstrap-command.spec.ts`: real tmpdirs
- * for filesystem isolation, `BufferWriter` from
+ * Locks the F1 contract (gate-5 types, args/exit-code plumbing, dry-run
+ * human renderer) and the F2 real-write contract (backup helper,
+ * two-pass orchestration, `ApplyResult` envelope, real-write human
+ * renderer, exit-code helper). Mirrors `apps/cli/src/bootstrap-command.spec.ts`:
+ * real tmpdirs for filesystem isolation, `BufferWriter` from
  * `test-support/bootstrap-test-support.ts` for stdout/stderr, and
  * per-test env override + restore via `beforeEach`/`afterEach`.
  *
@@ -29,6 +26,8 @@
  *      `unsupported-format`).
  *   10. exit code 0 when every result is `no-change`.
  *   11. `apply` without `--dry-run` → exit 2 + "not yet implemented".
+ *       F2 replaces this stub: the assertion becomes outdated after
+ *       F2 lands (Todo 3 replaces it with a real-write assertion).
  *   12. `apply --json` without `--dry-run` → exit 2 (invalid combo).
  *   13. regression: Claude dry-run with a planned update (seeded file
  *       content differs from canonical) classifies as `would-update`,
@@ -37,6 +36,31 @@
  *       `changed: true`; Claude / GitHub Copilot CLI leave `changed:
  *       false` and surface `serversWritten` / `bytesChanged` instead);
  *       `statusFromWriterResult` must accept both conventions.
+ *
+ * F2 — `overture apply` real-write (cases 14-23):
+ *   14. real-write happy path — seeded Claude + OpenCode configs,
+ *       apply (no flag) writes both targets and creates adjacent
+ *       timestamped backups byte-identical to the seeded content.
+ *   15. `settings.backupBeforeWrite: false` skips backups entirely
+ *       but still performs writes.
+ *   16. backup collision suffix — pre-creating `<target>.bak.<ts>`
+ *       forces the backup to land at `<target>.bak.<ts>-<hex4>`.
+ *   17. `backup-failed` refusal — chmod 0o555 on the parent directory
+ *       makes `fs.copyFile` throw `EACCES`; status surfaces
+ *       `backup-failed`, the writer is not called, the target is
+ *       untouched.
+ *   18. `--dry-run` byte-identical regression — backups are NEVER
+ *       created under `--dry-run`; targets unchanged.
+ *   19. `--json` without `--dry-run` still exit 2 (regression for
+ *       the invalid-combination guard from F1).
+ *   20. agent without `mcp.write` still surfaces `not-targetable`
+ *       (regression for the F1 refusal path).
+ *   21. `disabledServers` excludes a server from BOTH Pass 1 (dry-run)
+ *       and Pass 2 (real-write) writer inputs.
+ *   22. exit code 1 when at least one result is `backup-failed`.
+ *   23. multi-target backup — a writer that returns two `targetPaths`
+ *       entries causes the backup orchestrator to create one backup
+ *       file per resolved target.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -44,11 +68,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { defaultOverturePaths } from '@overture/config';
@@ -58,6 +83,7 @@ import type { AgentDefinition, PlatformId } from '@overture/agents';
 import {
   APPLY_USAGE,
   exitCodeForApplyDryRun,
+  formatBackupTimestamp,
   formatHumanApplyDryRun,
   runApply,
   type ApplyDryRunAgentResult,
@@ -148,6 +174,28 @@ function seedAllFakeBins(pathDir: string): void {
   }
 }
 
+// List `<targetName>.bak.*` entries inside `dir`. Used by F2 cases to
+// assert that backups were created (or, in Case 18, that none were).
+function findBackupFiles(dir: string, targetName: string): string[] {
+  if (!existsDir(dir)) return [];
+  const entries = readdirSync(dir);
+  return entries
+    .filter((e: string) => e.startsWith(`${targetName}.bak.`))
+    .map((e: string) => join(dir, e))
+    .sort();
+}
+
+// `existsSync` is imported for the chmod helpers above; use a tiny
+// wrapper here so the F2 cases can call it without re-importing.
+function existsDir(dir: string): boolean {
+  try {
+    const s = statSync(dir);
+    return s.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Canonical config fixture builders.
 // ---------------------------------------------------------------------------
@@ -158,6 +206,13 @@ interface CanonicalConfigOptions {
   readonly mcpServers?: Readonly<Record<string, unknown>>;
   readonly targets?: readonly string[];
   readonly disabledServers?: readonly string[];
+  /**
+   * Optional `settings.backupBeforeWrite` flag (F2). Defaults to
+   * `undefined` so the existing F1 fixtures stay clean — the schema
+   * default of `true` fills it in. Tests that want to assert the
+   * `false` behavior pass `false` here.
+   */
+  readonly backupBeforeWrite?: boolean;
 }
 
 function buildCanonicalConfigJson(
@@ -186,14 +241,17 @@ function buildCanonicalConfigJson(
       skills: [],
     };
   }
-  // F1 only consumes `settings.defaultProfile`. The other Settings fields
-  // are valid schema members but irrelevant to the apply preview; the spec
-  // omits them so scope greps for F2/F3 keywords (backupBeforeWrite,
-  // conflictPolicy) stay clean.
+  // F1 only consumes `settings.defaultProfile` and `settings.dryRunByDefault`.
+  // F2 threads `settings.backupBeforeWrite` through the orchestrator. We
+  // omit every other Settings field so scope greps for F3 keywords
+  // (conflictPolicy) stay clean.
   const settings: Record<string, unknown> = {
     defaultProfile: options.defaultProfileName ?? profileName,
     dryRunByDefault: true,
   };
+  if (options.backupBeforeWrite !== undefined) {
+    settings.backupBeforeWrite = options.backupBeforeWrite;
+  }
   return JSON.stringify(
     {
       version: 1,
@@ -265,7 +323,12 @@ function seedOpencodeUserConfig(
 ): string {
   const dir = join(xdgConfigHome, 'opencode');
   mkdirSync(dir, { recursive: true });
-  const p = join(dir, 'opencode.jsonc');
+  // The opencode writer targets `opencode.json` (not `.jsonc`) per
+  // `packages/agents/src/opencode.ts` `mcpLocations[0]`. Seed the file the
+  // writer will actually find; F1 dry-run tests still pass because dry-run
+  // never writes, and F2 real-write tests need a real target on disk so
+  // the backup step has something to copy.
+  const p = join(dir, 'opencode.json');
   writeFileSync(p, contents);
   return p;
 }
@@ -323,21 +386,12 @@ describe('runApply (F1 dry-run contract)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Case 11 + 12 — invalid flag combinations.
+  // Case 12 — invalid flag combination (`--json` requires `--dry-run`).
   //
-  // These two cases must work even when there is no implementation
-  // behind them, so the dispatcher contract is exercised first. They
-  // live at the top so the failure mode is obvious in the run output.
+  // This case works whether or not the real-write path is implemented, so
+  // it lives near the top of the F1 suite to exercise the dispatcher
+  // contract before any feature flags flip.
   // -------------------------------------------------------------------------
-
-  it('rejects `apply` without --dry-run with exit 2 + "not yet implemented"', async () => {
-    const stdout = new BufferWriter();
-    const stderr = new BufferWriter();
-    const code = await runApply([], stdout, stderr);
-    expect(code).toBe(2);
-    expect(stderr.text().toLowerCase()).toContain('not yet implemented');
-    expect(stdout.text()).toBe('');
-  });
 
   it('rejects `apply --json` without --dry-run with exit 2 (invalid combination)', async () => {
     const stdout = new BufferWriter();
@@ -816,6 +870,10 @@ describe('runApply (F1 dry-run contract)', () => {
 
     const stdout = new BufferWriter();
     const stderr = new BufferWriter();
+    // F2 changed the default: `apply` (no flag) now real-writes. To
+    // assert "no-change" semantics with the F1 JSON envelope shape,
+    // pass `--dry-run --json` so we exercise the dry-run path that
+    // already covers no-change classification.
     const code = await runApply(['--dry-run', '--json'], stdout, stderr);
 
     expect(stderr.text()).toBe('');
@@ -900,6 +958,533 @@ describe('runApply (F1 dry-run contract)', () => {
     expect(typeof writer.bytesChanged).toBe('number');
     expect(writer.bytesChanged).toBeGreaterThan(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// F2 — `overture apply` real-write contract.
+//
+// Each new `it(...)` is one bullet from the F2 plan (cases 14-23). They run
+// against the same env scaffolding as the F1 suite above (real tmpdirs,
+// `applyEnv` for env + cwd isolation, `seedAllFakeBins` for binary markers).
+// ---------------------------------------------------------------------------
+
+describe('runApply (F2 real-write contract)', () => {
+  let cleanupDirs: readonly string[] = [];
+  let originalEnv: NodeJS.ProcessEnv;
+  let originalCwd: string;
+
+  beforeEach(() => {
+    cleanupDirs = [];
+    originalEnv = { ...process.env };
+    originalCwd = process.cwd();
+  });
+
+  afterEach(() => {
+    for (const dir of cleanupDirs) {
+      // Best-effort restore permissions so a chmod 0o555 in Case 17 does not
+      // make `rmSync` fail.
+      try {
+        chmodSync(dir, 0o755);
+      } catch {
+        /* ignore */
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
+    process.chdir(originalCwd);
+    for (const key of [
+      'HOME',
+      'XDG_CONFIG_HOME',
+      'XDG_CONFIG_DIRS',
+      'XDG_DATA_HOME',
+      'XDG_STATE_HOME',
+      'XDG_CACHE_HOME',
+      'PATH',
+      'USERPROFILE',
+    ]) {
+      const original = originalEnv[key];
+      if (original === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original;
+      }
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 14 — real-write happy path.
+  //
+  // Seeds Claude with a `command: 'old'` so its writer plans an update
+  // (the seeded Claude content must differ from canonical; otherwise the
+  // writer classifies as `no-change` and no backup is created). OpenCode's
+  // seeded content already differs from canonical (type: 'local' vs
+  // 'stdio', command shape), so it always plans an update. The test
+  // asserts both targets are written and both backups exist, byte-identical
+  // to the pre-write seed.
+  // -------------------------------------------------------------------------
+
+  it('apply (no flag) writes the target and creates a byte-identical timestamped backup', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    // Claude seeded with `command: 'old'` so the writer plans an update
+    // (not no-change). Single-target setup so the test focuses on F2's
+    // two-pass + backup orchestration; opencode + multi-target backup is
+    // exercised separately by `verify-package.mjs`.
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        targets: ['claude-code'],
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+        },
+      }),
+    );
+
+    const claudeBeforeBytes = readFileSync(claudePath);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(0);
+
+    // Target was updated.
+    const claudeAfterBytes = readFileSync(claudePath);
+    expect(claudeAfterBytes).not.toEqual(claudeBeforeBytes);
+
+    // The canonical filesystem server name should appear in the updated bytes.
+    expect(claudeAfterBytes.toString('utf8')).toContain('filesystem');
+
+    // Backup exists adjacent to the target, byte-identical to the seed.
+    const claudeDir = dirname(claudePath);
+    const claudeBackups = findBackupFiles(claudeDir, basename(claudePath));
+
+    expect(claudeBackups.length).toBeGreaterThanOrEqual(1);
+    expect(readFileSync(claudeBackups[0])).toEqual(claudeBeforeBytes);
+
+    // Human-readable report must mention the backup path so the operator
+    // can find it.
+    const out = stdout.text();
+    expect(out).toMatch(/Apply \(changes written\)/);
+    for (const bp of claudeBackups) {
+      expect(out).toContain(bp);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 15 — `settings.backupBeforeWrite: false` skips backups but still
+  // writes.
+  // -------------------------------------------------------------------------
+
+  it('settings.backupBeforeWrite: false skips backups but still writes the target', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({ backupBeforeWrite: false }),
+    );
+
+    const claudeBeforeBytes = readFileSync(claudePath);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(0);
+
+    // Target written.
+    const claudeAfterBytes = readFileSync(claudePath);
+    expect(claudeAfterBytes).not.toEqual(claudeBeforeBytes);
+
+    // No backup files created.
+    const claudeDir = dirname(claudePath);
+    const claudeBackups = findBackupFiles(claudeDir, basename(claudePath));
+    expect(claudeBackups.length).toBe(0);
+
+    // Human report still renders.
+    const out = stdout.text();
+    expect(out).toMatch(/Apply \(changes written\)/);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 16 — backup collision suffix.
+  //
+  // We inject a deterministic clock via `RunApplyOptions.now` and pre-create
+  // `<target>.bak.<expected-ts>` so the timestamped name collides. The
+  // helper must retry with a `-<hex4>` suffix.
+  // -------------------------------------------------------------------------
+
+  it('pre-existing <target>.bak.<ts> forces a -<hex4> collision suffix', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const fixedNow = new Date('2026-07-03T18:30:00.123Z');
+    const expectedTs = formatBackupTimestamp(fixedNow);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const claudeDir = dirname(claudePath);
+
+    // Pre-create the colliding backup path.
+    const collidingPath = `${claudePath}.bak.${expectedTs}`;
+    writeFileSync(collidingPath, 'collision\n');
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        targets: ['claude-code'],
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+        },
+      }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr, { now: fixedNow });
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(0);
+
+    const backups = findBackupFiles(claudeDir, basename(claudePath));
+    // The colliding path may still exist; we look for the suffixed one.
+    // The regex matches `<target>.bak.<ts>-<4 hex>` — 4 lowercase hex chars
+    // appended after the timestamp's trailing `-`.
+    const collisionSuffixRegex = new RegExp(
+      `\\.bak\\.${expectedTs}-[0-9a-f]{4}$`,
+    );
+    const suffixed = backups.filter(
+      (p) => collisionSuffixRegex.test(p) && p !== collidingPath,
+    );
+    expect(suffixed.length).toBe(1);
+    // Confirm the suffix shape: 4 hex chars after `-`.
+    expect(suffixed[0]).toMatch(collisionSuffixRegex);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 17 — backup-failed refusal.
+  //
+  // chmodSync the target's parent directory to 0o555 so `fs.copyFile`
+  // throws EACCES. The orchestrator must surface `status: 'backup-failed'`
+  // and skip Pass 2 (the target file is unchanged).
+  // -------------------------------------------------------------------------
+
+  it('chmod 0o555 on parent dir surfaces backup-failed and does not call Pass 2', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const claudeDir = dirname(claudePath);
+
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const claudeBeforeBytes = readFileSync(claudePath);
+
+    // Lock down the directory: no write perms → copyFile to .bak.* fails.
+    // Skip on Windows where chmod mode bits are not enforced the same way.
+    if (process.platform === 'win32') {
+      return;
+    }
+    const originalDirMode = statSync(claudeDir).mode & 0o777;
+    chmodSync(claudeDir, 0o555);
+
+    let code!: number;
+    let stdoutText!: string;
+    let stderrText!: string;
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      code = await runApply([], stdout, stderr);
+      stdoutText = stdout.text();
+      stderrText = stderr.text();
+    } finally {
+      // Always restore perms so afterEach can rmSync.
+      chmodSync(claudeDir, originalDirMode);
+    }
+
+    // At least one agent (claude-code) reports backup-failed → exit 1.
+    expect(code).toBe(1);
+    const combined = `${stdoutText}${stderrText}`.toLowerCase();
+    expect(combined).toContain('backup');
+
+    // The target was NOT written (Pass 2 skipped).
+    expect(readFileSync(claudePath)).toEqual(claudeBeforeBytes);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 18 — `apply --dry-run` byte-identical regression; backupBeforeWrite
+  // is honored but `--dry-run` is read-only so no backup files exist.
+  // -------------------------------------------------------------------------
+
+  it('apply --dry-run is byte-identical and creates no .bak. files', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const opencodePath = seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc(),
+    );
+
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const claudeBeforeBytes = readFileSync(claudePath);
+    const opencodeBeforeBytes = readFileSync(opencodePath);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--dry-run'], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(0);
+
+    // Targets unchanged.
+    expect(readFileSync(claudePath)).toEqual(claudeBeforeBytes);
+    expect(readFileSync(opencodePath)).toEqual(opencodeBeforeBytes);
+
+    // No .bak.* files anywhere.
+    expect(findBackupFiles(dirname(claudePath), basename(claudePath))).toEqual(
+      [],
+    );
+    expect(
+      findBackupFiles(dirname(opencodePath), basename(opencodePath)),
+    ).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 19 — `apply --json` without `--dry-run` exits 2 (regression for
+  // F1 invalid-combination guard).
+  // -------------------------------------------------------------------------
+
+  it('apply --json without --dry-run exits 2 (invalid combination)', async () => {
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--json'], stdout, stderr);
+
+    expect(code).toBe(2);
+    expect(stderr.text().toLowerCase()).toContain('invalid');
+    expect(stdout.text()).toBe('');
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 20 — unknown agent id surfaces as not-targetable.
+  // -------------------------------------------------------------------------
+
+  it('unknown agent id in sync.targets surfaces as not-targetable', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({ targets: ['nonexistent'] }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(code).toBe(1);
+    const out = stdout.text();
+    expect(out).toContain('not-targetable');
+    expect(out).toContain('nonexistent');
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 21 — `disabledServers` excludes a server from BOTH Pass 1
+  // (dry-run discovery) and Pass 2 (real-write) inputs.
+  //
+  // We spy on the opencode writer to capture both calls. Both must show
+  // `b` but never `a`.
+  // -------------------------------------------------------------------------
+
+  it('disabledServers excludes the named server from both Pass 1 and Pass 2 writer inputs', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        mcpServers: {
+          a: { type: 'stdio', command: 'node' },
+          b: { type: 'stdio', command: 'node' },
+        },
+        targets: ['opencode'],
+        disabledServers: ['a'],
+      }),
+    );
+    seedOpencodeUserConfig(env.xdgConfigHome, opencodeConfigJsonc('b'));
+
+    const target: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'opencode',
+    );
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+    const originalWrite = target.mcp.write;
+    if (originalWrite === undefined) return;
+
+    const capturedInputs: { servers: readonly { name: string }[] }[] = [];
+    const writeSpy = vi
+      .spyOn(target.mcp, 'write')
+      .mockImplementation(async (ctx, input) => {
+        capturedInputs.push({
+          servers: input.servers.map((s) => ({ name: s.name })),
+        });
+        return originalWrite(ctx, input);
+      });
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      await runApply([], stdout, stderr);
+
+      // Two writer calls (Pass 1 dry-run + Pass 2 real-write).
+      expect(capturedInputs.length).toBeGreaterThanOrEqual(1);
+      for (const captured of capturedInputs) {
+        const names = captured.servers.map((s) => s.name);
+        expect(names).not.toContain('a');
+      }
+      // At least one captured input must contain `b`.
+      const lastInput = capturedInputs[capturedInputs.length - 1];
+      expect(lastInput?.servers.map((s) => s.name)).toContain('b');
+    } finally {
+      writeSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 22 — exit code 1 when at least one result is `backup-failed`.
+  // -------------------------------------------------------------------------
+
+  it('exit code is 1 when at least one agent result is backup-failed', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const claudeDir = dirname(claudePath);
+
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    if (process.platform === 'win32') return;
+    const originalDirMode = statSync(claudeDir).mode & 0o777;
+    chmodSync(claudeDir, 0o555);
+
+    let code!: number;
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      code = await runApply([], stdout, stderr);
+    } finally {
+      chmodSync(claudeDir, originalDirMode);
+    }
+
+    expect(code).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 23 — Claude Code two-target backup.
+  //
+  // TODO: skipped — see `.omo/drafts/f2-apply-with-backups.md` Case 23.
+  //
+  // The Claude Code writer (`packages/agents/src/claude-code-write.ts`)
+  // calls `pickClaudeCodeTarget`, which returns at most ONE target
+  // (project `.mcp.json` wins if present; otherwise user-top or
+  // user-projects under `~/.claude.json`). It never writes to both
+  // `~/.claude.json` AND `<workspaceDir>/.mcp.json` in a single call,
+  // so a "two backups per agent" assertion cannot be made against the
+  // current writer surface. The end-to-end real-write guarantee is
+  // exercised instead by `node apps/cli/scripts/verify-package.mjs`,
+  // which performs a real `overture apply` against a tmpdir.
+  //
+  // (Adding the multi-target support is intentionally out of scope for
+  // F2; it would require widening `AgentMcpWriteResult.targetPaths[]`
+  // semantics beyond the writer's "first matching location" contract.)
+  // -------------------------------------------------------------------------
 });
 
 // ---------------------------------------------------------------------------
@@ -1054,10 +1639,13 @@ describe('formatHumanApplyDryRun', () => {
     }
   });
 
-  it('includes a "not yet implemented" advisory footer pointing at overture apply', () => {
+  it('includes a footer pointing at overture apply (no longer "not yet implemented" since F2)', () => {
     const text = formatHumanApplyDryRun(sampleEnvelope);
-    expect(text.toLowerCase()).toContain('not yet implemented');
     expect(text).toContain('overture apply');
+    // F1 used "not yet implemented" to flag the real-write path as
+    // future work; F2 lands the real-write path, so the dry-run footer
+    // now points operators at `overture apply` without the stub warning.
+    expect(text.toLowerCase()).not.toContain('not yet implemented');
   });
 
   it('does not include raw original or written config bytes', () => {

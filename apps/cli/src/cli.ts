@@ -130,7 +130,7 @@ const USAGE =
   '  config show       Print the resolved user-level overture config.\n' +
   '  scan [--json]     Build the installed MCP server matrix.\n' +
   '  bootstrap [--dry-run] [--json]   Preview the canonical config that D3 would write.\n' +
-  '  apply --dry-run [--json]   Preview per-agent MCP writes from the canonical config (F1; real apply is F2).\n';
+  '  apply [--dry-run] [--json]   Apply canonical MCP intent to per-agent configs. Backups are created before each write (use --dry-run to preview without writing).\n';
 
 async function runDetect(flags: readonly string[]): Promise<number> {
   if (flags.includes('--help') || flags.includes('-h')) {

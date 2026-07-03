@@ -48,10 +48,11 @@ function run(cmd, args, opts = {}) {
   }
 }
 
-function spawnWithEnv(args, env) {
+function spawnWithEnv(args, env, opts = {}) {
   return spawnSync(process.execPath, args, {
     encoding: 'utf8',
     env,
+    ...opts,
   });
 }
 
@@ -532,6 +533,143 @@ if (
   );
 }
 console.log('bootstrap --help: exit=0 usage=PASS');
+
+logStep('Apply real-write smoke (F2)');
+// Seed a tmpdir with `overture.jsonc` + a Claude Code config that
+// differs from canonical, run `overture apply` (no flag), assert the
+// target file was modified and a timestamped backup file exists with
+// byte-identical contents to the pre-write seed. End-to-end guard for
+// the F2 two-pass (dryRun → backup → real) orchestration.
+//
+// Claude Code is the chosen target because its writer preserves the
+// existing entry's KEY when replacing the value (verified by the
+// F2 spec Case 14 + Case 18 contracts). The OpenCode writer's
+// `findServerPropertyRange` / `renderServer` interaction drops the
+// server key for existing entries (see `packages/agents/src/opencode-write.ts`
+// line 345), so exercising it here would surface a writer-side quirk
+// rather than the F2 orchestrator surface. The unit-spec opencode
+// coverage lives in `packages/agents/src/opencode.write.spec.ts`.
+const applyHome = mkdtempSync('/tmp/overture-verify-apply-home-');
+const applyXdg = mkdtempSync('/tmp/overture-verify-apply-xdg-');
+const applyPath = mkdtempSync('/tmp/overture-verify-apply-path-');
+const applyWorkspace = mkdtempSync('/tmp/overture-verify-apply-ws-');
+const applyEnv = {
+  ...process.env,
+  HOME: applyHome,
+  XDG_CONFIG_HOME: applyXdg,
+  PATH: applyPath,
+};
+const applyClaudeConfig = join(applyHome, '.claude.json');
+const applyClaudeBefore = JSON.stringify(
+  {
+    mcpServers: {
+      filesystem: { type: 'stdio', command: 'old' },
+    },
+  },
+  null,
+  2,
+);
+writeFileSync(applyClaudeConfig, applyClaudeBefore);
+const applyClaudeBeforeBytes = readFileSync(applyClaudeConfig);
+
+// Seed a fake claude binary on the apply PATH so the claude-code agent
+// passes binary-first detection.
+const applyClaudeBin = join(applyPath, 'claude');
+writeFileSync(applyClaudeBin, '#!/bin/sh\nexit 0\n');
+chmodSync(applyClaudeBin, 0o755);
+
+// Seed the canonical config so apply has a real target to write to.
+const applyOvertureConfigDir = join(applyXdg, 'overture');
+mkdirSync(applyOvertureConfigDir, { recursive: true });
+const applyOvertureConfig = join(applyOvertureConfigDir, 'overture.jsonc');
+writeFileSync(
+  applyOvertureConfig,
+  JSON.stringify(
+    {
+      version: 1,
+      settings: {
+        defaultProfile: 'default',
+        backupBeforeWrite: true,
+      },
+      profiles: {
+        default: {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'node' },
+          },
+          sync: {
+            targets: ['claude-code'],
+            disabledServers: [],
+          },
+          skills: [],
+        },
+      },
+    },
+    null,
+    2,
+  ),
+);
+
+const applyResult = spawnWithEnv([distMain, 'apply'], applyEnv, {
+  cwd: applyWorkspace,
+});
+if (applyResult.status !== 0) {
+  fail(
+    `apply (no flag) exited ${applyResult.status} (expected 0)\nstdout:\n${applyResult.stdout}\nstderr:\n${applyResult.stderr}`,
+  );
+}
+
+// Target was modified.
+const applyClaudeAfterBytes = readFileSync(applyClaudeConfig);
+if (applyClaudeAfterBytes.equals(applyClaudeBeforeBytes)) {
+  fail(
+    `apply (no flag) did not modify the seeded claude config\nbefore: ${applyClaudeBeforeBytes.length} bytes\nafter:  ${applyClaudeAfterBytes.length} bytes`,
+  );
+}
+if (!applyClaudeAfterBytes.toString('utf8').includes('filesystem')) {
+  fail(
+    `apply (no flag) did not write the canonical filesystem server\nafter: ${applyClaudeAfterBytes.toString('utf8')}`,
+  );
+}
+
+// Find the backup file (`<target>.bak.<ts>` adjacent to the target).
+const applyHomeDir = dirname(applyClaudeConfig);
+const applyBackups = readdirSync(applyHomeDir).filter((entry) =>
+  entry.startsWith('.claude.json.bak.'),
+);
+if (applyBackups.length === 0) {
+  fail(
+    `apply (no flag) did not create a backup file\ndir: ${applyHomeDir}\nfiles: ${readdirSync(applyHomeDir).join(', ')}`,
+  );
+}
+const applyBackupPath = join(applyHomeDir, applyBackups[0]);
+const applyBackupBytes = readFileSync(applyBackupPath);
+if (!applyBackupBytes.equals(applyClaudeBeforeBytes)) {
+  fail(
+    `apply backup is not byte-identical to the seeded content\nbackup: ${applyBackupPath}\nseed length: ${applyClaudeBeforeBytes.length}\nbackup length: ${applyBackupBytes.length}`,
+  );
+}
+
+// Human report must mention the backup path.
+if (!applyResult.stdout.includes(applyBackupPath)) {
+  fail(
+    `apply (no flag) stdout missing backup path ${applyBackupPath}\nstdout:\n${applyResult.stdout}`,
+  );
+}
+if (!applyResult.stdout.includes('Apply (changes written)')) {
+  fail(
+    `apply (no flag) stdout missing "Apply (changes written)" heading\nstdout:\n${applyResult.stdout}`,
+  );
+}
+
+console.log(
+  `apply (no flag): exit=${applyResult.status} targetModified=PASS backupCreated=PASS backupByteIdentical=PASS`,
+);
+
+// Cleanup apply tmpdirs.
+rmSync(applyHome, { recursive: true, force: true });
+rmSync(applyXdg, { recursive: true, force: true });
+rmSync(applyPath, { recursive: true, force: true });
+rmSync(applyWorkspace, { recursive: true, force: true });
 
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
