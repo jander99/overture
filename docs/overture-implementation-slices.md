@@ -394,6 +394,46 @@ Then apply only the canonical MCP entries to the target MCP subtree.
 
 Expected result: real write behavior with backup creation.
 
+**Status: completed on feat/f2-apply-with-backups (this slice).** Delivered
+the `overture apply` real-write path with adjacent timestamped backups.
+Each per-agent write runs in two passes: Pass 1 (`dryRun: true`) discovers
+the target paths and change decision; if Pass 1 plans an update, the
+orchestrator snapshots each target via `fs.copyFile` to
+`<target>.bak.<YYYYMMDD-HHmmssSSS>` with a `-<randomHex(4)>` collision
+suffix (3 retries); only then does Pass 2 (`dryRun: false`) perform the
+real write. `settings.backupBeforeWrite` (default `true`) gates the
+backup step — when `false`, Pass 2 runs without a snapshot. Refusal
+statuses (`not-targetable`, `parse-error`, `unsupported-shape`,
+`unsupported-format`) skip both the backup step and Pass 2. Backup
+failures surface as a CLI-local `status: 'backup-failed'` (never widening
+`WriteReason` in `@overture/agents`). The new `ApplyResult` envelope
+(profile, configPath, disabledServers, backupBeforeWrite, results) is
+human-only per gate F2-4 — `--json` stays dry-run-only. Conflict refusal
+(F3) and the G-track (state file + restore + human logs) remain future
+work.
+
+> **Retroactive fixes shipped alongside this slice.** Restoring the
+> Case 14 real-write happy path to cover both Claude and OpenCode
+> surfaced two latent bugs in the OpenCode writer + E1 preservation
+> harness that the F1 dry-run contract masked:
+>
+> 1. `packages/agents/src/opencode-write.ts::findServerPropertyRange`
+>    returned a range that covered the entire property (key + value +
+>    trailing comma), and the caller spliced `JSON.stringify(value)`
+>    over it — so the property key was dropped on every existing-entry
+>    update, leaving the document malformed. Narrowed the range to the
+>    value node only (matches the E3 sibling `jsonc-map-write.ts`).
+>    Also added a `local` branch to `toOpenCodeMcpServer` so a stdio
+>    canonical pre-converted to `{type: 'local', command: [...]}` is
+>    not re-classified as `remote` when `planEdits` re-invokes the
+>    helper for extension preservation.
+> 2. `packages/agents/src/writer-preservation/checks.ts::compareContainerKeyOrder`
+>    computed `expected = common.map((_, i) => i)` (ascending indices),
+>    which only fires when the relative order of common keys changes —
+>    not when the relative order is preserved but the position within a
+>    larger container shifts. Now `expected = common.map((k) => origKeys.indexOf(k))`,
+>    matching the original parsed order.
+
 ### F3. Refuse settings conflicts during apply
 
 If a target agent already has the same server name with different settings,

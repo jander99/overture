@@ -680,8 +680,12 @@ function compareContainerKeyOrder(
   const origKeys = Object.keys(orig);
   const writtenKeys = Object.keys(written);
   const common = origKeys.filter((k) => k in written);
+  // FIX: derive expected position indices from the ORIGINAL key order,
+  // not from ascending [0, 1, 2, ...]. Without this fix the check is a
+  // silent pass for any key reorder (project memory 93 surfaced the bug;
+  // F2 / Case 14 restoration revealed it).
   const writtenOrder = common.map((k) => writtenKeys.indexOf(k));
-  const expected = common.map((_, i) => i);
+  const expected = common.map((k) => origKeys.indexOf(k));
   if (JSON.stringify(writtenOrder) !== JSON.stringify(expected)) {
     diffs.push(
       `${path}: expected [${expected}], got [${writtenOrder}] (keys: ${JSON.stringify(common)})`,
