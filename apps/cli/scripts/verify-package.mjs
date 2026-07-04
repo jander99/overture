@@ -526,7 +526,7 @@ if (bootstrapHelpResult.status !== 0) {
 }
 if (
   !bootstrapHelpResult.stdout.includes(
-    'Usage: overture bootstrap --dry-run [--json]',
+    'Usage: overture bootstrap [--dry-run] [--json]',
   )
 ) {
   fail(
