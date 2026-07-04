@@ -472,6 +472,53 @@ paths, hashes, and statuses.
 
 Expected result: machine-readable state for the last apply runs.
 
+**Delivered: shipped 2026-07-04 (PR #TBD) on feat/g1-apply-state-file.**
+Records each `overture apply` real-write run to a per-run JSON file under
+`stateDir/apply/<runId>.json` plus a pointer file at
+`stateDir/apply/last.json`. `stateDir` resolves via
+`defaultOverturePaths()` — `$XDG_STATE_HOME/overture` when set, else
+`~/.local/state/overture` — so the XDG invariant from project memory 72
+is honored. The per-run schema (`ApplyStateRecord`) is parallel to
+`ApplyResult` rather than an extension: a state file written today
+remains parseable after future schema changes to the live envelope.
+Records carry `schemaVersion: 1`, `runId`
+(`<formatBackupTimestamp>-<randomHex8>`, lexically sortable),
+ISO 8601 UTC `timestamp`, `mode: 'apply'`, `profile`, `configPath`, an
+echo of effective `backupBeforeWrite`, and per-agent entries with
+`agentId`, `displayName`, `status` (stored as `string` so a future
+`ApplyStatus` widening does not invalidate old records), `targetPaths`,
+`backupPaths`, `preWriteSha256` / `postWriteSha256`, and optional
+`reason` (mirroring `ApplyAgentResult.reasonDetail`). Hash strategy is
+SHA-256 (Node `crypto.createHash`, lowercase hex, 64 chars) — `null`
+when the target file was absent before or after the write so
+"file did not exist" is distinguishable from "file existed with empty
+content". Retention is bounded to the 10 most recent per-run files:
+`pruneApplyState` lexically sorts `apply/*.json` (the pointer file and
+any stale `*.tmp-*` are excluded by the `*.json && name !== 'last.json'`
+filter), unlinks the oldest so the surviving count equals `keep`
+(default 10), and runs at the end of every successful write. GC runs
+in the `writeApplyState` call after the per-run file is on disk and
+the pointer file is updated; `last.json` is never pruned. Dry-run runs
+produce no state file — the `--dry-run` branch in `runApply` short-
+circuits before `recordApplyStateBestEffort`, matching gate G1-4.
+State-write failures are best-effort: the helper swallows its own
+errors after emitting a single `warning: failed to write apply state:`
+line to `stderr`, and the apply exit code is preserved (a state-write
+failure cannot retroactively make a successful apply exit non-zero).
+Implementation lives in the new CLI-local module
+`apps/cli/src/apply-state.ts` (codec + atomic writer + GC), with the
+orchestrator hook in `apps/cli/src/apply-command.ts` — `runApply`
+captures `defaultOverturePaths()` once at the top of the real-write
+branch, runs a pre-discovery `mcp.write` pass to resolve target paths
+and pre-write hashes BEFORE the existing `applyToAgentReal` loop, then
+calls `recordApplyStateBestEffort(...)` after the human report is
+emitted. No writer files were modified, `ApplyResult` /
+`ApplyAgentResult` / `ApplyStatus` / `WriteReason` were not widened,
+no Nx project was added, and the `--dry-run --json` envelope is
+byte-identical to its pre-G1 shape. G2 (human-readable apply logs on
+disk) and G3 (`overture restore-last` helper, plus consumer for the
+state file) remain future work.
+
 ### G2. Human-readable apply logs
 
 Write a log per apply run that explains what changed and how to restore the
