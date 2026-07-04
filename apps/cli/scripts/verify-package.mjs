@@ -686,10 +686,17 @@ const stateHome = mkdtempSync('/tmp/overture-verify-state-home-');
 const stateXdg = mkdtempSync('/tmp/overture-verify-state-xdg-');
 const statePathDir = mkdtempSync('/tmp/overture-verify-state-path-');
 const stateWorkspace = mkdtempSync('/tmp/overture-verify-state-ws-');
+const stateHomeStateDir = join(stateHome, '.local', 'state');
+// XDG_STATE_HOME must be explicitly set: a parent's XDG_STATE_HOME leak
+// (common in dev shells) would otherwise hijack the state dir and write
+// records to the real home instead of the smoke's tmpdir. The F2 smoke
+// never trips on this because the F2 path is no-change (no state file
+// is written); the G1 path always writes, so we have to pin the env.
 const stateEnv = {
   ...process.env,
   HOME: stateHome,
   XDG_CONFIG_HOME: stateXdg,
+  XDG_STATE_HOME: stateHomeStateDir,
   PATH: statePathDir,
 };
 // Seed the canonical config — target OpenCode with a single canonical
@@ -710,7 +717,7 @@ writeFileSync(
       profiles: {
         default: {
           mcpServers: {
-            filesystem: { type: 'local', command: ['node'] },
+            filesystem: { type: 'stdio', command: 'node' },
           },
           sync: {
             targets: ['opencode'],
@@ -777,10 +784,10 @@ if (stateBackupFiles.length === 0) {
   );
 }
 
-// State file: `<stateDir>/apply/<runId>.json`. Mirror the F2 home-
-// override pattern: `HOME=stateHome` with no `XDG_STATE_HOME` set, so
-// `stateDir` resolves to `$stateHome/.local/state/overture` per
-// `defaultOverturePaths()` in `packages/config/src/paths.ts:108-152`.
+// State file: `<stateDir>/apply/<runId>.json`. With XDG_STATE_HOME pinned
+// to `$stateHome/.local/state`, `defaultOverturePaths()` resolves
+// `stateDir` to `$stateHome/.local/state/overture` and
+// `defaultApplyStateDir` adds the trailing `apply` segment.
 const stateApplyDir = join(stateHome, '.local', 'state', 'overture', 'apply');
 if (!statSync(stateApplyDir, { throwIfNoEntry: false })) {
   fail(
