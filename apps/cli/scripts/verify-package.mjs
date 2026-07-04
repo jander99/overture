@@ -669,6 +669,194 @@ rmSync(applyXdg, { recursive: true, force: true });
 rmSync(applyPath, { recursive: true, force: true });
 rmSync(applyWorkspace, { recursive: true, force: true });
 
+logStep('Apply state-file smoke (G1)');
+// G1 state-file smoke. Drives `overture apply` (no flag) against a
+// tmpdir seeded with an OpenCode config whose existing `unrelated`
+// server does NOT conflict with canonical intent (the canonical
+// `filesystem` server is absent from existing, so the B3 detector
+// has nothing to refuse on). The orchestrator must:
+//   1. Create a backup at `<target>.bak.<YYYYMMDD-HHmmssSSS>`
+//      (Pass 1 plans an update).
+//   2. Write the real config (Pass 2 adds `filesystem`).
+//   3. Write the state file at `<stateDir>/apply/<runId>.json` and
+//      update `<stateDir>/apply/last.json`. End-to-end guard for the
+//      G1 contract: per-run record, schemaVersion=1, agentId matches
+//      the seed target, pointer file names the same runId.
+const stateHome = mkdtempSync('/tmp/overture-verify-state-home-');
+const stateXdg = mkdtempSync('/tmp/overture-verify-state-xdg-');
+const statePathDir = mkdtempSync('/tmp/overture-verify-state-path-');
+const stateWorkspace = mkdtempSync('/tmp/overture-verify-state-ws-');
+const stateHomeStateDir = join(stateHome, '.local', 'state');
+// XDG_STATE_HOME must be explicitly set: a parent's XDG_STATE_HOME leak
+// (common in dev shells) would otherwise hijack the state dir and write
+// records to the real home instead of the smoke's tmpdir. The F2 smoke
+// never trips on this because the F2 path is no-change (no state file
+// is written); the G1 path always writes, so we have to pin the env.
+const stateEnv = {
+  ...process.env,
+  HOME: stateHome,
+  XDG_CONFIG_HOME: stateXdg,
+  XDG_STATE_HOME: stateHomeStateDir,
+  PATH: statePathDir,
+};
+// Seed the canonical config — target OpenCode with a single canonical
+// `filesystem` server. `backupBeforeWrite: true` exercises the F2
+// backup path so the G1 smoke also asserts a backup exists.
+const stateOvertureConfigDir = join(stateXdg, 'overture');
+mkdirSync(stateOvertureConfigDir, { recursive: true });
+const stateOvertureConfig = join(stateOvertureConfigDir, 'overture.jsonc');
+writeFileSync(
+  stateOvertureConfig,
+  JSON.stringify(
+    {
+      version: 1,
+      settings: {
+        defaultProfile: 'default',
+        backupBeforeWrite: true,
+      },
+      profiles: {
+        default: {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'node' },
+          },
+          sync: {
+            targets: ['opencode'],
+            disabledServers: [],
+          },
+          skills: [],
+        },
+      },
+    },
+    null,
+    2,
+  ),
+);
+// Seed an existing OpenCode config with an UNRELATED server so the
+// F3 conflict detector sees no divergence (canonical `filesystem`
+// is absent from existing → no conflict), the writer's Pass 1 plans
+// an update (add `filesystem`), and Pass 2 actually writes.
+const stateOpencodeDir = join(stateXdg, 'opencode');
+mkdirSync(stateOpencodeDir, { recursive: true });
+const stateOpencodeConfig = join(stateOpencodeDir, 'opencode.json');
+const stateOpencodeBefore = JSON.stringify(
+  {
+    mcp: {
+      unrelated: { type: 'local', command: ['stay'] },
+    },
+  },
+  null,
+  2,
+);
+writeFileSync(stateOpencodeConfig, stateOpencodeBefore);
+const stateOpencodeBeforeBytes = readFileSync(stateOpencodeConfig);
+
+// Seed a fake opencode binary on PATH so the opencode agent passes
+// binary-first detection.
+const stateOpencodeBin = join(statePathDir, 'opencode');
+writeFileSync(stateOpencodeBin, '#!/bin/sh\nexit 0\n');
+chmodSync(stateOpencodeBin, 0o755);
+
+const stateApplyResult = spawnWithEnv([distMain, 'apply'], stateEnv, {
+  cwd: stateWorkspace,
+});
+if (stateApplyResult.status !== 0) {
+  fail(
+    `apply (no flag, state-file) exited ${stateApplyResult.status} (expected 0)\nstdout:\n${stateApplyResult.stdout}\nstderr:\n${stateApplyResult.stderr}`,
+  );
+}
+
+// Target file must have been modified (Pass 2 ran).
+const stateOpencodeAfterBytes = readFileSync(stateOpencodeConfig);
+if (stateOpencodeAfterBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    `apply (no flag, state-file) did NOT modify the seeded opencode config (Pass 2 skipped)`,
+  );
+}
+
+// Backup file must exist at `<target>.bak.<ts>`.
+const stateOpencodeHomeDir = dirname(stateOpencodeConfig);
+const stateBackupFiles = readdirSync(stateOpencodeHomeDir).filter((entry) =>
+  entry.startsWith('opencode.json.bak.'),
+);
+if (stateBackupFiles.length === 0) {
+  fail(
+    `apply (no flag, state-file) did NOT create a backup file\ndir: ${stateOpencodeHomeDir}\nexpected: opencode.json.bak.<YYYYMMDD-HHmmssSSS>`,
+  );
+}
+
+// State file: `<stateDir>/apply/<runId>.json`. With XDG_STATE_HOME pinned
+// to `$stateHome/.local/state`, `defaultOverturePaths()` resolves
+// `stateDir` to `$stateHome/.local/state/overture` and
+// `defaultApplyStateDir` adds the trailing `apply` segment.
+const stateApplyDir = join(stateHome, '.local', 'state', 'overture', 'apply');
+if (!statSync(stateApplyDir, { throwIfNoEntry: false })) {
+  fail(
+    `apply (no flag, state-file) state dir missing: ${stateApplyDir}\nstdout:\n${stateApplyResult.stdout}\nstderr:\n${stateApplyResult.stderr}`,
+  );
+}
+const statePerRunFiles = readdirSync(stateApplyDir).filter(
+  (entry) => entry.endsWith('.json') && entry !== 'last.json',
+);
+if (statePerRunFiles.length !== 1) {
+  fail(
+    `apply (no flag, state-file) expected exactly 1 per-run state file under ${stateApplyDir}, found ${statePerRunFiles.length}: ${statePerRunFiles.join(', ')}`,
+  );
+}
+const stateRecordPath = join(stateApplyDir, statePerRunFiles[0]);
+let stateRecord;
+try {
+  stateRecord = JSON.parse(readFileSync(stateRecordPath, 'utf8'));
+} catch (err) {
+  fail(
+    `apply (no flag, state-file) state record at ${stateRecordPath} is not valid JSON: ${err.message}`,
+  );
+}
+if (stateRecord.schemaVersion !== 1) {
+  fail(
+    `apply (no flag, state-file) state record schemaVersion=${stateRecord.schemaVersion} (expected 1)\nrecord: ${JSON.stringify(stateRecord)}`,
+  );
+}
+if (!Array.isArray(stateRecord.agents) || stateRecord.agents.length === 0) {
+  fail(
+    `apply (no flag, state-file) state record agents must be a non-empty array\nrecord: ${JSON.stringify(stateRecord)}`,
+  );
+}
+const stateOpencodeAgent = stateRecord.agents.find(
+  (a) => a && a.agentId === 'opencode',
+);
+if (stateOpencodeAgent === undefined) {
+  fail(
+    `apply (no flag, state-file) state record agents[] missing an entry with agentId === 'opencode'\nrecord: ${JSON.stringify(stateRecord)}`,
+  );
+}
+
+// Pointer file: `<stateDir>/apply/last.json` names the same runId.
+const statePointerPath = join(stateApplyDir, 'last.json');
+let statePointer;
+try {
+  statePointer = JSON.parse(readFileSync(statePointerPath, 'utf8'));
+} catch (err) {
+  fail(
+    `apply (no flag, state-file) pointer at ${statePointerPath} is not valid JSON: ${err.message}`,
+  );
+}
+const stateExpectedRunId = statePerRunFiles[0].replace(/\.json$/, '');
+if (statePointer.runId !== stateExpectedRunId) {
+  fail(
+    `apply (no flag, state-file) pointer runId=${statePointer.runId} (expected ${stateExpectedRunId})`,
+  );
+}
+
+console.log(
+  `apply (no flag, state-file): exit=${stateApplyResult.status} targetModified=PASS backupExists=PASS recordSchemaVersion=1 recordHasOpencode=PASS pointerMatches=PASS`,
+);
+
+// Cleanup state tmpdirs.
+rmSync(stateHome, { recursive: true, force: true });
+rmSync(stateXdg, { recursive: true, force: true });
+rmSync(statePathDir, { recursive: true, force: true });
+rmSync(stateWorkspace, { recursive: true, force: true });
+
 logStep('Apply refused-apply smoke (F3)');
 // F3 refused-apply smoke. Drives `overture apply` (no flag) against a
 // tmpdir seeded with a Claude Code config whose `filesystem` server
