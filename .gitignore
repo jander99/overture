@@ -41,6 +41,10 @@ apps/cli/dist/workspace_modules
 # Build outputs from `tsc -b` (project-references typecheck / lib
 # builds). Created on first CI run and on every local typecheck.
 out-tsc/
+# Build-info cache files emitted by `tsc -b` next to each
+# tsconfig that declares `composite: true`. Per-checkout, regenerated
+# on every typecheck.
+*.tsbuildinfo
 
 # ESLint content-cache (per-checkout, regenerated on every lint run).
 .eslintcache
