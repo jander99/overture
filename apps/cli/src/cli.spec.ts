@@ -3,11 +3,13 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 import { __setPlatformForTests } from './cli.js';
 
@@ -1034,5 +1036,133 @@ describe('run: scan', () => {
       }
       rmSync(pathDir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// G3 — restore-last dispatcher regressions (cases 12-15).
+// ---------------------------------------------------------------------------
+
+describe('run: restore-last dispatcher (G3)', () => {
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+  let originalXdgStateHome: string | undefined;
+  let tempRoots: string[];
+
+  beforeEach(() => {
+    originalXdgStateHome = process.env.XDG_STATE_HOME;
+    tempRoots = [];
+    stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    for (const dir of tempRoots) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    if (originalXdgStateHome === undefined) {
+      delete process.env.XDG_STATE_HOME;
+    } else {
+      process.env.XDG_STATE_HOME = originalXdgStateHome;
+    }
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+  });
+
+  // Case 12 — restore-last --help → USAGE block, exit 0
+  it('restore-last --help prints the new USAGE block and exits 0', async () => {
+    const code = await run(['restore-last', '--help']);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(out).toContain('Usage: overture restore-last');
+    expect(out).toContain('--dry-run');
+    expect(out).toContain('--yes');
+    expect(out).toContain('--force');
+    expect(out).toContain('--run-id');
+  });
+
+  // Case 13 — restore-last --dry-run end-to-end (XDG_STATE_HOME override)
+  it('restore-last --dry-run with seeded state reads the JSON, prints the plan, exits 0', async () => {
+    const xdg = mkdtempSync(join(tmpdir(), 'overture-restore-xdg-'));
+    tempRoots.push(xdg);
+    process.env.XDG_STATE_HOME = xdg;
+    const stateDir = join(xdg, 'overture', 'apply');
+    mkdirSync(stateDir, { recursive: true });
+    const runId = '20260704-183000123-eeeeeeee';
+    const target = join(stateDir, 'mcp-target.json');
+    const backup = join(stateDir, 'mcp-target.json.bak.20260704');
+    const targetContent = '{"old":true}\n';
+    writeFileSync(target, targetContent);
+    writeFileSync(backup, targetContent);
+    const preSha = createHash('sha256').update(targetContent).digest('hex');
+    const record = {
+      schemaVersion: 1,
+      runId,
+      timestamp: '2026-07-04T18:30:00.123Z',
+      mode: 'apply',
+      profile: 'default',
+      configPath: '/home/test/overture.jsonc',
+      backupBeforeWrite: true,
+      agents: [
+        {
+          agentId: 'claude-code',
+          displayName: 'Claude Code',
+          status: 'updated',
+          targetPaths: [target],
+          backupPaths: [backup],
+          preWriteSha256: preSha,
+          postWriteSha256: null,
+        },
+      ],
+    };
+    writeFileSync(join(stateDir, `${runId}.json`), JSON.stringify(record));
+    writeFileSync(join(stateDir, 'last.json'), JSON.stringify({ runId }));
+
+    const code = await run(['restore-last', '--dry-run']);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(out).toContain('Overture restore plan');
+    expect(out).toContain(runId);
+    expect(out).toContain('mv -v');
+    // No filesystem writes on dry-run.
+    expect(readFileSync(target, 'utf8')).toBe(targetContent);
+  });
+
+  // Case 14 — restore-last --unknown-flag → exit 2 + USAGE on stderr
+  it('restore-last --unknown-flag exits 2 and prints the USAGE block to stderr', async () => {
+    const xdg = mkdtempSync(join(tmpdir(), 'overture-restore-xdg-'));
+    tempRoots.push(xdg);
+    process.env.XDG_STATE_HOME = xdg;
+    const stateDir = join(xdg, 'overture', 'apply');
+    mkdirSync(stateDir, { recursive: true });
+
+    const code = await run(['restore-last', '--bogus']);
+    expect(code).toBe(2);
+    const err = stderrSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(err).toContain('Unknown flag: --bogus');
+    expect(err).toContain('Usage: overture restore-last');
+  });
+
+  // Case 15 — no-args still emits USAGE (regression — dispatcher change must
+  // not break the empty-args path).
+  it('overture with no args still returns 0 and prints the USAGE block', async () => {
+    const code = await run([]);
+    expect(code).toBe(0);
+    const out = stdoutSpy.mock.calls
+      .map((c: readonly unknown[]) => c[0] as string)
+      .join('');
+    expect(out).toContain('detect [--json]');
+    expect(out).toContain('apply [--dry-run]');
+    expect(out).toContain('restore-last');
   });
 });

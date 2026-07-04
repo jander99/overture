@@ -18,6 +18,7 @@ import type { DetectJsonOutput } from './platforms/types.js';
 import { runBootstrap } from './bootstrap-command.js';
 import { runScan } from './scan-command.js';
 import { runApply } from './apply-command.js';
+import { runRestore } from './restore-command.js';
 let platformOverride: HostPlatform | null = null;
 export function __setPlatformForTests(p: HostPlatform | null): void {
   platformOverride = p;
@@ -130,7 +131,8 @@ const USAGE =
   '  config show       Print the resolved user-level overture config.\n' +
   '  scan [--json]     Build the installed MCP server matrix.\n' +
   '  bootstrap [--dry-run] [--json]   Preview the canonical config that D3 would write.\n' +
-  '  apply [--dry-run] [--json]   Apply canonical MCP intent to per-agent configs. Backups are created before each write (use --dry-run to preview without writing).\n';
+  '  apply [--dry-run] [--json]   Apply canonical MCP intent to per-agent configs. Backups are created before each write (use --dry-run to preview without writing).\n' +
+  '  restore-last [--dry-run] [--yes] [--force] [--run-id <id>]   Restore backups from the last (or chosen) apply run via per-pair `mv -v`.\n';
 
 async function runDetect(flags: readonly string[]): Promise<number> {
   if (flags.includes('--help') || flags.includes('-h')) {
@@ -245,6 +247,10 @@ export async function run(args: readonly string[]): Promise<number> {
 
   if (args[0] === 'apply') {
     return runApply(args.slice(1), process.stdout, process.stderr);
+  }
+
+  if (args[0] === 'restore-last') {
+    return runRestore(args.slice(1), process.stdout, process.stderr);
   }
 
   process.stderr.write(`Unknown command: ${args[0]}\n${USAGE}`);
