@@ -168,10 +168,6 @@ function seedOpencodeConfig(xdgConfigHome: string, contents: string): string {
   return agentConfigPath;
 }
 
-function countOccurrences(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
-}
-
 describe('runBootstrap', () => {
   let cleanupDirs: readonly string[] = [];
 
@@ -554,7 +550,18 @@ describe('D2 interactive', () => {
     expect(code).toBe(0);
     expect(stderr.text()).toBe('');
     expect(prompt).toHaveBeenCalledTimes(2);
-    expect(countOccurrences(stdout.text(), 'Pickable conflict:')).toBe(2);
+    // After the D2 prompt double-render fix, the prompt text is only
+    // delivered via the `prompt(message)` call (readline renders the
+    // message to stdout in production; the test stub captures it via
+    // `prompt.mock.calls` instead). Pickable order is serverName ascending
+    // (per `@overture/scan-matrix::classifyConflicts`), so `context7` runs
+    // before `filesystem`.
+    expect(prompt.mock.calls[0]?.[0] ?? '').toContain(
+      'Pickable conflict: context7',
+    );
+    expect(prompt.mock.calls[1]?.[0] ?? '').toContain(
+      'Pickable conflict: filesystem',
+    );
     expect(stdout.text()).toContain('Resolved conflicts: 1');
     expect(stdout.text()).toContain('Skipped conflicts: 1');
     expect(stdout.text()).toContain('selected-conflict');

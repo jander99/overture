@@ -29,7 +29,8 @@ import {
 export type { StringWriter } from './scan-command.js';
 import type { StringWriter } from './scan-command.js';
 
-export const BOOTSTRAP_USAGE = 'Usage: overture bootstrap --dry-run [--json]\n';
+export const BOOTSTRAP_USAGE =
+  'Usage: overture bootstrap [--dry-run] [--json]\n';
 
 const BOOTSTRAP_WROTE_FOOTER = (path: string): string =>
   `Wrote config: ${path}\n`;
@@ -208,7 +209,6 @@ async function runBootstrapInteractive(
   const decisions: InteractiveResolution[] = [];
 
   for (const conflict of plan.conflicts.pickable) {
-    stdout.write(formatPickablePrompt(conflict));
     let resolved = false;
     let invalidAttempts = 0;
     while (!resolved) {
@@ -230,7 +230,6 @@ async function runBootstrapInteractive(
           );
           return 2;
         }
-        stdout.write(formatPickablePrompt(conflict));
         continue;
       }
       if (parsed.kind === 'skipped') {
