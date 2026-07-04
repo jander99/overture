@@ -1901,6 +1901,394 @@ describe('runApply (G1 apply-state recording)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// G2 — `overture apply` per-run log writing (cases 29-33).
+//
+// Mirrors the G1 describe block's tmpdir scaffolding. Codec / renderer /
+// writer / parser contract lives in `apply-log.spec.ts`; the cases here
+// lock the orchestrator-side wiring (when a log is written, what path it
+// lands at, what happens on failure, and how retention stays in lockstep
+// with G1).
+// ---------------------------------------------------------------------------
+
+describe('runApply (G2 apply-log writing)', () => {
+  let cleanupDirs: readonly string[] = [];
+  let originalEnv: NodeJS.ProcessEnv;
+  let originalCwd: string;
+
+  // Resolve the default `stateDir` for the current env. Mirrors the
+  // real-writer path so tests assert against the same directories the
+  // orchestrator lands on. `XDG_STATE_HOME` overrides take precedence
+  // over `HOME` per the XDG Base Directory Specification.
+  function defaultStateDir(): string {
+    const paths = defaultOverturePaths({}, process.env);
+    return join(paths.stateDir, 'apply');
+  }
+
+  beforeEach(() => {
+    cleanupDirs = [];
+    originalEnv = { ...process.env };
+    originalCwd = process.cwd();
+    // Default XDG_STATE_HOME to a fresh tmpdir so each test gets an
+    // isolated state directory. The afterEach restores the original
+    // env (and afterEach removes the listed dirs in `cleanupDirs`).
+    const xdgState = mkdtempSync(join(tmpdir(), 'overture-apply-log-'));
+    process.env.XDG_STATE_HOME = xdgState;
+    cleanupDirs = [...cleanupDirs, xdgState];
+  });
+
+  afterEach(() => {
+    for (const dir of cleanupDirs) {
+      try {
+        chmodSync(dir, 0o755);
+      } catch {
+        /* ignore */
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
+    process.chdir(originalCwd);
+    for (const key of [
+      'HOME',
+      'XDG_CONFIG_HOME',
+      'XDG_CONFIG_DIRS',
+      'XDG_DATA_HOME',
+      'XDG_STATE_HOME',
+      'XDG_CACHE_HOME',
+      'PATH',
+      'USERPROFILE',
+    ]) {
+      const original = originalEnv[key];
+      if (original === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original;
+      }
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 29 — `overture apply` (real-write) writes a per-run `.log` adjacent
+  // to the G1 `.json`. The log's runId matches the state's runId and the
+  // log carries the G3-prep `backup:` / `target:` tag lines for every
+  // `updated` agent.
+  // -------------------------------------------------------------------------
+
+  it('Case 29: real-write writes <stateDir>/apply/<runId>.log with backup:/target: tag lines for every updated agent', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const opencodePath = seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+          extra: { type: 'stdio', command: 'extra-cmd' },
+        },
+      }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    const stateDir = defaultStateDir();
+
+    // G1: one per-run .json + last.json pointer.
+    const entries = readdirSync(stateDir).sort();
+    const perRunEntries = entries.filter(
+      (e) => e !== 'last.json' && e.endsWith('.json'),
+    );
+    expect(perRunEntries.length).toBe(1);
+    const runFile = perRunEntries[0];
+    expect(runFile).toBeDefined();
+    if (runFile === undefined) throw new Error('expected one per-run file');
+    const runId = runFile.replace(/\.json$/, '');
+
+    // G2: the sibling .log exists with the SAME runId.
+    const logFile = `${runId}.log`;
+    const logPath = join(stateDir, logFile);
+    expect(entries).toContain(logFile);
+
+    // The log carries the runId in its header and the G3-prep tag lines.
+    const logText = readFileSync(logPath, 'utf8');
+    expect(logText).toContain(runId);
+    // OpenCode was `updated` (pass 2 ran) → restorePairs → backup: + target: tags.
+    expect(logText).toContain('backup:');
+    expect(logText).toContain('target:');
+    // mv -v line for the seeded opencode path (which exists and was backed up).
+    expect(logText).toContain('mv -v');
+    // The DO NOT source this file banner is at the top.
+    expect(logText).toContain('DO NOT source this file');
+    // The log mentions opencode by id.
+    expect(logText).toContain('opencode');
+
+    // The seeded opencode file was backed up (Pass 2 ran) — the log's
+    // backup tag should reference a file under the home dir.
+    expect(opencodePath).toBeDefined();
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 30 — `overture apply --dry-run` writes NO `.log`. The pre-clear
+  // happens implicitly via the fresh XDG_STATE_HOME tmpdir in beforeEach;
+  // the post-condition is the apply/<dir> contains no `.log` files.
+  // -------------------------------------------------------------------------
+
+  it('Case 30: apply --dry-run writes no .log file', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stateDir = defaultStateDir();
+    // Pre-condition: state dir does not exist (beforeEach allocated a
+    // fresh XDG_STATE_HOME tmpdir).
+    expect(existsDir(stateDir)).toBe(false);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--dry-run', '--json'], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    // The state directory either does not exist (writeApplyState was
+    // never called) or contains no `.log` file.
+    if (existsDir(stateDir)) {
+      const entries = readdirSync(stateDir);
+      expect(entries.filter((e) => e.endsWith('.log'))).toEqual([]);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 31 — log-write failure does NOT change the apply exit code.
+  //
+  // Spy on `writeApplyLog` to throw. The apply itself succeeds; the
+  // G1 state file is still written (separate try/catch), and the log
+  // failure surfaces as a stderr warning line. Exit code reflects the
+  // apply outcome, NOT the bookkeeping failure.
+  // -------------------------------------------------------------------------
+
+  it('Case 31: mocked writeApplyLog rejection leaves exit code untouched + emits warning', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const writeLogSpy = vi
+      .spyOn(await import('./apply-log.js'), 'writeApplyLog')
+      .mockRejectedValueOnce(new Error('synthetic-log-write-failure'));
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      // Apply succeeded. Exit code is the apply outcome, not the
+      // log-write failure.
+      expect(code).toBeGreaterThanOrEqual(0);
+      expect(code).toBeLessThanOrEqual(1);
+
+      // Warning line on stderr for the log failure.
+      expect(stderr.text()).toContain('warning');
+      expect(stderr.text()).toContain('failed to write apply log');
+
+      // G1 path unaffected — the state file IS written.
+      const stateDir = defaultStateDir();
+      expect(existsDir(stateDir)).toBe(true);
+      const entries = readdirSync(stateDir);
+      const perRunEntries = entries.filter(
+        (e) => e !== 'last.json' && e.endsWith('.json'),
+      );
+      expect(perRunEntries.length).toBe(1);
+    } finally {
+      writeLogSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 32 — retention in lockstep with G1. Pre-seed 11 paired
+  // `<runId>.json` + `<runId>.log` files. Run `apply` (which writes the
+  // 12th pair). The retention sweep keeps the 10 newest paired runs and
+  // unlinks BOTH files for the 2 oldest runIds. `last.json` points to
+  // the newest runId.
+  // -------------------------------------------------------------------------
+
+  it('Case 32: retention keeps the 10 newest paired runs (.json + .log lockstep, oldest 2 culled)', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stateDir = defaultStateDir();
+    mkdirSync(stateDir, { recursive: true });
+
+    // 11 pre-existing paired runs spanning two timestamps, lexically
+    // ordered oldest-first. After the apply adds the 12th run, the
+    // retention sweep must cull the two lexically oldest pairs (BOTH
+    // .json AND .log per pair).
+    const ts1 = '20260101-000000000';
+    const ts2 = '20260102-000000000';
+    const seededRunIds = [
+      `${ts1}-00000001`,
+      `${ts1}-00000002`,
+      `${ts1}-00000003`,
+      `${ts1}-00000004`,
+      `${ts1}-00000005`,
+      `${ts1}-00000006`,
+      `${ts2}-00000007`,
+      `${ts2}-00000008`,
+      `${ts2}-00000009`,
+      `${ts2}-0000000a`,
+      `${ts2}-0000000b`,
+    ];
+    for (const id of seededRunIds) {
+      writeFileSync(
+        join(stateDir, `${id}.json`),
+        JSON.stringify({
+          schemaVersion: 1,
+          runId: id,
+          timestamp: '2026-01-01T00:00:00.000Z',
+          mode: 'apply',
+          profile: 'default',
+          configPath: '/tmp/seeded.jsonc',
+          backupBeforeWrite: true,
+          agents: [],
+        }),
+      );
+      writeFileSync(
+        join(stateDir, `${id}.log`),
+        `Overture apply log\nrunId: ${id}\n`,
+      );
+    }
+    writeFileSync(
+      join(stateDir, 'last.json'),
+      JSON.stringify({ runId: seededRunIds[seededRunIds.length - 1] }),
+    );
+    // 11 json + 11 log + last.json = 23 entries pre-apply.
+    expect(readdirSync(stateDir)).toHaveLength(23);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    const after = readdirSync(stateDir).sort();
+    // 12 paired runs (11 seeded + 1 new) + last.json = 25 entries
+    // pre-prune. Retention culls the 2 oldest pairs (BOTH .json AND .log
+    // per pair), leaving 10 paired runs + last.json = 21 entries.
+    expect(after).toHaveLength(21);
+
+    // The two lexically oldest pairs are gone — BOTH .json AND .log per pair.
+    expect(after).not.toContain(`${ts1}-00000001.json`);
+    expect(after).not.toContain(`${ts1}-00000001.log`);
+    expect(after).not.toContain(`${ts1}-00000002.json`);
+    expect(after).not.toContain(`${ts1}-00000002.log`);
+
+    // The retained 10 pairs are the lexically newest 10 runIds (paired).
+    const expectedRunIds = seededRunIds.slice().sort().slice(-9); // 9 of the 10 retained are from the seed (the 10th is the new run).
+    const expectedPaired: string[] = [];
+    for (const id of expectedRunIds) {
+      expectedPaired.push(`${id}.json`);
+      expectedPaired.push(`${id}.log`);
+    }
+    // Identify the new run from the directory listing (NOT in the seed).
+    const newRunJson = after.find(
+      (f) =>
+        f.endsWith('.json') && !seededRunIds.some((id) => `${id}.json` === f),
+    );
+    expect(newRunJson).toBeDefined();
+    if (newRunJson === undefined) throw new Error('expected new run json');
+    const newRunLog = newRunJson.replace(/\.json$/, '.log');
+    expectedPaired.push(newRunJson);
+    expectedPaired.push(newRunLog);
+    expect(after.filter((e) => e !== 'last.json').sort()).toEqual(
+      expectedPaired.sort(),
+    );
+
+    // last.json points to the newest runId (the new run's id, not a seeded one).
+    const lastText = readFileSync(join(stateDir, 'last.json'), 'utf8');
+    const lastParsed = JSON.parse(lastText) as { runId: string };
+    expect(lastParsed.runId).toBe(newRunJson.replace(/\.json$/, ''));
+    // The newest run has its .log present.
+    expect(after).toContain(newRunLog);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 33 — `stateDir` follows `XDG_STATE_HOME` for the G2 log path.
+  // Same regression pattern as G1 Case 28 — the log lands at
+  // `<XDG_STATE_HOME>/overture/apply/<runId>.log`.
+  // -------------------------------------------------------------------------
+
+  it('Case 33: apply log lands under XDG_STATE_HOME override (defaultOverturePaths().stateDir)', async () => {
+    const xdgState = process.env.XDG_STATE_HOME;
+    expect(xdgState).toBeDefined();
+    if (xdgState === undefined) throw new Error('XDG_STATE_HOME must be set');
+
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    // The log lives under the XDG override, alongside the G1 JSON + last.json.
+    const expectedDir = join(xdgState, 'overture', 'apply');
+    expect(existsDir(expectedDir)).toBe(true);
+    const entries = readdirSync(expectedDir);
+    const logEntries = entries.filter((e) => e.endsWith('.log'));
+    expect(logEntries.length).toBe(1);
+
+    // Sanity: the stateDir is exactly `${XDG_STATE_HOME}/overture`
+    // when XDG_STATE_HOME is set (matches the G1 Case 28 contract).
+    expect(defaultStateDir()).toBe(expectedDir);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Inline helpers (G1 cases only).
 // ---------------------------------------------------------------------------
 

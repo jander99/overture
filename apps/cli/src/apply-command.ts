@@ -28,6 +28,7 @@
 import { randomBytes } from 'node:crypto';
 import { readdirSync } from 'node:fs';
 import { copyFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
 import {
@@ -55,7 +56,10 @@ import {
   generateRunId,
   sha256OfFile,
   writeApplyState,
+  type ApplyStateRecord,
 } from './apply-state.js';
+
+import { buildApplyLog, writeApplyLog } from './apply-log.js';
 
 // ---------------------------------------------------------------------------
 // Gate-5 — Apply dry-run output types.
@@ -210,6 +214,24 @@ export const APPLY_USAGE = 'Usage: overture apply [--dry-run] [--json]\n';
 
 /** Number of retries when picking a unique backup path. */
 const BACKUP_COLLISION_RETRIES = 3;
+
+/**
+ * CLI version string cached at module load for the G2 `generatedBy` field.
+ * Read from `apps/cli/package.json` via `createRequire(__filename)` so the
+ * lookup works in both the dev (vitest) and bundled-runtime (`dist/main.js`)
+ * contexts — the canonical pattern documented in the project's "bin points
+ * at the built artifact" note. Falls back to `'overture'` when the version
+ * is unavailable so the log writer never has to special-case `unknown`.
+ */
+const CLI_VERSION: string = (() => {
+  try {
+    const requireFromHere = createRequire(__filename);
+    const pkg = requireFromHere('../../package.json') as { version?: unknown };
+    return typeof pkg?.version === 'string' ? pkg.version : 'overture';
+  } catch {
+    return 'overture';
+  }
+})();
 
 // ---------------------------------------------------------------------------
 // Pure helpers.
@@ -1214,8 +1236,11 @@ export async function runApply(
 
   // G1 — record this real-write run to the apply-state file. Best-effort:
   // a state-write failure MUST NOT change the apply exit code (the apply
-  // already happened — state is bookkeeping).
-  await recordApplyStateBestEffort({
+  // already happened — state is bookkeeping). Returns the built
+  // `ApplyStateRecord` on success so the G2 log writer can consume it;
+  // returns `null` when state-write failed (the G1 warning has already
+  // been emitted in that branch and there is nothing meaningful to log).
+  const stateRecord = await recordApplyStateBestEffort({
     overturePaths,
     now,
     backupBeforeWrite,
@@ -1226,6 +1251,33 @@ export async function runApply(
     preDiscoveryByAgentId,
     stderr,
   });
+
+  // G2 — write the per-run human-readable recovery log adjacent to the
+  // G1 state JSON. Independent from the G1 try/catch: a log-write failure
+  // does NOT affect the G1 success line (state was already written or
+  // already warned about), and vice versa. The log is derived from the
+  // authoritative G1 record so it can never drift from the on-disk JSON.
+  // When `stateRecord` is `null` (G1 state-write failed), we skip the
+  // log entirely — the apply already produced its exit code + human
+  // report + G1 stderr warning, and there is no canonical record to
+  // project.
+  if (stateRecord !== null) {
+    try {
+      const logContent = buildApplyLog(
+        stateRecord,
+        `overture@${CLI_VERSION}`,
+        defaultApplyStateDir(overturePaths),
+      );
+      await writeApplyLog(logContent, defaultApplyStateDir(overturePaths), 10);
+    } catch (logErr) {
+      // Best-effort: surface a one-line warning, do NOT propagate, do
+      // NOT change the apply exit code. The apply itself already
+      // succeeded — the log is observability, not bookkeeping.
+      stderr.write(
+        `warning: failed to write apply log: ${messageForError(logErr)}\n`,
+      );
+    }
+  }
 
   return exitCodeForApply(agentResults);
 }
@@ -1281,7 +1333,7 @@ interface RecordApplyStateArgs {
 
 async function recordApplyStateBestEffort(
   args: RecordApplyStateArgs,
-): Promise<void> {
+): Promise<ApplyStateRecord | null> {
   // Post-hash loop, parallel to `agentResults`. We re-use the
   // pre-discovery target list (captured in runApply BEFORE
   // applyToAgentReal ran) because writers resolve target paths the
@@ -1328,11 +1380,19 @@ async function recordApplyStateBestEffort(
       perAgent: perAgentEntries,
     });
     await writeApplyState(record, defaultApplyStateDir(args.overturePaths), 10);
+    // G2: return the built record so the orchestrator can hand it to
+    // `buildApplyLog` for the per-run `.log` write. The record is
+    // authoritative (the on-disk JSON matches this exact shape), so the
+    // log and the JSON never drift.
+    return record;
   } catch (err) {
     // Best-effort: the apply itself already succeeded. Surface a one-line
-    // warning, do NOT propagate, do NOT change the exit code.
+    // warning, do NOT propagate, do NOT change the exit code. Return
+    // `null` so the caller skips the G2 log write — the G1 warning has
+    // already been logged and the apply exit code is unchanged.
     args.stderr.write(
       `warning: failed to write apply state: ${messageForError(err)}\n`,
     );
+    return null;
   }
 }

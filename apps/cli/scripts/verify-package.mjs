@@ -996,6 +996,193 @@ rmSync(refuseXdg, { recursive: true, force: true });
 rmSync(refusePath, { recursive: true, force: true });
 rmSync(refuseWorkspace, { recursive: true, force: true });
 
+logStep('Apply log-file smoke (G2)');
+// G2 log-file smoke. Drives `overture apply` (no flag) against a tmpdir
+// seeded identically to the G1 smoke (OpenCode with an `unrelated` server
+// on disk + canonical `filesystem` server), then asserts the per-run
+// `<stateDir>/apply/<runId>.log` written alongside the G1 state JSON
+// has the full 5-section plain-text rendering. End-to-end guard for the
+// G2 contract: header separator, `Overture apply log` marker,
+// `DO NOT source this file` warning, per-agent `backup:` / `target:`
+// tag lines, single-quoted `mv -v` recovery snippet, and the
+// `Roll-back all` footer.
+const logHome = mkdtempSync('/tmp/overture-verify-log-home-');
+const logXdg = mkdtempSync('/tmp/overture-verify-log-xdg-');
+const logPathDir = mkdtempSync('/tmp/overture-verify-log-path-');
+const logWorkspace = mkdtempSync('/tmp/overture-verify-log-ws-');
+const logHomeStateDir = join(logHome, '.local', 'state');
+const logEnv = {
+  ...process.env,
+  HOME: logHome,
+  XDG_CONFIG_HOME: logXdg,
+  XDG_STATE_HOME: logHomeStateDir,
+  PATH: logPathDir,
+};
+// Canonical config matches the G1 smoke: single `filesystem` server,
+// `backupBeforeWrite: true`, target opencode.
+const logOvertureConfigDir = join(logXdg, 'overture');
+mkdirSync(logOvertureConfigDir, { recursive: true });
+const logOvertureConfig = join(logOvertureConfigDir, 'overture.jsonc');
+writeFileSync(
+  logOvertureConfig,
+  JSON.stringify(
+    {
+      version: 1,
+      settings: {
+        defaultProfile: 'default',
+        backupBeforeWrite: true,
+      },
+      profiles: {
+        default: {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'node' },
+          },
+          sync: {
+            targets: ['opencode'],
+            disabledServers: [],
+          },
+          skills: [],
+        },
+      },
+    },
+    null,
+    2,
+  ),
+);
+// Existing OpenCode config seeded with the same `unrelated` server the
+// G1 smoke uses — the B3 detector sees no divergence, the writer's
+// Pass 1 plans an update, Pass 2 writes, and a backup is created so
+// the per-agent block has a `(backup, target)` pair to render.
+const logOpencodeDir = join(logXdg, 'opencode');
+mkdirSync(logOpencodeDir, { recursive: true });
+const logOpencodeConfig = join(logOpencodeDir, 'opencode.json');
+writeFileSync(
+  logOpencodeConfig,
+  JSON.stringify(
+    {
+      mcp: {
+        unrelated: { type: 'local', command: ['stay'] },
+      },
+    },
+    null,
+    2,
+  ),
+);
+// Fake opencode binary on PATH so the opencode agent passes
+// binary-first detection.
+const logOpencodeBin = join(logPathDir, 'opencode');
+writeFileSync(logOpencodeBin, '#!/bin/sh\nexit 0\n');
+chmodSync(logOpencodeBin, 0o755);
+
+const logApplyResult = spawnWithEnv([distMain, 'apply'], logEnv, {
+  cwd: logWorkspace,
+});
+if (logApplyResult.status !== 0) {
+  fail(
+    `apply (no flag, log-file) exited ${logApplyResult.status} (expected 0)\nstdout:\n${logApplyResult.stdout}\nstderr:\n${logApplyResult.stderr}`,
+  );
+}
+
+// State dir mirrors the G1 smoke: `$XDG_STATE_HOME/overture/apply`.
+const logApplyDir = join(logHome, '.local', 'state', 'overture', 'apply');
+if (!statSync(logApplyDir, { throwIfNoEntry: false })) {
+  fail(
+    `apply (no flag, log-file) state dir missing: ${logApplyDir}\nstdout:\n${logApplyResult.stdout}\nstderr:\n${logApplyResult.stderr}`,
+  );
+}
+const logPerRunFiles = readdirSync(logApplyDir).filter(
+  (entry) => entry.endsWith('.log') && entry !== 'last.log',
+);
+if (logPerRunFiles.length !== 1) {
+  fail(
+    `apply (no flag, log-file) expected exactly 1 per-run .log under ${logApplyDir}, found ${logPerRunFiles.length}: ${logPerRunFiles.join(', ')}`,
+  );
+}
+const logPath = join(logApplyDir, logPerRunFiles[0]);
+const logRunId = logPerRunFiles[0].replace(/\.log$/, '');
+// Pointer file (written by G1) names the same runId — the .json and
+// .log files are siblings paired by runId basename.
+const logPointerPath = join(logApplyDir, 'last.json');
+let logPointer;
+try {
+  logPointer = JSON.parse(readFileSync(logPointerPath, 'utf8'));
+} catch (err) {
+  fail(
+    `apply (no flag, log-file) pointer at ${logPointerPath} is not valid JSON: ${err.message}`,
+  );
+}
+if (logPointer.runId !== logRunId) {
+  fail(
+    `apply (no flag, log-file) pointer runId=${logPointer.runId} (expected ${logRunId})`,
+  );
+}
+
+const logText = readFileSync(logPath, 'utf8');
+
+// Header — 80-char `=` separator followed by `Overture apply log`.
+if (!logText.startsWith('='.repeat(80))) {
+  fail(
+    `apply (no flag, log-file) log does not start with 80-char '=' separator\nfirst 80 chars: ${JSON.stringify(logText.slice(0, 80))}`,
+  );
+}
+if (!logText.includes('Overture apply log')) {
+  fail(
+    `apply (no flag, log-file) log missing "Overture apply log" header marker\nlogPath: ${logPath}`,
+  );
+}
+// Warning section — the rendered "DO NOT source this file" banner.
+if (
+  !logText.includes(
+    'DO NOT source this file — read it and run individual commands.',
+  )
+) {
+  fail(
+    `apply (no flag, log-file) log missing "DO NOT source this file" warning\nlogPath: ${logPath}`,
+  );
+}
+// Per-agent restore block — `backup: '<path>'` tag line with a
+// single-quoted path for the updated opencode agent. The tag-line
+// shape is the G3-prep parse anchor (per gate G2-3).
+if (!logText.includes(`[opencode]`)) {
+  fail(
+    `apply (no flag, log-file) log missing per-agent "[opencode]" header\nlogPath: ${logPath}`,
+  );
+}
+const logBackupTagRegex = /^backup: '[^']*\.bak\.[0-9]+-[0-9]+'$/m;
+if (!logBackupTagRegex.test(logText)) {
+  fail(
+    `apply (no flag, log-file) log missing single-quoted "backup: '<path>.bak.<ts>'" tag line\nlogPath: ${logPath}\nlog excerpt:\n${logText.split('\n').slice(0, 40).join('\n')}`,
+  );
+}
+if (!/^target: '[^']+'$/m.test(logText)) {
+  fail(
+    `apply (no flag, log-file) log missing single-quoted "target: '<path>'" tag line\nlogPath: ${logPath}`,
+  );
+}
+// `mv -v '<backup>' '<target>'` recovery snippet. Per gate G2-2,
+// this is the load-bearing recovery line a user copies pastes.
+if (!logText.includes(`mv -v '`)) {
+  fail(
+    `apply (no flag, log-file) log missing "mv -v '" recovery snippet\nlogPath: ${logPath}`,
+  );
+}
+// Footer — the `Roll-back all` aggregate block header line.
+if (!logText.includes('Roll-back all (read first, run after review)')) {
+  fail(
+    `apply (no flag, log-file) log missing "Roll-back all" footer block header\nlogPath: ${logPath}`,
+  );
+}
+
+console.log(
+  `apply (no flag, log-file): exit=${logApplyResult.status} logFileExists=PASS headerSeparator=PASS applyLogMarker=PASS doNotSourceWarning=PASS backupTag=PASS targetTag=PASS mvSnippet=PASS rollBackFooter=PASS pointerMatches=PASS`,
+);
+
+// Cleanup log tmpdirs.
+rmSync(logHome, { recursive: true, force: true });
+rmSync(logXdg, { recursive: true, force: true });
+rmSync(logPathDir, { recursive: true, force: true });
+rmSync(logWorkspace, { recursive: true, force: true });
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });
