@@ -75,7 +75,8 @@ export type ApplyDryRunStatus =
   | 'not-targetable'
   | 'parse-error'
   | 'unsupported-shape'
-  | 'unsupported-format';
+  | 'unsupported-format'
+  | 'conflict';
 
 /** Single per-agent entry in an {@link ApplyDryRunResult}. */
 export interface ApplyDryRunAgentResult {
@@ -126,7 +127,8 @@ export type ApplyStatus =
   | 'not-targetable'
   | 'parse-error'
   | 'unsupported-shape'
-  | 'unsupported-format';
+  | 'unsupported-format'
+  | 'conflict';
 
 /** Single per-agent entry in an {@link ApplyResult}. */
 export interface ApplyAgentResult {
@@ -858,6 +860,12 @@ function mapDryRefusalToApply(status: ApplyDryRunStatus): ApplyStatus {
       return 'not-targetable';
     case 'no-change':
       return 'no-change';
+    case 'conflict':
+      // Identity map — `'conflict'` is a CLI-local status that pairs across
+      // the dry-run and real-write envelopes. Unreachable today (Task 4
+      // wires the `AgentMcpWriteResult.conflicts` → status mapping) but
+      // required by `noImplicitReturns` once the union is widened.
+      return 'conflict';
     case 'would-update':
       // Caller never reaches here for would-update (handled above), but
       // satisfy the exhaustive switch.

@@ -59,6 +59,7 @@ export type {
   PlatformRegistryEntry,
   PathResolutionContext,
   HostPlatform,
+  ServerConflict,
 } from './types.js';
 
 export {

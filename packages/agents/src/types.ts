@@ -167,6 +167,14 @@ export interface AgentMcpWriteResult {
   readonly format?: McpLocationFormat;
   /** Total byte delta of the write operation. */
   readonly bytesChanged?: number;
+  /**
+   * Per-server conflict detail when settings drift was detected.
+   * Populated only when non-empty; the CLI maps this to
+   * `ApplyStatus: 'conflict'` via `statusFromWriterResult`. Mirrors
+   * B3 'canonical-settings-drift' message vocabulary. CLI-local
+   * output — does not widen `WriteReason`.
+   */
+  readonly conflicts?: readonly ServerConflict[];
   /** Structured reason when write was not applicable. */
   readonly reason?: WriteReason;
 }
@@ -187,6 +195,17 @@ export type WriteReason =
   | 'unsupported-format'
   | 'unsupported-shape'
   | 'no-change';
+
+/**
+ * Conflict detail for a single server name where canonical settings
+ * differ from the existing target entry after B2 normalization.
+ * JSON-serializable — no functions, no class instances.
+ */
+export interface ServerConflict {
+  readonly serverName: string;
+  readonly message: string; // mirrors B3 message vocabulary
+  readonly diffKeys: readonly string[]; // sorted ascending
+}
 
 /**
  * Per-agent typed read handler. Each per-agent file can also export a

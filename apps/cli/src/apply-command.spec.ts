@@ -62,7 +62,15 @@
  *       entries causes the backup orchestrator to create one backup
  *       file per resolved target.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest';
 import {
   chmodSync,
   mkdirSync,
@@ -78,7 +86,12 @@ import { tmpdir } from 'node:os';
 
 import { defaultOverturePaths } from '@overture/config';
 import { agentRegistry } from '@overture/agents';
-import type { AgentDefinition, PlatformId } from '@overture/agents';
+import type {
+  AgentDefinition,
+  AgentMcpWriteResult,
+  PlatformId,
+  ServerConflict,
+} from '@overture/agents';
 
 import {
   APPLY_USAGE,
@@ -88,6 +101,8 @@ import {
   runApply,
   type ApplyDryRunAgentResult,
   type ApplyDryRunResult,
+  type ApplyDryRunStatus,
+  type ApplyStatus,
   type RunApplyOptions,
 } from './apply-command.js';
 import { BufferWriter } from '../test-support/bootstrap-test-support.js';
@@ -1695,6 +1710,102 @@ describe('formatHumanApplyDryRun', () => {
     const text = formatHumanApplyDryRun(sampleEnvelope);
     expect(text).toContain('no workspace .github/mcp.json found');
     expect(text).toContain('malformed TOML at ~/.codex/config.toml:18');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F3 — `conflict` type-contract surface (Task 1, type-only).
+//
+// Behavior tests for the conflict refusal path (orchestrator mapping, exit
+// codes, human/JSON rendering) land in Task 4. This block locks the type
+// surface only: every shape F3 needs downstream must already be reachable
+// before any writer populates it. No detection logic yet (Task 2).
+// ---------------------------------------------------------------------------
+
+describe('F3 conflict status type contract', () => {
+  it("ApplyStatus member enum includes 'conflict'", () => {
+    // Member enumeration: every value of the union must be reachable.
+    // Stripping `never` lets us compare against a heterogeneous list.
+    type Members = ApplyStatus extends infer U
+      ? U extends ApplyStatus
+        ? [U] extends [string]
+          ? U
+          : never
+        : never
+      : never;
+    expectTypeOf<Members>().toEqualTypeOf<
+      | 'updated'
+      | 'no-change'
+      | 'backup-failed'
+      | 'not-targetable'
+      | 'parse-error'
+      | 'unsupported-shape'
+      | 'unsupported-format'
+      | 'conflict'
+    >();
+  });
+
+  it("ApplyDryRunStatus member enum includes 'conflict'", () => {
+    type Members = ApplyDryRunStatus extends infer U
+      ? U extends ApplyDryRunStatus
+        ? [U] extends [string]
+          ? U
+          : never
+        : never
+      : never;
+    expectTypeOf<Members>().toEqualTypeOf<
+      | 'would-update'
+      | 'no-change'
+      | 'not-targetable'
+      | 'parse-error'
+      | 'unsupported-shape'
+      | 'unsupported-format'
+      | 'conflict'
+    >();
+  });
+
+  it("AgentMcpWriteResult['conflicts'] accepts readonly ServerConflict[] (and undefined)", () => {
+    const sample: AgentMcpWriteResult = {
+      written: 0,
+      changed: false,
+      dryRun: true,
+      serversWritten: [],
+      targetPaths: [],
+      conflicts: [
+        {
+          serverName: 'remote-tools',
+          message: 'canonical settings drift on url',
+          diffKeys: ['url'],
+        },
+      ],
+    };
+    // The field is optional — `undefined` must remain assignable.
+    const omitted: AgentMcpWriteResult = {
+      written: 0,
+      changed: false,
+      dryRun: true,
+      serversWritten: [],
+      targetPaths: [],
+    };
+    // Both shapes must satisfy the indexed-access type.
+    expectTypeOf(sample.conflicts).toMatchTypeOf<
+      readonly ServerConflict[] | undefined
+    >();
+    expectTypeOf(omitted.conflicts).toMatchTypeOf<
+      readonly ServerConflict[] | undefined
+    >();
+  });
+
+  it('ServerConflict is JSON-serializable (no functions, no class instances)', () => {
+    const sample: ServerConflict = {
+      serverName: 'stdio-tools',
+      message: 'canonical settings drift on env',
+      diffKeys: ['env', 'args'],
+    };
+    // JSON roundtrip must deeply equal the original — proves every field
+    // is a JSON scalar or a readonly string array (no functions, no
+    // class instances, no Map/Set).
+    expect(JSON.parse(JSON.stringify(sample))).toEqual(sample);
   });
 });
 
