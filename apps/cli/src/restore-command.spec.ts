@@ -9,6 +9,15 @@
  *
  * Cases 12-15 (CLI dispatcher regressions) live in `cli.spec.ts`.
  *
+ * **Task 4 (2026-07-04)** — user verdict re-classified `missing-backup`
+ * from a `skipped` outcome to a `failed` outcome. The execution loop
+ * in `runRestore` now aborts the batch on the first missing-backup
+ * pair, surfaces a clear stderr error per pair, writes a follow-up
+ * stderr hint pointing the user at `<stateDir>/apply/`, and exits 1.
+ * Case 12 below locks the new behavior: a plan with N pairs where 1
+ * is `missing-backup` and N-1 are `ok` must exit 1 with no `mv`
+ * shell-out fired.
+ *
  * Coverage map (each `it(...)` is one Must-have bullet):
  *   1. `readRestoreSource` reads the JSON path correctly (source =
  *      'state-json', pairs match seeded `agents[*].backupPaths/targetPaths`).
@@ -33,6 +42,11 @@
  *      history found in <stateDir>" + USAGE hint.
  *  11. TTY simulation: interactive `y\n` permits execution, `n\n` aborts.
  *      Uses injected prompt helper so tests don't touch real stdin.
+ *  12. `runRestore --yes` with a plan that has 1 `missing-backup` pair
+ *      amid N-1 `ok` pairs (user verdict 2026-07-04): exit 1; stderr
+ *      carries `error: backup file missing:` AND the follow-up hint;
+ *      the `ok` pairs are NOT executed (atomic whole-run semantics per
+ *      gate G3-8); the spawn-call mock confirms zero `mv` shell-outs.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
@@ -718,5 +732,159 @@ describe('restore-command (G3 contract)', () => {
       expect(readFileSync(seeded2.target, 'utf8')).toBe(targetContentBefore);
       expect(existsSync(seeded2.backup)).toBe(true);
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 12 — runRestore --yes with a missing-backup pair (user verdict
+  // 2026-07-04). The plan has two `ok` pairs and one `missing-backup`
+  // pair. The expected behavior is atomic: exit 1; stderr carries the
+  // per-pair `error: backup file missing:` line AND the follow-up
+  // `error: could not complete restore — backup file(s) may have been
+  // consumed by a previous restore, or never existed.` hint; the
+  // `ok` pairs are NOT executed (zero `mv` shell-outs); the targets
+  // are NOT clobbered.
+  // -------------------------------------------------------------------------
+
+  it('runRestore --yes with a missing-backup pair exits 1, surfaces the error, and skips every mv', async () => {
+    const tmp = freshTmp('g3-restore-missingbackup-');
+    cleanupDirs.push(tmp);
+    const stateDir = join(tmp, 'state', 'apply');
+    const runId = '20260704-183000123-eeee0001';
+
+    // Two `ok` pairs (targetA/backupA, targetB/backupB) and one
+    // `missing-backup` pair (targetC with backupC absent on disk).
+    // The plan order in `buildRestorePlan` mirrors the order the
+    // agents appear in the record, so we put the missing-backup
+    // agent LAST — this matches the post-fix expectation that the
+    // atomic abort fires before subsequent (or, in this order,
+    // preceding) pairs are visited. We deliberately also seed an
+    // extra `ok` pair FIRST to prove atomicity: even the first
+    // `ok` pair must NOT execute when a later pair is missing-
+    // backup.
+    const targetA = join(tmp, 'target-a.json');
+    const backupA = join(tmp, 'target-a.json.bak.20260704');
+    const targetB = join(tmp, 'target-b.json');
+    const backupB = join(tmp, 'target-b.json.bak.20260704');
+    const targetC = join(tmp, 'target-c.json');
+    const backupC = join(tmp, 'target-c.json.bak.20260704');
+
+    const origA = '{"old":true}\n';
+    const origB = '{"old":true}\n';
+    const origC = '{"old":true}\n';
+    writeFileSync(targetA, origA);
+    writeFileSync(backupA, origA);
+    writeFileSync(targetB, origB);
+    writeFileSync(backupB, origB);
+    writeFileSync(targetC, origC);
+    // backupC is intentionally NOT written — drives `missing-backup`.
+    const preASha = createHash('sha256').update(origA).digest('hex');
+    const preBSha = createHash('sha256').update(origB).digest('hex');
+    const preCSha = createHash('sha256').update(origC).digest('hex');
+
+    const record: ApplyStateRecord = {
+      schemaVersion: 1,
+      runId,
+      timestamp: '2026-07-04T18:30:00.123Z',
+      mode: 'apply',
+      profile: 'default',
+      configPath: '/home/test/overture.jsonc',
+      backupBeforeWrite: true,
+      agents: [
+        {
+          agentId: 'a-agent',
+          displayName: 'A Agent',
+          status: 'updated',
+          targetPaths: [targetA],
+          backupPaths: [backupA],
+          preWriteSha256: preASha,
+          postWriteSha256: preASha,
+        },
+        {
+          agentId: 'b-agent',
+          displayName: 'B Agent',
+          status: 'updated',
+          targetPaths: [targetB],
+          backupPaths: [backupB],
+          preWriteSha256: preBSha,
+          postWriteSha256: preBSha,
+        },
+        {
+          agentId: 'c-agent',
+          displayName: 'C Agent',
+          status: 'updated',
+          targetPaths: [targetC],
+          backupPaths: [backupC],
+          preWriteSha256: preCSha,
+          postWriteSha256: null,
+        },
+      ],
+    };
+    const { writeApplyState } = await import('./apply-state.js');
+    mkdirSync(stateDir, { recursive: true });
+    await writeApplyState(record, stateDir, 10);
+
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const stdoutWriter = { write: (s: string) => stdout.push(s) };
+    const stderrWriter = { write: (s: string) => stderr.push(s) };
+
+    // Snapshot the `spawn` call count BEFORE the restore. The hoisted
+    // mock from the top of this file (`vi.mock('node:child_process', …)`)
+    // pushes every spawn invocation into `spawnCalls`. A successful
+    // `mv -v` per pair fires one spawn; the missing-backup pair must
+    // abort the batch BEFORE any `mv` fires.
+    const spawnCountBefore = spawnCalls.length;
+
+    const code = await runRestore(['--yes'], stdoutWriter, stderrWriter, {
+      isTTY: false,
+      stateDir,
+    });
+
+    // Atomic exit code per user verdict 2026-07-04 (gate G3-8).
+    expect(code).toBe(1);
+
+    // Per-pair stderr error: every missing-backup pair emits
+    // `error: backup file missing: <shellQuoted(backup)>`.
+    const stderrText = stderr.join('');
+    expect(stderrText).toContain(`error: backup file missing: '${backupC}'`);
+
+    // Follow-up stderr hint points the user at `<stateDir>/apply/`.
+    expect(stderrText).toContain(
+      'error: could not complete restore — backup file(s) may have been',
+    );
+    expect(stderrText).toContain(stateDir);
+
+    // The OkPairs must NOT have been touched (no mv fired).
+    expect(readFileSync(targetA, 'utf8')).toBe(origA);
+    expect(readFileSync(targetB, 'utf8')).toBe(origB);
+    expect(existsSync(backupA)).toBe(true);
+    expect(existsSync(backupB)).toBe(true);
+
+    // Rendered outcome reports the missing-backup pair as `failed`
+    // with reason `backup file missing`, the two blocked `ok` pairs
+    // as `failed` with reason `restore aborted — another pair is
+    // missing its backup`, and the summary line increments `failed`
+    // to the full plan size (atomic whole-run semantics: every
+    // pair is accounted for as failed, none get `restored`).
+    expect(stdout.join('')).toContain('Overture restore outcome');
+    expect(stdout.join('')).toContain('backup file missing');
+    expect(stdout.join('')).toContain(
+      'restore aborted — another pair is missing its backup',
+    );
+    // Summary: 0 restored, 0 skipped, 3 failed (plan size = 3).
+    expect(stdout.join('')).toContain('restored: 0, skipped: 0, failed: 3');
+
+    // Atomic invariant: ZERO new `mv` spawn calls fired during the
+    // restore. The hoisted mock captured every spawn call; this
+    // assert proves no shell-out happened for any pair — including
+    // the two `ok` pairs ahead of the missing-backup pair in the
+    // plan order. (The post-fix loop processes pairs in registry
+    // order, so the first missing-backup encountered aborts the
+    // batch BEFORE any subsequent or earlier pair's `mv` fires.
+    // Plan-order is `a-agent`, `b-agent`, `c-agent`; `c-agent` is
+    // the missing-backup pair; the earlier `a-agent` and `b-agent`
+    // pairs must NOT execute.)
+    const newSpawnCalls = spawnCalls.slice(spawnCountBefore);
+    expect(newSpawnCalls).toEqual([]);
   });
 });

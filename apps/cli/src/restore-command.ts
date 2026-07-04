@@ -98,9 +98,16 @@ export interface RestorePlan {
 }
 
 /**
- * Per-pair result of an `mv` execution. `ok` = exit 0; `skipped` =
- * `integrityStatus: 'missing-backup'` (no error); `failed` = `mv` exited
- * non-zero OR a `mismatch` was blocked (no `--force`).
+ * Per-pair result of an `mv` execution. `ok` = exit 0; `failed` =
+ * `mv` exited non-zero, a `mismatch` was blocked (no `--force`), or
+ * `integrityStatus: 'missing-backup'`. Per the **user verdict
+ * 2026-07-04** recorded in `.omo/plans/g3-restore-last-helper.md`
+ * gate G3-8, a missing backup is a FAILURE, not a silent skip — we
+ * cannot prove whether the file was consumed by a prior restore or
+ * never existed, so the restore request cannot be fulfilled and the
+ * user must investigate. The `'skipped'` status is reserved for
+ * future slices that may need a non-fatal opt-out path; today nothing
+ * emits it.
  */
 export type RestoreOutcomeStatus = 'ok' | 'skipped' | 'failed';
 
@@ -397,8 +404,14 @@ export function formatHumanRestorePlan(plan: RestorePlan): string {
 
 /**
  * Render the post-execute human-readable outcome. Same header → per-pair
- * result line (`ok` / `skipped` / `failed: <reason>`) → summary
+ * result line (`ok` / `failed: <reason>`) → summary
  * (`restored: N, skipped: M, failed: K`).
+ *
+ * Today the `'skipped'` bucket is always 0 — the user verdict 2026-07-04
+ * (gate G3-8) classifies `missing-backup` pairs as `failed`, not
+ * `skipped`, so the only contributor to `M` would be a future slice
+ * that adds a non-fatal opt-out path. The summary line keeps the
+ * `skipped: M` slot for that forward-compat reason.
  *
  * Pure function; locked format. Mirrors G2's `renderApplyLog` shape.
  */
@@ -596,22 +609,70 @@ export async function runRestore(
     }
   }
 
-  // Execute `mv -v` per pair, sequentially. Atomic whole-run: the first
-  // failure aborts the batch and we surface the partial outcome.
-  const outcomes: RestoreOutcome[] = [];
-  let aborted = false;
-  for (const pair of plan.pairs) {
-    if (pair.integrityStatus === 'missing-backup') {
-      outcomes.push({
+  // Pre-scan the plan for ANY missing-backup pair BEFORE issuing any
+  // `mv`. Per the **user verdict 2026-07-04** recorded in gate G3-8
+  // of the plan, `integrityStatus: 'missing-backup'` (the G1 backup
+  // file is absent on disk) is treated as a FAILURE, not a silent
+  // skip — we cannot prove whether the backup was consumed by a prior
+  // restore or never existed, and the user's "restore this" request
+  // cannot be guaranteed. Issuing `mv` for the `ok` pairs while
+  // leaving the missing-backup pairs as failures would be a *worse*
+  // partial-success: the user couldn't re-run the restore and get
+  // the missing files back because the backup is gone. So when ANY
+  // pair has a missing backup we refuse the whole request: stderr
+  // gets one `error: backup file missing: …` line per missing pair
+  // plus a follow-up investigation hint, the rendered outcome reports
+  // every pair as `failed` (with a distinct reason per type), and we
+  // exit 1 with ZERO `mv` shell-outs fired.
+  const missingBackupPairs = plan.pairs.filter(
+    (p) => p.integrityStatus === 'missing-backup',
+  );
+  if (missingBackupPairs.length > 0) {
+    for (const pair of missingBackupPairs) {
+      stderr.write(
+        `error: backup file missing: ${shellQuotePath(pair.backup)}\n`,
+      );
+    }
+    stderr.write(
+      `error: could not complete restore — backup file(s) may have been consumed by a previous restore, or never existed. Investigate with \`ls ${plan.stateDir}/\` before retrying.\n`,
+    );
+
+    // Render every pair in the outcome so the summary line accurately
+    // reflects the plan size. Missing-backup pairs surface with reason
+    // `backup file missing`; every other pair (which we deliberately
+    // did NOT execute) is shown with reason
+    // `restore aborted — another pair is missing its backup`.
+    const outcomes: RestoreOutcome[] = plan.pairs.map((pair) => {
+      if (pair.integrityStatus === 'missing-backup') {
+        return {
+          agentId: pair.agentId,
+          displayName: pair.displayName,
+          backup: pair.backup,
+          target: pair.target,
+          status: 'failed' as const,
+          reason: 'backup file missing',
+        };
+      }
+      return {
         agentId: pair.agentId,
         displayName: pair.displayName,
         backup: pair.backup,
         target: pair.target,
-        status: 'skipped',
-        reason: 'backup file no longer on disk',
-      });
-      continue;
-    }
+        status: 'failed' as const,
+        reason: 'restore aborted — another pair is missing its backup',
+      };
+    });
+
+    stdout.write(formatHumanRestoreOutcome(plan, outcomes));
+    return 1;
+  }
+
+  // No missing-backup pairs: execute `mv -v` per pair, sequentially.
+  // Atomic whole-run: the first `mv` failure (non-zero exit) aborts
+  // the batch and we surface the partial outcome + exit 1.
+  const outcomes: RestoreOutcome[] = [];
+  let aborted = false;
+  for (const pair of plan.pairs) {
     const mvResult = await spawnMvVerbose(pair.backup, pair.target);
     if (mvResult.code === 0) {
       outcomes.push({

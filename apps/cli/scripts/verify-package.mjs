@@ -952,6 +952,113 @@ console.log(
   `restore-last --yes --force (end-to-end after real apply): exit=${stateEndToEndResult.status} targetRestoredToPreApply=PASS backupUnlinked=PASS restoredCount=1 forceWarn=PASS`,
 );
 
+// ---------------------------------------------------------------------------
+// Task-4 / user-verdict 2026-07-04 second-restore assertion. After the
+// first successful restore consumed the backup, re-run
+// `overture restore-last --yes --force` and assert the missing-backup
+// branch exits 1 with the per-pair `error: backup file missing: …` line
+// AND the follow-up `error: could not complete restore — backup file(s)
+// may have been consumed by a previous restore, or never existed.`
+// hint. The target bytes must be byte-identical to the post-first-
+// restore state (the failed restore must NOT have clobbered them). The
+// backup file must STILL be absent on disk (no second backup was created
+// or deleted by the failed restore).
+// ---------------------------------------------------------------------------
+
+const stateSecondRestoreResult = spawnWithEnv(
+  [distMain, 'restore-last', '--yes', '--force'],
+  stateEnv,
+  { cwd: stateWorkspace },
+);
+
+// Atomic exit code per gate G3-8 / user verdict 2026-07-04: a plan
+// with any missing-backup pair must exit 1, not 0.
+if (stateSecondRestoreResult.status !== 1) {
+  fail(
+    `restore-last --yes --force (second restore, backup consumed) exited ${stateSecondRestoreResult.status} (expected 1 per user verdict 2026-07-04)\nstdout:\n${stateSecondRestoreResult.stdout}\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Per-pair stderr error: each missing-backup pair must surface
+// `error: backup file missing: <shellQuoted(backup)>`.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    `error: backup file missing: '${stateEndToEndBackup}'`,
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr missing "error: backup file missing: '${stateEndToEndBackup}'"\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Follow-up stderr hint pointing the user at the apply dir.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    'error: could not complete restore — backup file(s) may have been consumed by a previous restore, or never existed.',
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr missing follow-up investigation hint\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// The follow-up hint must reference the state dir so the user knows
+// where to look. Read it back from the apply dir we seeded.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    join(stateHome, '.local', 'state', 'overture', 'apply'),
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr hint missing the apply dir path\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Rendered outcome must report the pair as `failed`, not `skipped`.
+// The summary line emits `failed: 1` (one missing-backup pair).
+if (
+  !stateSecondRestoreResult.stdout.includes(
+    'restored: 0, skipped: 0, failed: 1',
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stdout summary missing "restored: 0, skipped: 0, failed: 1"\nstdout:\n${stateSecondRestoreResult.stdout}`,
+  );
+}
+
+// Target bytes must be byte-identical to the post-first-restore state.
+// The failed restore must not have clobbered anything. We compare to
+// `stateOpencodeBeforeBytes` (the opencode pre-apply bytes), which
+// was what the FIRST restore wrote back. If a `mv` had fired during
+// the second restore the bytes would either change (to the backup's
+// bytes, which were unlinked at the start of the second restore) or
+// the file's existence/inode would change.
+const stateSecondRestoreBytes = readFileSync(stateOpencodeConfig);
+if (!stateSecondRestoreBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    `restore-last --yes --force (second restore) clobbered the target — bytes differ from post-first-restore state\nrestored bytes: ${stateSecondRestoreBytes.length}\npost-first-restore bytes: ${stateOpencodeBeforeBytes.length}\nstdout:\n${stateSecondRestoreResult.stdout}\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// The backup file must still be absent on disk. A real `mv` would
+// emit ENOENT (or unlink and recreate); the dry-run invariant here
+// is: the second restore's atomic-abort path did NOT touch the
+// backup's parent dir OR re-create the backup. This is a coarse
+// proxy for "no mv shell-out fired" — outside vitest's `spawnCalls`
+// mock, we assert by filesystem observation.
+const stateSecondRestoreBackupStat = statSync(stateEndToEndBackup, {
+  throwIfNoEntry: false,
+});
+if (stateSecondRestoreBackupStat) {
+  fail(
+    `restore-last --yes --force (second restore) unexpectedly re-created the backup at ${stateEndToEndBackup}`,
+  );
+}
+
+console.log(
+  `restore-last --yes --force (second restore, missing-backup): exit=${stateSecondRestoreResult.status} exitOne=PASS stderrMissingBackup=PASS stderrHint=PASS summaryFailed1=PASS targetUntouched=PASS backupAbsent=PASS`,
+);
+
 // Cleanup state tmpdirs.
 rmSync(stateHome, { recursive: true, force: true });
 rmSync(stateXdg, { recursive: true, force: true });
@@ -1483,5 +1590,5 @@ rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
 console.log(
-  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), restore-last (G3 --dry-run), and restore-last --yes --force (G3 end-to-end after real apply) smoke checks.',
+  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), restore-last (G3 --dry-run), restore-last --yes --force (G3 end-to-end after real apply), and restore-last --yes --force (G3 second restore, missing-backup user verdict 2026-07-04) smoke checks.',
 );
