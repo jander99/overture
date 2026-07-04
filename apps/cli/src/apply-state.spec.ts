@@ -1,5 +1,5 @@
 /**
- * G1 — `apply-state` codec suite (pure helpers + filesystem writer).
+ * G1 + G2 — `apply-state` codec suite (pure helpers + filesystem writer).
  *
  * Locks the contract for `apps/cli/src/apply-state.ts`: the per-run state
  * codec, the `readApplyState` round-trip, and the retention GC. The
@@ -20,10 +20,12 @@
  *      an `ApplyStateRecord` with per-agent fields populated correctly.
  *   4. `writeApplyState` writes both files atomically under a tmpdir;
  *      `readApplyState` round-trips byte-identically.
- *   5. `pruneApplyState(stateDir, 10)` keeps the 10 most recent per-run
- *      files (lexical by runId) and unlinks the rest. Pre-seeded 12 files
- *      spanning two timestamps; oldest 2 must be removed.
- *   6. `pruneApplyState(stateDir, 0)` unlinks everything.
+ *   5. `pruneApplyArtifacts(stateDir, 10)` keeps the 10 most recent
+ *      per-run PAIRS (lexical by runId, G2 paired retention) and unlinks
+ *      BOTH the `.json` AND `.log` for the 2 oldest runIds. Pre-seeded
+ *      12 paired files spanning two timestamps.
+ *   6. `pruneApplyState(stateDir, 0)` unlinks every per-run `.json` (G1
+ *      backward-compat wrapper behavior preserved).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
@@ -57,6 +59,7 @@ import {
 import {
   buildApplyStateRecord,
   generateRunId,
+  pruneApplyArtifacts,
   pruneApplyState,
   readApplyState,
   sha256OfFile,
@@ -254,10 +257,14 @@ describe('apply-state (G1 contract)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Case 5 — pruneApplyState keeps the 10 newest per-run files
+  // Case 5 — pruneApplyArtifacts keeps the 10 newest per-run pairs
+  // (G2 promotion: paired `.json` + `.log` retention, replacing G1's
+  // `.json`-only pruneApplyState. The original Case 5 fixture + assertion
+  // shape is preserved, with `.log` files added 1:1 against the `.json`
+  // files. The returned `pruned` list contains BOTH basenames per pair.)
   // -------------------------------------------------------------------------
 
-  it('pruneApplyState(stateDir, 10) keeps the 10 most recent per-run files and unlinks the rest', async () => {
+  it('pruneApplyArtifacts(stateDir, 10) keeps the 10 most recent per-run pairs and unlinks both .json + .log for the rest', async () => {
     const tmp = mkdtempSync(join(tmpdir(), 'g1-state-prune-'));
     cleanupDirs.push(tmp);
     const stateDir = join(tmp, 'state', 'apply');
@@ -283,27 +290,43 @@ describe('apply-state (G1 contract)', () => {
     ];
     for (const id of runIds) {
       writeFileSync(join(stateDir, `${id}.json`), `{"runId":"${id}"}`);
+      // G2: each .json is paired with a .log. The pruner unlinks BOTH.
+      writeFileSync(
+        join(stateDir, `${id}.log`),
+        `Overture apply log\nrunId: ${id}\n`,
+      );
     }
-    expect(readdirSync(stateDir)).toHaveLength(12);
+    expect(readdirSync(stateDir)).toHaveLength(24); // 12 json + 12 log
 
-    const pruned = await pruneApplyState(stateDir, 10);
+    const pruned = await pruneApplyArtifacts(stateDir, 10);
 
     const remaining = readdirSync(stateDir).sort();
-    expect(remaining).toHaveLength(10);
-    // Two lexically oldest removed.
+    expect(remaining).toHaveLength(20); // 10 json + 10 log
+    // Two lexically oldest pairs removed (BOTH .json AND .log per pair).
     expect(remaining).not.toContain(`${ts1}-00000001.json`);
+    expect(remaining).not.toContain(`${ts1}-00000001.log`);
     expect(remaining).not.toContain(`${ts1}-00000002.json`);
-    // The remaining 10 are exactly the lexically newest 10 runIds.
-    const expectedRemaining = runIds
-      .slice()
-      .sort()
-      .slice(-10)
-      .map((id) => `${id}.json`);
+    expect(remaining).not.toContain(`${ts1}-00000002.log`);
+    // The remaining 20 are exactly the lexically newest 10 runIds x 2.
+    const expectedRemaining = [
+      ...runIds
+        .slice()
+        .sort()
+        .slice(-10)
+        .map((id) => `${id}.json`),
+      ...runIds
+        .slice()
+        .sort()
+        .slice(-10)
+        .map((id) => `${id}.log`),
+    ].sort();
     expect(remaining).toEqual(expectedRemaining);
-    // The returned pruned list reports the basenames that were unlinked.
+    // The returned pruned list reports BOTH basenames per pair.
     expect(pruned.slice().sort()).toEqual([
       `${ts1}-00000001.json`,
+      `${ts1}-00000001.log`,
       `${ts1}-00000002.json`,
+      `${ts1}-00000002.log`,
     ]);
   });
 

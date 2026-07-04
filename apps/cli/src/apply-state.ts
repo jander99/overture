@@ -1,5 +1,5 @@
 /**
- * G1 — `apply-state` module: per-run state file codec, atomic writer,
+ * G1 + G2 — `apply-state` module: per-run state file codec, atomic writer,
  * retention GC.
  *
  * Lives in the CLI (not in `@overture/agents`) because G1 is an
@@ -9,10 +9,15 @@
  * re-parsing the rest.
  *
  * Per-run file:  `<stateDir>/apply/<runId>.json`     (one JSON per apply)
+ * Per-run log:   `<stateDir>/apply/<runId>.log`      (one log per apply, G2)
  * Pointer file:  `<stateDir>/apply/last.json`         → `{ "runId": "..." }`
  *
- * Retention: GC keeps the `keep` (default 10) newest per-run files;
- * `last.json` is never pruned (lexical selector filters for `*.json` only).
+ * Retention: GC keeps the `keep` (default 10) newest per-run artifacts;
+ * `last.json` is never pruned. G2 promotes `pruneApplyState` to
+ * `pruneApplyArtifacts`, which prunes the `.json` and `.log` files for the
+ * same `<runId>` together so the two views of history never diverge.
+ * `pruneApplyState` is preserved as a thin `.json`-only wrapper so G1 callers
+ * (e.g. Case 6 of `apply-state.spec.ts`) continue to work unchanged.
  * Atomic write is inline open+write+fsync+close+rename (no shared helper).
  */
 import { createHash, randomBytes } from 'node:crypto';
@@ -198,9 +203,10 @@ export function buildApplyStateRecord(
 
 /**
  * Atomically write `record` to `<stateDir>/apply/<runId>.json`, update the
- * `<stateDir>/apply/last.json` pointer, then GC older per-run files so that
- * `keep` (default 10) remain. `pruneApplyState` is called internally; the
- * returned `pruned` list exposes what was unlinked for observability.
+ * `<stateDir>/apply/last.json` pointer, then GC older per-run artifacts so
+ * that `keep` (default 10) remain. `pruneApplyArtifacts` is called
+ * internally; the returned `pruned` list exposes what was unlinked for
+ * observability.
  */
 export async function writeApplyState(
   record: ApplyStateRecord,
@@ -219,7 +225,7 @@ export async function writeApplyState(
   const pointerPath = join(stateDir, 'last.json');
   await atomicWrite(pointerPath, JSON.stringify({ runId: record.runId }));
 
-  const pruned = await pruneApplyState(stateDir, keep);
+  const pruned = await pruneApplyArtifacts(stateDir, keep);
 
   return { recordPath, pointerPath, pruned };
 }
@@ -242,27 +248,84 @@ export async function readApplyState(
 }
 
 /**
- * GC `stateDir/apply/*.json` to the `keep` newest entries, ordered lexically
- * by file name (which embeds a sortable runId). Returns the basenames of
- * the files that were unlinked. `keep = 0` unlinks everything. The
- * `last.json` pointer is never pruned.
+ * GC `stateDir/apply/*.json` AND `*.log` to the `keep` newest runIds,
+ * paired by basename-without-extension. Returns the basenames of the files
+ * that were unlinked. `keep = 0` unlinks everything. The `last.json`
+ * pointer is never pruned (excluded from the json set so it doesn't compete
+ * for the retention budget).
+ *
+ * Grouping algorithm: read every `.json` (excluding `last.json`) and every
+ * `.log` in the directory, bucket each filename by its extension-stripped
+ * basename (the `<runId>`), sort runIds lexically (which encodes a sortable
+ * timestamp per `generateRunId`), then slice off the oldest when
+ * `runIds.length > keep` and unlink EVERY file in those buckets.
+ *
+ * G2 promotion: this function replaces G1's `.json`-only `pruneApplyState`
+ * so the `.json` and `.log` for the same `<runId>` are unlinked together —
+ * the two views of history never diverge. Backward-compat: orphan `.json`
+ * files (legacy G1-only dirs) and orphan `.log` files (e.g. a half-completed
+ * G2 run) are handled identically — the pruner treats them as single-file
+ * buckets.
+ */
+export async function pruneApplyArtifacts(
+  stateDir: string,
+  keep: number,
+): Promise<readonly string[]> {
+  const entries = await readdir(stateDir);
+
+  // Bucket each filename by its extension-stripped basename (the runId).
+  // Exclude the `last.json` pointer so the retention count applies only to
+  // per-run artifacts — `last.json` is a pointer, never pruned.
+  interface Bucket {
+    readonly json?: string;
+    readonly log?: string;
+  }
+  const buckets = new Map<string, Bucket>();
+  for (const name of entries) {
+    if (name === 'last.json') continue;
+    if (name.endsWith('.json')) {
+      const runId = name.slice(0, -'.json'.length);
+      const prior = buckets.get(runId) ?? {};
+      buckets.set(runId, { ...prior, json: name });
+    } else if (name.endsWith('.log')) {
+      const runId = name.slice(0, -'.log'.length);
+      const prior = buckets.get(runId) ?? {};
+      buckets.set(runId, { ...prior, log: name });
+    }
+  }
+
+  // runIds are lexically sortable (the runId embeds a sortable timestamp
+  // per `generateRunId`). G1's Case 5 already proves this.
+  const sortedRunIds = [...buckets.keys()].sort();
+  if (sortedRunIds.length <= keep) return [];
+
+  const toUnlink = sortedRunIds.slice(0, sortedRunIds.length - keep);
+  const unlinked: string[] = [];
+  for (const runId of toUnlink) {
+    const bucket = buckets.get(runId);
+    if (!bucket) continue;
+    if (bucket.json !== undefined) unlinked.push(bucket.json);
+    if (bucket.log !== undefined) unlinked.push(bucket.log);
+  }
+  await Promise.all(unlinked.map((name) => unlink(join(stateDir, name))));
+  return unlinked;
+}
+
+/**
+ * G1 backward-compat shim: prune only the `.json` files (the G1 behavior).
+ * Delegates to {@link pruneApplyArtifacts} and filters out `.log` results
+ * so existing G1 callers (e.g. Case 6 of `apply-state.spec.ts`) continue
+ * to observe `.json`-only retention.
+ *
+ * New code should call {@link pruneApplyArtifacts} directly so paired `.log`
+ * retention is enforced.
  */
 export async function pruneApplyState(
   stateDir: string,
   keep: number,
 ): Promise<readonly string[]> {
-  const entries = await readdir(stateDir);
-  // Exclude the `last.json` pointer so the retention count applies only
-  // to per-run records. Without this, `last.json` would compete with
-  // per-run files for the `keep` budget and the documented invariant
-  // ("last.json is never pruned") would be violated.
-  const perRun = entries
-    .filter((name) => name.endsWith('.json') && name !== 'last.json')
-    .sort();
-  if (perRun.length <= keep) return [];
-  const survivors = perRun.slice(0, perRun.length - keep);
-  await Promise.all(survivors.map((name) => unlink(join(stateDir, name))));
-  return survivors;
+  const pruned = await pruneApplyArtifacts(stateDir, keep);
+  return pruned.filter((name) => !name.endsWith('.log'));
 }
 
 // ---------------------------------------------------------------------------
