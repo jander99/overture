@@ -29,7 +29,7 @@
  */
 import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 
 import { readApplyLog, shellQuotePath } from './apply-log.js';
 import { readApplyState, sha256OfFile } from './apply-state.js';
@@ -284,6 +284,7 @@ export async function buildRestorePlan(
   }
 
   // state-json: evaluate sha256(current target) vs preWriteSha256 per pair.
+  const notes: string[] = [...source.notes];
   const pairs: RestorePair[] = [];
   for (const raw of source.rawPairs) {
     const currentSha256 = await sha256OfFile(raw.target);
@@ -292,6 +293,18 @@ export async function buildRestorePlan(
       // Writer-aligned zipping means a `backup` slot may be empty when no
       // backup was created (no-change / unsupported). Skip these pairs.
       integrityStatus = 'missing-backup';
+    } else if (!isAbsolute(raw.target)) {
+      // F3 fix (belt-and-braces): the apply-state record should already
+      // hold absolute targetPaths (buildApplyStateRecord resolves them
+      // against the apply-time `PathResolutionContext`). If a record
+      // somehow still has a relative path, the spawned `mv` would
+      // resolve it against its own cwd and silently fail. Surface that
+      // as `unverified` (refused) with a notes line so the caller can
+      // surface a clear stderr message and exit 1.
+      integrityStatus = 'unverified';
+      notes.push(
+        `target path ${raw.target} is not absolute — refusing restore. Re-apply to refresh the state record with absolute paths.`,
+      );
     } else {
       const fs = await import('node:fs');
       if (!fs.existsSync(raw.backup)) {
@@ -322,7 +335,6 @@ export async function buildRestorePlan(
     });
   }
 
-  const notes: string[] = [...source.notes];
   // Suppress an unused-variable lint complaint when `now` is unused. The
   // parameter exists so future slices can stamp the plan / outcome with a
   // fixed clock for tests; today the renderer doesn't surface it.
@@ -483,7 +495,13 @@ export async function runRestore(
   if (runId === undefined) {
     try {
       runId = (await readLastJsonPointer(stateDir)) ?? undefined;
-    } catch {
+    } catch (err) {
+      // F2 fix: surface the underlying error so a real permission / IO
+      // failure is not silently collapsed into "no history found". The
+      // no-history fallback below still runs so the user gets the
+      // USAGE hint; the warning precedes the fallback.
+      const message = err instanceof Error ? err.message : String(err);
+      stderr.write(`warning: failed to read last.json: ${message}\n`);
       runId = undefined;
     }
   }
@@ -516,6 +534,18 @@ export async function runRestore(
     // runId in last.json). Same pruning-style message.
     stderr.write(RESTORE_PRUNED_MESSAGE(runId, stateDir));
     return 1;
+  }
+
+  // F2 fix: log-tag-lines source (no sha256 reference) surfaces a
+  // stderr WARN on every path (--dry-run + --yes + interactive) so
+  // the user knows the integrity check was skipped. Per gate G3-5
+  // recommendation: "no sha256 exists → integrityStatus: 'unverified';
+  // restore proceeds without comparison; a stderr WARN on --dry-run
+  // and --yes paths."
+  if (plan.pairs.some((p) => p.integrityStatus === 'unverified')) {
+    stderr.write(
+      'warning: integrity check skipped — restore source was a log file without sha256 hashes. Run `overture apply --dry-run` first if you want a full integrity check.\n',
+    );
   }
 
   // Always render the plan first — even on `--dry-run` the user should
@@ -691,18 +721,36 @@ function createStdinConfirmPrompt(): (
   message: string,
 ) => Promise<string | null> {
   return async (message: string): Promise<string | null> => {
-    const readline = await import('node:readline/promises');
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    // F2 fix: surface readline initialization failures instead of
+    // silently returning `null`. The `try` block is also split so the
+    // init error is reported separately from the per-question error —
+    // a broken stdin / TTY is a different class of failure from a
+    // user pressing Ctrl-C mid-question.
+    let rl: import('node:readline/promises').Interface;
+    try {
+      const readline = await import('node:readline/promises');
+      rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        `warning: failed to initialize confirmation prompt: ${message}\n`,
+      );
+      return null;
+    }
     try {
       const answer = await rl.question(message);
       return answer.trim();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(
+        `warning: failed to read confirmation prompt: ${message}\n`,
+      );
       return null;
     } finally {
-      rl.close();
+      if (rl !== null) rl.close();
     }
   };
 }

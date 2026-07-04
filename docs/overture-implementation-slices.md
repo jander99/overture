@@ -608,12 +608,6 @@ and the `mv -v` recovery snippet) remains future work.
 
 ### G3. Restore-last helper
 
-Optionally add a helper command that restores from the most recent successful
-apply backup set.
-
-Expected result: convenience on top of the `mv`-based recovery path, not a
-replacement for it.
-
 **Delivered: shipped 2026-07-04 (commit `862a417a`) on `feat/g3-restore-last`.**
 Adds `overture restore-last`, a convenience on top of the `mv`-based recovery
 path the G2 logs advertise — not a replacement for it. The new CLI-local

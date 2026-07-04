@@ -693,12 +693,18 @@ const stateHomeStateDir = join(stateHome, '.local', 'state');
 // records to the real home instead of the smoke's tmpdir. The F2 smoke
 // never trips on this because the F2 path is no-change (no state file
 // is written); the G1 path always writes, so we have to pin the env.
+//
+// PATH must PREPEND `statePathDir` (so the fake opencode binary wins
+// detection) but PRESERVE the inherited system PATH — the end-to-end
+// apply → restore-last smoke below needs `/usr/bin/mv` (or equivalent)
+// to actually execute the restore. Replacing PATH with just
+// `statePathDir` breaks the F3 G3 regression guard.
 const stateEnv = {
   ...process.env,
   HOME: stateHome,
   XDG_CONFIG_HOME: stateXdg,
   XDG_STATE_HOME: stateHomeStateDir,
-  PATH: statePathDir,
+  PATH: `${statePathDir}${process.env.PATH ? `:${process.env.PATH}` : ''}`,
 };
 // Seed the canonical config — target OpenCode with a single canonical
 // `filesystem` server. `backupBeforeWrite: true` exercises the F2
@@ -850,6 +856,100 @@ if (statePointer.runId !== stateExpectedRunId) {
 
 console.log(
   `apply (no flag, state-file): exit=${stateApplyResult.status} targetModified=PASS backupExists=PASS recordSchemaVersion=1 recordHasOpencode=PASS pointerMatches=PASS`,
+);
+
+// ---------------------------------------------------------------------------
+// F3 / G3 end-to-end smoke: apply → restore-last --yes, on the SAME state
+// the G1 smoke just produced. This is the load-bearing regression guard
+// for the F3 BLOCKING finding (Anomaly 1: opencode writer emits
+// `loc.relativePath` as the raw `targetPaths[*].path`, and a pre-fix
+// restore-last would `mv` against the relative path and silently fail).
+// After the fix, `buildApplyStateRecord` resolves every target against
+// the apply-time `PathResolutionContext` and the seeded pair's `mv -v`
+// hits the absolute target on disk. The smoke fails LOUDLY if a future
+// regression reintroduces the relative-path bug.
+// ---------------------------------------------------------------------------
+
+// Backup file path is the opencode target's pre-apply sidecar. Re-discover
+// it from the seeded dir (same logic as the apply assertions above).
+const stateEndToEndBackup = join(stateOpencodeHomeDir, stateBackupFiles[0]);
+if (!statSync(stateEndToEndBackup, { throwIfNoEntry: false })) {
+  fail(
+    `restore-last end-to-end: backup file ${stateEndToEndBackup} missing before restore-last --yes`,
+  );
+}
+// Snapshot the apply's post-write target bytes so we can confirm the
+// restore reverts them to the pre-apply bytes captured at G1 smoke.
+const stateEndToEndAfterApplyBytes = stateOpencodeAfterBytes;
+
+// Run the dispatcher. cwd must be the workspace (or anywhere inside the
+// worktree — but the workspace is the cleanest) so the writer's
+// `process.cwd()`-anchored resolution matches the apply run.
+// We pass `--force` because gate G3-5's integrity check compares the
+// CURRENT target sha256 against `preWriteSha256` (the pre-apply bytes).
+// After a real apply the target carries post-apply bytes, so the check
+// always reports `mismatch` for a non-no-op restore — `--force`
+// (gate G3-4) is the user-opt-in that authorizes the clobber. The
+// F3 BLOCKING regression we're guarding is the relative-target bug,
+// which surfaces BEFORE the integrity check (the `mv` never fires),
+// not inside the integrity gate itself.
+const stateEndToEndResult = spawnWithEnv(
+  [distMain, 'restore-last', '--yes', '--force'],
+  stateEnv,
+  { cwd: stateWorkspace },
+);
+if (stateEndToEndResult.status !== 0) {
+  fail(
+    `restore-last --yes --force (end-to-end after real apply) exited ${stateEndToEndResult.status} (expected 0)\nstdout:\n${stateEndToEndResult.stdout}\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+// F3 guard 1 — the target must now match the pre-apply bytes. The
+// pre-fix bug would leave it untouched (the `mv` would fail because of
+// the relative target path).
+const stateEndToEndRestoredBytes = readFileSync(stateOpencodeConfig);
+if (!stateEndToEndRestoredBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    `restore-last --yes --force (end-to-end) did NOT restore the target to pre-apply bytes\nbefore-apply bytes: ${stateOpencodeBeforeBytes.length}\nafter-restore bytes: ${stateEndToEndRestoredBytes.length}\nstdout:\n${stateEndToEndResult.stdout}\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+// F3 guard 2 — the backup file must be unlinked by the restore. Pre-fix
+// the `mv` failed so the backup persisted; the after-apply bytes must
+// differ from the before-restore bytes (otherwise the test seeded a
+// no-op).
+if (stateEndToEndAfterApplyBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    'restore-last --yes --force (end-to-end) precondition failed: apply did not modify the target — there is nothing to restore',
+  );
+}
+const stateEndToEndBackupStat = statSync(stateEndToEndBackup, {
+  throwIfNoEntry: false,
+});
+if (stateEndToEndBackupStat) {
+  fail(
+    `restore-last --yes --force (end-to-end) did NOT unlink the backup at ${stateEndToEndBackup} (pre-fix regression)`,
+  );
+}
+
+// F3 guard 3 — the outcome must report `restored: 1` (one pair restored).
+if (!stateEndToEndResult.stdout.includes('restored: 1')) {
+  fail(
+    `restore-last --yes --force (end-to-end) stdout missing "restored: 1" line\nstdout:\n${stateEndToEndResult.stdout}`,
+  );
+}
+
+// F3 guard 4 — the WARN line for the forced restore must appear on stderr
+// (gate G3-4 mandates `WARN: target <path> was edited since apply;
+// restore forced.` per pair).
+if (!stateEndToEndResult.stderr.includes('restore forced')) {
+  fail(
+    `restore-last --yes --force (end-to-end) stderr missing "restore forced" WARN line\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+console.log(
+  `restore-last --yes --force (end-to-end after real apply): exit=${stateEndToEndResult.status} targetRestoredToPreApply=PASS backupUnlinked=PASS restoredCount=1 forceWarn=PASS`,
 );
 
 // Cleanup state tmpdirs.
@@ -1383,5 +1483,5 @@ rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
 console.log(
-  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), and restore-last (G3 --dry-run) smoke checks.',
+  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), restore-last (G3 --dry-run), and restore-last --yes --force (G3 end-to-end after real apply) smoke checks.',
 );

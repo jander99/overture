@@ -151,6 +151,12 @@ describe('apply-state (G1 contract)', () => {
       profileName: 'default',
       configPath: '/home/test/overture.jsonc',
       backupBeforeWrite: true,
+      ctx: {
+        homeDir: '/home/test',
+        configDir: '/home/test/.config',
+        workspaceDir: '/home/test/ws',
+        platform: 'linux',
+      },
       perAgent: [
         {
           agentResult,
@@ -360,6 +366,85 @@ describe('apply-state (G1 contract)', () => {
       '20260101-000000000-aaaaaaaa.json',
       '20260102-000000000-bbbbbbbb.json',
       '20260103-000000000-cccccccc.json',
+    ]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 7 — buildApplyStateRecord resolves relative targetPaths (G3 fix).
+  // OpenCode / Codex writers emit `targetPaths[*].path` as the raw
+  // `loc.relativePath`; the apply-time `PathResolutionContext` is the only
+  // anchor that can turn those into absolutes. The persisted record must
+  // hold the resolved absolute path so the G3 `restore-last` helper can
+  // `mv` against it without guessing the apply-time cwd. Absolute inputs
+  // are idempotent (resolveTargetBase passes them through).
+  // -------------------------------------------------------------------------
+
+  it('buildApplyStateRecord resolves relative targetPaths against ctx (G3 F3 fix)', () => {
+    const targets: AgentTargetPath[] = [
+      // OpenCode convention: relative path with a `base` hint.
+      { scope: 'project', base: 'workspace', path: 'opencode/opencode.json' },
+      // Codex convention: also relative, but anchored against home.
+      { scope: 'user', base: 'home', path: '.codex/config.toml' },
+      // Claude / Copilot convention: already absolute (idempotent pass-through).
+      { scope: 'user', base: 'home', path: '/home/test/.claude.json' },
+    ];
+    const writerResult: AgentMcpWriteResult = {
+      written: 3,
+      changed: true,
+      dryRun: false,
+      serversWritten: ['filesystem'],
+      targetPaths: targets,
+    };
+    const agentResult: ApplyAgentResult = {
+      agentId: 'mixed',
+      displayName: 'Mixed Agents',
+      status: 'updated',
+      result: writerResult,
+      backupPaths: [
+        '/tmp/ws/opencode/opencode.json.bak.20260704-200000000',
+        '/home/test/.codex/config.toml.bak.20260704-200000000',
+        '/home/test/.claude.json.bak.20260704-200000000',
+      ],
+    };
+    const ctx = {
+      homeDir: '/home/test',
+      configDir: '/home/test/.config',
+      workspaceDir: '/tmp/ws',
+      platform: 'linux' as const,
+    };
+    const args: BuildApplyStateRecordArgs = {
+      runId: '20260704-200000000-deadbeef',
+      now: new Date('2026-07-04T20:00:00.000Z'),
+      mode: 'apply',
+      profileName: 'default',
+      configPath: '/home/test/overture.jsonc',
+      backupBeforeWrite: true,
+      ctx,
+      perAgent: [
+        {
+          agentResult,
+          preSnapshots: ['aaaa', 'bbbb', 'cccc'],
+          postSnapshots: ['dddd', 'eeee', 'ffff'],
+        },
+      ],
+    };
+
+    const record = buildApplyStateRecord(args);
+
+    expect(record.agents).toHaveLength(1);
+    const agent = record.agents[0];
+    if (!agent) throw new Error('expected one ApplyStateAgent');
+    // Each writer-style relative path resolves against its declared base.
+    expect(agent.targetPaths).toEqual([
+      '/tmp/ws/opencode/opencode.json',
+      '/home/test/.codex/config.toml',
+      '/home/test/.claude.json',
+    ]);
+    // backupPaths stay whatever the writer/orchestrator produced (untouched).
+    expect(agent.backupPaths).toEqual([
+      '/tmp/ws/opencode/opencode.json.bak.20260704-200000000',
+      '/home/test/.codex/config.toml.bak.20260704-200000000',
+      '/home/test/.claude.json.bak.20260704-200000000',
     ]);
   });
 });

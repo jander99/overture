@@ -58,6 +58,35 @@ import {
   runRestore,
 } from './restore-command.js';
 
+// F1 fix: track every `child_process.spawn` invocation across the
+// suite. The ESM-sealed `node:child_process` namespace can't be mutated
+// via `vi.spyOn` (project memory 49), so we use a hoisted `vi.mock`
+// that wraps the real `spawn` and pushes every call into a shared
+// array. Tests inspect `spawnCalls` to assert the dry-run / non-execute
+// paths never fire a `mv` shell-out.
+const spawnCalls: {
+  command: string;
+  args: readonly string[];
+}[] = [];
+vi.mock('node:child_process', async (importOriginal) => {
+  const real = await importOriginal<typeof import('node:child_process')>();
+  return {
+    ...real,
+    spawn: ((
+      command: string,
+      args: readonly string[],
+      ...rest: unknown[]
+    ): unknown => {
+      spawnCalls.push({ command, args });
+      return (real.spawn as (...a: unknown[]) => unknown)(
+        command,
+        args,
+        ...rest,
+      );
+    }) as typeof real.spawn,
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Shared fixture helpers.
 // ---------------------------------------------------------------------------
@@ -382,6 +411,11 @@ describe('restore-command (G3 contract)', () => {
     const stdoutWriter = { write: (s: string) => stdout.push(s) };
     const stderrWriter = { write: (s: string) => stderr.push(s) };
 
+    // F1 fix: every `child_process.spawn` call is captured by the
+    // hoisted `vi.mock('node:child_process', ...)` at the top of this
+    // file. Snapshot the count before the call so we can prove the
+    // dry-run path does NOT fire a `mv` (or any other) shell-out.
+    const spawnCountBefore = spawnCalls.length;
     const code = await runRestore(['--dry-run'], stdoutWriter, stderrWriter, {
       isTTY: false,
       stateDir,
@@ -395,6 +429,11 @@ describe('restore-command (G3 contract)', () => {
     expect(stdout.join('')).toContain(runId);
     expect(stdout.join('')).toContain('mv -v');
     expect(stderr.join('')).toBe('');
+    // Dry-run invariant: NO new spawn calls (mv or otherwise) fired.
+    const newCalls = spawnCalls.slice(spawnCountBefore);
+    expect(newCalls).toEqual([]);
+    const mvCalls = newCalls.filter((c) => c.command === 'mv');
+    expect(mvCalls).toEqual([]);
   });
 
   // -------------------------------------------------------------------------
