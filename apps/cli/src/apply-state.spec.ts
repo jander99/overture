@@ -1,8 +1,10 @@
 /**
- * G1 — `apply-state` module tests (RED phase).
+ * G1 — `apply-state` codec suite (pure helpers + filesystem writer).
  *
- * TDD red phase per `.omo/plans/g1-apply-state-file.md` Todo 1. These cases
- * lock the contract for `apps/cli/src/apply-state.ts` before Wave 2 lands.
+ * Locks the contract for `apps/cli/src/apply-state.ts`: the per-run state
+ * codec, the `readApplyState` round-trip, and the retention GC. The
+ * orchestrator-level apply-state recording (pre-discovery, post-hash,
+ * `writeApplyState` best-effort) lives in `apply-command.spec.ts`.
  * Each case is independent of the others:
  *   - Pure-function cases (1, 2, 3) need no filesystem.
  *   - Filesystem cases (4, 5, 6) use `mkdtempSync` for isolation, with
@@ -144,11 +146,6 @@ describe('apply-state (G1 contract)', () => {
       now: new Date('2026-07-04T18:30:00.123Z'),
       mode: 'apply',
       profileName: 'default',
-      profile: {
-        mcpServers: {},
-        sync: { targets: ['claude-code'], disabledServers: [] },
-        skills: [],
-      },
       configPath: '/home/test/overture.jsonc',
       backupBeforeWrite: true,
       perAgent: [

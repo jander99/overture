@@ -13,16 +13,16 @@
  *
  * Retention: GC keeps the `keep` (default 10) newest per-run files;
  * `last.json` is never pruned (lexical selector filters for `*.json` only).
- * Atomic write is inline write-then-rename (no shared helper).
+ * Atomic write is inline open+write+fsync+close+rename (no shared helper).
  */
 import { createHash, randomBytes } from 'node:crypto';
 import {
   mkdir,
+  open,
   readdir,
   readFile,
   rename,
   unlink,
-  writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -96,8 +96,6 @@ export interface BuildApplyStateRecordArgs {
   readonly now: Date;
   readonly mode: 'apply';
   readonly profileName: string;
-  /** Resolved profile object (passed through to the record as opaque data). */
-  readonly profile: unknown;
   readonly configPath: string;
   readonly backupBeforeWrite: boolean;
   readonly perAgent: readonly {
@@ -235,7 +233,7 @@ export async function readApplyState(
 ): Promise<ApplyStateRecord> {
   const raw = await readFile(recordPath);
   const parsed: unknown = JSON.parse(raw.toString('utf8'));
-  if (!isApplyStateRecordShape(parsed)) {
+  if (!isApplyStateRecord(parsed)) {
     throw new Error(
       `Invalid ApplyStateRecord at ${recordPath}: schemaVersion !== 1`,
     );
@@ -272,32 +270,65 @@ export async function pruneApplyState(
 // ---------------------------------------------------------------------------
 
 /**
- * Inline write-then-rename pattern. Mirrors `atomicWrite` in
- * `packages/agents/src/claude-code-write.ts`, but kept local to G1 (no
- * shared helper per the plan's "Must NOT introduce a shared atomic-write
- * helper" guardrail). Failure of the underlying `writeFile` or `rename`
- * propagates to the caller; a stray `.tmp-<hex>` will be ignored by
- * `pruneApplyState`'s `*.json` filter and persists harmlessly until the
- * next apply's GC misses it.
+ * Inline atomic write — open temp → write → fsync → close → rename. Mirrors
+ * the G1 plan's "write-to-temp + fsync before rename" contract (see
+ * `.omo/plans/g1-apply-state-file.md`); fsync is what guarantees the bytes
+ * survive a crash between the temp write and the rename. Kept local to G1
+ * (no shared helper per the plan's "Must NOT introduce a shared atomic-write
+ * helper" guardrail). On failure the temp file is unlinked best-effort so
+ * no `.tmp-<hex>` debris persists, and the underlying error is rethrown
+ * with a `[atomicWrite]` tag so callers can identify the failure surface.
  */
 async function atomicWrite(
   targetPath: string,
   contents: string,
 ): Promise<void> {
   const tempPath = `${targetPath}.tmp-${randomBytes(4).toString('hex')}`;
-  await writeFile(tempPath, contents, 'utf8');
-  await rename(tempPath, targetPath);
+  let handle: import('node:fs/promises').FileHandle | null = null;
+  try {
+    handle = await open(tempPath, 'w');
+    await handle.writeFile(contents, 'utf8');
+    await handle.sync();
+    await handle.close();
+    handle = null;
+    await rename(tempPath, targetPath);
+  } catch (err) {
+    // Close the handle if it's still open so we don't leak the FD.
+    if (handle !== null) {
+      try {
+        await handle.close();
+      } catch {
+        /* swallow — already failing */
+      }
+    }
+    // Best-effort cleanup so no `.tmp-<hex>` debris persists across retries.
+    try {
+      await unlink(tempPath);
+    } catch {
+      /* already gone or never created — that's fine */
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    // Attach the underlying error so callers (and logs) can inspect the
+    // root cause via `error.cause` (Node 16.9+, ES2022 standard).
+    throw new Error(`[atomicWrite] failed: ${message}`, { cause: err });
+  }
 }
 
 /**
  * Best-effort ENOENT detection: catches both `readFile` rejections (where
  * `code === 'ENOENT'`) and any error that carries a `NodeJS.ErrnoException`
- * property with the same code on it.
+ * property with the same code on it. Uses the canonical `'code' in err`
+ * safe-property-check pattern (see `packages/os/src/detect.ts`,
+ * `packages/agents/src/read-mcp-config.ts`) to avoid an `unknown` cast on
+ * `err.code`.
  */
 function isErrnoWithCode(err: unknown, code: string): boolean {
-  if (typeof err !== 'object' || err === null) return false;
-  const candidate = err as { code?: unknown };
-  return candidate.code === code;
+  return (
+    err instanceof Error &&
+    'code' in err &&
+    typeof err.code === 'string' &&
+    err.code === code
+  );
 }
 
 /**
@@ -314,10 +345,12 @@ function pickHash(snapshots: readonly string[] | undefined): string | null {
  * Narrow `unknown` from `JSON.parse` to the structural shape we trust
  * on disk. Only the `schemaVersion` literal is enforced here; the rest
  * is taken on faith (the orchestrator wrote it seconds ago in the
- * common case).
+ * common case). Uses the canonical `'schemaVersion' in value`
+ * safe-property-check pattern to avoid an `unknown` cast on
+ * `value.schemaVersion`.
  */
-function isApplyStateRecordShape(value: unknown): value is ApplyStateRecord {
+function isApplyStateRecord(value: unknown): value is ApplyStateRecord {
   if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as { schemaVersion?: unknown };
-  return candidate.schemaVersion === 1;
+  if (!('schemaVersion' in value)) return false;
+  return value.schemaVersion === 1;
 }

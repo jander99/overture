@@ -1177,10 +1177,17 @@ export async function runApply(
       .filter((p) => p.length > 0);
     const preSnapshots: string[] = [];
     for (const target of targets) {
-      const h = await sha256OfFile(target);
+      // Best-effort per-path: `sha256OfFile` already returns `null` for
+      // ENOENT; non-ENOENT errors (EACCES, EISDIR, transient I/O) degrade
+      // to `null` here so a single unreadable target cannot abort the
+      // entire pre-discovery loop and change the apply exit code.
+      let h: string | null = null;
+      try {
+        h = await sha256OfFile(target);
+      } catch {
+        /* best-effort: hash read failure → null */
+      }
       if (h !== null) preSnapshots.push(h);
-      // Null (file absent) is recorded by `pickHash` via absent-entry;
-      // a missing file semantically means "no pre-write hash".
     }
     preDiscoveryByAgentId.set(agentId, { targets, preSnapshots });
   }
@@ -1209,7 +1216,6 @@ export async function runApply(
   // a state-write failure MUST NOT change the apply exit code (the apply
   // already happened — state is bookkeeping).
   await recordApplyStateBestEffort({
-    ctx,
     overturePaths,
     now,
     backupBeforeWrite,
@@ -1256,7 +1262,6 @@ export async function runApply(
 // ---------------------------------------------------------------------------
 
 interface RecordApplyStateArgs {
-  readonly ctx: PathResolutionContext;
   readonly overturePaths: OverturePaths;
   readonly now: Date;
   readonly backupBeforeWrite: boolean;
@@ -1293,7 +1298,15 @@ async function recordApplyStateBestEffort(
     const targets = pre?.targets ?? [];
     const postSnapshots: string[] = [];
     for (const target of targets) {
-      const h = await sha256OfFile(target);
+      // Best-effort per-path (see pre-discovery loop): a transient I/O
+      // error on one target must not abort the post-hash loop or change
+      // the apply exit code.
+      let h: string | null = null;
+      try {
+        h = await sha256OfFile(target);
+      } catch {
+        /* best-effort: hash read failure → null */
+      }
       if (h !== null) postSnapshots.push(h);
     }
     perAgentEntries.push({
@@ -1310,7 +1323,6 @@ async function recordApplyStateBestEffort(
       now: args.now,
       mode: 'apply',
       profileName: args.profileName,
-      profile: args.profile,
       configPath: args.configPath,
       backupBeforeWrite: args.backupBeforeWrite,
       perAgent: perAgentEntries,
