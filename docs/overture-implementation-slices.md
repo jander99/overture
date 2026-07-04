@@ -441,6 +441,26 @@ refuse instead of overwriting.
 
 Expected result: apply never silently picks a winner.
 
+**Status: completed on feat/f3-conflict-refusal (this slice).** Delivered
+F3's `overture apply` settings-drift refusal. New CLI-local `'conflict'`
+member on `ApplyStatus` / `ApplyDryRunStatus` (`WriteReason` in
+`@overture/agents` unchanged); the `ServerConflict` shape lives in
+`@overture/agents/types.ts` and is exported via `@overture/agents/index.ts`;
+the `detectCanonicalSettingsDrift` helper in
+`packages/agents/src/parse-mcp-servers.ts` compares two
+`ReadonlyMap<serverName, AgentNormalizedMcpServer>` snapshots and is wired
+into all four production per-agent writers (OpenCode, Claude Code with its
+workspace-nested `projects[workspaceDir].mcpServers`, GitHub Copilot CLI,
+OpenAI Codex). The orchestrator short-circuits before backup + Pass 2 via
+the existing `'would-update'`-exclusive gate; `formatHumanApply` and
+`formatHumanApplyDryRun` render a `Conflicts:` block; the dry-run JSON
+envelope carries `AgentMcpWriteResult.conflicts`; `reasonDetail` policy
+pinned to synthesized refusals only. Five commits on
+`feat/f3-conflict-refusal` (`2397d82d` type contract,
+`684079fb` detector, `f8e3eb08` writer integration, `1e060a4b` orchestrator
+refusal, slice-doc/smoke commit). Plan:
+`.omo/plans/f3-conflict-refusal.md`.
+
 ## Track G: undo and auditability
 
 Undo should be human-recoverable, not dependent on hidden state.

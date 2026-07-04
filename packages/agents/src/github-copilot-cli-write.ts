@@ -16,18 +16,26 @@ import {
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
-import { editJsoncMap } from './jsonc-map-write.js';
 import {
-  pickCopilotWriteTarget,
-  targetPathFor,
-} from './github-copilot-cli-write-helpers.js';
+  normalizeGitHubCopilotCliMcpServers,
+  type GitHubCopilotCliMcpConfig,
+} from './github-copilot-cli.js';
+import { editJsoncMap } from './jsonc-map-write.js';
+import { normalized } from './normalize-mcp-config.js';
+import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
+  AgentMcpReadResult,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   McpLocationFormat,
   PathResolutionContext,
   WriteReason,
 } from './types.js';
+import {
+  pickCopilotWriteTarget,
+  targetPathFor,
+} from './github-copilot-cli-write-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Types and converter
@@ -248,6 +256,41 @@ export async function writeGitHubCopilotCliMcpConfig(
   }
 
   const mcpServersObj = mcpServers as Record<string, unknown>;
+
+  // F3 conflict detection: build the existing normalized map from
+  // the read mcpServers container, compare against the canonical
+  // input, and refuse when any same-name pair differs in normalized
+  // shape. Detector invocation order is fixed per the F3 design
+  // contract: read → normalize → compare → refuse-or-proceed. Runs
+  // AFTER shape validation and BEFORE any per-server patch building
+  // so the writer never reads-then-rewrites a divergent entry.
+  const existingRead: AgentMcpReadResult<GitHubCopilotCliMcpConfig> = {
+    config: {
+      mcpServers: mcpServersObj as GitHubCopilotCliMcpConfig['mcpServers'],
+    },
+    nonEmpty: Object.keys(mcpServersObj).length > 0,
+  };
+  const existingNormalizedRecord =
+    normalizeGitHubCopilotCliMcpServers(existingRead);
+  const existingMap = new Map<string, AgentNormalizedMcpServer>(
+    Object.entries(existingNormalizedRecord),
+  );
+  const canonicalMap = new Map<string, AgentNormalizedMcpServer>(
+    input.servers.map((s) => [s.name, normalized(s.server)]),
+  );
+  const conflicts = detectCanonicalSettingsDrift(existingMap, canonicalMap);
+  if (conflicts.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: targetPath,
+      format: 'jsonc' as McpLocationFormat,
+      conflicts,
+    };
+  }
 
   // Check all requested servers exist in the container (update-only: no creation)
   for (const entry of input.servers) {

@@ -14,7 +14,12 @@ import {
   parse as parseJsonc,
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
-import type { McpServerEntry } from './types.js';
+import type { OvertureMcpServer } from '@overture/config';
+import type {
+  AgentNormalizedMcpServer,
+  McpServerEntry,
+  ServerConflict,
+} from './types.js';
 
 const localRequire = createRequire(__filename);
 // Load yaml the same way smol-toml is loaded in mcp-config-parser.ts:
@@ -271,4 +276,184 @@ export function parseOpenCodeMcpServerMap(
   resolvedPath: string,
 ): readonly McpServerEntry[] {
   return parseJsoncMcpServerMap(resolvedPath, 'mcp');
+}
+
+// ---------------------------------------------------------------------------
+// F3 canonical settings drift detection.
+//
+// `detectCanonicalSettingsDrift` is the pure helper that lifts the B3
+// 'canonical-settings-drift' classification into the write path. Each
+// per-agent writer invokes it during Pass 1 (after the existing target
+// read + B2 normalization completes, before byte-level planning) with
+// two `ReadonlyMap<serverName, AgentNormalizedMcpServer>` arguments:
+// - `existing`:  the existing target entries, already normalized
+//                (B2 funnel output, keyed by server name)
+// - `canonical`: the canonical intent entries, already normalized
+//                (B2 funnel output, keyed by server name)
+//
+// The helper returns ONE `ServerConflict` per same-name pair where the
+// normalized canonical fields differ. Missing entries (key present in
+// only one map) are NOT conflicts — the writer handles new-entry paths.
+// Entries with `state === 'shape-conflict'` are skipped here; their
+// refusal surfaces via the writer's existing `WriteReason` path, not F3.
+//
+// `AgentNormalizedMcpServer` itself carries NO server-name field
+// (memory 114), so the map key is the only authoritative identifier.
+// The helper never relies on array index order to identify a server
+// name (silent-pass risk per memory 113, F2 PR #133 retro).
+//
+// Pure: no fs, no async, no per-agent-specific imports.
+// Deterministic: same inputs produce deeply equal output.
+// JSON-serializable: no functions, no class instances in messages.
+// ---------------------------------------------------------------------------
+
+/**
+ * Compare two normalized MCP server maps and emit one
+ * `ServerConflict` per same-name pair whose canonical fields differ.
+ *
+ * Both arguments are `ReadonlyMap<serverName, AgentNormalizedMcpServer>`
+ * — the map key is the authoritative server name (memory 114).
+ * Output is sorted ascending by `serverName`; `diffKeys` is sorted
+ * ascending within each conflict.
+ *
+ * Comparator semantics (anti-silent-pass per memory 113):
+ * - `args` (string array): order is SIGNIFICANT.
+ * - `env` / `headers` (Record<string, string>): key insertion order
+ *   is INSIGNIFICANT — equivalent key→string maps compare equal.
+ * - `undefined` vs `undefined`: NOT a diff.
+ * - `undefined` vs `[]` / `{}`: IS a diff (missing vs empty).
+ * - No implicit coercion: numbers vs numeric strings are distinct;
+ *   `null` and `undefined` are distinct when both are legal.
+ *
+ * No `JSON.stringify` equality — would conflate `env` / `headers`
+ * insertion order with content (F2 retro silent-pass risk).
+ */
+export function detectCanonicalSettingsDrift(
+  existing: ReadonlyMap<string, AgentNormalizedMcpServer>,
+  canonical: ReadonlyMap<string, AgentNormalizedMcpServer>,
+): readonly ServerConflict[] {
+  // Iterate the intersection of keys, sorted ascending. We pick
+  // the smaller map's keys as the outer loop to avoid allocating
+  // the full intersection array, then sort the resulting array.
+  const intersectKeys: string[] = [];
+  const [outer, inner] =
+    existing.size <= canonical.size
+      ? [existing, canonical]
+      : [canonical, existing];
+  for (const name of outer.keys()) {
+    if (inner.has(name)) intersectKeys.push(name);
+  }
+  intersectKeys.sort();
+
+  const out: ServerConflict[] = [];
+  for (const serverName of intersectKeys) {
+    const leftEntry = existing.get(serverName);
+    const rightEntry = canonical.get(serverName);
+    // Defensive: the intersection loop already filters on `inner.has`,
+    // so both lookups must succeed. The `!` non-null assertion would
+    // be flagged by the lint config; fall through silently instead.
+    if (!leftEntry || !rightEntry) continue;
+    // Skip non-normalized entries on either side — their refusal
+    // surfaces via the writer's existing `WriteReason` path, not F3.
+    if (leftEntry.state !== 'normalized' || rightEntry.state !== 'normalized') {
+      continue;
+    }
+    const diffKeys = compareNormalizedServers(
+      leftEntry.server,
+      rightEntry.server,
+    );
+    if (diffKeys.length === 0) continue;
+    out.push({
+      serverName,
+      message:
+        `Refusing to continue for server "${serverName}": ` +
+        `canonical and agent settings differ. ` +
+        `Update the canonical config or the agent config and retry.`,
+      diffKeys,
+    });
+  }
+  return out;
+}
+
+/**
+ * Walk the canonical fields of two normalized server entries and
+ * return the sorted list of field names whose values differ. Order-
+ * significant for arrays (`args`); order-insignificant for record
+ * maps (`env`, `headers`).
+ */
+function compareNormalizedServers(
+  left: OvertureMcpServer,
+  right: OvertureMcpServer,
+): readonly string[] {
+  const diffs = new Set<string>();
+
+  // Discriminator is always present on both branches.
+  if (left.type !== right.type) diffs.add('type');
+
+  // Branch-specific fields. When the two sides pick different
+  // transports, the side that doesn't carry a branch-specific field
+  // contributes `undefined`, and the comparator flags the mismatch
+  // as a diff (a transport switch IS a multi-field drift).
+  const leftCommand = left.type === 'stdio' ? left.command : undefined;
+  const rightCommand = right.type === 'stdio' ? right.command : undefined;
+  if (leftCommand !== rightCommand) diffs.add('command');
+
+  const leftArgs = left.type === 'stdio' ? left.args : undefined;
+  const rightArgs = right.type === 'stdio' ? right.args : undefined;
+  if (!arraysEqualOrderSignificant(leftArgs, rightArgs)) diffs.add('args');
+
+  const leftEnv = left.type === 'stdio' ? left.env : undefined;
+  const rightEnv = right.type === 'stdio' ? right.env : undefined;
+  if (!recordEqualOrderInsignificant(leftEnv, rightEnv)) diffs.add('env');
+
+  const leftUrl = left.type === 'remote' ? left.url : undefined;
+  const rightUrl = right.type === 'remote' ? right.url : undefined;
+  if (leftUrl !== rightUrl) diffs.add('url');
+
+  const leftHeaders = left.type === 'remote' ? left.headers : undefined;
+  const rightHeaders = right.type === 'remote' ? right.headers : undefined;
+  if (!recordEqualOrderInsignificant(leftHeaders, rightHeaders)) {
+    diffs.add('headers');
+  }
+
+  return Array.from(diffs).sort();
+}
+
+/**
+ * Order-significant array equality. Treats two `undefined` values
+ * as equal (the canonical schema makes `args` optional). `null` and
+ * `undefined` are distinct.
+ */
+function arraysEqualOrderSignificant(left: unknown, right: unknown): boolean {
+  if (left === undefined && right === undefined) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Order-insignificant record equality. Treats two `undefined` values
+ * as equal (the canonical schema makes `env`/`headers` optional).
+ * Key insertion order does NOT affect equality.
+ */
+function recordEqualOrderInsignificant(left: unknown, right: unknown): boolean {
+  if (left === undefined && right === undefined) return true;
+  if (!isPlainRecord(left) || !isPlainRecord(right)) return false;
+  const lKeys = Object.keys(left).sort();
+  const rKeys = Object.keys(right).sort();
+  if (lKeys.length !== rKeys.length) return false;
+  for (let i = 0; i < lKeys.length; i++) {
+    const k = lKeys[i];
+    if (k === undefined || rKeys[i] === undefined) return false;
+    if (k !== rKeys[i]) return false;
+    if (left[k] !== right[k]) return false;
+  }
+  return true;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

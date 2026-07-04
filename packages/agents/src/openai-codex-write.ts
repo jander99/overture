@@ -22,6 +22,12 @@
  *    range the splice helper computes.
  */
 import type { OvertureMcpServer } from '@overture/config';
+import {
+  normalizeOpenAICodexMcpServers,
+  type OpenAICodexMcpConfig,
+} from './openai-codex.js';
+import { normalized } from './normalize-mcp-config.js';
+import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 
 // ---------------------------------------------------------------------------
 // Sentinel for unsupported extension shapes
@@ -459,8 +465,10 @@ import {
   type CodexWriteTarget,
 } from './openai-codex-write-helpers.js';
 import type {
+  AgentMcpReadResult,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   McpLocationFormat,
   PathResolutionContext,
   WriteReason,
@@ -800,6 +808,42 @@ export async function writeOpenAICodexMcpConfig(
   }
 
   const mcpServersObj = mcpServers as Record<string, unknown>;
+
+  // F3 conflict detection: build the existing normalized map from
+  // the parsed `[mcp_servers.<name>]` TOML tables, compare against
+  // the canonical input, and refuse when any same-name pair differs
+  // in normalized shape. Detector invocation order is fixed per the
+  // F3 design contract: read → parse / shape-validate → normalize →
+  // compare → refuse-or-proceed. Runs AFTER TOML parse + shape
+  // validation and the update-only existence check, BEFORE any
+  // per-server patch building so the writer never reads-then-rewrites
+  // a divergent entry.
+  const existingRead: AgentMcpReadResult<OpenAICodexMcpConfig> = {
+    config: {
+      mcp_servers: mcpServersObj as OpenAICodexMcpConfig['mcp_servers'],
+    },
+    nonEmpty: Object.keys(mcpServersObj).length > 0,
+  };
+  const existingNormalizedRecord = normalizeOpenAICodexMcpServers(existingRead);
+  const existingMap = new Map<string, AgentNormalizedMcpServer>(
+    Object.entries(existingNormalizedRecord),
+  );
+  const canonicalMap = new Map<string, AgentNormalizedMcpServer>(
+    input.servers.map((s) => [s.name, normalized(s.server)]),
+  );
+  const conflicts = detectCanonicalSettingsDrift(existingMap, canonicalMap);
+  if (conflicts.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath: target.path,
+      format: 'toml' as McpLocationFormat,
+      conflicts,
+    };
+  }
 
   // Update-only: every requested server must already exist in the
   // target document. Missing names are rejected with not-targetable

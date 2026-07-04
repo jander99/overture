@@ -448,7 +448,7 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
       );
     });
 
-    it('E3: project .mcp.json update returns changed:true, written:1, format:jsonc', async () => {
+    it('F3: project .mcp.json divergent canonical triggers conflict refusal', async () => {
       const ctx = makeCtx();
       const projectPath = join(ctx.workspaceDir, '.mcp.json');
       const { writeFile, mkdir } = await import('node:fs/promises');
@@ -468,13 +468,20 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
         servers: [{ name: 'filesystem', server: filesystemServer }],
       });
 
-      // RED phase: stub returns parse-error; these assertions prove the wiring
-      expect(result.changed).toBe(true);
-      expect(result.written).toBe(1);
+      // F3: divergent settings refuse the write before byte-level
+      // planning. The target resolution (project .mcp.json) still
+      // surfaces; only the write is refused.
+      expect(result.changed).toBe(false);
+      expect(result.written).toBe(0);
+      expect(result.serversWritten).toEqual([]);
       expect(result.format).toBe('jsonc');
-      expect(result.serversWritten).toContain('filesystem');
       expect(result.resolvedPath).toBe(projectPath);
-      expect(result.bytesChanged).toBeGreaterThan(0);
+      expect(result.targetPaths).toContainEqual(
+        expect.objectContaining({ scope: 'project', base: 'workspace' }),
+      );
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts).toHaveLength(1);
+      expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
     });
   });
 
@@ -501,7 +508,7 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
       );
     });
 
-    it('E3: user-top update returns full metadata envelope', async () => {
+    it('F3: user-top divergent canonical triggers conflict refusal', async () => {
       const ctx = makeCtx();
       const userPath = join(ctx.homeDir, '.claude.json');
       const { writeFile, mkdir } = await import('node:fs/promises');
@@ -521,14 +528,15 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
         servers: [{ name: 'filesystem', server: filesystemServer }],
       });
 
-      expect(result.changed).toBe(true);
-      expect(result.written).toBe(1);
+      expect(result.changed).toBe(false);
+      expect(result.written).toBe(0);
       expect(result.dryRun).toBe(false);
-      expect(result.serversWritten).toContain('filesystem');
+      expect(result.serversWritten).toEqual([]);
       expect(result.format).toBe('jsonc');
       expect(result.resolvedPath).toBe(userPath);
-      expect(result.bytesChanged).toBeGreaterThan(0);
       expect(result.targetPaths).toHaveLength(1);
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
     });
   });
 
@@ -560,7 +568,7 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
       );
     });
 
-    it('E3: user-projects update exercises projects[workspaceKey].mcpServers path', async () => {
+    it('F3: user-projects divergent canonical triggers conflict refusal', async () => {
       const ctx = makeCtx();
       const userPath = join(ctx.homeDir, '.claude.json');
       const { writeFile, mkdir } = await import('node:fs/promises');
@@ -584,18 +592,20 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
         servers: [{ name: 'filesystem', server: filesystemServer }],
       });
 
-      // RED phase: stub returns parse-error; wiring is confirmed via targetPaths
-      expect(result.changed).toBe(true);
-      expect(result.written).toBe(1);
-      expect(result.serversWritten).toContain('filesystem');
+      // F3: target resolved (user-projects path), but divergent
+      // settings refuse the write before byte-level planning.
+      expect(result.changed).toBe(false);
+      expect(result.written).toBe(0);
+      expect(result.serversWritten).toEqual([]);
       expect(result.format).toBe('jsonc');
-      expect(result.bytesChanged).toBeGreaterThan(0);
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
     });
   });
 
-  // ----- METADATA ENVELOPE: changed update -----
-  describe('metadata envelope: changed update', () => {
-    it('returns written:1, changed:true, dryRun:false, serversWritten, bytesChanged>0, format:jsonc, targetPaths, resolvedPath', async () => {
+  // ----- METADATA ENVELOPE: F3 conflict refusal -----
+  describe('metadata envelope: F3 conflict refusal', () => {
+    it('returns written:0, changed:false, dryRun:false, conflicts populated, targetPaths, resolvedPath', async () => {
       const ctx = makeCtx();
       const projectPath = join(ctx.workspaceDir, '.mcp.json');
       const { writeFile, mkdir } = await import('node:fs/promises');
@@ -611,14 +621,19 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
         servers: [{ name: 'filesystem', server: filesystemServer }],
       });
 
-      expect(result.written).toBe(1);
-      expect(result.changed).toBe(true);
+      // F3 supersedes the pre-F3 "changed update" envelope: divergent
+      // settings now refuse the write before byte-level planning.
+      expect(result.written).toBe(0);
+      expect(result.changed).toBe(false);
       expect(result.dryRun).toBe(false);
-      expect(result.serversWritten).toEqual(['filesystem']);
+      expect(result.serversWritten).toEqual([]);
       expect(result.targetPaths).toHaveLength(1);
       expect(result.format).toBe('jsonc');
-      expect(result.bytesChanged).toBeGreaterThan(0);
       expect(result.resolvedPath).toBe(projectPath);
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(result.conflicts?.[0]?.message).toContain('canonical and agent');
+      expect(result.conflicts?.[0]?.diffKeys).toContain('args');
     });
   });
 
@@ -654,7 +669,7 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
 
   // ----- METADATA ENVELOPE: dry-run -----
   describe('metadata envelope: dry-run', () => {
-    it('returns planned metadata and leaves disk unchanged', async () => {
+    it('F3 dry-run: divergent canonical triggers conflict refusal with dryRun flag, leaves disk unchanged', async () => {
       const ctx = makeCtx();
       const projectPath = join(ctx.workspaceDir, '.mcp.json');
       const { writeFile, mkdir, readFile } = await import('node:fs/promises');
@@ -680,7 +695,8 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
       expect(result.dryRun).toBe(true);
       expect(result.changed).toBe(false);
       expect(result.written).toBe(0); // no disk write occurred
-      expect(result.serversWritten).toContain('filesystem');
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
       expect(result.format).toBe('jsonc');
       expect(result.resolvedPath).toBe(projectPath);
 
@@ -1205,6 +1221,145 @@ describe('claudeCode.mcp.write (E3 byte-splice)', () => {
       } finally {
         writeSpy.mockRestore();
       }
+    });
+  });
+
+  // ----- F3: conflict refusal across top-level + workspace scopes -----
+  describe('F3: claudeCode.mcp.write conflict detection (workspace scope)', () => {
+    /**
+     * Build a Claude Code config fixture that has workspace-nested
+     * `projects[workspaceDir].mcpServers` (no top-level mcpServers).
+     */
+    function workspaceOnlyFixture(workspaceDir: string): string {
+      return JSON.stringify({
+        numStartups: 42,
+        hasCompletedOnboarding: true,
+        projects: {
+          [workspaceDir]: {
+            mcpServers: {
+              context7: {
+                command: 'npx',
+                args: ['-y', '@upstash/context7-mcp@latest'],
+                env: { CONTEXT7_API_KEY: 'placeholder' },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    it('F3: workspace-only divergent context7 triggers conflict refusal', async () => {
+      const ctx = makeCtx();
+      const userPath = join(ctx.homeDir, '.claude.json');
+      const { writeFile, mkdir } = await import('node:fs/promises');
+      await mkdir(join(userPath, '..'), { recursive: true });
+      await writeFile(
+        userPath,
+        workspaceOnlyFixture(ctx.workspaceDir),
+        'utf-8',
+      );
+
+      const result = await claudeCode.mcp.write(ctx, {
+        servers: [
+          {
+            name: 'context7',
+            server: {
+              type: 'stdio',
+              command: 'npx',
+              args: ['-y', 'something-else'],
+            },
+          },
+        ],
+      });
+
+      expect(result.written).toBe(0);
+      expect(result.changed).toBe(false);
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('context7');
+      expect(result.conflicts?.[0]?.diffKeys).toContain('args');
+    });
+
+    it('F3: workspace overrides top-level on collision for the existing map', async () => {
+      // The same server name lives in both top-level and workspace-nested
+      // maps with divergent normalized shapes. The conflict check must
+      // compare canonical against the WORKSPACE entry (which wins on
+      // collision) — i.e., the workspace-divergent shape is what fires
+      // the conflict, not the top-level one.
+      const ctx = makeCtx();
+      const userPath = join(ctx.homeDir, '.claude.json');
+      const { writeFile, mkdir } = await import('node:fs/promises');
+      await mkdir(join(userPath, '..'), { recursive: true });
+      const fixtureBody = JSON.stringify({
+        numStartups: 42,
+        mcpServers: {
+          shared: {
+            command: 'top-cmd',
+            args: ['top'],
+          },
+        },
+        projects: {
+          [ctx.workspaceDir]: {
+            mcpServers: {
+              shared: {
+                command: 'ws-cmd',
+                args: ['ws-1', 'ws-2'],
+              },
+            },
+          },
+        },
+      });
+      await writeFile(userPath, fixtureBody, 'utf-8');
+
+      // Canonical matches the TOP-LEVEL entry exactly. With workspace-
+      // overrides-top-level, the existing map uses ws-cmd; canonical
+      // differs from ws-cmd (but matches top-cmd) → conflict fires
+      // against the workspace entry.
+      const result = await claudeCode.mcp.write(ctx, {
+        servers: [
+          {
+            name: 'shared',
+            server: { type: 'stdio', command: 'top-cmd', args: ['top'] },
+          },
+        ],
+      });
+
+      expect(result.conflicts).toBeDefined();
+      expect(result.conflicts?.[0]?.serverName).toBe('shared');
+      // workspace entry has command 'ws-cmd' vs canonical 'top-cmd' →
+      // command + args both differ.
+      expect(result.conflicts?.[0]?.diffKeys).toContain('command');
+    });
+
+    it('F3: top-level matching canonical proceeds byte-level (no-change)', async () => {
+      const ctx = makeCtx();
+      const projectPath = join(ctx.workspaceDir, '.mcp.json');
+      const { writeFile, mkdir } = await import('node:fs/promises');
+      await mkdir(join(projectPath, '..'), { recursive: true });
+      const matchingFixture = JSON.stringify({
+        mcpServers: {
+          filesystem: {
+            command: 'npx',
+            args: ['-y', '@scope/server'],
+          },
+        },
+      });
+      await writeFile(projectPath, matchingFixture, 'utf-8');
+
+      const result = await claudeCode.mcp.write(ctx, {
+        servers: [
+          {
+            name: 'filesystem',
+            server: {
+              type: 'stdio',
+              command: 'npx',
+              args: ['-y', '@scope/server'],
+            },
+          },
+        ],
+      });
+
+      expect(result.conflicts).toBeUndefined();
+      expect(result.reason).toBe('no-change');
     });
   });
 });

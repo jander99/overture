@@ -534,20 +534,25 @@ if (
 }
 console.log('bootstrap --help: exit=0 usage=PASS');
 
-logStep('Apply real-write smoke (F2)');
-// Seed a tmpdir with `overture.jsonc` + a Claude Code config that
-// differs from canonical, run `overture apply` (no flag), assert the
-// target file was modified and a timestamped backup file exists with
-// byte-identical contents to the pre-write seed. End-to-end guard for
-// the F2 two-pass (dryRun → backup → real) orchestration.
+logStep('Apply no-change smoke (F2)');
+// Seed a tmpdir with `overture.jsonc` + a Claude Code config that is
+// already aligned with canonical intent, run `overture apply` (no
+// flag), and assert the orchestrator exits 0 with no backup created
+// and the target byte-identical to the seed. End-to-end guard for
+// the F2 two-pass (dryRun → no-change) short-circuit — the F3-era
+// equivalent of the original F2 happy path: under F3 the writer
+// refuses every divergent seed, so the only writable scenario is
+// "no-change" (existing is F3-equal to canonical). The real-write
+// happy path (divergent seed → write + backup) is locked by the F2
+// unit-spec at apps/cli/src/apply-command.spec.ts and the
+// per-writer byte-fidelity specs in
+// packages/agents/src/{claude-code,opencode,...}.write.spec.ts; the
+// smoke harness now exercises the binary's exit-code + no-write
+// contract on the only path F3 leaves available.
 //
 // Claude Code is the chosen target because it is the simplest single-
 // target writer (one file per call), making the F2 surface easy to
-// verify end-to-end. OpenCode is covered by the F2 spec Case 14 in
-// apps/cli/src/apply-command.spec.ts (real-write happy path covers
-// both Claude and OpenCode side-by-side). GitHub Copilot CLI and
-// OpenAI Codex are covered by their unit-specs (see
-// packages/agents/src/{github-copilot-cli,openai-codex}.write.spec.ts).
+// verify end-to-end.
 const applyHome = mkdtempSync('/tmp/overture-verify-apply-home-');
 const applyXdg = mkdtempSync('/tmp/overture-verify-apply-xdg-');
 const applyPath = mkdtempSync('/tmp/overture-verify-apply-path-');
@@ -562,7 +567,7 @@ const applyClaudeConfig = join(applyHome, '.claude.json');
 const applyClaudeBefore = JSON.stringify(
   {
     mcpServers: {
-      filesystem: { type: 'stdio', command: 'old' },
+      filesystem: { type: 'stdio', command: 'node' },
     },
   },
   null,
@@ -577,7 +582,7 @@ const applyClaudeBin = join(applyPath, 'claude');
 writeFileSync(applyClaudeBin, '#!/bin/sh\nexit 0\n');
 chmodSync(applyClaudeBin, 0o755);
 
-// Seed the canonical config so apply has a real target to write to.
+// Seed the canonical config so apply has a real target to evaluate.
 const applyOvertureConfigDir = join(applyXdg, 'overture');
 mkdirSync(applyOvertureConfigDir, { recursive: true });
 const applyOvertureConfig = join(applyOvertureConfigDir, 'overture.jsonc');
@@ -613,55 +618,49 @@ const applyResult = spawnWithEnv([distMain, 'apply'], applyEnv, {
 });
 if (applyResult.status !== 0) {
   fail(
-    `apply (no flag) exited ${applyResult.status} (expected 0)\nstdout:\n${applyResult.stdout}\nstderr:\n${applyResult.stderr}`,
+    `apply (no flag, no-change) exited ${applyResult.status} (expected 0)\nstdout:\n${applyResult.stdout}\nstderr:\n${applyResult.stderr}`,
   );
 }
 
-// Target was modified.
+// Target was NOT modified.
 const applyClaudeAfterBytes = readFileSync(applyClaudeConfig);
-if (applyClaudeAfterBytes.equals(applyClaudeBeforeBytes)) {
+if (!applyClaudeAfterBytes.equals(applyClaudeBeforeBytes)) {
   fail(
-    `apply (no flag) did not modify the seeded claude config\nbefore: ${applyClaudeBeforeBytes.length} bytes\nafter:  ${applyClaudeAfterBytes.length} bytes`,
-  );
-}
-if (!applyClaudeAfterBytes.toString('utf8').includes('filesystem')) {
-  fail(
-    `apply (no flag) did not write the canonical filesystem server\nafter: ${applyClaudeAfterBytes.toString('utf8')}`,
+    `apply (no flag, no-change) modified the seeded claude config\nbefore: ${applyClaudeBeforeBytes.length} bytes\nafter:  ${applyClaudeAfterBytes.length} bytes`,
   );
 }
 
-// Find the backup file (`<target>.bak.<ts>` adjacent to the target).
+// No backup file created (Pass 2 never ran — Pass 1 short-circuited on no-change).
 const applyHomeDir = dirname(applyClaudeConfig);
 const applyBackups = readdirSync(applyHomeDir).filter((entry) =>
   entry.startsWith('.claude.json.bak.'),
 );
-if (applyBackups.length === 0) {
+if (applyBackups.length !== 0) {
   fail(
-    `apply (no flag) did not create a backup file\ndir: ${applyHomeDir}\nfiles: ${readdirSync(applyHomeDir).join(', ')}`,
-  );
-}
-const applyBackupPath = join(applyHomeDir, applyBackups[0]);
-const applyBackupBytes = readFileSync(applyBackupPath);
-if (!applyBackupBytes.equals(applyClaudeBeforeBytes)) {
-  fail(
-    `apply backup is not byte-identical to the seeded content\nbackup: ${applyBackupPath}\nseed length: ${applyClaudeBeforeBytes.length}\nbackup length: ${applyBackupBytes.length}`,
+    `apply (no flag, no-change) unexpectedly created backup file(s)\ndir: ${applyHomeDir}\nbackups: ${applyBackups.join(', ')}`,
   );
 }
 
-// Human report must mention the backup path.
-if (!applyResult.stdout.includes(applyBackupPath)) {
+// Human report must surface the no-change heading + no-change status.
+if (!applyResult.stdout.includes('Apply (no changes written)')) {
   fail(
-    `apply (no flag) stdout missing backup path ${applyBackupPath}\nstdout:\n${applyResult.stdout}`,
+    `apply (no flag, no-change) stdout missing "Apply (no changes written)" heading\nstdout:\n${applyResult.stdout}`,
   );
 }
-if (!applyResult.stdout.includes('Apply (changes written)')) {
+if (!applyResult.stdout.includes('status:    no-change')) {
   fail(
-    `apply (no flag) stdout missing "Apply (changes written)" heading\nstdout:\n${applyResult.stdout}`,
+    `apply (no flag, no-change) stdout missing "status:    no-change" line\nstdout:\n${applyResult.stdout}`,
+  );
+}
+// F3 refusal block must NOT appear on a no-change path.
+if (applyResult.stdout.includes('Conflicts:')) {
+  fail(
+    `apply (no flag, no-change) unexpectedly rendered a Conflicts: block\nstdout:\n${applyResult.stdout}`,
   );
 }
 
 console.log(
-  `apply (no flag): exit=${applyResult.status} targetModified=PASS backupCreated=PASS backupByteIdentical=PASS`,
+  `apply (no flag, no-change): exit=${applyResult.status} targetUntouched=PASS noBackup=PASS noChangeHeading=PASS`,
 );
 
 // Cleanup apply tmpdirs.
@@ -669,6 +668,145 @@ rmSync(applyHome, { recursive: true, force: true });
 rmSync(applyXdg, { recursive: true, force: true });
 rmSync(applyPath, { recursive: true, force: true });
 rmSync(applyWorkspace, { recursive: true, force: true });
+
+logStep('Apply refused-apply smoke (F3)');
+// F3 refused-apply smoke. Drives `overture apply` (no flag) against a
+// tmpdir seeded with a Claude Code config whose `filesystem` server
+// has different settings than canonical intent (existing `command:
+// 'old'` vs canonical `command: 'node'`). The writer's Pass 1
+// `dryRun` must surface a single `ServerConflict` (B3 detector),
+// the orchestrator must short-circuit before backup + Pass 2 (the
+// 'would-update'-exclusive gate), and the human report must list
+// the conflict under a `Conflicts:` block. End-to-end guard for the
+// F3 refusal contract as exercised by the installed binary.
+const refuseHome = mkdtempSync('/tmp/overture-verify-refuse-home-');
+const refuseXdg = mkdtempSync('/tmp/overture-verify-refuse-xdg-');
+const refusePath = mkdtempSync('/tmp/overture-verify-refuse-path-');
+const refuseWorkspace = mkdtempSync('/tmp/overture-verify-refuse-ws-');
+const refuseEnv = {
+  ...process.env,
+  HOME: refuseHome,
+  XDG_CONFIG_HOME: refuseXdg,
+  PATH: refusePath,
+};
+const refuseClaudeConfig = join(refuseHome, '.claude.json');
+const refuseClaudeBefore = JSON.stringify(
+  {
+    mcpServers: {
+      filesystem: { type: 'stdio', command: 'old' },
+    },
+  },
+  null,
+  2,
+);
+writeFileSync(refuseClaudeConfig, refuseClaudeBefore);
+const refuseClaudeBeforeBytes = readFileSync(refuseClaudeConfig);
+
+// Seed a fake claude binary so the claude-code agent passes
+// binary-first detection.
+const refuseClaudeBin = join(refusePath, 'claude');
+writeFileSync(refuseClaudeBin, '#!/bin/sh\nexit 0\n');
+chmodSync(refuseClaudeBin, 0o755);
+
+// Seed the canonical config. The filesystem server uses `command:
+// 'node'` — divergent from the existing `command: 'old'` — so the
+// B3 detector emits exactly one `ServerConflict` on the writer's
+// Pass 1 dryRun.
+const refuseOvertureConfigDir = join(refuseXdg, 'overture');
+mkdirSync(refuseOvertureConfigDir, { recursive: true });
+const refuseOvertureConfig = join(refuseOvertureConfigDir, 'overture.jsonc');
+writeFileSync(
+  refuseOvertureConfig,
+  JSON.stringify(
+    {
+      version: 1,
+      settings: {
+        defaultProfile: 'default',
+        backupBeforeWrite: true,
+      },
+      profiles: {
+        default: {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'node' },
+          },
+          sync: {
+            targets: ['claude-code'],
+            disabledServers: [],
+          },
+          skills: [],
+        },
+      },
+    },
+    null,
+    2,
+  ),
+);
+
+const refuseResult = spawnWithEnv([distMain, 'apply'], refuseEnv, {
+  cwd: refuseWorkspace,
+});
+
+// Exit must be non-zero (refusal).
+if (refuseResult.status === 0) {
+  fail(
+    `apply (no flag, conflict) exited 0 (expected non-zero refusal)\nstdout:\n${refuseResult.stdout}\nstderr:\n${refuseResult.stderr}`,
+  );
+}
+// Exit must be exactly 1 (F3 refusal is the only blocking status in
+// this scenario; 2 would mean a usage error or pipeline failure).
+if (refuseResult.status !== 1) {
+  fail(
+    `apply (no flag, conflict) exited ${refuseResult.status} (expected 1)\nstdout:\n${refuseResult.stdout}\nstderr:\n${refuseResult.stderr}`,
+  );
+}
+
+// Target config file bytes must be unchanged — Pass 2 never ran.
+const refuseClaudeAfterBytes = readFileSync(refuseClaudeConfig);
+if (!refuseClaudeAfterBytes.equals(refuseClaudeBeforeBytes)) {
+  fail(
+    `apply (no flag, conflict) modified the seeded claude config\nbefore: ${refuseClaudeBeforeBytes.length} bytes\nafter:  ${refuseClaudeAfterBytes.length} bytes`,
+  );
+}
+
+// No backup file created — the orchestrator short-circuited before
+// backup + Pass 2 on the conflict path.
+const refuseHomeDir = dirname(refuseClaudeConfig);
+const refuseBackups = readdirSync(refuseHomeDir).filter((entry) =>
+  entry.startsWith('.claude.json.bak.'),
+);
+if (refuseBackups.length !== 0) {
+  fail(
+    `apply (no flag, conflict) unexpectedly created backup file(s)\ndir: ${refuseHomeDir}\nbackups: ${refuseBackups.join(', ')}`,
+  );
+}
+
+// Human report must render the `Conflicts:` block listing the
+// refused server name.
+if (!refuseResult.stdout.includes('Conflicts:')) {
+  fail(
+    `apply (no flag, conflict) stdout missing "Conflicts:" block\nstdout:\n${refuseResult.stdout}`,
+  );
+}
+if (!refuseResult.stdout.includes('filesystem')) {
+  fail(
+    `apply (no flag, conflict) stdout missing conflicted server name "filesystem"\nstdout:\n${refuseResult.stdout}`,
+  );
+}
+if (!refuseResult.stdout.includes('status:    conflict')) {
+  fail(
+    `apply (no flag, conflict) stdout missing "status:    conflict" line\nstdout:\n${refuseResult.stdout}`,
+  );
+}
+
+console.log(
+  `apply (no flag, conflict): exit=${refuseResult.status} targetUntouched=PASS noBackup=PASS conflictsBlock=PASS refusedServerListed=PASS`,
+);
+
+// Cleanup refuse tmpdirs.
+rmSync(refuseHome, { recursive: true, force: true });
+rmSync(refuseXdg, { recursive: true, force: true });
+rmSync(refusePath, { recursive: true, force: true });
+rmSync(refuseWorkspace, { recursive: true, force: true });
 
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
@@ -679,5 +817,5 @@ rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
 console.log(
-  'All verifications passed. The tarball is ready to publish, including bootstrap smoke checks.',
+  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), and apply (F3 refused-apply) smoke checks.',
 );

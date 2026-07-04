@@ -383,7 +383,7 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
   // Metadata envelope — dry-run
   // -------------------------------------------------------------------------
 
-  it('dry-run leaves disk unchanged', async () => {
+  it('F3: dry-run divergent canonical triggers conflict refusal and leaves disk unchanged', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -401,12 +401,12 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
         dryRun: true,
       });
       expect(res.dryRun).toBe(true);
-      expect(res.written).toBe(1);
-      expect(res.changed).toBe(true);
-      expect(res.serversWritten).toEqual(['filesystem']);
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
       expect(res.targetPaths).toHaveLength(1);
       expect(res.format).toBe('toml');
-      expect(res.bytesChanged).toBeGreaterThan(0);
       const after = await readFile(fixturePath, 'utf-8');
       expect(after).toBe(before);
     } finally {
@@ -455,7 +455,7 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
   // Metadata envelope — changed update (stdio)
   // -------------------------------------------------------------------------
 
-  it('changed stdio update returns full metadata (format: toml)', async () => {
+  it('F3: divergent stdio update triggers conflict refusal (format: toml)', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -473,14 +473,16 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
       const res = await openaiCodex.mcp.write(ctx, {
         servers: [{ name: 'filesystem', server: updatedFs }],
       });
-      expect(res.written).toBe(1);
-      expect(res.changed).toBe(true);
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
       expect(res.dryRun).toBe(false);
-      expect(res.serversWritten).toEqual(['filesystem']);
+      expect(res.serversWritten).toEqual([]);
       expect(res.targetPaths).toHaveLength(1);
       expect(res.resolvedPath).toContain('.codex/config.toml');
       expect(res.format).toBe('toml');
-      expect(res.bytesChanged).toBeGreaterThan(0);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(res.conflicts?.[0]?.diffKeys).toContain('args');
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });
@@ -491,7 +493,7 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
   // Metadata envelope — changed update (remote)
   // -------------------------------------------------------------------------
 
-  it('changed remote update returns full metadata (format: toml)', async () => {
+  it('F3: divergent remote update (transport switch) triggers conflict refusal', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -505,13 +507,16 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
       const res = await openaiCodex.mcp.write(ctx, {
         servers: [{ name: 'filesystem', server: updatedRemote }],
       });
-      expect(res.written).toBe(1);
-      expect(res.changed).toBe(true);
-      expect(res.dryRun).toBe(false);
-      expect(res.serversWritten).toEqual(['filesystem']);
+      // Transport switch is a multi-key drift (type, command, args,
+      // url, headers). F3 refuses this before byte-level planning.
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
+      expect(res.serversWritten).toEqual([]);
       expect(res.targetPaths).toHaveLength(1);
       expect(res.format).toBe('toml');
-      expect(res.bytesChanged).toBeGreaterThan(0);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(res.conflicts?.[0]?.diffKeys).toContain('type');
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });
@@ -641,7 +646,7 @@ describe('openaiCodex.mcp.write (E4 byte-splice)', () => {
   // Non-contiguous descendant layout
   // -------------------------------------------------------------------------
 
-  it('non-contiguous descendant layout returns unsupported-shape', async () => {
+  it('non-contiguous descendant layout returns unsupported-shape (matching canonical)', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -665,15 +670,24 @@ FOO_API_KEY = "\${FOO_API_KEY}"
 `;
       await seedUserConfig(home, nestedToml);
       const ctx = makeCtx(home, ws);
+      // Canonical MUST match existing's normalized shape (foo carries
+      // the FOO_API_KEY env var) so F3 passes; the non-contiguous
+      // check then catches the layout as unsupported-shape.
       const res = await openaiCodex.mcp.write(ctx, {
         servers: [
           {
             name: 'foo',
-            server: { type: 'stdio', command: 'npx', args: ['-y', 'foo-mcp'] },
+            server: {
+              type: 'stdio',
+              command: 'npx',
+              args: ['-y', 'foo-mcp'],
+              env: { FOO_API_KEY: '\${FOO_API_KEY}' },
+            },
           },
         ],
       });
       expect(res.reason).toBe('unsupported-shape');
+      expect(res.conflicts).toBeUndefined();
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });
@@ -684,7 +698,7 @@ FOO_API_KEY = "\${FOO_API_KEY}"
   // Transport switch drops incompatible fields
   // -------------------------------------------------------------------------
 
-  it('transport switch drops incompatible fields', async () => {
+  it('F3: transport switch is a multi-key drift and triggers conflict refusal', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -699,18 +713,79 @@ FOO_API_KEY = "\${FOO_API_KEY}"
       const res = await openaiCodex.mcp.write(ctx, {
         servers: [{ name: 'filesystem', server: remoteServer }],
       });
-      expect(res.changed).toBe(true);
-      expect(res.written).toBe(1);
-      // After transport switch, the written entry should have url but not command/args
+      // F3 refuses the transport switch before byte-level planning;
+      // the original stdio entry stays on disk.
+      expect(res.changed).toBe(false);
+      expect(res.written).toBe(0);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(res.conflicts?.[0]?.diffKeys).toEqual(
+        expect.arrayContaining(['type', 'command', 'args', 'url']),
+      );
+      // The original stdio entry stays on disk.
       const fixturePath = join(home, '.codex', 'config.toml');
       const written = await readFile(fixturePath, 'utf-8');
-      expect(written).toContain('url');
-      // Verify the filesystem block specifically has no command = (not just any server in the file)
       const filesystemBlock =
         written
           .split('[mcp_servers.filesystem]')[1]
           ?.split(/\[mcp_servers\.\w+\]/)[0] ?? '';
-      expect(filesystemBlock).not.toMatch(/^\s*command\s*=/m);
+      expect(filesystemBlock).not.toMatch(/^\s*url\s*=/m);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(ws, { recursive: true, force: true });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // F3: conflict refusal + matching-case spec
+  // -------------------------------------------------------------------------
+
+  it('F3: divergent canonical triggers conflict refusal (written:0, changed:false, conflicts populated)', async () => {
+    const home = await tmp();
+    const ws = await tmp();
+    try {
+      await seedUserConfig(home, CODEX_FIXTURE);
+      const ctx = makeCtx(home, ws);
+      const divergentFs: OvertureMcpServer = {
+        type: 'stdio',
+        command: 'pnpm',
+        args: ['-y', 'different-server'],
+      };
+      const res = await openaiCodex.mcp.write(ctx, {
+        servers: [{ name: 'filesystem', server: divergentFs }],
+      });
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
+      expect(res.serversWritten).toEqual([]);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(res.conflicts?.[0]?.diffKeys).toContain('command');
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(ws, { recursive: true, force: true });
+    }
+  });
+
+  it('F3: matching canonical proceeds byte-level (no-change)', async () => {
+    const home = await tmp();
+    const ws = await tmp();
+    try {
+      await seedUserConfig(home, CODEX_FIXTURE);
+      const ctx = makeCtx(home, ws);
+      const matchingFs: OvertureMcpServer = {
+        type: 'stdio',
+        command: 'npx',
+        args: [
+          '-y',
+          '@modelcontextprotocol/server-filesystem',
+          '/home/user/projects',
+        ],
+      };
+      const res = await openaiCodex.mcp.write(ctx, {
+        servers: [{ name: 'filesystem', server: matchingFs }],
+      });
+      expect(res.conflicts).toBeUndefined();
+      expect(res.reason).toBe('no-change');
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });

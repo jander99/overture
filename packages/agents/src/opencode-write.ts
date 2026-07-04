@@ -17,11 +17,19 @@ import {
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
-import { opencode } from './opencode.js';
-import type { OpenCodeMcpServer } from './opencode.js';
+import {
+  normalizeOpenCodeMcpServers,
+  opencode,
+  type OpenCodeMcpConfig,
+  type OpenCodeMcpServer,
+} from './opencode.js';
+import { normalized } from './normalize-mcp-config.js';
+import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
+  AgentMcpReadResult,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   McpLocation,
   McpLocationFormat,
   PathResolutionContext,
@@ -206,6 +214,66 @@ function safeParseNodeValue(text: string, node: Node): unknown {
   }
 }
 
+/**
+ * Parsed view of the on-disk target. The byte-level planner
+ * (`planEdits`) and the F3 conflict detector both consume this shape,
+ * which guarantees the detector sees exactly the same `existingServers`
+ * map that the planner later writes. The F3 design contract fixes the
+ * order — read → normalize → compare → refuse-or-proceed — so the
+ * detector must run BEFORE `planEdits`.
+ */
+interface ParsedTarget {
+  readonly root: Node;
+  readonly mcpNode: Node | undefined;
+  readonly existingServers: Readonly<Record<string, OpenCodeMcpServer>>;
+}
+
+/**
+ * Parse the on-disk JSONC target and lift the existing server entries
+ * out of the `mcp` map. Returns `{ parseError: true }` when the
+ * document is unparseable or not a top-level object (the F3 design
+ * contract emits `reason: 'parse-error'` for both shapes; the planner
+ * never runs in that case).
+ *
+ * `existingServers` is the same `Record<string, OpenCodeMcpServer>`
+ * shape `planEdits` previously produced internally; lifting it here
+ * lets the detector see exactly what the planner will see.
+ */
+function parseTarget(
+  text: string,
+  mcpKey: string,
+): ParsedTarget | { readonly parseError: true } {
+  const errors: ParseError[] = [];
+  const root = parseTree(text, errors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+  if (errors.length > 0 || root === undefined || root.type !== 'object') {
+    return { parseError: true };
+  }
+  const mcpProperty = findChildProperty(root, mcpKey);
+  const mcpNode =
+    mcpProperty !== undefined && mcpProperty.children !== undefined
+      ? mcpProperty.children[1]
+      : undefined;
+
+  const existingServers: Record<string, OpenCodeMcpServer> = {};
+  if (mcpNode !== undefined && mcpNode.type === 'object') {
+    for (const prop of mcpNode.children ?? []) {
+      if (prop.type !== 'property' || prop.children === undefined) continue;
+      const keyNode = prop.children[0];
+      const valueNode = prop.children[1];
+      if (keyNode === undefined || valueNode === undefined) continue;
+      const name = String(keyNode.value);
+      const parsed = safeParseNodeValue(text, valueNode);
+      if (parsed !== undefined && isObject(parsed)) {
+        existingServers[name] = parsed as unknown as OpenCodeMcpServer;
+      }
+    }
+  }
+  return { root, mcpNode, existingServers };
+}
+
 function findServerPropertyRange(
   mcpNode: Node,
   text: string,
@@ -300,40 +368,14 @@ interface PlanResult {
 
 function planEdits(args: {
   readonly text: string;
+  readonly parsed: ParsedTarget;
   readonly input: readonly {
     readonly name: string;
     readonly server: OpenCodeMcpServer;
   }[];
-  readonly mcpKey: string;
-}): PlanResult | { readonly parseError: true } {
-  const errors: ParseError[] = [];
-  const root = parseTree(args.text, errors, {
-    allowTrailingComma: true,
-    disallowComments: false,
-  });
-  if (errors.length > 0 || root === undefined || root.type !== 'object') {
-    return { parseError: true };
-  }
-  const mcpProperty = findChildProperty(root, args.mcpKey);
-  const mcpValueNode =
-    mcpProperty !== undefined && mcpProperty.children !== undefined
-      ? mcpProperty.children[1]
-      : undefined;
-
-  const existingServers: Record<string, OpenCodeMcpServer> = {};
-  if (mcpValueNode !== undefined && mcpValueNode.type === 'object') {
-    for (const prop of mcpValueNode.children ?? []) {
-      if (prop.type !== 'property' || prop.children === undefined) continue;
-      const keyNode = prop.children[0];
-      const valueNode = prop.children[1];
-      if (keyNode === undefined || valueNode === undefined) continue;
-      const name = String(keyNode.value);
-      const parsed = safeParseNodeValue(args.text, valueNode);
-      if (parsed !== undefined && isObject(parsed)) {
-        existingServers[name] = parsed as unknown as OpenCodeMcpServer;
-      }
-    }
-  }
+}): PlanResult {
+  const { root, mcpNode: mcpValueNode } = args.parsed;
+  const existingServers = args.parsed.existingServers;
 
   const edits: PlannedEdit[] = [];
   const touched: string[] = [];
@@ -380,9 +422,17 @@ function planEdits(args: {
       }
     }
   } else {
-    if (root.type !== 'object') return { parseError: true };
     const body = mcpObjectBodyRange(root, args.text);
-    if (body === null) return { parseError: true };
+    if (body === null) {
+      // Root was already validated by `parseTarget`; this branch only
+      // fires when the mcp container is missing. The byte-level splice
+      // is the same as before: synthesize an empty top-level body.
+      return {
+        written: args.text,
+        changed: false,
+        touched: [],
+      };
+    }
     const indent = detectIndent(args.text, root);
     const mcpObj: Record<string, OpenCodeMcpServer> = {};
     for (const entry of args.input) {
@@ -398,7 +448,7 @@ function planEdits(args: {
     }
     const rendered = renderServer(mcpObj);
     const indented = indentMultiLine(rendered, indent);
-    const spliceText = `${indent}${JSON.stringify(args.mcpKey)}: ${indented},\n`;
+    const spliceText = `${indent}${JSON.stringify('mcp')}: ${indented},\n`;
     const lastChild = root.children?.[root.children.length - 1];
     const insertAt = findInsertionPoint(args.text, body, lastChild);
     edits.push({ start: insertAt, end: insertAt, replacement: spliceText });
@@ -406,7 +456,11 @@ function planEdits(args: {
   }
 
   if (edits.length === 0) {
-    return { written: args.text, changed: false, touched: [] };
+    return {
+      written: args.text,
+      changed: false,
+      touched: [],
+    };
   }
   return {
     written: applyEdits(args.text, edits),
@@ -495,20 +549,13 @@ export async function opencodeWriteMcpConfig(
     };
   }
 
-  // Convert the writer input into the canonical form the planner consumes.
-  // The planner only needs (name, server) pairs.
-  const planned = planEdits({
-    text: original,
-    mcpKey,
-    input: input.servers.map((s) => {
-      // toOpenCodeMcpServer is called inside the planner, but the planner
-      // doesn't have access to the raw canonical server — pre-compute the
-      // native shape here and pass it through. The planner still re-derives
-      // it for extension preservation against existing entries.
-      return { name: s.name, server: toOpenCodeMcpServer(s.server) };
-    }),
-  });
-  if ('parseError' in planned) {
+  // Parse the on-disk target first so the F3 detector sees the same
+  // existing-server map the byte-level planner will consume. The order
+  // is fixed per the F3 design contract: read → normalize → compare →
+  // refuse-or-proceed. Detection runs BEFORE `planEdits` so a divergent
+  // entry never reaches the byte-level splice path.
+  const parsed = parseTarget(original, mcpKey);
+  if ('parseError' in parsed) {
     return {
       written: 0,
       changed: false,
@@ -520,6 +567,45 @@ export async function opencodeWriteMcpConfig(
       reason: 'parse-error',
     };
   }
+
+  const existingRead: AgentMcpReadResult<OpenCodeMcpConfig> = {
+    config: { mcp: parsed.existingServers },
+    nonEmpty: Object.keys(parsed.existingServers).length > 0,
+  };
+  const existingNormalized = normalizeOpenCodeMcpServers(existingRead);
+  const existingMap = new Map<string, AgentNormalizedMcpServer>(
+    Object.entries(existingNormalized),
+  );
+  const canonicalMap = new Map<string, AgentNormalizedMcpServer>(
+    input.servers.map((s) => [s.name, normalized(s.server)]),
+  );
+  const conflicts = detectCanonicalSettingsDrift(existingMap, canonicalMap);
+  if (conflicts.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths,
+      resolvedPath,
+      format: loc.format,
+      conflicts,
+    };
+  }
+
+  // Convert the writer input into the canonical form the planner consumes.
+  // The planner only needs (name, server) pairs.
+  const planned = planEdits({
+    text: original,
+    parsed,
+    input: input.servers.map((s) => {
+      // toOpenCodeMcpServer is called inside the planner, but the planner
+      // doesn't have access to the raw canonical server — pre-compute the
+      // native shape here and pass it through. The planner still re-derives
+      // it for extension preservation against existing entries.
+      return { name: s.name, server: toOpenCodeMcpServer(s.server) };
+    }),
+  });
 
   if (!planned.changed) {
     return {
