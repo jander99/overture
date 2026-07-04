@@ -13,6 +13,7 @@
 // Exits non-zero on any failure. Does NOT publish.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   mkdtempSync,
   mkdirSync,
@@ -692,12 +693,18 @@ const stateHomeStateDir = join(stateHome, '.local', 'state');
 // records to the real home instead of the smoke's tmpdir. The F2 smoke
 // never trips on this because the F2 path is no-change (no state file
 // is written); the G1 path always writes, so we have to pin the env.
+//
+// PATH must PREPEND `statePathDir` (so the fake opencode binary wins
+// detection) but PRESERVE the inherited system PATH — the end-to-end
+// apply → restore-last smoke below needs `/usr/bin/mv` (or equivalent)
+// to actually execute the restore. Replacing PATH with just
+// `statePathDir` breaks the F3 G3 regression guard.
 const stateEnv = {
   ...process.env,
   HOME: stateHome,
   XDG_CONFIG_HOME: stateXdg,
   XDG_STATE_HOME: stateHomeStateDir,
-  PATH: statePathDir,
+  PATH: `${statePathDir}${process.env.PATH ? `:${process.env.PATH}` : ''}`,
 };
 // Seed the canonical config — target OpenCode with a single canonical
 // `filesystem` server. `backupBeforeWrite: true` exercises the F2
@@ -849,6 +856,207 @@ if (statePointer.runId !== stateExpectedRunId) {
 
 console.log(
   `apply (no flag, state-file): exit=${stateApplyResult.status} targetModified=PASS backupExists=PASS recordSchemaVersion=1 recordHasOpencode=PASS pointerMatches=PASS`,
+);
+
+// ---------------------------------------------------------------------------
+// F3 / G3 end-to-end smoke: apply → restore-last --yes, on the SAME state
+// the G1 smoke just produced. This is the load-bearing regression guard
+// for the F3 BLOCKING finding (Anomaly 1: opencode writer emits
+// `loc.relativePath` as the raw `targetPaths[*].path`, and a pre-fix
+// restore-last would `mv` against the relative path and silently fail).
+// After the fix, `buildApplyStateRecord` resolves every target against
+// the apply-time `PathResolutionContext` and the seeded pair's `mv -v`
+// hits the absolute target on disk. The smoke fails LOUDLY if a future
+// regression reintroduces the relative-path bug.
+// ---------------------------------------------------------------------------
+
+// Backup file path is the opencode target's pre-apply sidecar. Re-discover
+// it from the seeded dir (same logic as the apply assertions above).
+const stateEndToEndBackup = join(stateOpencodeHomeDir, stateBackupFiles[0]);
+if (!statSync(stateEndToEndBackup, { throwIfNoEntry: false })) {
+  fail(
+    `restore-last end-to-end: backup file ${stateEndToEndBackup} missing before restore-last --yes`,
+  );
+}
+// Snapshot the apply's post-write target bytes so we can confirm the
+// restore reverts them to the pre-apply bytes captured at G1 smoke.
+const stateEndToEndAfterApplyBytes = stateOpencodeAfterBytes;
+
+// Run the dispatcher. cwd must be the workspace (or anywhere inside the
+// worktree — but the workspace is the cleanest) so the writer's
+// `process.cwd()`-anchored resolution matches the apply run.
+// We pass `--force` because gate G3-5's integrity check compares the
+// CURRENT target sha256 against `preWriteSha256` (the pre-apply bytes).
+// After a real apply the target carries post-apply bytes, so the check
+// always reports `mismatch` for a non-no-op restore — `--force`
+// (gate G3-4) is the user-opt-in that authorizes the clobber. The
+// F3 BLOCKING regression we're guarding is the relative-target bug,
+// which surfaces BEFORE the integrity check (the `mv` never fires),
+// not inside the integrity gate itself.
+const stateEndToEndResult = spawnWithEnv(
+  [distMain, 'restore-last', '--yes', '--force'],
+  stateEnv,
+  { cwd: stateWorkspace },
+);
+if (stateEndToEndResult.status !== 0) {
+  fail(
+    `restore-last --yes --force (end-to-end after real apply) exited ${stateEndToEndResult.status} (expected 0)\nstdout:\n${stateEndToEndResult.stdout}\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+// F3 guard 1 — the target must now match the pre-apply bytes. The
+// pre-fix bug would leave it untouched (the `mv` would fail because of
+// the relative target path).
+const stateEndToEndRestoredBytes = readFileSync(stateOpencodeConfig);
+if (!stateEndToEndRestoredBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    `restore-last --yes --force (end-to-end) did NOT restore the target to pre-apply bytes\nbefore-apply bytes: ${stateOpencodeBeforeBytes.length}\nafter-restore bytes: ${stateEndToEndRestoredBytes.length}\nstdout:\n${stateEndToEndResult.stdout}\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+// F3 guard 2 — the backup file must be unlinked by the restore. Pre-fix
+// the `mv` failed so the backup persisted; the after-apply bytes must
+// differ from the before-restore bytes (otherwise the test seeded a
+// no-op).
+if (stateEndToEndAfterApplyBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    'restore-last --yes --force (end-to-end) precondition failed: apply did not modify the target — there is nothing to restore',
+  );
+}
+const stateEndToEndBackupStat = statSync(stateEndToEndBackup, {
+  throwIfNoEntry: false,
+});
+if (stateEndToEndBackupStat) {
+  fail(
+    `restore-last --yes --force (end-to-end) did NOT unlink the backup at ${stateEndToEndBackup} (pre-fix regression)`,
+  );
+}
+
+// F3 guard 3 — the outcome must report `restored: 1` (one pair restored).
+if (!stateEndToEndResult.stdout.includes('restored: 1')) {
+  fail(
+    `restore-last --yes --force (end-to-end) stdout missing "restored: 1" line\nstdout:\n${stateEndToEndResult.stdout}`,
+  );
+}
+
+// F3 guard 4 — the WARN line for the forced restore must appear on stderr
+// (gate G3-4 mandates `WARN: target <path> was edited since apply;
+// restore forced.` per pair).
+if (!stateEndToEndResult.stderr.includes('restore forced')) {
+  fail(
+    `restore-last --yes --force (end-to-end) stderr missing "restore forced" WARN line\nstderr:\n${stateEndToEndResult.stderr}`,
+  );
+}
+
+console.log(
+  `restore-last --yes --force (end-to-end after real apply): exit=${stateEndToEndResult.status} targetRestoredToPreApply=PASS backupUnlinked=PASS restoredCount=1 forceWarn=PASS`,
+);
+
+// ---------------------------------------------------------------------------
+// Task-4 / user-verdict 2026-07-04 second-restore assertion. After the
+// first successful restore consumed the backup, re-run
+// `overture restore-last --yes --force` and assert the missing-backup
+// branch exits 1 with the per-pair `error: backup file missing: …` line
+// AND the follow-up `error: could not complete restore — backup file(s)
+// may have been consumed by a previous restore, or never existed.`
+// hint. The target bytes must be byte-identical to the post-first-
+// restore state (the failed restore must NOT have clobbered them). The
+// backup file must STILL be absent on disk (no second backup was created
+// or deleted by the failed restore).
+// ---------------------------------------------------------------------------
+
+const stateSecondRestoreResult = spawnWithEnv(
+  [distMain, 'restore-last', '--yes', '--force'],
+  stateEnv,
+  { cwd: stateWorkspace },
+);
+
+// Atomic exit code per gate G3-8 / user verdict 2026-07-04: a plan
+// with any missing-backup pair must exit 1, not 0.
+if (stateSecondRestoreResult.status !== 1) {
+  fail(
+    `restore-last --yes --force (second restore, backup consumed) exited ${stateSecondRestoreResult.status} (expected 1 per user verdict 2026-07-04)\nstdout:\n${stateSecondRestoreResult.stdout}\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Per-pair stderr error: each missing-backup pair must surface
+// `error: backup file missing: <shellQuoted(backup)>`.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    `error: backup file missing: '${stateEndToEndBackup}'`,
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr missing "error: backup file missing: '${stateEndToEndBackup}'"\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Follow-up stderr hint pointing the user at the apply dir.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    'error: could not complete restore — backup file(s) may have been consumed by a previous restore, or never existed.',
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr missing follow-up investigation hint\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// The follow-up hint must reference the state dir so the user knows
+// where to look. Read it back from the apply dir we seeded.
+if (
+  !stateSecondRestoreResult.stderr.includes(
+    join(stateHome, '.local', 'state', 'overture', 'apply'),
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stderr hint missing the apply dir path\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// Rendered outcome must report the pair as `failed`, not `skipped`.
+// The summary line emits `failed: 1` (one missing-backup pair).
+if (
+  !stateSecondRestoreResult.stdout.includes(
+    'restored: 0, skipped: 0, failed: 1',
+  )
+) {
+  fail(
+    `restore-last --yes --force (second restore) stdout summary missing "restored: 0, skipped: 0, failed: 1"\nstdout:\n${stateSecondRestoreResult.stdout}`,
+  );
+}
+
+// Target bytes must be byte-identical to the post-first-restore state.
+// The failed restore must not have clobbered anything. We compare to
+// `stateOpencodeBeforeBytes` (the opencode pre-apply bytes), which
+// was what the FIRST restore wrote back. If a `mv` had fired during
+// the second restore the bytes would either change (to the backup's
+// bytes, which were unlinked at the start of the second restore) or
+// the file's existence/inode would change.
+const stateSecondRestoreBytes = readFileSync(stateOpencodeConfig);
+if (!stateSecondRestoreBytes.equals(stateOpencodeBeforeBytes)) {
+  fail(
+    `restore-last --yes --force (second restore) clobbered the target — bytes differ from post-first-restore state\nrestored bytes: ${stateSecondRestoreBytes.length}\npost-first-restore bytes: ${stateOpencodeBeforeBytes.length}\nstdout:\n${stateSecondRestoreResult.stdout}\nstderr:\n${stateSecondRestoreResult.stderr}`,
+  );
+}
+
+// The backup file must still be absent on disk. A real `mv` would
+// emit ENOENT (or unlink and recreate); the dry-run invariant here
+// is: the second restore's atomic-abort path did NOT touch the
+// backup's parent dir OR re-create the backup. This is a coarse
+// proxy for "no mv shell-out fired" — outside vitest's `spawnCalls`
+// mock, we assert by filesystem observation.
+const stateSecondRestoreBackupStat = statSync(stateEndToEndBackup, {
+  throwIfNoEntry: false,
+});
+if (stateSecondRestoreBackupStat) {
+  fail(
+    `restore-last --yes --force (second restore) unexpectedly re-created the backup at ${stateEndToEndBackup}`,
+  );
+}
+
+console.log(
+  `restore-last --yes --force (second restore, missing-backup): exit=${stateSecondRestoreResult.status} exitOne=PASS stderrMissingBackup=PASS stderrHint=PASS summaryFailed1=PASS targetUntouched=PASS backupAbsent=PASS`,
 );
 
 // Cleanup state tmpdirs.
@@ -1183,6 +1391,196 @@ rmSync(logXdg, { recursive: true, force: true });
 rmSync(logPathDir, { recursive: true, force: true });
 rmSync(logWorkspace, { recursive: true, force: true });
 
+logStep('Restore-last --dry-run smoke (G3)');
+// G3 restore-last --dry-run smoke. Skip `overture apply` entirely — G1
+// already proved the JSON / log writers; here we need to prove that the
+// DISPATCHER path `overture restore-last --dry-run` reads a G1 record,
+// renders the plan, and (most importantly) does NOT actually mv any
+// backup. The dry-run branch in `runRestore` short-circuits before the
+// `spawn mv -v` loop (matches the gate G3-6 guard). End-to-end guard for
+// the G3 contract as exercised by the installed binary: `--dry-run`
+// exits 0, renders the seeded pair's `mv -v '…' '…'` line, and leaves
+// both the target and the backup file untouched on disk.
+//
+// Layout:
+//   <ws>/mcp-target.json                 ← current on-disk target
+//   <ws>/mcp-target.json.bak.<ts>        ← the G1 backup
+//   <xdg>/overture/apply/last.json       ← pointer
+//   <xdg>/overture/apply/<runId>.json    ← G1 record (canonical source)
+//   <xdg>/overture/apply/<runId>.log     ← G2 log (seeding for parity;
+//                                          dry-run reads the JSON, not
+//                                          the log, so this file is
+//                                          here only to assert the
+//                                          apply dir carries both).
+const restoreHome = mkdtempSync('/tmp/overture-verify-restore-home-');
+const restoreXdg = mkdtempSync('/tmp/overture-verify-restore-xdg-');
+const restorePathDir = mkdtempSync('/tmp/overture-verify-restore-path-');
+const restoreWorkspace = mkdtempSync('/tmp/overture-verify-restore-ws-');
+// Same XDG_STATE_HOME discipline as the G1 smoke — a parent's leak
+// would otherwise hijack the recorded state dir.
+const restoreHomeStateDir = join(restoreHome, '.local', 'state');
+const restoreEnv = {
+  ...process.env,
+  HOME: restoreHome,
+  XDG_CONFIG_HOME: restoreXdg,
+  XDG_STATE_HOME: restoreHomeStateDir,
+  PATH: restorePathDir,
+};
+
+// Seed the current on-disk target and the backup with IDENTICAL bytes so
+// `currentSha256 === preWriteSha256` → `integrityStatus: 'ok'`. A real
+// `mv -v` would unlink the backup and overwrite the target; the dry-run
+// short-circuit must leave both intact.
+const restoreTarget = join(restoreWorkspace, 'mcp-target.json');
+const restoreBackup = join(
+  restoreWorkspace,
+  'mcp-target.json.bak.20260704-183000123',
+);
+const restoreTargetBefore = '{"current":true}\n';
+writeFileSync(restoreTarget, restoreTargetBefore);
+writeFileSync(restoreBackup, restoreTargetBefore);
+const restoreTargetBeforeBytes = readFileSync(restoreTarget);
+const restoreBackupBeforeBytes = readFileSync(restoreBackup);
+const restorePreSha = createHash('sha256')
+  .update(restoreTargetBefore)
+  .digest('hex');
+
+const restoreRunId = '20260704-183000123-eeeeeeee';
+const restoreApplyDir = join(restoreHomeStateDir, 'overture', 'apply');
+mkdirSync(restoreApplyDir, { recursive: true });
+const restoreRecord = {
+  schemaVersion: 1,
+  runId: restoreRunId,
+  timestamp: '2026-07-04T18:30:00.123Z',
+  mode: 'apply',
+  profile: 'default',
+  configPath: join(restoreXdg, 'overture', 'overture.jsonc'),
+  backupBeforeWrite: true,
+  agents: [
+    {
+      agentId: 'claude-code',
+      displayName: 'Claude Code',
+      status: 'updated',
+      targetPaths: [restoreTarget],
+      backupPaths: [restoreBackup],
+      preWriteSha256: restorePreSha,
+      postWriteSha256: null,
+    },
+  ],
+};
+writeFileSync(
+  join(restoreApplyDir, `${restoreRunId}.json`),
+  JSON.stringify(restoreRecord),
+);
+writeFileSync(
+  join(restoreApplyDir, 'last.json'),
+  JSON.stringify({ runId: restoreRunId }),
+);
+// Paired G2 log so the apply dir carries both .json + .log (mirrors the
+// G2 smoke's pairing). Dry-run reads the G1 record, not the log, so
+// this file is purely cosmetic for the dry-run pass.
+const restoreLogPath = join(restoreApplyDir, `${restoreRunId}.log`);
+writeFileSync(
+  restoreLogPath,
+  [
+    '='.repeat(80),
+    'Overture apply log',
+    '='.repeat(80),
+    `run id: ${restoreRunId}`,
+    '',
+    '[claude-code] Claude Code',
+    'status: updated',
+    `backup: '${restoreBackup}'`,
+    `target: '${restoreTarget}'`,
+    `mv -v '${restoreBackup}' '${restoreTarget}'`,
+    '',
+  ].join('\n'),
+);
+
+const restoreResult = spawnWithEnv(
+  [distMain, 'restore-last', '--dry-run'],
+  restoreEnv,
+  { cwd: restoreWorkspace },
+);
+if (restoreResult.status !== 0) {
+  fail(
+    `restore-last --dry-run exited ${restoreResult.status} (expected 0)\nstdout:\n${restoreResult.stdout}\nstderr:\n${restoreResult.stderr}`,
+  );
+}
+
+// Plan header must name the seeded runId. The renderer emits
+// `run id:        <runId>` (8 spaces) per `formatHumanRestorePlan`.
+if (!restoreResult.stdout.includes(`run id:        ${restoreRunId}`)) {
+  fail(
+    `restore-last --dry-run stdout missing "run id:        ${restoreRunId}" header line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// Source must report `state-json` (the JSON path wins over the
+// fallback log-tag-lines source).
+if (!restoreResult.stdout.includes(`source:        state-json`)) {
+  fail(
+    `restore-last --dry-run stdout missing "source:        state-json" header line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// Integrity line for the seeded pair — `ok` because currentSha256 ===
+// preWriteSha256 by construction above.
+if (!restoreResult.stdout.includes('  status: ok')) {
+  fail(
+    `restore-last --dry-run stdout missing per-pair "  status: ok" line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// The load-bearing assertion: the seeded pair's `mv -v '<backup>'
+// '<target>'` line appears in the dry-run plan. Two leading spaces
+// reflect the `formatHumanRestorePlan` indent.
+if (
+  !restoreResult.stdout.includes(
+    `  mv -v '${restoreBackup}' '${restoreTarget}'`,
+  )
+) {
+  fail(
+    `restore-last --dry-run stdout missing the seeded pair's "mv -v '<backup>' '<target>'" line\nstdout:\n${restoreResult.stdout}\nbackup=${restoreBackup}\ntarget=${restoreTarget}`,
+  );
+}
+
+// Dry-run guard 1 — the target file's bytes must match the seeded bytes.
+// A real `mv -v` (gate G3-6 path) would replace the target contents with
+// the backup's. The dry-run branch must leave them untouched.
+const restoreTargetAfterBytes = readFileSync(restoreTarget);
+if (!restoreTargetAfterBytes.equals(restoreTargetBeforeBytes)) {
+  fail(
+    `restore-last --dry-run modified the seeded target\nbefore: ${restoreTargetBeforeBytes.length} bytes\nafter:  ${restoreTargetAfterBytes.length} bytes`,
+  );
+}
+
+// Dry-run guard 2 — the backup file must STILL exist on disk and its
+// contents must be byte-identical to the seed. A real `mv -v` would
+// unlink the backup; the dry-run short-circuit must not even reach the
+// `spawn mv -v` loop, so the seed is preserved verbatim.
+const restoreBackupAfterStat = statSync(restoreBackup, {
+  throwIfNoEntry: false,
+});
+if (!restoreBackupAfterStat) {
+  fail(
+    `restore-last --dry-run unlinked the seeded backup at ${restoreBackup} (would be unlinked by a real mv)`,
+  );
+}
+const restoreBackupAfterBytes = readFileSync(restoreBackup);
+if (!restoreBackupAfterBytes.equals(restoreBackupBeforeBytes)) {
+  fail(
+    `restore-last --dry-run modified the seeded backup\nbefore: ${restoreBackupBeforeBytes.length} bytes\nafter:  ${restoreBackupAfterBytes.length} bytes`,
+  );
+}
+
+console.log(
+  `restore-last --dry-run: exit=${restoreResult.status} planRendered=PASS sourceStateJson=PASS integrityOk=PASS mvLineRendered=PASS targetUntouched=PASS backupUntouched=PASS`,
+);
+
+// Cleanup restore tmpdirs.
+rmSync(restoreHome, { recursive: true, force: true });
+rmSync(restoreXdg, { recursive: true, force: true });
+rmSync(restorePathDir, { recursive: true, force: true });
+rmSync(restoreWorkspace, { recursive: true, force: true });
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });
@@ -1192,5 +1590,5 @@ rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
 console.log(
-  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), and apply (F3 refused-apply) smoke checks.',
+  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), restore-last (G3 --dry-run), restore-last --yes --force (G3 end-to-end after real apply), and restore-last --yes --force (G3 second restore, missing-backup user verdict 2026-07-04) smoke checks.',
 );

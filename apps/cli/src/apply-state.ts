@@ -31,10 +31,12 @@ import {
 } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import type { PathResolutionContext } from '@overture/agents';
 import type { OverturePaths } from '@overture/config';
 
 import {
   formatBackupTimestamp,
+  resolveTargetBase,
   type ApplyAgentResult,
 } from './apply-command.js';
 
@@ -95,6 +97,13 @@ export interface ApplyStateAgent {
  * `postSnapshots` index in parallel with the writer's
  * `result.targetPaths` array, so the caller is responsible for the
  * pre/post mapping during Pass 1 → Pass 2 orchestration.
+ *
+ * G3 fix (F3 BLOCKING): `ctx` is the same `PathResolutionContext` the
+ * apply orchestrator hands to the writer. We need it here to resolve
+ * the writer's relative `loc.relativePath` (`targetPaths[*].path` for
+ * OpenCode / Codex) into an absolute path before persisting — the
+ * downstream `restore-last` helper consumes the state record directly
+ * and cannot guess the apply-time cwd on its own.
  */
 export interface BuildApplyStateRecordArgs {
   readonly runId: string;
@@ -103,6 +112,7 @@ export interface BuildApplyStateRecordArgs {
   readonly profileName: string;
   readonly configPath: string;
   readonly backupBeforeWrite: boolean;
+  readonly ctx: PathResolutionContext;
   readonly perAgent: readonly {
     readonly agentResult: ApplyAgentResult;
     /** Hex digests captured BEFORE Pass 2. Length MUST match `agentResult.result.targetPaths`. `undefined` when no snapshots were captured. */
@@ -165,7 +175,17 @@ export function buildApplyStateRecord(
 ): ApplyStateRecord {
   const agents = args.perAgent.map((entry): ApplyStateAgent => {
     const { agentResult, preSnapshots, postSnapshots } = entry;
-    const targetPaths = agentResult.result.targetPaths.map((t) => t.path);
+    // G3 fix (F3 BLOCKING): resolve every writer-reported target path
+    // against the apply-time `PathResolutionContext` so the persisted
+    // `targetPaths[i]` matches the absolute `backupPaths[i]` the apply
+    // already resolves. Writers diverge (Claude/Copilot emit absolute;
+    // OpenCode/Codex emit `loc.relativePath`); `resolveTargetBase` is
+    // idempotent on absolute inputs so the on-disk contract
+    // "Absolute paths of every `targetPaths[*]` entry, resolved."
+    // (lines 81-82) holds uniformly.
+    const targetPaths = agentResult.result.targetPaths.map((t) =>
+      resolveTargetBase(t.base, t.path, args.ctx),
+    );
     const preWriteSha256 = pickHash(preSnapshots);
     const postWriteSha256 = pickHash(postSnapshots);
     const base: ApplyStateAgent = {

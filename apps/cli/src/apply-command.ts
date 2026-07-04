@@ -698,8 +698,15 @@ type WriteTargetPath = AgentMcpWriteResult['targetPaths'][number];
  * the absolute-vs-relative distinction here and resolve once, so `fs.copyFile`
  * always sees an absolute path. The `base` field is a hint for relative
  * paths; absolute paths bypass it.
+ *
+ * G3 fix (F3 BLOCKING): this helper is now also consumed by
+ * `apps/cli/src/apply-state.ts:buildApplyStateRecord` to populate
+ * `ApplyStateAgent.targetPaths[i]` with the absolute path so the
+ * downstream `restore-last` helper can spawn `mv` against a resolved
+ * target instead of a relative `loc.relativePath`. Exported so the
+ * state recorder can reuse the same anchor the writer side uses.
  */
-function resolveTargetBase(
+export function resolveTargetBase(
   base: WriteTargetPath['base'],
   filePath: string,
   ctx: PathResolutionContext,
@@ -714,6 +721,11 @@ function resolveTargetBase(
       return join(ctx.workspaceDir, filePath);
     case 'absolute':
       return filePath;
+    default:
+      // Exhaustiveness fallback for the inferred `WriteTargetPath['base']`
+      // literal union: any future widening is treated as a relative path
+      // against the workspace dir (matches the G3 fallback convention).
+      return join(ctx.workspaceDir, filePath);
   }
 }
 
@@ -1242,6 +1254,7 @@ export async function runApply(
   // been emitted in that branch and there is nothing meaningful to log).
   const stateRecord = await recordApplyStateBestEffort({
     overturePaths,
+    ctx,
     now,
     backupBeforeWrite,
     profileName: validated.profileName,
@@ -1315,6 +1328,7 @@ export async function runApply(
 
 interface RecordApplyStateArgs {
   readonly overturePaths: OverturePaths;
+  readonly ctx: PathResolutionContext;
   readonly now: Date;
   readonly backupBeforeWrite: boolean;
   readonly profileName: string;
@@ -1377,6 +1391,7 @@ async function recordApplyStateBestEffort(
       profileName: args.profileName,
       configPath: args.configPath,
       backupBeforeWrite: args.backupBeforeWrite,
+      ctx: args.ctx,
       perAgent: perAgentEntries,
     });
     await writeApplyState(record, defaultApplyStateDir(args.overturePaths), 10);

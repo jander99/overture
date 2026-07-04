@@ -608,11 +608,101 @@ and the `mv -v` recovery snippet) remains future work.
 
 ### G3. Restore-last helper
 
-Optionally add a helper command that restores from the most recent successful
-apply backup set.
-
-Expected result: convenience on top of the `mv`-based recovery path, not a
-replacement for it.
+**Delivered: shipped 2026-07-04 (commit `862a417a`) on `feat/g3-restore-last`.**
+Adds `overture restore-last`, a convenience on top of the `mv`-based recovery
+path the G2 logs advertise — not a replacement for it. The new CLI-local
+module `apps/cli/src/restore-command.ts` exports `RestorePair`,
+`RestorePlan`, `RestoreOutcome`, `RestoreOutcomeStatus`, `RunRestoreOptions`,
+`readRestoreSource`, `buildRestorePlan`, `formatHumanRestorePlan`,
+`formatHumanRestoreOutcome`, `runRestore`, and the `RESTORE_USAGE` banner;
+the dispatcher arm in `apps/cli/src/cli.ts` routes `restore-last` to
+`runRestore(...)` and the top-level USAGE block lists it alongside `detect` /
+`apply` / `bootstrap` / `scan`. **Command surface:**
+`overture restore-last [--dry-run] [--yes] [--force] [--run-id <id>]`.
+`--help` / `-h` print the USAGE block (exit 0); unknown flags exit 2 and
+emit `Unknown flag: <arg>` + USAGE on stderr. **Source preference**
+(gate G3-1) — `readRestoreSource` tries `<stateDir>/apply/<runId>.json`
+first (the G1 canonical record, carrying `preWriteSha256`), falls back to
+`<stateDir>/apply/<runId>.log` parsed through the G2 tag-line codec
+(`backup:` / `target:` lines, no sha256), and returns
+`source: 'last-json-pointer'` with `pairs: []` when neither exists —
+`last.json` is resolved through a small `readLastJsonPointer` helper. Empty
+plan sentinel is intentional: the caller exits 1 with a clear stderr
+message rather than guessing. **Integrity check** (gate G3-5) —
+`buildRestorePlan` SHA-256s each `<target>` via `sha256OfFile` (reused from
+`apply-state.ts`) and compares against the G1 record's `preWriteSha256`,
+producing a four-way `integrityStatus`: `ok` when the current bytes match
+`preWriteSha256` _or_ the target is absent on disk (the restore is a
+creation, not a clobber — per gate G3-5 the backup moves in cleanly);
+`mismatch` when bytes diverge (or `preWriteSha256` is `null`, the
+best-effort-skip case the G1 recorder uses when the pre-write hash
+couldn't be captured); `missing-backup` when the writer-aligned
+`backupPaths` slot is empty or the `.bak.<ts>` file is gone; `unverified`
+for the log-tag-lines source (no reference sha256 available). The plan
+type carries `preWriteSha256` and `currentSha256` explicitly as
+`string | null | undefined` so "absent" is distinguishable from "empty
+bytes" without sentinel strings. `--force` short-circuits the `mismatch`
+gate (emitting `WARN: target ... was edited since apply; restore forced.`
+to stderr per pair) but never overrides a real `mv` failure. **Execution**
+(gate G3-6) — `runRestore` spawns `child_process.spawn('mv', ['-v',
+backup, target])` per pair via a lazy `spawnMvVerbose` helper (stdout +
+stderr captured, exit code resolved on `'close'`); the on-disk contract
+the G2 log advertises is matched verbatim — never `fs.rename` — so a user
+copying `mv -v` lines out of an apply log and a user running
+`overture restore-last` see the same tool emit the same `-v` line. Pairs
+execute sequentially; the first `mv` exit ≠ 0 aborts the batch and the
+partial `RestoreOutcome[]` is rendered — atomic whole-run semantics per
+gate G3-8. **Exit codes** (gate G3-8): `0` on a clean dry-run _or_ a
+fully successful restore, `1` on a refused restore (no history / pruned
+runId / blocked mismatch without `--force` / `N` at the prompt / a
+mid-batch `mv` failure), `2` on usage errors (missing value for
+`--run-id`, unknown flag, non-TTY interactive confirm without `--yes`).
+**Flag / TTY interaction** (gate G3-4): without `--yes`, the dispatcher
+prompts `Proceed? [y/N] ` only when `process.stdin.isTTY === true`
+(overridable via `RunRestoreOptions.isTTY` for tests); non-TTY + no
+`--yes` exits 2 with `interactive confirmation required (TTY) — pass
+--yes`. The `prompt` option on `RunRestoreOptions` is the test-injection
+seam; the production path is `createStdinConfirmPrompt`, lazy-imported
+from `node:readline/promises` so the readline bundle stays out of the
+unit-test path. **Gate verdicts locked**: G3-1 top-level dispatch
+(USAGE + flag parsing + runId resolution from `last.json`), G3-2
+JSON→log tag-line fallback, G3-3 `--run-id` override of `last.json`
+(pruned runIds emit `run <id> not found in <stateDir> (retention window:
+10)` and exit 1), G3-4 flags + TTY (`--yes` skips prompt; non-TTY
+without `--yes` is a usage error → 2), G3-5 sha256 integrity
+(`ok` / `mismatch` / `missing-backup` / `unverified`), G3-6 `spawn mv -v`
+(not `fs.rename`), **G3-7 OFF** — no audit record, no
+`ApplyStateRecord.mode` widening, G3 is read-only on disk; G3-8 atomic
+0/1/2 exit semantics with mid-batch abort. **Tests:** 11 cases in
+`apps/cli/src/restore-command.spec.ts` — Case 1
+`readRestoreSource` JSON path, Case 2 log-tag-lines fallback, Case 3
+`buildRestorePlan` integrity matrix (`ok` / `mismatch` /
+`missing-backup`), Case 4 `formatHumanRestorePlan` stable rendering
+(header / per-pair / footer), Case 5 `runRestore --dry-run`, Case 6
+`runRestore --yes` with all `ok` pairs, Case 7 `runRestore --yes` with a
+`mismatch` pair (no `--force`) — exit 1 + no clobber, Case 8
+`runRestore --yes --force` with a `mismatch` pair — proceeds + WARN,
+Case 9 `runRestore --run-id` override + pruned runId, Case 10 no
+`last.json`, Case 11 TTY prompt simulation (`y` proceeds, `n` aborts);
+plus 4 cases in `apps/cli/src/cli.spec.ts` — Cases 12-15 in the
+`run: restore-last dispatcher (G3)` block (`--help` exits 0 with USAGE,
+`--dry-run` end-to-end through the dispatcher with `XDG_STATE_HOME`
+override and seed data, `--unknown-flag` exits 2 with USAGE on stderr,
+and a no-args regression guard so the new dispatcher arm doesn't break
+the empty-args USAGE render). **Files touched (this commit, only):**
+`apps/cli/src/restore-command.ts`, `apps/cli/src/restore-command.spec.ts`,
+`apps/cli/src/cli.ts`, `apps/cli/src/cli.spec.ts`. **Spec invariants
+preserved** — apply-state cases 1-6 stay byte-identical, apply-log cases
+1-6 stay byte-identical, apply-command cases 1-33 stay byte-identical;
+the G1 `ApplyStateRecord` / `ApplyStateAgent` shapes and the G2
+`ApplyLogEntry` / `ApplyLogContent` shapes are unchanged; no writer file
+in `packages/agents/src/*` was modified, no Nx project was added, no
+`--log-format` flag or `apply restore` subcommand exists, `ApplyResult`
+/ `ApplyAgentResult` / `ApplyStatus` / `WriteReason` were not widened,
+and the `--dry-run --json` envelope for `overture apply` is byte-
+identical to its pre-G3 shape. Backups persist after a successful
+restore — the next `overture apply` will prune them via G1's lockstep
+`pruneApplyArtifacts`.
 
 ## Recommended execution order
 
