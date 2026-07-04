@@ -18,9 +18,17 @@ import {
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
+import {
+  normalizeClaudeCodeMcpServers,
+  type ClaudeCodeMcpConfig,
+} from './claude-code.js';
+import { normalized } from './normalize-mcp-config.js';
+import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
+  AgentMcpReadResult,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   McpLocationFormat,
   PathResolutionContext,
   StringMap,
@@ -224,6 +232,71 @@ function validateContainer(
 }
 
 // ---------------------------------------------------------------------------
+// F3 existing-map construction (Claude Code)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the F3 existing-server map for Claude Code by combining the
+ * top-level `mcpServers` with the workspace-nested
+ * `projects[workspaceDir].mcpServers` entries. Workspace entries win
+ * on name collision. The merged map is funneled through the B2
+ * `normalizeClaudeCodeMcpServers` normalizer (synthetic
+ * `ClaudeCodeMcpConfig` wrapper, no public contract change) so both
+ * sides of the detector run on the same canonical normalized shape.
+ *
+ * Returns an empty map when `parsed` is not an object, when no
+ * workspace dir is supplied, or when neither container is present.
+ */
+function buildClaudeCodeExistingMap(
+  parsed: unknown,
+  workspaceDir: string,
+): ReadonlyMap<string, AgentNormalizedMcpServer> {
+  if (!isObject(parsed)) {
+    return new Map();
+  }
+
+  const topServers: Record<string, unknown> = isObject(parsed['mcpServers'])
+    ? (parsed['mcpServers'] as Record<string, unknown>)
+    : {};
+
+  let workspaceServers: Record<string, unknown> = {};
+  if (workspaceDir.length > 0) {
+    const projects = parsed['projects'];
+    if (isObject(projects)) {
+      const project = (projects as Record<string, unknown>)[workspaceDir];
+      if (isObject(project)) {
+        const nested = (project as Record<string, unknown>)['mcpServers'];
+        if (isObject(nested)) {
+          workspaceServers = nested as Record<string, unknown>;
+        }
+      }
+    }
+  }
+
+  // Workspace wins on collision. The spread order places workspace
+  // entries last so they overwrite top-level entries with the same key.
+  const merged: Record<string, unknown> = {
+    ...topServers,
+    ...workspaceServers,
+  };
+  if (Object.keys(merged).length === 0) {
+    return new Map();
+  }
+
+  const syntheticConfig: ClaudeCodeMcpConfig = {
+    mcpServers: merged as ClaudeCodeMcpConfig['mcpServers'],
+  };
+  const syntheticRead: AgentMcpReadResult<ClaudeCodeMcpConfig> = {
+    config: syntheticConfig,
+    nonEmpty: true,
+  };
+  const normalizedRecord = normalizeClaudeCodeMcpServers(syntheticRead);
+  return new Map<string, AgentNormalizedMcpServer>(
+    Object.entries(normalizedRecord),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Writer
 // ---------------------------------------------------------------------------
 
@@ -341,6 +414,35 @@ export async function writeClaudeCodeMcpConfig(
   let container: unknown = parsed;
   for (const seg of segments) {
     container = (container as Record<string, unknown>)[seg];
+  }
+
+  // F3 conflict detection: build the existing normalized map from
+  // BOTH top-level `mcpServers` AND `projects[workspaceDir].mcpServers`
+  // (workspace wins on collision), compare against the canonical
+  // input, and refuse when any same-name pair differs in normalized
+  // shape. Detector invocation order is fixed per the F3 design
+  // contract: read → normalize → compare → refuse-or-proceed. Runs
+  // AFTER shape validation and BEFORE any per-server patch building
+  // so the writer never reads-then-rewrites a divergent entry.
+  const existingMap = buildClaudeCodeExistingMap(
+    parsed,
+    typeof ctx.workspaceDir === 'string' ? ctx.workspaceDir : '',
+  );
+  const canonicalMap = new Map<string, AgentNormalizedMcpServer>(
+    input.servers.map((s) => [s.name, normalized(s.server)]),
+  );
+  const conflicts = detectCanonicalSettingsDrift(existingMap, canonicalMap);
+  if (conflicts.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths: [targetPathFor(target)],
+      resolvedPath,
+      format: 'jsonc' as McpLocationFormat,
+      conflicts,
+    };
   }
 
   // Build per-server patches: check existence and read existing native entries.

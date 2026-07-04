@@ -213,6 +213,7 @@ export function exitCodeForApplyDryRun(
     'parse-error',
     'unsupported-shape',
     'unsupported-format',
+    'conflict',
   ]);
   return results.some((r) => refusalStatuses.has(r.status)) ? 1 : 0;
 }
@@ -229,6 +230,7 @@ export function exitCodeForApply(results: readonly ApplyAgentResult[]): 0 | 1 {
     'parse-error',
     'unsupported-shape',
     'unsupported-format',
+    'conflict',
   ]);
   return results.some((r) => refusalStatuses.has(r.status)) ? 1 : 0;
 }
@@ -540,6 +542,15 @@ function messageForError(err: unknown): string {
 function statusFromWriterResult(
   result: AgentMcpWriteResult,
 ): ApplyDryRunStatus {
+  // F3: divergent canonical settings produce a `conflicts` array on the
+  // writer result. Surface that as the CLI-local `'conflict'` status
+  // BEFORE the plannedUpdate / no-change inference, so refusal short-
+  // circuits before any byte-level decision. Writers populate
+  // `result.conflicts`; the orchestrator is the only place that maps
+  // it to `ApplyDryRunStatus`. `WriteReason` stays unchanged.
+  if (result.conflicts !== undefined && result.conflicts.length > 0) {
+    return 'conflict';
+  }
   const reason = result.reason;
   if (reason === 'parse-error') return 'parse-error';
   if (reason === 'unsupported-shape') return 'unsupported-shape';
@@ -561,6 +572,12 @@ function statusFromWriterResult(
  * `changed` check.
  */
 function statusFromRealWriterResult(result: AgentMcpWriteResult): ApplyStatus {
+  // F3: same conflict-first mapping as the dry-run twin. The real-
+  // write path also short-circuits before Pass 2; Task 4 wires the
+  // backup-skip / Pass 2-skip branches off this status.
+  if (result.conflicts !== undefined && result.conflicts.length > 0) {
+    return 'conflict';
+  }
   const reason = result.reason;
   if (reason === 'parse-error') return 'parse-error';
   if (reason === 'unsupported-shape') return 'unsupported-shape';

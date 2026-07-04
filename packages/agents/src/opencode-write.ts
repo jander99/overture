@@ -17,11 +17,19 @@ import {
   type ParseError,
 } from 'jsonc-parser/lib/esm/main.js';
 import type { OvertureMcpServer } from '@overture/config';
-import { opencode } from './opencode.js';
-import type { OpenCodeMcpServer } from './opencode.js';
+import {
+  normalizeOpenCodeMcpServers,
+  opencode,
+  type OpenCodeMcpConfig,
+  type OpenCodeMcpServer,
+} from './opencode.js';
+import { normalized } from './normalize-mcp-config.js';
+import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
+  AgentMcpReadResult,
   AgentMcpWriteInput,
   AgentMcpWriteResult,
+  AgentNormalizedMcpServer,
   McpLocation,
   McpLocationFormat,
   PathResolutionContext,
@@ -296,6 +304,14 @@ interface PlanResult {
   readonly written: string;
   readonly changed: boolean;
   readonly touched: readonly string[];
+  /**
+   * Native existing-server map parsed out of the on-disk target.
+   * Returned alongside the plan so the F3 conflict detector can
+   * normalize both sides (existing + canonical) before byte-level
+   * planning runs. `undefined` when no `mcp` value node existed in
+   * the target.
+   */
+  readonly existingServers: Readonly<Record<string, OpenCodeMcpServer>>;
 }
 
 function planEdits(args: {
@@ -406,12 +422,18 @@ function planEdits(args: {
   }
 
   if (edits.length === 0) {
-    return { written: args.text, changed: false, touched: [] };
+    return {
+      written: args.text,
+      changed: false,
+      touched: [],
+      existingServers,
+    };
   }
   return {
     written: applyEdits(args.text, edits),
     changed: true,
     touched,
+    existingServers,
   };
 }
 
@@ -518,6 +540,37 @@ export async function opencodeWriteMcpConfig(
       resolvedPath,
       format: loc.format,
       reason: 'parse-error',
+    };
+  }
+
+  // F3: detect canonical settings drift BEFORE byte-level planning
+  // proceeds. `planEdits` already parsed the existing target entries;
+  // we reuse that work to build the existing normalized map, compare
+  // against the canonical input, and refuse when any same-name pair
+  // differs in normalized shape. The order is fixed per the F3 design
+  // contract: read → normalize → compare → refuse-or-proceed.
+  const existingRead: AgentMcpReadResult<OpenCodeMcpConfig> = {
+    config: { mcp: planned.existingServers },
+    nonEmpty: Object.keys(planned.existingServers).length > 0,
+  };
+  const existingNormalized = normalizeOpenCodeMcpServers(existingRead);
+  const existingMap = new Map<string, AgentNormalizedMcpServer>(
+    Object.entries(existingNormalized),
+  );
+  const canonicalMap = new Map<string, AgentNormalizedMcpServer>(
+    input.servers.map((s) => [s.name, normalized(s.server)]),
+  );
+  const conflicts = detectCanonicalSettingsDrift(existingMap, canonicalMap);
+  if (conflicts.length > 0) {
+    return {
+      written: 0,
+      changed: false,
+      dryRun,
+      serversWritten: [],
+      targetPaths,
+      resolvedPath,
+      format: loc.format,
+      conflicts,
     };
   }
 

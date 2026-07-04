@@ -918,7 +918,7 @@ describe('runApply (F1 dry-run contract)', () => {
   // it via `serversWritten` / `bytesChanged`.
   // -------------------------------------------------------------------------
 
-  it('classifies a Claude dry-run with a planned update as would-update (regression)', async () => {
+  it('F3: classifies a Claude dry-run with divergent canonical settings as conflict refusal', async () => {
     const env = createApplyTempEnv();
     cleanupDirs = env.cleanup;
     applyEnv(env);
@@ -934,9 +934,8 @@ describe('runApply (F1 dry-run contract)', () => {
         targets: ['claude-code'],
       }),
     );
-    // Seeded file: same server name but a different `command`, so the
-    // writer computes a hypothetical diff and surfaces it via
-    // `serversWritten` / `bytesChanged` (with `changed: false`).
+    // Seeded file: same server name but a different `command`. Under
+    // F3 this is a settings-drift refusal (not a planned update).
     seedClaudeUserConfig(
       env.home,
       JSON.stringify(
@@ -955,23 +954,22 @@ describe('runApply (F1 dry-run contract)', () => {
     const code = await runApply(['--dry-run', '--json'], stdout, stderr);
 
     expect(stderr.text()).toBe('');
-    // The planned update is clean (a would-update, not a refusal), so the
-    // aggregate exit is 0.
-    expect(code).toBe(0);
+    // F3 supersedes the pre-F3 "would-update" path: divergent settings
+    // refuse the write, and the orchestrator returns exit 1.
+    expect(code).toBe(1);
 
     const envelope = JSON.parse(stdout.text()) as ApplyDryRunResult;
     expect(envelope.results.length).toBe(1);
     const claudeResult = envelope.results[0];
     expect(claudeResult).toBeDefined();
-    // The core regression assertion: differing content + Claude's
-    // `changed: false` convention must still classify as `would-update`.
-    expect(claudeResult?.status).toBe('would-update');
+    expect(claudeResult?.status).toBe('conflict');
     const writer = claudeResult?.result;
     expect(writer.changed).toBe(false);
     expect(writer.dryRun).toBe(true);
-    expect(writer.serversWritten).toEqual(['filesystem']);
-    expect(typeof writer.bytesChanged).toBe('number');
-    expect(writer.bytesChanged).toBeGreaterThan(0);
+    expect(writer.written).toBe(0);
+    expect(writer.serversWritten).toEqual([]);
+    expect(writer.conflicts).toBeDefined();
+    expect(writer.conflicts?.[0]?.serverName).toBe('filesystem');
   });
 });
 
@@ -1037,14 +1035,14 @@ describe('runApply (F2 real-write contract)', () => {
   // `packages/agents/src/{claude-code,opencode,...}.write.spec.ts`.
   // -------------------------------------------------------------------------
 
-  it('apply (no flag) writes the target and creates a byte-identical timestamped backup', async () => {
+  it('F3: apply (no flag) refuses divergent canonical settings, leaves files unchanged, no backups created', async () => {
     const env = createApplyTempEnv();
     cleanupDirs = env.cleanup;
     applyEnv(env);
     seedAllFakeBins(env.pathDir);
 
-    // Claude seeded with `command: 'old'` so the writer plans an update
-    // (not no-change).
+    // Claude seeded with `command: 'old'`; canonical `command: 'node'`.
+    // F3 detects the settings drift and refuses the write.
     const claudePath = seedClaudeUserConfig(
       env.home,
       JSON.stringify(
@@ -1057,9 +1055,6 @@ describe('runApply (F2 real-write contract)', () => {
         2,
       ),
     );
-    // OpenCode seeded with `type: 'local'` + `command: ['old']` so its
-    // writer plans an update (canonical is `type: 'stdio'` +
-    // `command: 'node'`, which differs in both shape and value).
     const opencodePath = seedOpencodeUserConfig(
       env.xdgConfigHome,
       `{
@@ -1089,23 +1084,16 @@ describe('runApply (F2 real-write contract)', () => {
     const code = await runApply([], stdout, stderr);
 
     expect(stderr.text()).toBe('');
-    expect(code).toBe(0);
+    // F3 refusal: exit code 1.
+    expect(code).toBe(1);
 
-    // Targets were updated.
+    // Targets untouched.
     const claudeAfterBytes = readFileSync(claudePath);
     const opencodeAfterBytes = readFileSync(opencodePath);
-    expect(claudeAfterBytes).not.toEqual(claudeBeforeBytes);
-    expect(opencodeAfterBytes).not.toEqual(opencodeBeforeBytes);
+    expect(claudeAfterBytes).toEqual(claudeBeforeBytes);
+    expect(opencodeAfterBytes).toEqual(opencodeBeforeBytes);
 
-    // The canonical filesystem server name and stdio+node intent should
-    // appear in both updated files (Claude passes stdio through; OpenCode
-    // converts to its native `local` form but still carries `node`).
-    expect(claudeAfterBytes.toString('utf8')).toContain('filesystem');
-    expect(opencodeAfterBytes.toString('utf8')).toContain('filesystem');
-    expect(claudeAfterBytes.toString('utf8')).toContain('"node"');
-    expect(opencodeAfterBytes.toString('utf8')).toContain('"node"');
-
-    // Backups exist adjacent to each target, byte-identical to the seed.
+    // No backups created — Pass 2 never ran, conflict path skips backup.
     const claudeBackups = findBackupFiles(
       dirname(claudePath),
       basename(claudePath),
@@ -1115,19 +1103,8 @@ describe('runApply (F2 real-write contract)', () => {
       basename(opencodePath),
     );
 
-    expect(claudeBackups.length).toBeGreaterThanOrEqual(1);
-    expect(readFileSync(claudeBackups[0])).toEqual(claudeBeforeBytes);
-
-    expect(opencodeBackups.length).toBeGreaterThanOrEqual(1);
-    expect(readFileSync(opencodeBackups[0])).toEqual(opencodeBeforeBytes);
-
-    // Human-readable report must mention each backup path so the operator
-    // can find them.
-    const out = stdout.text();
-    expect(out).toMatch(/Apply \(changes written\)/);
-    for (const bp of [...claudeBackups, ...opencodeBackups]) {
-      expect(out).toContain(bp);
-    }
+    expect(claudeBackups.length).toBe(0);
+    expect(opencodeBackups.length).toBe(0);
   });
 
   // -------------------------------------------------------------------------
@@ -1135,7 +1112,7 @@ describe('runApply (F2 real-write contract)', () => {
   // writes.
   // -------------------------------------------------------------------------
 
-  it('settings.backupBeforeWrite: false skips backups but still writes the target', async () => {
+  it('F3: divergent canonical settings with backupBeforeWrite: false still refuse (conflict precludes backup and write)', async () => {
     const env = createApplyTempEnv();
     cleanupDirs = env.cleanup;
     applyEnv(env);
@@ -1165,20 +1142,17 @@ describe('runApply (F2 real-write contract)', () => {
     const code = await runApply([], stdout, stderr);
 
     expect(stderr.text()).toBe('');
-    expect(code).toBe(0);
+    // F3 refusal: exit 1 (backupBeforeWrite: false does not weaken refusal).
+    expect(code).toBe(1);
 
-    // Target written.
+    // Target untouched.
     const claudeAfterBytes = readFileSync(claudePath);
-    expect(claudeAfterBytes).not.toEqual(claudeBeforeBytes);
+    expect(claudeAfterBytes).toEqual(claudeBeforeBytes);
 
-    // No backup files created.
+    // No backup files created — conflict path skips both backup and write.
     const claudeDir = dirname(claudePath);
     const claudeBackups = findBackupFiles(claudeDir, basename(claudePath));
     expect(claudeBackups.length).toBe(0);
-
-    // Human report still renders.
-    const out = stdout.text();
-    expect(out).toMatch(/Apply \(changes written\)/);
   });
 
   // -------------------------------------------------------------------------
@@ -1189,7 +1163,7 @@ describe('runApply (F2 real-write contract)', () => {
   // helper must retry with a `-<hex4>` suffix.
   // -------------------------------------------------------------------------
 
-  it('pre-existing <target>.bak.<ts> forces a -<hex4> collision suffix', async () => {
+  it('F3: divergent canonical settings pre-empt the backup collision path (no write, no backup)', async () => {
     const env = createApplyTempEnv();
     cleanupDirs = env.cleanup;
     applyEnv(env);
@@ -1212,7 +1186,10 @@ describe('runApply (F2 real-write contract)', () => {
     );
     const claudeDir = dirname(claudePath);
 
-    // Pre-create the colliding backup path.
+    // Pre-create the colliding backup path (from the pre-F3 backup
+    // collision test that lived here). Under F3 the writer refuses
+    // before any backup would be created, so the pre-existing collision
+    // is irrelevant.
     const collidingPath = `${claudePath}.bak.${expectedTs}`;
     writeFileSync(collidingPath, 'collision\n');
 
@@ -1231,21 +1208,18 @@ describe('runApply (F2 real-write contract)', () => {
     const code = await runApply([], stdout, stderr, { now: fixedNow });
 
     expect(stderr.text()).toBe('');
-    expect(code).toBe(0);
+    // F3 refusal: exit 1.
+    expect(code).toBe(1);
 
+    // No NEW backup created (the colliding pre-existing file may stay).
     const backups = findBackupFiles(claudeDir, basename(claudePath));
-    // The colliding path may still exist; we look for the suffixed one.
-    // The regex matches `<target>.bak.<ts>-<4 hex>` — 4 lowercase hex chars
-    // appended after the timestamp's trailing `-`.
     const collisionSuffixRegex = new RegExp(
       `\\.bak\\.${expectedTs}-[0-9a-f]{4}$`,
     );
     const suffixed = backups.filter(
       (p) => collisionSuffixRegex.test(p) && p !== collidingPath,
     );
-    expect(suffixed.length).toBe(1);
-    // Confirm the suffix shape: 4 hex chars after `-`.
-    expect(suffixed[0]).toMatch(collisionSuffixRegex);
+    expect(suffixed.length).toBe(0);
   });
 
   // -------------------------------------------------------------------------
@@ -1316,7 +1290,7 @@ describe('runApply (F2 real-write contract)', () => {
   // is honored but `--dry-run` is read-only so no backup files exist.
   // -------------------------------------------------------------------------
 
-  it('apply --dry-run is byte-identical and creates no .bak. files', async () => {
+  it('F3: apply --dry-run with divergent canonical is byte-identical and creates no .bak. files (exit 1)', async () => {
     const env = createApplyTempEnv();
     cleanupDirs = env.cleanup;
     applyEnv(env);
@@ -1349,7 +1323,8 @@ describe('runApply (F2 real-write contract)', () => {
     const code = await runApply(['--dry-run'], stdout, stderr);
 
     expect(stderr.text()).toBe('');
-    expect(code).toBe(0);
+    // F3 refusal: Claude detects divergent canonical settings → exit 1.
+    expect(code).toBe(1);
 
     // Targets unchanged.
     expect(readFileSync(claudePath)).toEqual(claudeBeforeBytes);

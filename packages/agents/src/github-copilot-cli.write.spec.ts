@@ -555,7 +555,7 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
   // Metadata envelope — changed update
   // -------------------------------------------------------------------------
 
-  it('changed update returns written:1, changed:true, dryRun:false, serversWritten, targetPaths, resolvedPath, format:jsonc, bytesChanged > 0', async () => {
+  it('F3: divergent canonical triggers conflict refusal with written:0, changed:false, conflicts populated', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -573,14 +573,17 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
       const res = await githubCopilotCli.mcp.write(ctx, {
         servers: [{ name: 'filesystem', server: updatedFs }],
       });
-      expect(res.written).toBe(1);
-      expect(res.changed).toBe(true);
+      // F3 supersedes the pre-F3 "changed update" envelope: divergent
+      // settings refuse the write before byte-level planning.
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
       expect(res.dryRun).toBe(false);
-      expect(res.serversWritten).toEqual(['filesystem']);
+      expect(res.serversWritten).toEqual([]);
       expect(res.targetPaths).toHaveLength(1);
       expect(res.resolvedPath).toContain('.github/mcp.json');
       expect(res.format).toBe('jsonc');
-      expect(res.bytesChanged).toBeGreaterThan(0);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });
@@ -627,7 +630,7 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
   // Metadata envelope — dry-run
   // -------------------------------------------------------------------------
 
-  it('dry-run returns planned metadata and leaves disk unchanged', async () => {
+  it('F3: dry-run divergent canonical triggers conflict refusal and leaves disk unchanged', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -645,12 +648,12 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
         dryRun: true,
       });
       expect(res.dryRun).toBe(true);
-      expect(res.written).toBe(1);
-      expect(res.changed).toBe(true);
-      expect(res.serversWritten).toEqual(['filesystem']);
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
       expect(res.targetPaths).toHaveLength(1);
       expect(res.format).toBe('jsonc');
-      expect(res.bytesChanged).toBeGreaterThan(0);
       const after = await readFile(fixturePath, 'utf-8');
       expect(after).toBe(before);
     } finally {
@@ -663,7 +666,7 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
   // Extension preservation
   // -------------------------------------------------------------------------
 
-  it('native extension fields tools and cwd are preserved across a server value update', async () => {
+  it('F3: divergent canonical with native extension fields triggers conflict refusal (extensions not overwritten)', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -683,7 +686,9 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
       const res = await githubCopilotCli.mcp.write(ctx, {
         servers: [{ name: 'filesystem', server: updatedFs }],
       });
-      expect(res.changed).toBe(true);
+      // F3 refuses divergent settings — extension fields stay on disk.
+      expect(res.changed).toBe(false);
+      expect(res.conflicts).toBeDefined();
       const fixturePath = join(ws, '.github', 'mcp.json');
       const written = JSON.parse(await readFile(fixturePath, 'utf-8'));
       const fsEntry = written.mcpServers['filesystem'];
@@ -695,7 +700,7 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
     }
   });
 
-  it('unknown JSON-compatible extension keys inside a server entry are preserved', async () => {
+  it('F3: divergent canonical with unknown JSON-compatible extensions triggers conflict refusal (extensions preserved on disk)', async () => {
     const home = await tmp();
     const ws = await tmp();
     try {
@@ -714,7 +719,9 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
       const res = await githubCopilotCli.mcp.write(ctx, {
         servers: [{ name: 'context7', server: updatedCtx7 }],
       });
-      expect(res.changed).toBe(true);
+      // F3 refuses divergent settings — unknown extensions stay on disk.
+      expect(res.changed).toBe(false);
+      expect(res.conflicts).toBeDefined();
       const fixturePath = join(ws, '.github', 'mcp.json');
       const written = JSON.parse(await readFile(fixturePath, 'utf-8'));
       const ctx7Entry = written.mcpServers['context7'];
@@ -970,6 +977,62 @@ describe('githubCopilotCli.mcp.write (E3 byte-splice)', () => {
       } finally {
         writeSpy.mockRestore();
       }
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(ws, { recursive: true, force: true });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // F3: conflict refusal + matching-case spec
+  // -------------------------------------------------------------------------
+
+  it('F3: divergent canonical triggers conflict refusal (written:0, changed:false, conflicts populated)', async () => {
+    const home = await tmp();
+    const ws = await tmp();
+    try {
+      await seedWorkspaceFixture(ws);
+      const ctx = makeCtx(home, ws);
+      const divergentFs: OvertureMcpServer = {
+        type: 'stdio',
+        command: 'pnpm',
+        args: ['-y', 'different-server'],
+      };
+      const res = await githubCopilotCli.mcp.write(ctx, {
+        servers: [{ name: 'filesystem', server: divergentFs }],
+      });
+      expect(res.written).toBe(0);
+      expect(res.changed).toBe(false);
+      expect(res.serversWritten).toEqual([]);
+      expect(res.conflicts).toBeDefined();
+      expect(res.conflicts?.[0]?.serverName).toBe('filesystem');
+      expect(res.conflicts?.[0]?.diffKeys).toContain('command');
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(ws, { recursive: true, force: true });
+    }
+  });
+
+  it('F3: matching canonical proceeds byte-level (no-change)', async () => {
+    const home = await tmp();
+    const ws = await tmp();
+    try {
+      await seedWorkspaceFixture(ws);
+      const ctx = makeCtx(home, ws);
+      const matchingFs: OvertureMcpServer = {
+        type: 'stdio',
+        command: 'npx',
+        args: [
+          '-y',
+          '@modelcontextprotocol/server-filesystem',
+          '/home/user/projects',
+        ],
+      };
+      const res = await githubCopilotCli.mcp.write(ctx, {
+        servers: [{ name: 'filesystem', server: matchingFs }],
+      });
+      expect(res.conflicts).toBeUndefined();
+      expect(res.reason).toBe('no-change');
     } finally {
       await rm(home, { recursive: true, force: true });
       await rm(ws, { recursive: true, force: true });

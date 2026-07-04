@@ -377,36 +377,30 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
     ).toBe(true);
   });
 
-  // Regression for the F2 / Case 14 key-drop bug. The historical
-  // `findServerPropertyRange` returned a range that covered the WHOLE
-  // property (key + value + trailing comma); the replacement
-  // (`renderServer(next)` = JSON.stringify(value, null, 2)) was value-only,
-  // so the property key vanished on update. A stdio canonical updating
-  // an existing local entry produced `{\n  "type": "remote"\n}` in
-  // place of the value, leaving the JSON malformed. The fix narrows
-  // the range to the value node only; this test pins the new contract
-  // with a direct fs-level assertion (independent of the harness) so
-  // a regression cannot hide behind harness lenience.
-  it('opencode writer: existing local entry updated by stdio canonical preserves the property key', async () => {
+  // F3 conflict refusal: a divergent canonical entry refuses the write
+  // BEFORE any byte-level splice runs, so the original file is left
+  // untouched. The previous F2 regression test (key-drop bug) used the
+  // same divergent fixture shape; under F3 that scenario now produces
+  // a conflict refusal rather than a splice. The byte-level fix is
+  // still covered by the matching-case tests below and by the
+  // preservation harness against the OPENCODE_FIXTURE.
+  it('F3: opencode writer refuses divergent canonical settings and leaves the file untouched', async () => {
     const ctx = makeCtx();
     const fixturePath = join(ctx.configDir, 'opencode', 'opencode.json');
     await mkdir(join(ctx.configDir, 'opencode'), { recursive: true });
-    await writeFile(
-      fixturePath,
-      JSON.stringify(
-        {
-          mcp: {
-            filesystem: { type: 'local', command: ['old'] },
-            context7: { type: 'local', command: ['ctx'] },
-          },
+    const seededBody = JSON.stringify(
+      {
+        mcp: {
+          filesystem: { type: 'local', command: ['old'] },
+          context7: { type: 'local', command: ['ctx'] },
         },
-        null,
-        2,
-      ),
-      'utf8',
+      },
+      null,
+      2,
     );
+    await writeFile(fixturePath, seededBody, 'utf8');
 
-    await opencode.mcp.write(ctx, {
+    const result = await opencode.mcp.write(ctx, {
       servers: [
         {
           name: 'filesystem',
@@ -419,27 +413,63 @@ describe('E1 — opencode.mcp.write preserves OpenCode JSONC', () => {
       ],
     });
 
+    // F3 acceptance: conflict populated, no writes, no change.
+    expect(result.written).toBe(0);
+    expect(result.changed).toBe(false);
+    expect(result.serversWritten).toEqual([]);
+    expect(result.dryRun).toBe(false);
+    expect(result.conflicts).toBeDefined();
+    expect(result.conflicts).toHaveLength(1);
+    expect(result.conflicts?.[0]?.serverName).toBe('filesystem');
+    expect(result.conflicts?.[0]?.diffKeys).toContain('command');
+
+    // File untouched: original bytes preserved, no .bak.* created.
     const written = await readFile(fixturePath, 'utf8');
-    // The property key must still be present (regression of the F2
-    // key-drop: writer was splicing over the entire property).
+    expect(written).toBe(seededBody);
     expect(written).toContain('"filesystem"');
     expect(written).toContain('"context7"');
-    // Re-parse the written file to assert it's still valid JSON
-    // (the historical bug left the document malformed).
-    expect(() => JSON.parse(written)).not.toThrow();
-    const parsed = JSON.parse(written) as {
-      mcp: Record<string, unknown>;
-    };
-    expect(parsed.mcp).toHaveProperty('filesystem');
-    expect(parsed.mcp).toHaveProperty('context7');
-    // The filesystem entry should now reflect the canonical stdio →
-    // local conversion: command vector = ['node', '/tmp/foo'].
-    const fs = parsed.mcp.filesystem as {
-      type: string;
-      command: string[];
-    };
-    expect(fs.type).toBe('local');
-    expect(fs.command).toEqual(['node', '/tmp/foo']);
+  });
+
+  // F3 matching case: when the canonical and existing normalize to the
+  // same shape, the byte-level plan proceeds normally. Here we set the
+  // existing entry to match the canonical-after-native-conversion
+  // exactly, so planEdits produces zero edits and the result is
+  // `no-change` (no real byte difference).
+  it('F3: opencode writer proceeds when canonical matches existing normalized shape (no-change)', async () => {
+    const ctx = makeCtx();
+    const fixturePath = join(ctx.configDir, 'opencode', 'opencode.json');
+    await mkdir(join(ctx.configDir, 'opencode'), { recursive: true });
+    const matchingFixture = JSON.stringify(
+      {
+        mcp: {
+          filesystem: {
+            type: 'local',
+            command: ['node', '/tmp/foo'],
+          },
+        },
+      },
+      null,
+      2,
+    );
+    await writeFile(fixturePath, matchingFixture, 'utf8');
+
+    const result = await opencode.mcp.write(ctx, {
+      servers: [
+        {
+          name: 'filesystem',
+          server: {
+            type: 'stdio',
+            command: 'node',
+            args: ['/tmp/foo'],
+          },
+        },
+      ],
+    });
+
+    expect(result.conflicts).toBeUndefined();
+    expect(result.written).toBe(0);
+    expect(result.changed).toBe(false);
+    expect(result.reason).toBe('no-change');
   });
 
   it('preserves OpenCode JSONC: adding a new remote server target path fails rawBytes (insert case)', async () => {
