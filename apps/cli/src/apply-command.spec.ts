@@ -93,6 +93,8 @@ import type {
   ServerConflict,
 } from '@overture/agents';
 
+import { createHash } from 'node:crypto';
+
 import {
   APPLY_USAGE,
   exitCodeForApply,
@@ -109,6 +111,7 @@ import {
   type ApplyStatus,
   type RunApplyOptions,
 } from './apply-command.js';
+import { readApplyState } from './apply-state.js';
 import { BufferWriter } from '../test-support/bootstrap-test-support.js';
 
 // Touch RunApplyOptions so a future refactor that removes the export
@@ -1511,6 +1514,402 @@ describe('runApply (F2 real-write contract)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// G1 — `overture apply` apply-state recording (cases 24-28).
+//
+// Each case uses the same tmpdir scaffolding as F1/F2/F3. The XDG_STATE_HOME
+// override (Case 28) and the state-file lifecycle (Cases 24-27) are locked
+// here; codec and writer round-trip semantics live in `apply-state.spec.ts`.
+// ---------------------------------------------------------------------------
+
+describe('runApply (G1 apply-state recording)', () => {
+  let cleanupDirs: readonly string[] = [];
+  let originalEnv: NodeJS.ProcessEnv;
+  let originalCwd: string;
+
+  // Resolve the default `stateDir` for the current env. Mirrors the
+  // real-writer path so tests assert against the same directories the
+  // orchestrator lands on. `XDG_STATE_HOME` overrides take precedence
+  // over `HOME` per the XDG Base Directory Specification.
+  function defaultStateDir(): string {
+    const paths = defaultOverturePaths({}, process.env);
+    return join(paths.stateDir, 'apply');
+  }
+
+  beforeEach(() => {
+    cleanupDirs = [];
+    originalEnv = { ...process.env };
+    originalCwd = process.cwd();
+    // Default XDG_STATE_HOME to a fresh tmpdir so each test gets an
+    // isolated state directory. The afterEach restores the original
+    // env (and afterEach removes the listed dirs in `cleanupDirs`).
+    const xdgState = mkdtempSync(join(tmpdir(), 'overture-apply-state-'));
+    process.env.XDG_STATE_HOME = xdgState;
+    cleanupDirs = [...cleanupDirs, xdgState];
+  });
+
+  afterEach(() => {
+    for (const dir of cleanupDirs) {
+      try {
+        chmodSync(dir, 0o755);
+      } catch {
+        /* ignore */
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
+    process.chdir(originalCwd);
+    for (const key of [
+      'HOME',
+      'XDG_CONFIG_HOME',
+      'XDG_CONFIG_DIRS',
+      'XDG_DATA_HOME',
+      'XDG_STATE_HOME',
+      'XDG_CACHE_HOME',
+      'PATH',
+      'USERPROFILE',
+    ]) {
+      const original = originalEnv[key];
+      if (original === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original;
+      }
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 24 — `overture apply` (real-write) writes both the per-run record
+  // and the `last.json` pointer. Hashes present for every agent whose
+  // target file existed pre-write.
+  //
+  // Setup: single OpenCode agent. Seeded content differs from canonical so
+  // the writer plans an update (`would-update`) and Pass 2 runs. `last.json`
+  // must point to the per-run file's basename and the per-run record must
+  // parse back to an `ApplyStateRecord`.
+  // -------------------------------------------------------------------------
+
+  it('Case 24: real-write writes <stateDir>/apply/<runId>.json + last.json pointer with hashes for the agent', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const opencodePath = seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    // Capture the seeded bytes; pre-hash must match.
+    const opencodeBefore = readFileSync(opencodePath);
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+          extra: { type: 'stdio', command: 'extra-cmd' },
+        },
+      }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    const stateDir = defaultStateDir();
+    expect(stateDir).toContain('/apply');
+
+    // Both files exist on disk.
+    const entries = readdirSync(stateDir).sort();
+    const perRunEntries = entries.filter(
+      (e) => e !== 'last.json' && e.endsWith('.json'),
+    );
+    expect(perRunEntries.length).toBe(1);
+    const runFile = perRunEntries[0];
+    expect(runFile).toBeDefined();
+    if (runFile === undefined) throw new Error('expected one per-run file');
+
+    const lastFile = readFileSync(join(stateDir, 'last.json'), 'utf8');
+    const lastParsed = JSON.parse(lastFile) as { runId: string };
+    expect(lastParsed.runId).toBe(runFile.replace(/\.json$/, ''));
+
+    // Per-run record round-trips through `readApplyState`.
+    const recordPath = join(stateDir, runFile);
+    const record = await readApplyState(recordPath);
+    expect(record.schemaVersion).toBe(1);
+    expect(record.mode).toBe('apply');
+    expect(record.profile).toBe('default');
+    expect(record.runId).toBe(runFile.replace(/\.json$/, ''));
+    expect(record.timestamp).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
+
+    expect(record.agents.length).toBeGreaterThanOrEqual(1);
+    // The seeded OpenCode target existed pre-write → preWriteSha256 is
+    // a non-null hex digest, postWriteSha256 is a hex digest of the
+    // post-write bytes (must differ from the pre hash because the
+    // writer actually wrote).
+    const opencodeAgent = record.agents.find((a) => a.agentId === 'opencode');
+    expect(opencodeAgent).toBeDefined();
+    if (opencodeAgent === undefined) throw new Error('expected opencode agent');
+    expect(opencodeAgent.targetPaths.length).toBeGreaterThan(0);
+    expect(opencodeAgent.preWriteSha256).not.toBeNull();
+    expect(opencodeAgent.preWriteSha256?.length).toBe(64);
+    expect(opencodeAgent.postWriteSha256).not.toBeNull();
+    expect(opencodeAgent.postWriteSha256?.length).toBe(64);
+    // The post-hash differs from the pre-hash — the writer actually
+    // wrote new bytes.
+    expect(opencodeAgent.preWriteSha256).not.toBe(
+      opencodeAgent.postWriteSha256,
+    );
+
+    // Pre-hash matches the seeded (pre-write) bytes for the resolved
+    // target path. The agent result's `targetPaths[0].path` is the
+    // absolute path on disk (or relative resolved via `base`).
+    expect(opencodeAgent.preWriteSha256).toBe(
+      createHashSyncSha256(opencodeBefore),
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 25 — `overture apply --dry-run --json` writes NO state file.
+  //
+  // The pre-write path is gated on real-write; `--dry-run` must leave the
+  // state directory empty.
+  // -------------------------------------------------------------------------
+
+  it('Case 25: apply --dry-run --json writes no state file', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stateDir = defaultStateDir();
+    // Pre-condition: state dir is empty / does not exist (beforeEach
+    // allocated a fresh tmpdir as XDG_STATE_HOME).
+    expect(existsDir(stateDir)).toBe(false);
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--dry-run', '--json'], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    // State dir either doesn't exist or is empty.
+    if (existsDir(stateDir)) {
+      expect(readdirSync(stateDir)).toEqual([]);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 26 — state-write failure does NOT change the apply exit code.
+  //
+  // Spy on `writeApplyState` to throw. The apply itself succeeds; the
+  // state-write failure surfaces as a stderr warning line.
+  // -------------------------------------------------------------------------
+
+  it('Case 26: mocked writeApplyState rejection leaves exit code untouched + emits warning', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const writeSpy = vi
+      .spyOn(await import('./apply-state.js'), 'writeApplyState')
+      .mockRejectedValueOnce(new Error('synthetic-state-write-failure'));
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      // Apply succeeded. Exit code is the apply outcome, not the
+      // state-write failure.
+      expect(code).toBeGreaterThanOrEqual(0);
+      expect(code).toBeLessThanOrEqual(1);
+
+      // Warning line on stderr.
+      expect(stderr.text()).toContain('warning');
+      expect(stderr.text()).toContain('failed to write apply state');
+    } finally {
+      writeSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 27 — retention cap of 10 enforced. Pre-seed 11 per-run JSON files
+  // lexically ordered oldest-first, run `apply`, then assert the new
+  // per-run file lands and that pruneApplyState culled the 2 oldest.
+  // -------------------------------------------------------------------------
+
+  it('Case 27: retention keeps the 10 lexically newest per-run files (oldest 2 culled)', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stateDir = defaultStateDir();
+    mkdirSync(stateDir, { recursive: true });
+
+    // 11 pre-existing per-run files spanning two timestamps, lexically
+    // ordered oldest-first. runIds are arbitrary synthetic strings,
+    // but the LEXICAL order must be sortable so the older two are the
+    // clear losers.
+    const ts1 = '20260101-000000000';
+    const ts2 = '20260102-000000000';
+    const seededRunIds = [
+      `${ts1}-00000001`,
+      `${ts1}-00000002`,
+      `${ts1}-00000003`,
+      `${ts1}-00000004`,
+      `${ts1}-00000005`,
+      `${ts1}-00000006`,
+      `${ts2}-00000007`,
+      `${ts2}-00000008`,
+      `${ts2}-00000009`,
+      `${ts2}-0000000a`,
+      `${ts2}-0000000b`,
+    ];
+    for (const id of seededRunIds) {
+      writeFileSync(
+        join(stateDir, `${id}.json`),
+        JSON.stringify({
+          schemaVersion: 1,
+          runId: id,
+          timestamp: '2026-01-01T00:00:00.000Z',
+          mode: 'apply',
+          profile: 'default',
+          configPath: '/tmp/seeded.jsonc',
+          backupBeforeWrite: true,
+          agents: [],
+        }),
+      );
+    }
+    writeFileSync(
+      join(stateDir, 'last.json'),
+      JSON.stringify({ runId: seededRunIds[seededRunIds.length - 1] }),
+    );
+    expect(readdirSync(stateDir)).toHaveLength(12); // 11 + last.json
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    const after = readdirSync(stateDir).sort();
+    // 11 per-run + last.json = 12 total before prune; new run makes 12
+    // per-run + last.json = 13; retention culls 2 oldest → 10 per-run +
+    // last.json = 11. Filter out `last.json`.
+    const afterPerRun = after.filter(
+      (e) => e !== 'last.json' && e.endsWith('.json'),
+    );
+    expect(afterPerRun).toHaveLength(10);
+    expect(after).toContain('last.json');
+
+    // The two lexically oldest runIds are gone.
+    expect(after).not.toContain(`${ts1}-00000001.json`);
+    expect(after).not.toContain(`${ts1}-00000002.json`);
+
+    // The retained 10 are the lexically newest pre-existing runIds, in
+    // order.
+    const expectedKept = seededRunIds
+      .slice()
+      .sort()
+      .slice(-9)
+      .map((id) => `${id}.json`);
+    // The new run (from this test's apply) is the very newest. Pull
+    // it from the actual directory listing.
+    const newRunFile = afterPerRun.find(
+      (f) => !seededRunIds.some((id) => `${id}.json` === f),
+    );
+    expect(newRunFile).toBeDefined();
+    if (newRunFile === undefined) throw new Error('expected a new run file');
+    const expectedRetained = [...expectedKept, newRunFile].sort();
+    expect(afterPerRun).toEqual(expectedRetained);
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 28 — `stateDir` follows `XDG_STATE_HOME`. Set the env override to
+  // a tmpdir; the state file lands at `<XDG_STATE_HOME>/overture/apply/`
+  // (per `defaultOverturePaths().stateDir`).
+  // -------------------------------------------------------------------------
+
+  it('Case 28: stateDir follows XDG_STATE_HOME override (defaultOverturePaths().stateDir)', async () => {
+    // beforeEach already allocated an isolated XDG_STATE_HOME; we're
+    // confirming the apply honors it.
+    const xdgState = process.env.XDG_STATE_HOME;
+    expect(xdgState).toBeDefined();
+    if (xdgState === undefined) throw new Error('XDG_STATE_HOME must be set');
+
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    seedCanonicalConfig(env.xdgConfigHome, buildCanonicalConfigJson());
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBeGreaterThanOrEqual(0);
+    expect(code).toBeLessThanOrEqual(1);
+
+    // State file lives under the XDG override.
+    const expectedDir = join(xdgState, 'overture', 'apply');
+    expect(existsDir(expectedDir)).toBe(true);
+    const entries = readdirSync(expectedDir);
+    const perRunEntries = entries.filter(
+      (e) => e !== 'last.json' && e.endsWith('.json'),
+    );
+    expect(perRunEntries.length).toBe(1);
+
+    // Sanity: the state's stateDir is exactly `${XDG_STATE_HOME}/overture`
+    // when XDG_STATE_HOME is set.
+    expect(defaultStateDir()).toBe(expectedDir);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inline helpers (G1 cases only).
+// ---------------------------------------------------------------------------
+
+/** SHA-256 hex digest using the same algorithm as `apply-state.ts`. */
+function createHashSyncSha256(input: Buffer | string): string {
+  return createHash('sha256').update(input).digest('hex');
+}
+
+// ---------------------------------------------------------------------------
 // Pure-function tests — no env setup, no IO.
 // ---------------------------------------------------------------------------
 
@@ -1896,9 +2295,16 @@ describe('F3 apply conflict refusal integration', () => {
       expect(stderr.text()).toBe('');
       expect(code).toBe(1);
 
-      // Writer called exactly once with dryRun: true — Pass 2 skipped.
-      expect(writeCalls.length).toBe(1);
-      expect(writeCalls[0]?.dryRun).toBe(true);
+      // Writer called twice — once for the G1 pre-discovery snapshot
+      // (dryRun: true) and once for Pass 1 inside applyToAgentReal
+      // (dryRun: true). Pass 2 is still skipped on conflict, so neither
+      // call is dryRun: false. The semantic claim is preserved: no real
+      // write occurred.
+      expect(writeCalls.length).toBe(2);
+      for (const call of writeCalls) {
+        expect(call.dryRun).toBe(true);
+      }
+      expect(writeCalls.some((c) => c.dryRun === false)).toBe(false);
 
       // No backup files created — conflict path skips the backup step.
       const backups = findBackupFiles(
@@ -2011,14 +2417,29 @@ describe('F3 apply conflict refusal integration', () => {
       // At least one refusal → exit 1.
       expect(code).toBe(1);
 
-      // Claude (conflict): exactly one call, dryRun: true, no Pass 2.
-      expect(claudeCalls.length).toBe(1);
-      expect(claudeCalls[0]?.dryRun).toBe(true);
+      // Claude (conflict): Pass 1 from applyToAgentReal + pre-discovery
+      // from runApply's recordApplyStateBestEffort. Pass 2 still
+      // skipped on conflict — no dryRun: false call. Pre-discovery
+      // happens AFTER applyToAgentReal returns, so it lands at the
+      // tail of the call list.
+      expect(claudeCalls.length).toBe(2);
+      for (const call of claudeCalls) {
+        expect(call.dryRun).toBe(true);
+      }
+      expect(claudeCalls.some((c) => c.dryRun === false)).toBe(false);
 
-      // OpenCode (would-update): exactly two calls — Pass 1 + Pass 2.
-      expect(opencodeCalls.length).toBe(2);
-      expect(opencodeCalls[0]?.dryRun).toBe(true);
-      expect(opencodeCalls[1]?.dryRun).toBe(false);
+      // OpenCode (would-update): pre-discovery + Pass 1 + Pass 2.
+      // Pre-discovery runs BEFORE applyToAgentReal so it leads the call
+      // list. Pass 2 (the real write) is dryRun: false. Exactly one
+      // real write occurred.
+      expect(opencodeCalls.length).toBe(3);
+      expect(opencodeCalls[0]?.dryRun).toBe(true); // pre-discovery
+      expect(opencodeCalls[1]?.dryRun).toBe(true); // Pass 1
+      expect(opencodeCalls[2]?.dryRun).toBe(false); // Pass 2 (real write)
+      const opencodeRealWrites = opencodeCalls.filter(
+        (c) => c.dryRun === false,
+      );
+      expect(opencodeRealWrites.length).toBe(1);
 
       // OpenCode backup created (Pass 2 path includes backup step).
       const opencodeBackups = findBackupFiles(
@@ -2106,10 +2527,14 @@ describe('F3 apply conflict refusal integration', () => {
       expect(stderr.text()).toBe('');
       expect(code).toBe(1);
 
-      // Writer called exactly once — Pass 2 still skipped on conflict,
-      // regardless of backupBeforeWrite.
-      expect(writeCalls.length).toBe(1);
-      expect(writeCalls[0]?.dryRun).toBe(true);
+      // Writer called twice: G1 pre-discovery + Pass 1 inside
+      // applyToAgentReal. Pass 2 still skipped on conflict regardless of
+      // backupBeforeWrite, so no call is dryRun: false.
+      expect(writeCalls.length).toBe(2);
+      for (const call of writeCalls) {
+        expect(call.dryRun).toBe(true);
+      }
+      expect(writeCalls.some((c) => c.dryRun === false)).toBe(false);
 
       // No backup files — conflict path precludes backup entirely.
       const backups = findBackupFiles(

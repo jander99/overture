@@ -49,6 +49,14 @@ import { defaultPathResolutionContext } from './platforms/detect.js';
 export type { StringWriter } from './scan-command.js';
 import type { StringWriter } from './scan-command.js';
 
+import {
+  buildApplyStateRecord,
+  defaultApplyStateDir,
+  generateRunId,
+  sha256OfFile,
+  writeApplyState,
+} from './apply-state.js';
+
 // ---------------------------------------------------------------------------
 // Gate-5 — Apply dry-run output types.
 // ---------------------------------------------------------------------------
@@ -1100,6 +1108,11 @@ export async function runApply(
     return validated.exitCode;
   }
 
+  // Capture the resolved paths once so the state-recording branch can
+  // reach `stateDir` (which honors XDG_STATE_HOME). Re-using the same
+  // paths object as the validator keeps a single source of truth.
+  const overturePaths = defaultOverturePaths();
+
   // Use a single `PathResolutionContext` for every writer so the
   // `homeDir` / `configDir` / `workspaceDir` they see is consistent
   // (the E1 preservation harness compares bytes against the seeded
@@ -1132,7 +1145,46 @@ export async function runApply(
     return exitCodeForApplyDryRun(agentResults);
   }
 
-  // ----- F2 — real-write path -------------------------------------------
+  // ----- F2 + G1 — real-write path --------------------------------------
+
+  // G1 pre-discovery loop. Runs BEFORE applyToAgentReal so the recorded
+  // pre-hash reflects the bytes the writer is about to overwrite. Per the
+  // dispatch: pre-discovery happens from `runApply` only; `applyToAgentReal`
+  // keeps its existing Pass 1 logic intact (so each agent's writer is
+  // called twice — once here for pre-discovery, once via Pass 1, then Pass
+  // 2 — under would-update; conflict / no-change agents skip Pass 2).
+  const preDiscoveryByAgentId = new Map<
+    string,
+    {
+      readonly targets: readonly string[];
+      readonly preSnapshots: readonly string[];
+    }
+  >();
+  for (const agentId of validated.profile.sync.targets) {
+    const entry = agentRegistry.find((a) => a.id === agentId);
+    if (entry?.mcp.write === undefined) {
+      preDiscoveryByAgentId.set(agentId, { targets: [], preSnapshots: [] });
+      continue;
+    }
+    const serversForAgent = buildFilteredServers(validated.profile);
+    const dryResult = await entry.mcp.write(ctx, {
+      servers: serversForAgent,
+      dryRun: true,
+      pathContext: ctx,
+    });
+    const targets = dryResult.targetPaths
+      .map((tp) => resolveTargetBase(tp.base, tp.path, ctx))
+      .filter((p) => p.length > 0);
+    const preSnapshots: string[] = [];
+    for (const target of targets) {
+      const h = await sha256OfFile(target);
+      if (h !== null) preSnapshots.push(h);
+      // Null (file absent) is recorded by `pickHash` via absent-entry;
+      // a missing file semantically means "no pre-write hash".
+    }
+    preDiscoveryByAgentId.set(agentId, { targets, preSnapshots });
+  }
+
   const agentResults: ApplyAgentResult[] = [];
   for (const agentId of validated.profile.sync.targets) {
     agentResults.push(
@@ -1152,5 +1204,123 @@ export async function runApply(
   // F2 gate F2-4: real-write emits the human report only. `--json` is
   // reserved for the dry-run envelope (validated above).
   stdout.write(formatHumanApply(result));
+
+  // G1 — record this real-write run to the apply-state file. Best-effort:
+  // a state-write failure MUST NOT change the apply exit code (the apply
+  // already happened — state is bookkeeping).
+  await recordApplyStateBestEffort({
+    ctx,
+    overturePaths,
+    now,
+    backupBeforeWrite,
+    profileName: validated.profileName,
+    profile: validated.profile,
+    configPath: validated.configPath,
+    agentResults,
+    preDiscoveryByAgentId,
+    stderr,
+  });
+
   return exitCodeForApply(agentResults);
+}
+
+// ---------------------------------------------------------------------------
+// G1 — apply-state recording (best-effort).
+//
+// `runApply` calls this AFTER the human report is emitted. The state record
+// is parallel data (does NOT flow through `ApplyResult`), so the dispatch
+// envelope stays narrow. State-write failure is best-effort — a failure here
+// must NOT change the apply exit code (gate G1-4), and the helper swallows
+// its own errors after emitting a stderr warning line.
+//
+// Snapshot strategy (per plan / gate G1-1, G1-2):
+//   1. Pre-discovery — call each agent's `mcp.write` with `dryRun: true` to
+//      resolve the on-disk target paths the writer intends to touch.
+//   2. Pre-hash  — `sha256OfFile` each resolved target path BEFORE the real
+//      write loop. A missing file yields `null` and is omitted from the
+//      per-agent `preSnapshots` array (pickHash collapses empty to null).
+//   3. Run the existing `applyToAgentReal(...)` loop unchanged — Pass 1 +
+//      backup + Pass 2. The real-write path is untouched; this helper just
+//      reads the per-agent results.
+//   4. Post-hash — `sha256OfFile` each target path AFTER the writer ran.
+//      The same pre-discovery target paths are used (writers are
+//      deterministic about target resolution between Pass 1 and Pass 2).
+//   5. Build a per-agent `{ agentResult, preSnapshots, postSnapshots }`
+//      record parallel to `agentResults`, project it through
+//      `buildApplyStateRecord`, and write atomically via `writeApplyState`.
+//
+// `applyToAgentReal` still owns its own Pass 1 call — the pre-discovery call
+// here is a separate dryRun read for path resolution only, gated on the
+// plan's design constraint that the orchestrator does NOT widen the writer
+// signature.
+// ---------------------------------------------------------------------------
+
+interface RecordApplyStateArgs {
+  readonly ctx: PathResolutionContext;
+  readonly overturePaths: OverturePaths;
+  readonly now: Date;
+  readonly backupBeforeWrite: boolean;
+  readonly profileName: string;
+  readonly profile: OvertureProfile;
+  readonly configPath: string;
+  readonly agentResults: readonly ApplyAgentResult[];
+  readonly preDiscoveryByAgentId: ReadonlyMap<
+    string,
+    {
+      readonly targets: readonly string[];
+      readonly preSnapshots: readonly string[];
+    }
+  >;
+  readonly stderr: StringWriter;
+}
+
+async function recordApplyStateBestEffort(
+  args: RecordApplyStateArgs,
+): Promise<void> {
+  // Post-hash loop, parallel to `agentResults`. We re-use the
+  // pre-discovery target list (captured in runApply BEFORE
+  // applyToAgentReal ran) because writers resolve target paths the
+  // same way in Pass 1 and Pass 2 (deterministic pickers); a divergent
+  // post-write target list would be a writer bug, not something the
+  // recorder can heal.
+  const perAgentEntries: {
+    readonly agentResult: ApplyAgentResult;
+    readonly preSnapshots: readonly string[];
+    readonly postSnapshots: readonly string[];
+  }[] = [];
+  for (const agentResult of args.agentResults) {
+    const pre = args.preDiscoveryByAgentId.get(agentResult.agentId);
+    const targets = pre?.targets ?? [];
+    const postSnapshots: string[] = [];
+    for (const target of targets) {
+      const h = await sha256OfFile(target);
+      if (h !== null) postSnapshots.push(h);
+    }
+    perAgentEntries.push({
+      agentResult,
+      preSnapshots: pre?.preSnapshots ?? [],
+      postSnapshots,
+    });
+  }
+
+  try {
+    const runId = generateRunId(args.now);
+    const record = buildApplyStateRecord({
+      runId,
+      now: args.now,
+      mode: 'apply',
+      profileName: args.profileName,
+      profile: args.profile,
+      configPath: args.configPath,
+      backupBeforeWrite: args.backupBeforeWrite,
+      perAgent: perAgentEntries,
+    });
+    await writeApplyState(record, defaultApplyStateDir(args.overturePaths), 10);
+  } catch (err) {
+    // Best-effort: the apply itself already succeeded. Surface a one-line
+    // warning, do NOT propagate, do NOT change the exit code.
+    args.stderr.write(
+      `warning: failed to write apply state: ${messageForError(err)}\n`,
+    );
+  }
 }
