@@ -19,15 +19,9 @@ The codebase already has useful foundations:
 - `@overture/agents` owns the per-agent registry, MCP config locations,
   parser-backed reads, typed config shapes, and server-list parsers.
 
-The product behaviors from the vision are not yet complete:
-
-- **Read** is only partially implemented. The CLI reports current state, but it
-  does not compare current state against canonical intent.
-- **Bootstrap** is not implemented.
-- **Apply** is not implemented.
-- **Undo** is not implemented.
-
-The next work should build the read model first. Do not start with writers.
+The product behaviors from the vision are not yet complete: none. Bootstrap,
+apply, and undo have shipped — see the section `## Track D`, `## Track E`,
+`## Track F`, `## Track G` below.
 
 ## Slicing rules
 
@@ -368,8 +362,10 @@ summary without writing files.
 
 Expected result: users can preview every planned change.
 
-**Status: completed on feat/f1-apply-dry-run (this slice).** Delivered the
-`overture apply --dry-run [--json]` preview command. The orchestrator loads
+**Status: completed on feat/f1-apply-dry-run.** F2 (real writes + backups),
+F3 (refusal of settings drift), G1 (state file), G2 (human logs), and G3
+(restore-last) all shipped afterwards; see their entries below. Delivered
+the `overture apply --dry-run [--json]` preview command. The orchestrator loads
 the canonical `overture.jsonc`, picks the active profile by
 `settings.defaultProfile` (default `'default'`), filters servers against
 `profile.sync.disabledServers`, then iterates `profile.sync.targets` in order
@@ -379,13 +375,10 @@ disabledServers, results) and rendered as either JSON or a per-agent human
 report. Every result is metadata-only — no raw original or written config
 bytes are exposed. Exit code 0 means clean or no-change across all targets;
 exit code 1 means at least one target refused (not-targetable, parse-error,
-unsupported-shape, or unsupported-format); exit code 2 means usage error or
-`apply` without `--dry-run` (which returns "not yet implemented"). F1 is
-read-only by construction: the writers short-circuit on `dryRun: true` and
-every seeded agent config file is byte-identical before vs after the
-preview. F2 (`overture apply` with real writes + backups) and F3 (refuse
-settings conflicts during apply) remain future work; the G-track (state file,
-human logs, restore helper) follows after F3.
+unsupported-shape, unsupported-format, or conflict); exit code 2 means
+usage error. F1 is read-only by construction: the writers short-circuit on
+`dryRun: true` and every seeded agent config file is byte-identical before
+vs after the preview.
 
 ### F2. Add `overture apply` with backups
 

@@ -2,12 +2,26 @@
 
 `overture` is a CLI utility that scans your machine for MCP-capable LLM coding
 platforms and reports the state of each platform's MCP server configuration.
-The currently-shipped commands are `overture detect` (read-only inventory),
-`overture config show` (print the resolved user-level `overture.jsonc`), and
-`overture bootstrap` (one-time setup: writes the canonical `overture.jsonc`
-on success when run without flags). `overture detect`, `overture config
-show`, and `overture bootstrap --dry-run [--json]` never write or modify
-any file.
+The currently-shipped commands are:
+
+- `overture detect` — **read-only** inventory of installed MCP-capable platforms.
+- `overture config show` — **read-only**; print the resolved user-level
+  `overture.jsonc`.
+- `overture scan` — **read-only**; build the installed MCP server matrix and
+  classify conflicts.
+- `overture bootstrap` — **writes** the canonical `overture.jsonc` on
+  success when run without flags. Use `overture bootstrap --dry-run [--json]`
+  for a non-interactive preview.
+- `overture apply` — **writes** canonical MCP intent to per-agent configs
+  (each write is preceded by an adjacent `.bak.<ts>` backup). Use
+  `overture apply --dry-run [--json]` to preview without writing.
+- `overture restore-last` — **writes** (reverts) the most recent apply run
+  by `mv`-ing each `.bak.<ts>` back over its target via the inverse
+  `mv -v` recovery path the apply log advertises.
+
+`overture detect`, `overture config show`, `overture scan`, and the
+`--dry-run [--json]` variants of `bootstrap` and `apply` never write or
+modify any file.
 
 `overture` is published to npm as `@jander99/overture`.
 
@@ -331,8 +345,168 @@ fingerprints.
 
 `bootstrap --dry-run` will not write to or modify any of the files it
 inspects, and it makes no writes anywhere. D3 writes the canonical config on
-success;
-D4/E/F are future work.
+success.
+Apply + restore-last shipped — see below.
+
+## The `apply` command
+
+`overture apply` reads the canonical user-level `overture.jsonc` and writes
+the resolved MCP server set to each target agent's MCP config file. It is
+the inverse of `bootstrap`: `bootstrap` derives canonical intent from the
+agents, `apply` propagates canonical intent back out to the agents.
+
+### Usage
+
+```bash
+# Preview every planned per-agent change without writing any file.
+overture apply --dry-run
+
+# Machine-readable preview. Same shape as the human report — never the
+# real-write shape (see F2 gate F2-4).
+overture apply --dry-run --json
+
+# Real write. For every target whose writer plans an update, the
+# orchestrator snapshots the existing file to <target>.bak.<YYYYMMDD-HHmmssSSS>
+# (with a -<randomHex(4)> collision suffix, 3 retries) and only then
+# performs the real write. Refusal statuses skip both the backup step
+# and the real write.
+overture apply
+
+# Skip the backup step: set `settings.backupBeforeWrite: false` in the
+# canonical config. The CLI honors the setting (default `true`) — there
+# is no `--no-backup` flag. Pass 2 still runs; only the snapshot step is
+# omitted. Refusal statuses are unaffected.
+# (in overture.jsonc)
+# { "settings": { "backupBeforeWrite": false }, ... }
+
+# Print usage and exit 0
+overture apply --help
+```
+
+The orchestrator loads the canonical `overture.jsonc`, picks the active
+profile by `settings.defaultProfile` (default `'default'`), filters
+servers against `profile.sync.disabledServers`, then iterates
+`profile.sync.targets` in order. For each target it runs a two-pass write:
+Pass 1 (`dryRun: true`) discovers target paths and the change decision; if
+Pass 1 plans an update AND `backupBeforeWrite` is `true`, the orchestrator
+snapshots each target via `fs.copyFile`; Pass 2 (`dryRun: false`) performs
+the real write. F3 settings-drift refusals short-circuit before backup
+and Pass 2.
+
+### Dry-run JSON envelope
+
+`overture apply --dry-run --json` emits exactly four top-level keys:
+
+```json
+{
+  "profile": "default",
+  "configPath": "/absolute/path/to/overture.jsonc",
+  "disabledServers": [],
+  "results": [
+    {
+      "agentId": "opencode",
+      "displayName": "OpenCode",
+      "status": "would-update",
+      "result": {
+        "targetPaths": [{ "base": "/abs/path", "path": "/abs/path" }],
+        "resolvedPath": "/abs/path",
+        "changed": true,
+        "bytesChanged": 123,
+        "serversWritten": ["filesystem"]
+      }
+    }
+  ]
+}
+```
+
+See `ApplyDryRunResult` / `ApplyDryRunAgentResult` in
+`apps/cli/src/apply-command.ts` for the full schema. The F1 plan locks the
+envelope shape and the F2 gate F2-4 keeps `--json` reserved for the
+dry-run path only.
+
+### Exit codes
+
+| Exit code | Meaning                                                                                                                                                                                                                                                                                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0`       | Orchestration completed; every per-agent result is clean (`would-update`, `updated`, `no-change`).                                                                                                                                                                                                     |
+| `1`       | Orchestration completed but at least one per-agent result is a refusal (`not-targetable`, `parse-error`, `unsupported-shape`, `unsupported-format`, `conflict`, `backup-failed`), OR the canonical config is absent. The JSON / human envelope is still emitted so callers can read the failure model. |
+| `2`       | Usage errors (unknown flags, `--json` without `--dry-run`), unknown profile name, missing canonical config / invalid profile, or any orchestration failure that prevents the model from being built.                                                                                                   |
+
+`apply --dry-run [--json]` will not write to or modify any of the files it
+inspects, and it makes no writes anywhere. The real-write path is paired
+with `overture restore-last` — see below — which is the inverse recovery
+path.
+
+## The `restore-last` command
+
+`overture restore-last` is the inverse of `apply`: it restores each target
+file the most recent apply run touched by `mv`-ing the adjacent
+`.bak.<ts>` backup back over its target. It is a convenience on top of the
+`mv -v` recovery snippet the apply log advertises — copying the snippet
+out of the log and running `overture restore-last` produce the same
+`-v` line from the same `mv` invocation.
+
+### Usage
+
+```bash
+# Dry-run: print the restore plan without moving any file.
+overture restore-last --dry-run
+
+# Real restore: require `--yes` to skip the interactive confirm prompt
+# (or run interactively on a TTY).
+overture restore-last --yes
+
+# Force a restore even when the current target bytes do not match the
+# G1-recorded pre-write sha256 (user has edited the target since apply).
+overture restore-last --yes --force
+
+# Restore a specific apply run by id instead of the last.json pointer.
+overture restore-last --run-id 20260704-120304123-abcdef12 --yes
+
+# Print usage and exit 0
+overture restore-last --help
+```
+
+`restore-last` reads `<stateDir>/apply/last.json` (the G1 pointer file) to
+resolve the run id, then loads `<runId>.json` (the G1 state record —
+preferred, carries `preWriteSha256`) or `<runId>.log` (the G2 human
+log — fallback, parsed via the `backup:` / `target:` tag lines; no
+sha256). `stateDir` resolves via `defaultOverturePaths()` —
+`$XDG_STATE_HOME/overture` when set, else `~/.local/state/overture`.
+
+### Integrity check
+
+For every `(backup, target)` pair the orchestrator computes the current
+target's sha256 and compares it to the G1 record's `preWriteSha256`. The
+result is one of four `integrityStatus` values:
+
+| Status           | Meaning                                                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ok`             | Current bytes match `preWriteSha256` OR the target is absent on disk (the restore is a creation, not a clobber).                                                                            |
+| `mismatch`       | Bytes diverge (or `preWriteSha256` is `null`). Refused without `--force`; proceeded with a `WARN: target ... was edited since apply; restore forced.` line on stderr when `--force` is set. |
+| `missing-backup` | The `.bak.<ts>` slot is empty or the backup file is gone. Refused.                                                                                                                          |
+| `unverified`     | Source was the G2 log tag lines (no reference sha256 available). Proceeded (no integrity gate to violate).                                                                                  |
+
+### Execution
+
+`restore-last` spawns `child_process.spawn('mv', ['-v', backup, target])`
+per pair — never `fs.rename` — so the `-v` line users see matches the
+`mv -v` line in the apply log verbatim. Pairs execute sequentially; the
+first `mv` exit ≠ 0 aborts the batch and the partial outcome is rendered.
+Atomic whole-run semantics: either every pair restores, or none does.
+
+### Exit codes
+
+| Exit code | Meaning                                                                                                                                                                                           |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`       | Clean dry-run OR a fully successful restore (every pair `ok`/`unverified` restored via `mv -v`).                                                                                                  |
+| `1`       | Refused restore (no history in `stateDir`, pruned runId, blocked `mismatch` without `--force`, `N` at the interactive prompt, mid-batch `mv` failure). Partial outcome is rendered when relevant. |
+| `2`       | Usage errors (missing value for `--run-id`, unknown flag, non-TTY interactive confirm without `--yes`).                                                                                           |
+
+`restore-last` is the inverse recovery path; the on-disk recovery
+advertised in the apply log is just `mv -v` per pair. Backups persist
+after a successful restore — the next `overture apply` will prune them
+via G1's lockstep `pruneApplyArtifacts`.
 
 ## Repository layout
 
@@ -342,8 +516,9 @@ overture/
 │   └── cli/              # The `@jander99/overture` CLI (entry point: src/main.ts)
 ├── packages/
 │   ├── os/               # `@overture/os`: cross-platform OS detection
-│   ├── agents/           # `@overture/agents`: per-agent MCP registry and parsers
-│   └── config/           # `@overture/config`: user-level config loading and schema
+│   ├── agents/           # `@overture/agents`: per-agent MCP registry, parsers, writers
+│   ├── config/           # `@overture/config`: user-level config loading and schema
+│   └── scan-matrix/      # `@overture/scan-matrix`: pure scan matrix model + conflict classification
 ├── docs/
 │   ├── coding-platform-mcp-configurations.md
 │   ├── overture-config.md

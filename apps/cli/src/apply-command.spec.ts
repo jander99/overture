@@ -1493,24 +1493,258 @@ describe('runApply (F2 real-write contract)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Case 23 — Claude Code two-target backup.
-  //
-  // TODO: skipped — see `.omo/drafts/f2-apply-with-backups.md` Case 23.
+  // Case 23 — multi-target backup orchestrator (Claude Code spy).
   //
   // The Claude Code writer (`packages/agents/src/claude-code-write.ts`)
-  // calls `pickClaudeCodeTarget`, which returns at most ONE target
-  // (project `.mcp.json` wins if present; otherwise user-top or
-  // user-projects under `~/.claude.json`). It never writes to both
-  // `~/.claude.json` AND `<workspaceDir>/.mcp.json` in a single call,
-  // so a "two backups per agent" assertion cannot be made against the
-  // current writer surface. The end-to-end real-write guarantee is
-  // exercised instead by `node apps/cli/scripts/verify-package.mjs`,
-  // which performs a real `overture apply` against a tmpdir.
+  // calls `pickClaudeCodeTarget` which resolves to at most ONE target per
+  // call (project `.mcp.json` wins if present; otherwise user-top or
+  // user-projects under `~/.claude.json`). Multi-target writes are NOT a
+  // shipped feature — `AgentMcpWriteResult.targetPaths` is a 1-element
+  // array for the production writer.
   //
-  // (Adding the multi-target support is intentionally out of scope for
-  // F2; it would require widening `AgentMcpWriteResult.targetPaths[]`
-  // semantics beyond the writer's "first matching location" contract.)
+  // Case 23 exercises the orchestrator's multi-target backup branch
+  // (`collectBackupTargets` iterates over `result.targetPaths` and creates
+  // one `.bak.<ts>` file per resolved target) by spying on the Claude
+  // Code writer's `mcp.write` slot. The spy returns TWO target paths and
+  // writes canonical content to both files so the real-write path runs
+  // end-to-end. This locks the F2 backup contract for any future writer
+  // that chooses to emit multiple `targetPaths` (the orchestrator
+  // surface already supports it; the per-writer "first matching
+  // location" pickers just don't exercise it today).
+  //
+  // Assertions mirror Cases 17-22's fixture/assertion shape: real write,
+  // real backup files, real sha256 capture via `readApplyState`.
   // -------------------------------------------------------------------------
+
+  it('F2: writer returning two targetPaths yields two backups, paired targetPaths[i]↔backupPaths[i], and sha256 captures match', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    // Seed BOTH a user-scope `~/.claude.json` AND a project-scope
+    // `<workspaceDir>/.mcp.json` with content that diverges from
+    // canonical intent. The backup step needs the files to exist
+    // pre-write; the spy will overwrite them with canonical content.
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const projectPath = join(env.workspace, '.mcp.json');
+    writeFileSync(
+      projectPath,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        targets: ['claude-code'],
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+        },
+      }),
+    );
+
+    // Pre-write bytes — the spy must restore both files from these
+    // shapes so the byte-level backup assertions hold.
+    const claudeBeforeBytes = readFileSync(claudePath);
+    const projectBeforeBytes = readFileSync(projectPath);
+    const claudeBeforeHash = createHash('sha256')
+      .update(claudeBeforeBytes)
+      .digest('hex');
+    const projectBeforeHash = createHash('sha256')
+      .update(projectBeforeBytes)
+      .digest('hex');
+
+    const target: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'claude-code',
+    );
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+    if (target.mcp.write === undefined) {
+      throw new Error('claude-code writer missing');
+    }
+
+    // Spy returns TWO target paths on every call (pre-discovery, Pass 1,
+    // Pass 2). The real-write branch writes canonical content to both
+    // files so the orchestrator's Pass 2 sees a `changed: true` result
+    // and the backup step has both pre-write bytes to copy.
+    const writeSpy = vi
+      .spyOn(target.mcp, 'write')
+      .mockImplementation(
+        (
+          _ctx: Parameters<typeof target.mcp.write>[0],
+          input: Parameters<typeof target.mcp.write>[1],
+        ): Promise<AgentMcpWriteResult> => {
+          const targetPaths: readonly {
+            readonly scope: 'user' | 'project';
+            readonly base: 'home' | 'workspace';
+            readonly path: string;
+          }[] = [
+            { scope: 'user', base: 'home', path: claudePath },
+            { scope: 'project', base: 'workspace', path: projectPath },
+          ];
+          if (input.dryRun === true) {
+            // Claude Code's writer convention: `changed` stays false
+            // and the planned update is signalled via
+            // `serversWritten` / `bytesChanged`. Both must be populated
+            // so `statusFromWriterResult` classifies the result as
+            // `would-update` and the orchestrator proceeds to the
+            // backup step + Pass 2.
+            return Promise.resolve({
+              written: 0,
+              changed: false,
+              dryRun: true,
+              serversWritten: input.servers.map((s) => s.name),
+              bytesChanged: input.servers.length * 32,
+              targetPaths,
+            });
+          }
+          // Real-write: stamp canonical content into both files.
+          const canonical = JSON.stringify(
+            {
+              mcpServers: {
+                filesystem: { type: 'stdio', command: 'node' },
+              },
+            },
+            null,
+            2,
+          );
+          writeFileSync(claudePath, canonical);
+          writeFileSync(projectPath, canonical);
+          return Promise.resolve({
+            written: input.servers.length,
+            changed: true,
+            dryRun: false,
+            serversWritten: input.servers.map((s) => s.name),
+            targetPaths,
+          });
+        },
+      );
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      // All three writes were `would-update` → no refusal → exit 0.
+      expect(stderr.text()).toBe('');
+      expect(code).toBe(0);
+
+      // BOTH backup files exist on disk, one per target.
+      const claudeBackups = findBackupFiles(
+        dirname(claudePath),
+        basename(claudePath),
+      );
+      const projectBackups = findBackupFiles(
+        dirname(projectPath),
+        basename(projectPath),
+      );
+      expect(claudeBackups.length).toBe(1);
+      expect(projectBackups.length).toBe(1);
+
+      // Backup bytes match the seeded pre-write bytes byte-for-byte.
+      expect(readFileSync(claudeBackups[0])).toEqual(claudeBeforeBytes);
+      expect(readFileSync(projectBackups[0])).toEqual(projectBeforeBytes);
+
+      // Both target files were updated to canonical content.
+      const claudeAfter = readFileSync(claudePath, 'utf8');
+      const projectAfter = readFileSync(projectPath, 'utf8');
+      expect(claudeAfter).toContain('"node"');
+      expect(claudeAfter).not.toContain('"old"');
+      expect(projectAfter).toContain('"node"');
+      expect(projectAfter).not.toContain('"old"');
+
+      // Apply state record carries the multi-target invariants:
+      //   - targetPaths.length === backupPaths.length (paired 1:1)
+      //   - preWriteSha256 / postWriteSha256 are non-null single hashes
+      //     (the on-disk schema stores one hash per agent; `pickHash`
+      //     reduces the snapshot array to its first entry, by design —
+      //     see `apps/cli/src/apply-state.ts:421`).
+      //   - The recorded preWriteSha256 matches the seeded pre-write
+      //     hash of the FIRST target in writer-emitted order, so a
+      //     consumer can verify the snapshot array was indexed against
+      //     `targetPaths[0]` (which is also `backupPaths[0]`).
+      const paths = defaultOverturePaths({}, process.env);
+      const stateDir = join(paths.stateDir, 'apply');
+      const lastParsed = JSON.parse(
+        readFileSync(join(stateDir, 'last.json'), 'utf8'),
+      ) as { runId: string };
+      const record = await readApplyState(
+        join(stateDir, `${lastParsed.runId}.json`),
+      );
+
+      const claudeAgent = record.agents.find(
+        (a) => a.agentId === 'claude-code',
+      );
+      expect(claudeAgent).toBeDefined();
+      if (claudeAgent === undefined) {
+        throw new Error('expected claude-code agent in state record');
+      }
+
+      // Two target paths recorded (one per scope).
+      expect(claudeAgent.targetPaths.length).toBe(2);
+      // Two backup paths recorded (one per target).
+      expect(claudeAgent.backupPaths.length).toBe(2);
+      // The F2 invariant: backupPaths[i] aligned with targetPaths[i].
+      expect(claudeAgent.backupPaths.length).toBe(
+        claudeAgent.targetPaths.length,
+      );
+
+      // The backup at index i is the on-disk artifact for targetPaths[i].
+      for (let i = 0; i < claudeAgent.targetPaths.length; i++) {
+        const expectedBackup = `${claudeAgent.targetPaths[i]}.bak.`;
+        expect(claudeAgent.backupPaths[i].startsWith(expectedBackup)).toBe(
+          true,
+        );
+      }
+
+      // preWriteSha256 / postWriteSha256 are single hex digests per
+      // the on-disk schema. Non-null because both target files existed
+      // pre-write. The recorded hash matches the seeded pre-write hash
+      // of the FIRST target (`backupPaths[0]`); pickHash records the
+      // first snapshot and `targetPaths[0]` is the spy-emitted first
+      // entry (user `~/.claude.json`).
+      expect(claudeAgent.preWriteSha256).not.toBeNull();
+      expect(claudeAgent.preWriteSha256?.length).toBe(64);
+      expect(claudeAgent.postWriteSha256).not.toBeNull();
+      expect(claudeAgent.postWriteSha256?.length).toBe(64);
+      expect(claudeAgent.preWriteSha256).toBe(claudeBeforeHash);
+      expect(claudeAgent.postWriteSha256).not.toBe(claudeBeforeHash);
+
+      // The pre-write hash recorded for index 0 must match the bytes of
+      // backupPaths[0] — the backup is a copy of pre-write target bytes.
+      const backup0Hash = createHash('sha256')
+        .update(readFileSync(claudeAgent.backupPaths[0]))
+        .digest('hex');
+      expect(backup0Hash).toBe(claudeAgent.preWriteSha256);
+      // Pre-write hash of index 1 is captured in the SHA-256 of
+      // backupPaths[1] (the on-disk contract for backup-then-write).
+      const backup1Hash = createHash('sha256')
+        .update(readFileSync(claudeAgent.backupPaths[1]))
+        .digest('hex');
+      expect(backup1Hash).toBe(projectBeforeHash);
+    } finally {
+      writeSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

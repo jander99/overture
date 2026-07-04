@@ -1,6 +1,6 @@
 {
   "name": "@jander99/overture",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Keep your MCP server configurations in sync across every installed LLM coding platform.",
   "license": "MIT",
   "bin": "./dist/main.js",
