@@ -95,13 +95,17 @@ import type {
 
 import {
   APPLY_USAGE,
+  exitCodeForApply,
   exitCodeForApplyDryRun,
   formatBackupTimestamp,
+  formatHumanApply,
   formatHumanApplyDryRun,
   runApply,
+  type ApplyAgentResult,
   type ApplyDryRunAgentResult,
   type ApplyDryRunResult,
   type ApplyDryRunStatus,
+  type ApplyResult,
   type ApplyStatus,
   type RunApplyOptions,
 } from './apply-command.js';
@@ -1781,6 +1785,663 @@ describe('F3 conflict status type contract', () => {
     // is a JSON scalar or a readonly string array (no functions, no
     // class instances, no Map/Set).
     expect(JSON.parse(JSON.stringify(sample))).toEqual(sample);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F3 — `overture apply` conflict refusal integration (Task 4).
+//
+// Locks the orchestrator short-circuit, the human-output `Conflicts:`
+// block (both `--dry-run` and real-write), the `--json` envelope
+// pass-through of `result.conflicts`, and the `reasonDetail` policy.
+// All tests use the production per-agent writers so the conflict path
+// is exercised end-to-end (B2 normalization + B3 detector → CLI refusal).
+// ---------------------------------------------------------------------------
+
+describe('F3 apply conflict refusal integration', () => {
+  let cleanupDirs: readonly string[] = [];
+  let originalEnv: NodeJS.ProcessEnv;
+  let originalCwd: string;
+
+  beforeEach(() => {
+    cleanupDirs = [];
+    originalEnv = { ...process.env };
+    originalCwd = process.cwd();
+  });
+
+  afterEach(() => {
+    for (const dir of cleanupDirs) {
+      try {
+        chmodSync(dir, 0o755);
+      } catch {
+        /* ignore */
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
+    process.chdir(originalCwd);
+    for (const key of [
+      'HOME',
+      'XDG_CONFIG_HOME',
+      'XDG_CONFIG_DIRS',
+      'XDG_DATA_HOME',
+      'XDG_STATE_HOME',
+      'XDG_CACHE_HOME',
+      'PATH',
+      'USERPROFILE',
+    ]) {
+      const original = originalEnv[key];
+      if (original === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original;
+      }
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 1 — single-agent refused (real-write).
+  //
+  // Seeds Claude with divergent canonical settings. The writer's
+  // Pass 1 dryRun must return `conflict`. The orchestrator must:
+  //   - exit 1,
+  //   - skip Pass 2 (writer called exactly once with `dryRun: true`),
+  //   - skip backup creation (no `.bak.*` in the target directory),
+  //   - leave the target byte-identical.
+  // -------------------------------------------------------------------------
+
+  it('refuses a single agent on conflict: no Pass 2, no backup, exit 1', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({ targets: ['claude-code'] }),
+    );
+
+    const claudeTarget: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'claude-code',
+    );
+    expect(claudeTarget).toBeDefined();
+    if (claudeTarget === undefined) return;
+    const originalWrite = claudeTarget.mcp.write;
+    if (originalWrite === undefined) return;
+
+    const writeCalls: { dryRun: boolean }[] = [];
+    const writeSpy = vi
+      .spyOn(claudeTarget.mcp, 'write')
+      .mockImplementation(async (ctx, input) => {
+        writeCalls.push({ dryRun: input.dryRun === true });
+        return originalWrite(ctx, input);
+      });
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      expect(stderr.text()).toBe('');
+      expect(code).toBe(1);
+
+      // Writer called exactly once with dryRun: true — Pass 2 skipped.
+      expect(writeCalls.length).toBe(1);
+      expect(writeCalls[0]?.dryRun).toBe(true);
+
+      // No backup files created — conflict path skips the backup step.
+      const backups = findBackupFiles(
+        dirname(claudePath),
+        basename(claudePath),
+      );
+      expect(backups.length).toBe(0);
+
+      // Target byte-identical — no real write occurred.
+      // Capture target after the run; assert no change.
+      // (The seed content is `{ type: 'stdio', command: 'old' }`; the
+      // canonical intent is `command: 'node'`. The writer never
+      // overwrote it.)
+      const claudeAfter = readFileSync(claudePath);
+      expect(claudeAfter.toString()).toContain('"command": "old"');
+      expect(claudeAfter.toString()).not.toContain('"command": "node"');
+    } finally {
+      writeSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 2 — mixed run: one agent refused, another would-update.
+  //
+  // Seeds Claude with divergent settings (conflict) AND OpenCode with
+  // matching settings (would-update → real write). The orchestrator must:
+  //   - exit 1 (refusal wins over would-update),
+  //   - call Claude's writer exactly once (Pass 1 only — conflict skip),
+  //   - call OpenCode's writer twice (Pass 1 dryRun + Pass 2 real),
+  //   - create a backup for OpenCode (Pass 2 path),
+  //   - leave Claude byte-identical, OpenCode written.
+  // -------------------------------------------------------------------------
+
+  it('mixed run: conflict agent skipped, successful agent real-writes; overall exit 1', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    // Claude seeded with divergent settings (canonical: 'node', target: 'old').
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const claudeBefore = readFileSync(claudePath);
+    // OpenCode seeded with matching settings for `filesystem`. The
+    // canonical config adds a second server (`extra`) that does NOT
+    // exist in the OpenCode target — this is the only way to drive
+    // `planned.changed = true` for a writer that byte-preserves an
+    // existing equal entry: the planner still has to insert the new
+    // server name, so planned.changed is true and Pass 2 runs.
+    const opencodePath = seedOpencodeUserConfig(
+      env.xdgConfigHome,
+      opencodeConfigJsonc('filesystem'),
+    );
+    const opencodeBefore = readFileSync(opencodePath);
+
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        mcpServers: {
+          filesystem: { type: 'stdio', command: 'node' },
+          extra: { type: 'stdio', command: 'extra-cmd' },
+        },
+      }),
+    );
+
+    const claudeTarget: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'claude-code',
+    );
+    const opencodeTarget: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'opencode',
+    );
+    expect(claudeTarget).toBeDefined();
+    expect(opencodeTarget).toBeDefined();
+    if (claudeTarget === undefined || opencodeTarget === undefined) return;
+    const claudeOriginal = claudeTarget.mcp.write;
+    const opencodeOriginal = opencodeTarget.mcp.write;
+    if (claudeOriginal === undefined || opencodeOriginal === undefined) return;
+
+    const claudeCalls: { dryRun: boolean }[] = [];
+    const opencodeCalls: { dryRun: boolean }[] = [];
+    const claudeSpy = vi
+      .spyOn(claudeTarget.mcp, 'write')
+      .mockImplementation(async (ctx, input) => {
+        claudeCalls.push({ dryRun: input.dryRun === true });
+        return claudeOriginal(ctx, input);
+      });
+    const opencodeSpy = vi
+      .spyOn(opencodeTarget.mcp, 'write')
+      .mockImplementation(async (ctx, input) => {
+        opencodeCalls.push({ dryRun: input.dryRun === true });
+        return opencodeOriginal(ctx, input);
+      });
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      expect(stderr.text()).toBe('');
+      // At least one refusal → exit 1.
+      expect(code).toBe(1);
+
+      // Claude (conflict): exactly one call, dryRun: true, no Pass 2.
+      expect(claudeCalls.length).toBe(1);
+      expect(claudeCalls[0]?.dryRun).toBe(true);
+
+      // OpenCode (would-update): exactly two calls — Pass 1 + Pass 2.
+      expect(opencodeCalls.length).toBe(2);
+      expect(opencodeCalls[0]?.dryRun).toBe(true);
+      expect(opencodeCalls[1]?.dryRun).toBe(false);
+
+      // OpenCode backup created (Pass 2 path includes backup step).
+      const opencodeBackups = findBackupFiles(
+        dirname(opencodePath),
+        basename(opencodePath),
+      );
+      expect(opencodeBackups.length).toBeGreaterThan(0);
+
+      // Claude: no backup, byte-identical.
+      const claudeBackups = findBackupFiles(
+        dirname(claudePath),
+        basename(claudePath),
+      );
+      expect(claudeBackups.length).toBe(0);
+      expect(readFileSync(claudePath)).toEqual(claudeBefore);
+
+      // OpenCode: written (bytes changed from the seeded form).
+      // The exact byte content is owned by the opencode writer's
+      // preservation tests; here we assert only that the file changed.
+      const opencodeAfter = readFileSync(opencodePath);
+      expect(opencodeAfter.equals(opencodeBefore)).toBe(false);
+    } finally {
+      claudeSpy.mockRestore();
+      opencodeSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 3 — `backupBeforeWrite: false` does not weaken conflict
+  // refusal.
+  //
+  // The setting only governs whether a backup is created when a write
+  // happens; the conflict path precludes both backup and write. With
+  // `backupBeforeWrite: false` the orchestrator still exits 1, never
+  // calls Pass 2, never creates a backup, never touches the target.
+  // -------------------------------------------------------------------------
+
+  it('backupBeforeWrite: false still refuses on conflict: no backup, no Pass 2, exit 1', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    const claudePath = seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        targets: ['claude-code'],
+        backupBeforeWrite: false,
+      }),
+    );
+
+    const claudeTarget: AgentDefinition | undefined = agentRegistry.find(
+      (a) => a.id === 'claude-code',
+    );
+    expect(claudeTarget).toBeDefined();
+    if (claudeTarget === undefined) return;
+    const originalWrite = claudeTarget.mcp.write;
+    if (originalWrite === undefined) return;
+
+    const writeCalls: { dryRun: boolean }[] = [];
+    const writeSpy = vi
+      .spyOn(claudeTarget.mcp, 'write')
+      .mockImplementation(async (ctx, input) => {
+        writeCalls.push({ dryRun: input.dryRun === true });
+        return originalWrite(ctx, input);
+      });
+
+    try {
+      const stdout = new BufferWriter();
+      const stderr = new BufferWriter();
+      const code = await runApply([], stdout, stderr);
+
+      expect(stderr.text()).toBe('');
+      expect(code).toBe(1);
+
+      // Writer called exactly once — Pass 2 still skipped on conflict,
+      // regardless of backupBeforeWrite.
+      expect(writeCalls.length).toBe(1);
+      expect(writeCalls[0]?.dryRun).toBe(true);
+
+      // No backup files — conflict path precludes backup entirely.
+      const backups = findBackupFiles(
+        dirname(claudePath),
+        basename(claudePath),
+      );
+      expect(backups.length).toBe(0);
+
+      // Target byte-identical.
+      const claudeAfter = readFileSync(claudePath);
+      expect(claudeAfter.toString()).toContain('"command": "old"');
+      expect(claudeAfter.toString()).not.toContain('"command": "node"');
+    } finally {
+      writeSpy.mockRestore();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 4 — `formatHumanApply` real-write output includes the
+  // structured `Conflicts:` block listing each conflicted server name.
+  // The block replaces the generic `reason:` line for the conflict
+  // refusal — server name appears verbatim so operators can identify
+  // the drift without parsing JSON.
+  // -------------------------------------------------------------------------
+
+  it('formatHumanApply includes a Conflicts: block listing each conflicted server name (real-write)', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({ targets: ['claude-code'] }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply([], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(1);
+
+    const out = stdout.text();
+    expect(out).toContain('Conflicts:');
+    expect(out).toContain('filesystem');
+    // B3-aligned wording carries the "Refusing to continue" phrase so
+    // operators see the canonical vocabulary without grepping for it.
+    expect(out).toContain('Refusing to continue');
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 5 — `formatHumanApplyDryRun` output includes the
+  // structured `Conflicts:` block plus the refusal-summary line. The
+  // summary count already includes conflict in `refusal(s)` after
+  // fix-3; this test pins the rendered shape.
+  // -------------------------------------------------------------------------
+
+  it('formatHumanApplyDryRun renders Conflicts: block + refusal-summary line', () => {
+    const envelope: ApplyDryRunResult = {
+      profile: 'default',
+      configPath: '/tmp/example/overture.jsonc',
+      disabledServers: [],
+      results: [
+        {
+          agentId: 'claude-code',
+          displayName: 'Claude Code',
+          status: 'conflict',
+          result: {
+            written: 0,
+            changed: false,
+            dryRun: true,
+            serversWritten: [],
+            targetPaths: [
+              {
+                scope: 'user',
+                base: 'home',
+                path: '/tmp/example/.claude.json',
+              },
+            ],
+            resolvedPath: '/tmp/example/.claude.json',
+            conflicts: [
+              {
+                serverName: 'filesystem',
+                message:
+                  'Refusing to continue for server "filesystem": ' +
+                  'canonical and agent settings differ. ' +
+                  'Update the canonical config or the agent config and retry.',
+                diffKeys: ['command'],
+              },
+            ],
+          },
+        },
+        {
+          agentId: 'opencode',
+          displayName: 'OpenCode',
+          status: 'no-change',
+          result: {
+            written: 0,
+            changed: false,
+            dryRun: true,
+            serversWritten: [],
+            targetPaths: [
+              {
+                scope: 'user',
+                base: 'config',
+                path: '/tmp/example/.config/opencode/opencode.jsonc',
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const text = formatHumanApplyDryRun(envelope);
+    expect(text).toContain('Conflicts:');
+    expect(text).toContain('filesystem');
+    expect(text).toContain('Refusing to continue');
+    // Refusal summary line — 'conflict' is part of the refusal count.
+    expect(text).toMatch(/Summary:.*\d+ refusal\(s\)/);
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 6 — `--json` dry-run envelope carries the `conflicts`
+  // field per agent result. Real-write JSON is intentionally NOT
+  // emitted (F2 gate F2-4) so we only assert the dry-run envelope.
+  // -------------------------------------------------------------------------
+
+  it('--json dry-run envelope carries result.conflicts per agent', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({ targets: ['claude-code'] }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--dry-run', '--json'], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(1);
+
+    const envelope = JSON.parse(stdout.text()) as ApplyDryRunResult;
+    expect(envelope.results.length).toBe(1);
+    const claudeResult = envelope.results[0];
+    expect(claudeResult).toBeDefined();
+    expect(claudeResult?.status).toBe('conflict');
+    expect(claudeResult?.result?.conflicts).toBeDefined();
+    expect(claudeResult?.result?.conflicts?.length).toBe(1);
+    expect(claudeResult?.result?.conflicts?.[0]?.serverName).toBe('filesystem');
+    expect(claudeResult?.result?.conflicts?.[0]?.message).toContain(
+      'Refusing to continue',
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Integration 7 — `reasonDetail` policy: stays empty for writer-driven
+  // conflict refusals, populated only for synthesized refusals.
+  // -------------------------------------------------------------------------
+
+  it('reasonDetail is empty for conflict refusal but populated for synthesized not-targetable', async () => {
+    const env = createApplyTempEnv();
+    cleanupDirs = env.cleanup;
+    applyEnv(env);
+    seedAllFakeBins(env.pathDir);
+
+    // Conflict path: divergent Claude settings. The writer drives the
+    // refusal; reasonDetail must stay empty.
+    seedClaudeUserConfig(
+      env.home,
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: { type: 'stdio', command: 'old' },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    seedCanonicalConfig(
+      env.xdgConfigHome,
+      buildCanonicalConfigJson({
+        // Mixed run: one conflict, one synthesized not-targetable. The
+        // synthesized branch proves reasonDetail still gets populated
+        // when the orchestrator — not the writer — owns the refusal.
+        targets: ['claude-code', 'ghost-agent'],
+      }),
+    );
+
+    const stdout = new BufferWriter();
+    const stderr = new BufferWriter();
+    const code = await runApply(['--dry-run', '--json'], stdout, stderr);
+
+    expect(stderr.text()).toBe('');
+    expect(code).toBe(1);
+
+    const envelope = JSON.parse(stdout.text()) as ApplyDryRunResult;
+    const claudeResult = envelope.results.find(
+      (r: ApplyDryRunAgentResult) => r.agentId === 'claude-code',
+    );
+    expect(claudeResult).toBeDefined();
+    expect(claudeResult?.status).toBe('conflict');
+    // Conflict refusal: reasonDetail stays empty — the structured
+    // `result.conflicts` channel is the canonical home for drift detail.
+    expect(claudeResult?.reasonDetail).toBeUndefined();
+
+    const ghostResult = envelope.results.find(
+      (r: ApplyDryRunAgentResult) => r.agentId === 'ghost-agent',
+    );
+    expect(ghostResult).toBeDefined();
+    expect(ghostResult?.status).toBe('not-targetable');
+    // Synthesized refusal: reasonDetail populated with the orchestrator-
+    // owned explanation. The reason field on the writer envelope also
+    // carries it; reasonDetail is the CLI-local channel for
+    // synthesized refusals.
+    expect(ghostResult?.reasonDetail).toContain('unknown agent id');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F3 — pure-function contract locks for the human-formatter `Conflicts:`
+// block and the exit-code helpers.
+// ---------------------------------------------------------------------------
+
+describe('F3 pure-function contract: Conflicts block + exit codes', () => {
+  const sampleConflict: ServerConflict = {
+    serverName: 'remote-tools',
+    message:
+      'Refusing to continue for server "remote-tools": ' +
+      'canonical and agent settings differ. ' +
+      'Update the canonical config or the agent config and retry.',
+    diffKeys: ['url', 'headers'],
+  };
+
+  it('exitCodeForApplyDryRun returns 1 when any dry-run result is conflict', () => {
+    const result: ApplyDryRunAgentResult = {
+      agentId: 'claude-code',
+      displayName: 'Claude Code',
+      status: 'conflict',
+      result: {
+        written: 0,
+        changed: false,
+        dryRun: true,
+        serversWritten: [],
+        targetPaths: [],
+        conflicts: [sampleConflict],
+      },
+    };
+    expect(exitCodeForApplyDryRun([result])).toBe(1);
+  });
+
+  it('exitCodeForApply returns 1 when any real-write result is conflict', () => {
+    const result: ApplyAgentResult = {
+      agentId: 'claude-code',
+      displayName: 'Claude Code',
+      status: 'conflict',
+      result: {
+        written: 0,
+        changed: false,
+        dryRun: true,
+        serversWritten: [],
+        targetPaths: [],
+        conflicts: [sampleConflict],
+      },
+      backupPaths: [],
+    };
+    expect(exitCodeForApply([result])).toBe(1);
+  });
+
+  it('formatHumanApply renders the Conflicts: block in the real-write envelope', () => {
+    const envelope: ApplyResult = {
+      profile: 'default',
+      configPath: '/tmp/example/overture.jsonc',
+      disabledServers: [],
+      backupBeforeWrite: true,
+      results: [
+        {
+          agentId: 'claude-code',
+          displayName: 'Claude Code',
+          status: 'conflict',
+          result: {
+            written: 0,
+            changed: false,
+            dryRun: true,
+            serversWritten: [],
+            targetPaths: [
+              {
+                scope: 'user',
+                base: 'home',
+                path: '/tmp/example/.claude.json',
+              },
+            ],
+            resolvedPath: '/tmp/example/.claude.json',
+            conflicts: [sampleConflict],
+          },
+          backupPaths: [],
+        },
+      ],
+    };
+    const text = formatHumanApply(envelope);
+    expect(text).toContain('Conflicts:');
+    expect(text).toContain('remote-tools');
+    expect(text).toContain('Refusing to continue');
   });
 });
 

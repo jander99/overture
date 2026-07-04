@@ -86,9 +86,15 @@ export interface ApplyDryRunAgentResult {
   /** The writer envelope returned by `agent.mcp.write`, unchanged. */
   readonly result: AgentMcpWriteResult;
   /**
-   * Optional human-readable reason. Populated when the writer omitted a
-   * `reason` (e.g. unknown agent id, missing `mcp.write` slot) so the
-   * human/JSON envelope still explains the refusal.
+   * Optional human-readable reason. Populated ONLY when the refusal is
+   * synthesized in the orchestrator (unknown agent id, missing
+   * `mcp.write` slot). For writer-driven refusals (parse-error,
+   * unsupported-shape, unsupported-format, conflict) the writer's
+   * `result.reason` / `result.conflicts` are the canonical channel —
+   * do NOT mirror them here. F3 in particular pins that the structured
+   * `Conflicts:` block (sourced from `result.conflicts`) is the only
+   * home for canonical-settings-drift detail; `reasonDetail` stays
+   * empty so future consumers cannot conflate the two channels.
    */
   readonly reasonDetail?: string;
 }
@@ -148,9 +154,16 @@ export interface ApplyAgentResult {
    */
   readonly backupPaths: readonly string[];
   /**
-   * Optional human-readable reason. Populated when the writer omitted a
-   * `reason` (e.g. unknown agent id, missing `mcp.write` slot) or when the
-   * backup step failed and Pass 2 was skipped.
+   * Optional human-readable reason. Populated ONLY when the refusal is
+   * synthesized in the orchestrator (unknown agent id, missing
+   * `mcp.write` slot) or when the backup step failed before Pass 2 ran.
+   * For writer-driven refusals the writer's `result.reason` /
+   * `result.conflicts` are the canonical channel — do NOT mirror them
+   * here. F3 in particular pins that the structured `Conflicts:` block
+   * (sourced from `result.conflicts`) is the only home for
+   * canonical-settings-drift detail; `reasonDetail` stays empty for
+   * conflict refusals so future consumers cannot conflate the two
+   * channels.
    */
   readonly reasonDetail?: string;
 }
@@ -386,8 +399,25 @@ export function formatHumanApplyDryRun(result: ApplyDryRunResult): string {
         lines.push(`  servers:   ${agent.result.serversWritten.join(', ')}`);
       }
     } else {
-      const reason = agent.reasonDetail ?? agent.result.reason ?? '(no reason)';
-      lines.push(`  reason:    ${reason}`);
+      // F3: when the writer populates `result.conflicts`, surface the
+      // structured `Conflicts:` block in place of the generic `reason:`
+      // line. The structured channel is the canonical home for
+      // canonical-settings-drift detail — `reasonDetail` is reserved
+      // for synthesized / non-writer refusals and is NOT the conflict
+      // channel (see the doc comment on `ApplyDryRunAgentResult.reasonDetail`).
+      if (
+        agent.result.conflicts !== undefined &&
+        agent.result.conflicts.length > 0
+      ) {
+        lines.push('  Conflicts:');
+        for (const c of agent.result.conflicts) {
+          lines.push(`    - ${c.serverName}: ${c.message}`);
+        }
+      } else {
+        const reason =
+          agent.reasonDetail ?? agent.result.reason ?? '(no reason)';
+        lines.push(`  reason:    ${reason}`);
+      }
     }
     lines.push('');
   }
@@ -401,7 +431,8 @@ export function formatHumanApplyDryRun(result: ApplyDryRunResult): string {
         r.status === 'not-targetable' ||
         r.status === 'parse-error' ||
         r.status === 'unsupported-shape' ||
-        r.status === 'unsupported-format',
+        r.status === 'unsupported-format' ||
+        r.status === 'conflict',
     ).length,
   };
   const total = result.results.length;
@@ -481,8 +512,25 @@ export function formatHumanApply(result: ApplyResult): string {
         lines.push(`  servers:   ${agent.result.serversWritten.join(', ')}`);
       }
     } else {
-      const reason = agent.reasonDetail ?? agent.result.reason ?? '(no reason)';
-      lines.push(`  reason:    ${reason}`);
+      // F3: structured `Conflicts:` block in the real-write twin so the
+      // dry-run and real-write reports carry the same shape when a
+      // canonical-settings-drift conflict refuses the agent. The
+      // structured channel is the canonical home for that detail;
+      // `reasonDetail` is reserved for synthesized / non-writer
+      // refusals (see the doc comment on `ApplyAgentResult.reasonDetail`).
+      if (
+        agent.result.conflicts !== undefined &&
+        agent.result.conflicts.length > 0
+      ) {
+        lines.push('  Conflicts:');
+        for (const c of agent.result.conflicts) {
+          lines.push(`    - ${c.serverName}: ${c.message}`);
+        }
+      } else {
+        const reason =
+          agent.reasonDetail ?? agent.result.reason ?? '(no reason)';
+        lines.push(`  reason:    ${reason}`);
+      }
     }
     lines.push('');
   }
@@ -496,7 +544,8 @@ export function formatHumanApply(result: ApplyResult): string {
         r.status === 'not-targetable' ||
         r.status === 'parse-error' ||
         r.status === 'unsupported-shape' ||
-        r.status === 'unsupported-format',
+        r.status === 'unsupported-format' ||
+        r.status === 'conflict',
     ).length,
   };
   const total = result.results.length;
@@ -724,6 +773,12 @@ async function applyToAgentDryRun(
     pathContext: ctx,
   });
 
+  // F3: `reasonDetail` stays empty here. The writer's
+  // `result.reason` / `result.conflicts` are the canonical channel for
+  // writer-driven refusals (parse-error, unsupported-shape,
+  // unsupported-format, conflict); synthesizing a `reasonDetail` would
+  // let a future consumer conflate the two channels (see
+  // `ApplyDryRunAgentResult.reasonDetail` doc).
   return {
     agentId,
     displayName: entry.displayName,
@@ -798,8 +853,16 @@ async function applyToAgentReal(
     pathContext: ctx,
   });
   const dryStatus = statusFromWriterResult(dryResult);
-  // Refusal / no-change / parse-error / unsupported-* → no backup, no Pass 2.
+  // Refusal / no-change / parse-error / unsupported-* / conflict →
+  // no backup, no Pass 2. `backupBeforeWrite` is intentionally NOT
+  // consulted on this branch: refusal precludes both backup and write,
+  // so the setting only governs the would-update path below.
   if (dryStatus !== 'would-update') {
+    // F3: `reasonDetail` stays empty for writer-driven refusals. The
+    // structured conflict detail lives on `result.conflicts` (the
+    // canonical channel — see `ApplyAgentResult.reasonDetail` doc);
+    // other writer refusals live on `result.reason`. Synthesizing a
+    // `reasonDetail` here would let a future consumer conflate the two.
     return {
       agentId,
       displayName: entry.displayName,
