@@ -13,6 +13,7 @@
 // Exits non-zero on any failure. Does NOT publish.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   mkdtempSync,
   mkdirSync,
@@ -1183,6 +1184,196 @@ rmSync(logXdg, { recursive: true, force: true });
 rmSync(logPathDir, { recursive: true, force: true });
 rmSync(logWorkspace, { recursive: true, force: true });
 
+logStep('Restore-last --dry-run smoke (G3)');
+// G3 restore-last --dry-run smoke. Skip `overture apply` entirely — G1
+// already proved the JSON / log writers; here we need to prove that the
+// DISPATCHER path `overture restore-last --dry-run` reads a G1 record,
+// renders the plan, and (most importantly) does NOT actually mv any
+// backup. The dry-run branch in `runRestore` short-circuits before the
+// `spawn mv -v` loop (matches the gate G3-6 guard). End-to-end guard for
+// the G3 contract as exercised by the installed binary: `--dry-run`
+// exits 0, renders the seeded pair's `mv -v '…' '…'` line, and leaves
+// both the target and the backup file untouched on disk.
+//
+// Layout:
+//   <ws>/mcp-target.json                 ← current on-disk target
+//   <ws>/mcp-target.json.bak.<ts>        ← the G1 backup
+//   <xdg>/overture/apply/last.json       ← pointer
+//   <xdg>/overture/apply/<runId>.json    ← G1 record (canonical source)
+//   <xdg>/overture/apply/<runId>.log     ← G2 log (seeding for parity;
+//                                          dry-run reads the JSON, not
+//                                          the log, so this file is
+//                                          here only to assert the
+//                                          apply dir carries both).
+const restoreHome = mkdtempSync('/tmp/overture-verify-restore-home-');
+const restoreXdg = mkdtempSync('/tmp/overture-verify-restore-xdg-');
+const restorePathDir = mkdtempSync('/tmp/overture-verify-restore-path-');
+const restoreWorkspace = mkdtempSync('/tmp/overture-verify-restore-ws-');
+// Same XDG_STATE_HOME discipline as the G1 smoke — a parent's leak
+// would otherwise hijack the recorded state dir.
+const restoreHomeStateDir = join(restoreHome, '.local', 'state');
+const restoreEnv = {
+  ...process.env,
+  HOME: restoreHome,
+  XDG_CONFIG_HOME: restoreXdg,
+  XDG_STATE_HOME: restoreHomeStateDir,
+  PATH: restorePathDir,
+};
+
+// Seed the current on-disk target and the backup with IDENTICAL bytes so
+// `currentSha256 === preWriteSha256` → `integrityStatus: 'ok'`. A real
+// `mv -v` would unlink the backup and overwrite the target; the dry-run
+// short-circuit must leave both intact.
+const restoreTarget = join(restoreWorkspace, 'mcp-target.json');
+const restoreBackup = join(
+  restoreWorkspace,
+  'mcp-target.json.bak.20260704-183000123',
+);
+const restoreTargetBefore = '{"current":true}\n';
+writeFileSync(restoreTarget, restoreTargetBefore);
+writeFileSync(restoreBackup, restoreTargetBefore);
+const restoreTargetBeforeBytes = readFileSync(restoreTarget);
+const restoreBackupBeforeBytes = readFileSync(restoreBackup);
+const restorePreSha = createHash('sha256')
+  .update(restoreTargetBefore)
+  .digest('hex');
+
+const restoreRunId = '20260704-183000123-eeeeeeee';
+const restoreApplyDir = join(restoreHomeStateDir, 'overture', 'apply');
+mkdirSync(restoreApplyDir, { recursive: true });
+const restoreRecord = {
+  schemaVersion: 1,
+  runId: restoreRunId,
+  timestamp: '2026-07-04T18:30:00.123Z',
+  mode: 'apply',
+  profile: 'default',
+  configPath: join(restoreXdg, 'overture', 'overture.jsonc'),
+  backupBeforeWrite: true,
+  agents: [
+    {
+      agentId: 'claude-code',
+      displayName: 'Claude Code',
+      status: 'updated',
+      targetPaths: [restoreTarget],
+      backupPaths: [restoreBackup],
+      preWriteSha256: restorePreSha,
+      postWriteSha256: null,
+    },
+  ],
+};
+writeFileSync(
+  join(restoreApplyDir, `${restoreRunId}.json`),
+  JSON.stringify(restoreRecord),
+);
+writeFileSync(
+  join(restoreApplyDir, 'last.json'),
+  JSON.stringify({ runId: restoreRunId }),
+);
+// Paired G2 log so the apply dir carries both .json + .log (mirrors the
+// G2 smoke's pairing). Dry-run reads the G1 record, not the log, so
+// this file is purely cosmetic for the dry-run pass.
+const restoreLogPath = join(restoreApplyDir, `${restoreRunId}.log`);
+writeFileSync(
+  restoreLogPath,
+  [
+    '='.repeat(80),
+    'Overture apply log',
+    '='.repeat(80),
+    `run id: ${restoreRunId}`,
+    '',
+    '[claude-code] Claude Code',
+    'status: updated',
+    `backup: '${restoreBackup}'`,
+    `target: '${restoreTarget}'`,
+    `mv -v '${restoreBackup}' '${restoreTarget}'`,
+    '',
+  ].join('\n'),
+);
+
+const restoreResult = spawnWithEnv(
+  [distMain, 'restore-last', '--dry-run'],
+  restoreEnv,
+  { cwd: restoreWorkspace },
+);
+if (restoreResult.status !== 0) {
+  fail(
+    `restore-last --dry-run exited ${restoreResult.status} (expected 0)\nstdout:\n${restoreResult.stdout}\nstderr:\n${restoreResult.stderr}`,
+  );
+}
+
+// Plan header must name the seeded runId. The renderer emits
+// `run id:        <runId>` (8 spaces) per `formatHumanRestorePlan`.
+if (!restoreResult.stdout.includes(`run id:        ${restoreRunId}`)) {
+  fail(
+    `restore-last --dry-run stdout missing "run id:        ${restoreRunId}" header line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// Source must report `state-json` (the JSON path wins over the
+// fallback log-tag-lines source).
+if (!restoreResult.stdout.includes(`source:        state-json`)) {
+  fail(
+    `restore-last --dry-run stdout missing "source:        state-json" header line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// Integrity line for the seeded pair — `ok` because currentSha256 ===
+// preWriteSha256 by construction above.
+if (!restoreResult.stdout.includes('  status: ok')) {
+  fail(
+    `restore-last --dry-run stdout missing per-pair "  status: ok" line\nstdout:\n${restoreResult.stdout}`,
+  );
+}
+// The load-bearing assertion: the seeded pair's `mv -v '<backup>'
+// '<target>'` line appears in the dry-run plan. Two leading spaces
+// reflect the `formatHumanRestorePlan` indent.
+if (
+  !restoreResult.stdout.includes(
+    `  mv -v '${restoreBackup}' '${restoreTarget}'`,
+  )
+) {
+  fail(
+    `restore-last --dry-run stdout missing the seeded pair's "mv -v '<backup>' '<target>'" line\nstdout:\n${restoreResult.stdout}\nbackup=${restoreBackup}\ntarget=${restoreTarget}`,
+  );
+}
+
+// Dry-run guard 1 — the target file's bytes must match the seeded bytes.
+// A real `mv -v` (gate G3-6 path) would replace the target contents with
+// the backup's. The dry-run branch must leave them untouched.
+const restoreTargetAfterBytes = readFileSync(restoreTarget);
+if (!restoreTargetAfterBytes.equals(restoreTargetBeforeBytes)) {
+  fail(
+    `restore-last --dry-run modified the seeded target\nbefore: ${restoreTargetBeforeBytes.length} bytes\nafter:  ${restoreTargetAfterBytes.length} bytes`,
+  );
+}
+
+// Dry-run guard 2 — the backup file must STILL exist on disk and its
+// contents must be byte-identical to the seed. A real `mv -v` would
+// unlink the backup; the dry-run short-circuit must not even reach the
+// `spawn mv -v` loop, so the seed is preserved verbatim.
+const restoreBackupAfterStat = statSync(restoreBackup, {
+  throwIfNoEntry: false,
+});
+if (!restoreBackupAfterStat) {
+  fail(
+    `restore-last --dry-run unlinked the seeded backup at ${restoreBackup} (would be unlinked by a real mv)`,
+  );
+}
+const restoreBackupAfterBytes = readFileSync(restoreBackup);
+if (!restoreBackupAfterBytes.equals(restoreBackupBeforeBytes)) {
+  fail(
+    `restore-last --dry-run modified the seeded backup\nbefore: ${restoreBackupBeforeBytes.length} bytes\nafter:  ${restoreBackupAfterBytes.length} bytes`,
+  );
+}
+
+console.log(
+  `restore-last --dry-run: exit=${restoreResult.status} planRendered=PASS sourceStateJson=PASS integrityOk=PASS mvLineRendered=PASS targetUntouched=PASS backupUntouched=PASS`,
+);
+
+// Cleanup restore tmpdirs.
+rmSync(restoreHome, { recursive: true, force: true });
+rmSync(restoreXdg, { recursive: true, force: true });
+rmSync(restorePathDir, { recursive: true, force: true });
+rmSync(restoreWorkspace, { recursive: true, force: true });
+
 logStep('Cleanup');
 rmSync(packTmp, { recursive: true, force: true });
 rmSync(cleanTmp, { recursive: true, force: true });
@@ -1192,5 +1383,5 @@ rmSync(bootstrapPath, { recursive: true, force: true });
 
 logStep('PASS');
 console.log(
-  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), and apply (F3 refused-apply) smoke checks.',
+  'All verifications passed. The tarball is ready to publish, including bootstrap, apply (F2 no-change), apply (F3 refused-apply), and restore-last (G3 --dry-run) smoke checks.',
 );
