@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "shared-fs": {
+      "command": "echo",
+      "args": ["shared"],
+      "env": {}
+    }
+  }
+}

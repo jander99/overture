@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,71 +62,14 @@ function runJson(args) {
   return JSON.parse(run(args));
 }
 
-function seedFixtures() {
-  mkdirSync(join(tempConfigDir, 'opencode'), { recursive: true });
-  mkdirSync(join(tempHome, '.copilot'), { recursive: true });
-  mkdirSync(join(tempHome, '.codex'), { recursive: true });
-
-  writeFileSync(
-    join(tempHome, '.claude.json'),
-    JSON.stringify(
-      {
-        mcpServers: {
-          'shared-fs': { command: 'echo', args: ['shared'], env: {} },
-        },
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-
-  writeFileSync(
-    join(tempConfigDir, 'opencode', 'opencode.json'),
-    JSON.stringify(
-      {
-        $schema: 'https://opencode.ai/config.json',
-        mcp: {
-          'shared-fs': {
-            type: 'local',
-            command: ['echo', 'shared'],
-            environment: {},
-          },
-        },
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-
-  writeFileSync(
-    join(tempHome, '.copilot', 'mcp-config.json'),
-    JSON.stringify(
-      {
-        mcpServers: {
-          'shared-fs': {
-            type: 'local',
-            command: 'echo',
-            args: ['shared'],
-            env: {},
-          },
-        },
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-
-  // codex normalizer emits `{env: undefined}` if source lacks `env`. Other
-  // agents emit `{env: {}}`. serverSettingsEqual treats `undefined ≠ {}` as
-  // distinct, creating a pickable conflict instead of all-agents-equal.
-  // Set `env = {}` so codex normalizes to the same canonical shape.
-  writeFileSync(
-    join(tempHome, '.codex', 'config.toml'),
-    '[mcp_servers.shared-fs]\ncommand = "echo"\nargs = ["shared"]\nenv = {}\n',
-  );
-}
-
-seedFixtures();
+// `fixtures/` mirrors the target install paths under `tempHome` so a
+// recursive copy reproduces exactly what `seedFixtures()` used to write
+// in-place. `fixtures/.codex/config.toml` keeps `env = {}` because the
+// codex normalizer emits `{env: undefined}` when the key is absent and
+// other agents emit `{env: {}}`; `serverSettingsEqual` treats those as
+// distinct, which would surface as a pickable conflict instead of the
+// desired all-agents-equal adoption.
+cpSync(join(__dirname, 'fixtures'), tempHome, { recursive: true });
 console.log(`Seeded fixtures in ${tempHome}`);
 
 // ----- Phase A: no overture config exists yet -----
