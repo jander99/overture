@@ -64,7 +64,10 @@ export function toGitHubCopilotCliMcpServer(
   server: OvertureMcpServer,
   existing?: GitHubCopilotCliWritableMcpServer,
 ): GitHubCopilotCliWritableMcpServer {
-  const extensions = collectExtensions(existing, GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES);
+  const extensions = collectExtensions(
+    existing,
+    GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES,
+  );
 
   // Canonical fields first, extensions last — preserves the existing entry's
   // JSON key order so JSON.stringify(a) === JSON.stringify(b) is true when the

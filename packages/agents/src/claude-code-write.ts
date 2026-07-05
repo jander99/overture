@@ -90,7 +90,10 @@ export function toClaudeCodeMcpServer(
   server: OvertureMcpServer,
   existing?: ClaudeCodeWritableMcpServer,
 ): ClaudeCodeWritableMcpServer {
-  const extensions = collectExtensions(existing, CLAUDE_CODE_CANONICAL_FIELD_NAMES);
+  const extensions = collectExtensions(
+    existing,
+    CLAUDE_CODE_CANONICAL_FIELD_NAMES,
+  );
   // Claude Code treats `type: 'stdio'` as the implicit default — fixtures in the wild
   // commonly omit it. Preserve byte-equivalence with the existing entry on update:
   // when existing is provided AND lacks `type`, omit `type` from the new value.

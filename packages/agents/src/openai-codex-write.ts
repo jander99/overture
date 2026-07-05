@@ -572,8 +572,8 @@ function noChangeResult(dryRun: boolean, target: Target): AgentMcpWriteResult {
     targetPaths: [targetPathFor(target)],
     resolvedPath: target.path,
     format: 'toml' as McpLocationFormat,
-  bytesChanged: 0,
-  reason: 'no-change' as WriteReason,
+    bytesChanged: 0,
+    reason: 'no-change' as WriteReason,
   };
 }
 
