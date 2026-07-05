@@ -806,9 +806,6 @@ export async function writeOpenAICodexMcpConfig(
   // compatible extension fields from the existing native entry.
   // Track only the entries that actually change so unchanged
   // writes do not bump the `written` counter.
-  // compatible extension fields from the existing native entry.
-  // Track only the entries that actually change so unchanged
-  // writes do not bump the `written` counter.
   const patches = new Map<string, OpenAICodexWritableMcpServer>();
   const touched: string[] = [];
   for (const entry of input.servers) {
