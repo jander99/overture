@@ -153,6 +153,31 @@
         "options": {
           "reportsDirectory": "coverage/apps/cli"
         }
+      },
+      "validate": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "dependsOn": [
+          "build"
+        ],
+        "inputs": [
+          "default",
+          "^default",
+          {
+            "fileset": "{workspaceRoot}/.github/scripts/overture-validate/**/*"
+          },
+          {
+            "fileset": "{workspaceRoot}/.github/workflows/validate.yml"
+          },
+          {
+            "runtime": "node --version"
+          }
+        ],
+        "outputs": [],
+        "options": {
+          "command": "node .github/scripts/overture-validate/validate.mjs",
+          "cwd": "{workspaceRoot}"
+        }
       }
     }
   },

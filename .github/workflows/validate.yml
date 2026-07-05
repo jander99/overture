@@ -19,68 +19,21 @@ jobs:
     name: Overture validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      OVERTURE_BIN: /usr/local/bin/overture
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Node 24
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
 
-      - name: Enable Corepack
-        run: corepack enable
+      - run: corepack enable
 
-      # Sequential CLI installs. Each tool's official install command.
-      # claude installs to $HOME/.local/bin; we export it via $GITHUB_PATH
-      # so subsequent steps see the binary.
-      - name: Install Claude Code
+      - name: Install agent CLIs
         run: |
           curl -fsSL https://claude.ai/install.sh | bash -s stable
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          npm install -g @openai/codex opencode-ai @github/copilot
 
-      - name: Install OpenAI Codex
-        run: npm install -g @openai/codex
+      - run: yarn install --immutable
 
-      - name: Install OpenCode
-        run: npm install -g opencode-ai
-
-      - name: Install GitHub Copilot CLI
-        run: npm install -g @github/copilot
-
-      - name: Show tool versions + HOME + XDG_CONFIG_HOME
-        run: |
-          echo "HOME=$HOME"
-          echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<unset>}"
-          echo "PATH=$PATH"
-          for tool in claude codex opencode copilot; do
-            echo "=== $tool ==="
-            if ! command -v "$tool" >/dev/null 2>&1; then
-              echo "MISSING: $tool"
-              exit 1
-            fi
-            "$tool" --version 2>&1 || echo "(no --version flag)"
-          done
-
-      - name: Seed MCP configs
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/overture-validate/seed-configs.sh"
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Build overture
-        run: yarn nx build @jander99/overture --skip-nx-cache
-
-      - name: Symlink overture
-        run: |
-          set -eu
-          chmod +x "$GITHUB_WORKSPACE/apps/cli/dist/main.js"
-          sudo ln -sf "$GITHUB_WORKSPACE/apps/cli/dist/main.js" /usr/local/bin/overture
-          command -v overture
-          overture --help > /dev/null
-
-      - name: Validate
-        run: |
-          cd "$HOME"
-          node "$GITHUB_WORKSPACE/.github/scripts/overture-validate/validate.mjs"
+      - run: yarn nx run @jander99/overture:validate --skip-nx-cache

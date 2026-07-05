@@ -1,20 +1,43 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const OVERTURE = process.env.OVERTURE_BIN || '/usr/local/bin/overture';
-const HOME = process.env.HOME;
-if (!HOME) {
-  console.error('FAIL: HOME is not set');
-  process.exit(1);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const WORKSPACE_ROOT = join(__dirname, '..', '..', '..');
+const CLI_ENTRY = join(WORKSPACE_ROOT, 'apps', 'cli', 'dist', 'main.js');
+
+const tempHome = mkdtempSync(join(tmpdir(), 'overture-validate-'));
+const tempConfigDir = join(tempHome, '.config');
+const env = {
+  ...process.env,
+  HOME: tempHome,
+  XDG_CONFIG_HOME: tempConfigDir,
+};
+
+// chdir so the CLI does not walk up from cwd and discover the
+// repository's own `.mcp.json` (which configures `nx-mcp` for local
+// development). Mirrors the original workflow's `cd "$HOME"` step.
+process.chdir(tempHome);
+
+function cleanup() {
+  try {
+    rmSync(tempHome, { recursive: true, force: true });
+  } catch {
+    /* best effort */
+  }
 }
-if (process.cwd() !== HOME) {
-  console.error(`FAIL: cwd (${process.cwd()}) must equal HOME (${HOME})`);
-  process.exit(1);
-}
-const CONFIG_DIR = process.env.XDG_CONFIG_HOME || join(HOME, '.config');
-const OVERTURE_CONFIG_DIR = join(CONFIG_DIR, 'overture');
+process.on('exit', cleanup);
+process.on('SIGINT', () => {
+  cleanup();
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  cleanup();
+  process.exit(143);
+});
 
 let failures = 0;
 
@@ -27,20 +50,84 @@ function expect(label, cond, detail = '') {
   }
 }
 
-function runJson(args) {
-  const stdout = execFileSync(OVERTURE, args, {
+function run(args) {
+  return execFileSync(process.execPath, [CLI_ENTRY, ...args], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    env,
   });
-  return JSON.parse(stdout);
 }
 
-function run(args) {
-  return execFileSync(OVERTURE, args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+function runJson(args) {
+  return JSON.parse(run(args));
 }
+
+function seedFixtures() {
+  mkdirSync(join(tempConfigDir, 'opencode'), { recursive: true });
+  mkdirSync(join(tempHome, '.copilot'), { recursive: true });
+  mkdirSync(join(tempHome, '.codex'), { recursive: true });
+
+  writeFileSync(
+    join(tempHome, '.claude.json'),
+    JSON.stringify(
+      {
+        mcpServers: {
+          'shared-fs': { command: 'echo', args: ['shared'], env: {} },
+        },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+
+  writeFileSync(
+    join(tempConfigDir, 'opencode', 'opencode.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        mcp: {
+          'shared-fs': {
+            type: 'local',
+            command: ['echo', 'shared'],
+            environment: {},
+          },
+        },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+
+  writeFileSync(
+    join(tempHome, '.copilot', 'mcp-config.json'),
+    JSON.stringify(
+      {
+        mcpServers: {
+          'shared-fs': {
+            type: 'local',
+            command: 'echo',
+            args: ['shared'],
+            env: {},
+          },
+        },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+
+  // codex normalizer emits `{env: undefined}` if source lacks `env`. Other
+  // agents emit `{env: {}}`. serverSettingsEqual treats `undefined ≠ {}` as
+  // distinct, creating a pickable conflict instead of all-agents-equal.
+  // Set `env = {}` so codex normalizes to the same canonical shape.
+  writeFileSync(
+    join(tempHome, '.codex', 'config.toml'),
+    '[mcp_servers.shared-fs]\ncommand = "echo"\nargs = ["shared"]\nenv = {}\n',
+  );
+}
+
+seedFixtures();
+console.log(`Seeded fixtures in ${tempHome}`);
 
 // ----- Phase A: no overture config exists yet -----
 
@@ -50,6 +137,7 @@ expect(
   detect.platforms.length === 4,
   `got ${detect.platforms.length}`,
 );
+
 const expectedIds = [
   'claude-code',
   'github-copilot-cli',
@@ -62,6 +150,7 @@ expect(
   JSON.stringify(seenIds) === JSON.stringify([...expectedIds].sort()),
   `got ${JSON.stringify(seenIds)}`,
 );
+
 for (const p of detect.platforms) {
   expect(`detect.${p.id}.installed`, p.installed === true);
   expect(
@@ -117,14 +206,13 @@ expect(
 
 // ----- Phase B: write the bootstrap proposal, then apply + restore -----
 
-mkdirSync(OVERTURE_CONFIG_DIR, { recursive: true });
+mkdirSync(join(tempConfigDir, 'overture'), { recursive: true });
+const overtureConfigPath = join(tempConfigDir, 'overture', 'overture.jsonc');
 writeFileSync(
-  join(OVERTURE_CONFIG_DIR, 'overture.jsonc'),
+  overtureConfigPath,
   JSON.stringify(boot.proposal.config, null, 2) + '\n',
 );
-console.log(
-  `Wrote canonical config: ${join(OVERTURE_CONFIG_DIR, 'overture.jsonc')}`,
-);
+console.log(`Wrote canonical config: ${overtureConfigPath}`);
 
 const apply = runJson(['apply', '--dry-run', '--json']);
 expect('apply ran 4 agents', apply.results.length === 4);
@@ -136,7 +224,6 @@ for (const r of apply.results) {
   );
 }
 
-// restore-last --dry-run with no history exits 1 with "no overture apply history found"
 try {
   run(['restore-last', '--dry-run']);
   expect('restore-last exits 1 when no history', false, 'expected exit 1');
@@ -146,11 +233,10 @@ try {
     err.status === 1,
     `got status ${err.status}`,
   );
-  const stderr = String(err.stderr ?? '');
   expect(
     'restore-last stderr mentions no history',
-    /no overture apply history found/.test(stderr),
-    stderr,
+    /no overture apply history found/.test(String(err.stderr ?? '')),
+    String(err.stderr ?? ''),
   );
 }
 
@@ -159,3 +245,5 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log('\nAll validation checks passed.');
+console.log(`(workspace root: ${WORKSPACE_ROOT})`);
+console.log(`(cli entry: ${relative(process.cwd(), CLI_ENTRY)})`);
