@@ -1,5 +1,6 @@
 # Overture workspace
 .omo/
+.serena/
 .sisyphus/
 .nx/installation
 .nx/cache

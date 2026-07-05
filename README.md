@@ -523,7 +523,6 @@ overture/
 │   ├── coding-platform-mcp-configurations.md
 │   ├── overture-config.md
 │   ├── overture-vision.md
-│   ├── overture-implementation-slices.md
 │   └── publishing.md
 ├── nx.json               # NX workspace configuration
 └── package.json          # Yarn 4 workspaces root

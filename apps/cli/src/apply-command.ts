@@ -374,8 +374,7 @@ export async function copyFileWithClassification(
 /**
  * Render an {@link ApplyDryRunResult} as a human-readable report.
  *
- * Gate-5 layout (per `docs/overture-implementation-slices.md` and the
- * F1 plan's "Gate 5 — Apply dry-run output shape" section):
+ * Apply dry-run output shape (Gate-5 layout):
  *
  *   1. Heading (`Apply dry-run (no changes written)`).
  *   2. Profile, config path, and `disabledServers` echo lines.
