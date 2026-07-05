@@ -8,7 +8,6 @@
  * top-level keys, and unrelated MCP servers) by surgically replacing only
  * the byte ranges that `parseTree` identifies as the touched subtrees.
  */
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   parseTree,
@@ -25,6 +24,7 @@ import {
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -135,21 +135,6 @@ function findApplicableLocation(
     return { loc, resolvedPath: path };
   }
   return null;
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      isObject(err) &&
-      typeof err['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(err['code'])
-    ) {
-      return null;
-    }
-    throw err;
-  }
 }
 
 function renderServer(value: unknown): string {

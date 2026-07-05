@@ -10,7 +10,6 @@
  * replace only the touched server-entry value nodes, preserving
  * surrounding comments, formatting, key order, and unrelated content.
  */
-import { readFile } from 'node:fs/promises';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -22,6 +21,7 @@ import {
 } from './claude-code.js';
 import { normalized } from './normalize-mcp-config.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
   AgentMcpReadResult,
@@ -166,24 +166,6 @@ function targetPathSegmentsFor(
       return ['mcpServers'];
     case 'user-projects':
       return ['projects', target.workspaceKey, 'mcpServers'];
-  }
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      typeof (err as Record<string, unknown>)['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
-        (err as Record<string, unknown>)['code'] as string,
-      )
-    ) {
-      return null;
-    }
-    throw err;
   }
 }
 

@@ -8,7 +8,6 @@
  * Byte-level splice via `editJsoncMap` (value-node-only replacement) which
  * preserves comments, whitespace, BOM, trailing newlines, and unrelated keys.
  */
-import { readFile } from 'node:fs/promises';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -22,6 +21,7 @@ import { editJsoncMap } from './jsonc-map-write.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -121,24 +121,6 @@ export function toGitHubCopilotCliMcpServer(
 
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      typeof (err as Record<string, unknown>)['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
-        (err as Record<string, string>)['code'],
-      )
-    ) {
-      return null;
-    }
-    throw err;
-  }
 }
 
 // ---------------------------------------------------------------------------
