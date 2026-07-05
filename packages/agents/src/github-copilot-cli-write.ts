@@ -8,9 +8,7 @@
  * Byte-level splice via `editJsoncMap` (value-node-only replacement) which
  * preserves comments, whitespace, BOM, trailing newlines, and unrelated keys.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -23,6 +21,7 @@ import {
 import { editJsoncMap } from './jsonc-map-write.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -112,28 +111,6 @@ export function toGitHubCopilotCliMcpServer(
 // Atomic write
 // ---------------------------------------------------------------------------
 
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Deep equal for no-change detection
 // ---------------------------------------------------------------------------
@@ -145,10 +122,6 @@ async function atomicWrite(
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
-
-// ---------------------------------------------------------------------------
-// Reader (mirrors opencode-write pattern)
-// ---------------------------------------------------------------------------
 
 async function readIfExists(path: string): Promise<string | null> {
   try {

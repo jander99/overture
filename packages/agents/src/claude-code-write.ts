@@ -10,9 +10,7 @@
  * replace only the touched server-entry value nodes, preserving
  * surrounding comments, formatting, key order, and unrelated content.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -23,6 +21,7 @@ import {
   type ClaudeCodeMcpConfig,
 } from './claude-code.js';
 import { normalized } from './normalize-mcp-config.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
   AgentMcpReadResult,
@@ -183,28 +182,6 @@ async function readIfExists(path: string): Promise<string | null> {
       )
     ) {
       return null;
-    }
-    throw err;
-  }
-}
-
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
     }
     throw err;
   }

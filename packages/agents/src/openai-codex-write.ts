@@ -456,10 +456,9 @@ function renderCodexInlineTable(
 // Writer: file orchestration + byte-level splice
 // ---------------------------------------------------------------------------
 
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { atomicWrite } from './writers/lib/atomic-write.js';
 import {
   pickCodexWriteTarget,
   targetPathFor,
@@ -500,35 +499,6 @@ const smolTomlCjsModule = createRequire(__filename)('smol-toml') as {
  */
 const NON_TOP_LEVEL_MCP_SERVERS_REFERENCE =
   /^\s*(?:\[\s*mcp_servers(?:\.[^\]]*)?\s*\]|mcp_servers\s*=)/m;
-
-/**
- * Atomic file write: writes `contents` to a same-directory temp file,
- * then renames over `targetPath`. On any failure the temp file is
- * best-effort cleaned up. Mirrors the
- * `github-copilot-cli-write.ts` atomicWrite pattern.
- */
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
-  }
-}
 
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

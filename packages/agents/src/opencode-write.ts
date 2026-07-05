@@ -8,9 +8,8 @@
  * top-level keys, and unrelated MCP servers) by surgically replacing only
  * the byte ranges that `parseTree` identifies as the touched subtrees.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   parseTree,
   type Node,
@@ -25,6 +24,7 @@ import {
 } from './opencode.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -147,28 +147,6 @@ async function readIfExists(path: string): Promise<string | null> {
       ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(err['code'])
     ) {
       return null;
-    }
-    throw err;
-  }
-}
-
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
     }
     throw err;
   }
