@@ -1,0 +1,4 @@
+[mcp_servers.shared-fs]
+command = "echo"
+args = ["shared"]
+env = {}

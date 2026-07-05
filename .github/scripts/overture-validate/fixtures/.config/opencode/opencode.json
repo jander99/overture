@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "shared-fs": {
+      "type": "local",
+      "command": ["echo", "shared"],
+      "environment": {}
+    }
+  }
+}
