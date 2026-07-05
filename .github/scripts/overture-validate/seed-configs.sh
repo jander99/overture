@@ -48,10 +48,16 @@ cat > "$HOME/.copilot/mcp-config.json" <<'JSON'
 JSON
 
 # openai-codex: ~/.codex/config.toml
+# `env = {}` is required so codex normalizes to `{env: {}}` — matching the
+# other agents. Without it, codex emits `{env: undefined}` and the
+# scan-matrix equality check (`serverSettingsEqual`) treats
+# `undefined ≠ {}` as distinct, producing a pickable conflict instead of
+# the expected `all-agents-equal` adoption.
 cat > "$HOME/.codex/config.toml" <<'TOML'
 [mcp_servers.shared-fs]
 command = "echo"
 args = ["shared"]
+env = {}
 TOML
 
 echo "Seeded MCP configs:"

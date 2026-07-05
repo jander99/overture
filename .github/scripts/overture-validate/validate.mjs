@@ -50,7 +50,12 @@ expect(
   detect.platforms.length === 4,
   `got ${detect.platforms.length}`,
 );
-const expectedIds = ['claude-code', 'codex', 'github-copilot-cli', 'opencode'];
+const expectedIds = [
+  'claude-code',
+  'github-copilot-cli',
+  'openai-codex',
+  'opencode',
+];
 const seenIds = detect.platforms.map((p) => p.id).sort();
 expect(
   'detect ids match registry',
