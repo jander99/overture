@@ -65,10 +65,8 @@ The catalog in this document is the **source of truth** for the
 per-platform detection data that `overture` consumes. The
 `@overture/agents` library (in `packages/agents/`) stores that data
 as one file per agent under `packages/agents/src/<id>.ts`, then
-aggregates them in `packages/agents/src/index.ts` (the
-`platformRegistry` export in `apps/cli/src/platforms/registry.ts` is
-a re-export of that aggregate). To wire a new platform into the
-CLI:
+aggregates them in `packages/agents/src/index.ts`. To wire a new
+platform into the CLI:
 
 1. Add a "## <Platform name>" section to the catalog below with the
    platform's installation markers, MCP config locations, executable
@@ -80,9 +78,9 @@ CLI:
    `AGENTS.md` (search for "Adding a new MCP agent") for the full
    step-by-step, including the `continue` reserved-keyword edge case.
 3. Wire the new agent into `packages/agents/src/index.ts`
-   at the canonical position (the legacy `expectedIds` assertion in
-   `apps/cli/src/platforms/registry.spec.ts` pins the index of every
-   entry — reordering is a breaking change).
+   at the canonical position (`apps/cli/src/platforms/registry.spec.ts`
+   pins the index of every entry via the `expectedIds` assertion —
+   reordering is a breaking change).
 4. Add or extend a regression test under
    `apps/cli/src/platforms/registry.spec.ts` asserting the
    per-agent invariants.

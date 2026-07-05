@@ -10,9 +10,6 @@
  * replace only the touched server-entry value nodes, preserving
  * surrounding comments, formatting, key order, and unrelated content.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -23,6 +20,9 @@ import {
   type ClaudeCodeMcpConfig,
 } from './claude-code.js';
 import { normalized } from './normalize-mcp-config.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
   AgentMcpReadResult,
@@ -77,27 +77,6 @@ const CLAUDE_CODE_CANONICAL_FIELD_NAMES = new Set<string>([
   'headers',
 ]);
 
-function collectExtensions(
-  existing: ClaudeCodeWritableMcpServer | undefined,
-): Record<string, JsonValue> {
-  const extensions: Record<string, JsonValue> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (CLAUDE_CODE_CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
-}
-
 /**
  * Convert a canonical `OvertureMcpServer` to a Claude Code native server.
  *
@@ -111,7 +90,10 @@ export function toClaudeCodeMcpServer(
   server: OvertureMcpServer,
   existing?: ClaudeCodeWritableMcpServer,
 ): ClaudeCodeWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(
+    existing,
+    CLAUDE_CODE_CANONICAL_FIELD_NAMES,
+  );
   // Claude Code treats `type: 'stdio'` as the implicit default — fixtures in the wild
   // commonly omit it. Preserve byte-equivalence with the existing entry on update:
   // when existing is provided AND lacks `type`, omit `type` from the new value.
@@ -167,46 +149,6 @@ function targetPathSegmentsFor(
       return ['mcpServers'];
     case 'user-projects':
       return ['projects', target.workspaceKey, 'mcpServers'];
-  }
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      typeof (err as Record<string, unknown>)['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
-        (err as Record<string, unknown>)['code'] as string,
-      )
-    ) {
-      return null;
-    }
-    throw err;
-  }
-}
-
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
   }
 }
 

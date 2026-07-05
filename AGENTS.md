@@ -260,11 +260,11 @@ detect. Each agent lives in its own file and implements the
 `AgentDefinition` interface (defined in `packages/agents/src/types.ts`
 as a structural extension of `PlatformRegistryEntry` that adds an
 `mcp: { read, write }` slot). The detection pipeline consumes only
-the static aggregate in `packages/agents/src/index.ts`; per-agent
-files are not imported anywhere else. The legacy `platformRegistry`
-name in `apps/cli/src/platforms/registry.ts` is a thin re-export of
-that aggregate (object identity, not a copy) so older CLI callers
-keep working.
+the static aggregate exported by `packages/agents/src/index.ts`;
+per-agent files are not imported anywhere else. The CLI imports
+`agentRegistry` directly from `@overture/agents` (there is no local
+re-export — the historical `apps/cli/src/platforms/registry.ts` thin
+re-export no longer exists).
 
 To add a new agent:
 
@@ -288,8 +288,8 @@ To add a new agent:
    UX regression.
 3. Insert the new import + array entry in
    `packages/agents/src/index.ts` at the canonical
-   position. **Order matters**: the legacy `expectedIds` assertion
-   in `apps/cli/src/platforms/registry.spec.ts` pins the index of
+   position. **Order matters**: the `expectedIds` assertion in
+   `apps/cli/src/platforms/registry.spec.ts` pins the index of
    every entry. Reordering is a breaking change for any consumer
    that depends on positional indices.
 4. Add or extend a `describe(...)` block in

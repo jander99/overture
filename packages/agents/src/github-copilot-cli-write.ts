@@ -8,9 +8,6 @@
  * Byte-level splice via `editJsoncMap` (value-node-only replacement) which
  * preserves comments, whitespace, BOM, trailing newlines, and unrelated keys.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
 import {
   parse as parseJsonc,
   type ParseError,
@@ -23,6 +20,9 @@ import {
 import { editJsoncMap } from './jsonc-map-write.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -60,32 +60,14 @@ const GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES = new Set<string>([
   'headers',
 ]);
 
-function collectExtensions(
-  existing: GitHubCopilotCliWritableMcpServer | undefined,
-): Record<string, unknown> {
-  const extensions: Record<string, unknown> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
-}
-
 export function toGitHubCopilotCliMcpServer(
   server: OvertureMcpServer,
   existing?: GitHubCopilotCliWritableMcpServer,
 ): GitHubCopilotCliWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(
+    existing,
+    GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES,
+  );
 
   // Canonical fields first, extensions last — preserves the existing entry's
   // JSON key order so JSON.stringify(a) === JSON.stringify(b) is true when the
@@ -109,63 +91,11 @@ export function toGitHubCopilotCliMcpServer(
 }
 
 // ---------------------------------------------------------------------------
-// Atomic write
-// ---------------------------------------------------------------------------
-
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Deep equal for no-change detection
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // Deep equal for no-change detection
 // ---------------------------------------------------------------------------
 
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
-}
-
-// ---------------------------------------------------------------------------
-// Reader (mirrors opencode-write pattern)
-// ---------------------------------------------------------------------------
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      typeof (err as Record<string, unknown>)['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(
-        (err as Record<string, string>)['code'],
-      )
-    ) {
-      return null;
-    }
-    throw err;
-  }
 }
 
 // ---------------------------------------------------------------------------

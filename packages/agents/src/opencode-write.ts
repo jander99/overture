@@ -8,9 +8,7 @@
  * top-level keys, and unrelated MCP servers) by surgically replacing only
  * the byte ranges that `parseTree` identifies as the touched subtrees.
  */
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { join } from 'node:path';
 import {
   parseTree,
   type Node,
@@ -25,6 +23,9 @@ import {
 } from './opencode.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
+import { atomicWrite } from './writers/lib/atomic-write.js';
+import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -52,7 +53,7 @@ export function toOpenCodeMcpServer(
   server: OvertureMcpServer | OpenCodeMcpServer,
   existing?: OpenCodeWritableMcpServer,
 ): OpenCodeWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(existing, CANONICAL_FIELD_NAMES);
 
   if (server.type === 'stdio') {
     return {
@@ -88,27 +89,6 @@ export function toOpenCodeMcpServer(
   };
 }
 
-function collectExtensions(
-  existing: OpenCodeWritableMcpServer | undefined,
-): Record<string, JsonValue> {
-  const extensions: Record<string, JsonValue> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
-}
-
 // ---------------------------------------------------------------------------
 // Writer
 // ---------------------------------------------------------------------------
@@ -135,43 +115,6 @@ function findApplicableLocation(
     return { loc, resolvedPath: path };
   }
   return null;
-}
-
-async function readIfExists(path: string): Promise<string | null> {
-  try {
-    return await readFile(path, 'utf8');
-  } catch (err) {
-    if (
-      isObject(err) &&
-      typeof err['code'] === 'string' &&
-      ['ENOENT', 'EACCES', 'EPERM', 'EISDIR'].includes(err['code'])
-    ) {
-      return null;
-    }
-    throw err;
-  }
-}
-
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
-  }
 }
 
 function renderServer(value: unknown): string {

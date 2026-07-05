@@ -28,6 +28,7 @@ import {
 } from './openai-codex.js';
 import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
+import { parseTomlHeaderPath as parseCodexHeaderPath } from './toml/header-path.js';
 
 // ---------------------------------------------------------------------------
 // Sentinel for unsupported extension shapes
@@ -455,10 +456,9 @@ function renderCodexInlineTable(
 // Writer: file orchestration + byte-level splice
 // ---------------------------------------------------------------------------
 
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { atomicWrite } from './writers/lib/atomic-write.js';
 import {
   pickCodexWriteTarget,
   targetPathFor,
@@ -499,35 +499,6 @@ const smolTomlCjsModule = createRequire(__filename)('smol-toml') as {
  */
 const NON_TOP_LEVEL_MCP_SERVERS_REFERENCE =
   /^\s*(?:\[\s*mcp_servers(?:\.[^\]]*)?\s*\]|mcp_servers\s*=)/m;
-
-/**
- * Atomic file write: writes `contents` to a same-directory temp file,
- * then renames over `targetPath`. On any failure the temp file is
- * best-effort cleaned up. Mirrors the
- * `github-copilot-cli-write.ts` atomicWrite pattern.
- */
-async function atomicWrite(
-  targetPath: string,
-  contents: string,
-): Promise<void> {
-  await mkdir(dirname(targetPath), { recursive: true });
-  const tempPath = join(
-    dirname(targetPath),
-    `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  try {
-    await writeFile(tempPath, contents, 'utf8');
-
-    await rename(tempPath, targetPath);
-  } catch (err) {
-    try {
-      await rm(tempPath, { force: true });
-    } catch {
-      /* best-effort cleanup */
-    }
-    throw err;
-  }
-}
 
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -604,51 +575,6 @@ function noChangeResult(dryRun: boolean, target: Target): AgentMcpWriteResult {
     bytesChanged: 0,
     reason: 'no-change' as WriteReason,
   };
-}
-
-/**
- * Parse a TOML table header (e.g. `[mcp_servers.filesystem]` or
- * `[mcp_servers."server.with.dot"]`) into its segments. Returns
- * `null` for non-header lines or malformed headers. Mirrors the
- * helper in `writer-preservation/checks.ts` but is duplicated here
- * to keep the writer independent of internal harness helpers.
- */
-function parseCodexHeaderPath(line: string): readonly string[] | null {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return null;
-  const inner = trimmed.slice(1, -1);
-  const segments: string[] = [];
-  let i = 0;
-  while (i < inner.length) {
-    while (i < inner.length && (inner[i] === ' ' || inner[i] === '\t')) i++;
-    if (i >= inner.length) break;
-    const ch = inner[i];
-    if (ch === '"' || ch === "'") {
-      const quote = ch;
-      const start = i + 1;
-      let j = start;
-      while (j < inner.length && inner[j] !== quote) {
-        if (inner[j] === '\\' && j + 1 < inner.length) j += 2;
-        else j++;
-      }
-      if (j >= inner.length) return null;
-      segments.push(inner.slice(start, j));
-      i = j + 1;
-    } else {
-      const start = i;
-      while (i < inner.length && /[A-Za-z0-9_-]/.test(inner[i] ?? '')) {
-        i++;
-      }
-      if (i === start) return null;
-      segments.push(inner.slice(start, i));
-    }
-    if (i < inner.length) {
-      if (inner[i] === '.') i++;
-      else return null;
-    }
-  }
-  if (segments.length === 0) return null;
-  return segments;
 }
 
 /**
@@ -877,9 +803,6 @@ export async function writeOpenAICodexMcpConfig(
   }
 
   // Build the native entries for each requested server, preserving
-  // compatible extension fields from the existing native entry.
-  // Track only the entries that actually change so unchanged
-  // writes do not bump the `written` counter.
   // compatible extension fields from the existing native entry.
   // Track only the entries that actually change so unchanged
   // writes do not bump the `written` counter.
