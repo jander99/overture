@@ -25,6 +25,7 @@ import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
 import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -52,7 +53,7 @@ export function toOpenCodeMcpServer(
   server: OvertureMcpServer | OpenCodeMcpServer,
   existing?: OpenCodeWritableMcpServer,
 ): OpenCodeWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(existing, CANONICAL_FIELD_NAMES);
 
   if (server.type === 'stdio') {
     return {
@@ -86,27 +87,6 @@ export function toOpenCodeMcpServer(
     url: server.url,
     ...(server.headers === undefined ? {} : { headers: server.headers }),
   };
-}
-
-function collectExtensions(
-  existing: OpenCodeWritableMcpServer | undefined,
-): Record<string, JsonValue> {
-  const extensions: Record<string, JsonValue> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
 }
 
 // ---------------------------------------------------------------------------

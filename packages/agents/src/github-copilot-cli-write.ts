@@ -22,6 +22,7 @@ import { normalized } from './normalize-mcp-config.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
 import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import type {
   AgentMcpReadResult,
   AgentMcpWriteInput,
@@ -59,32 +60,11 @@ const GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES = new Set<string>([
   'headers',
 ]);
 
-function collectExtensions(
-  existing: GitHubCopilotCliWritableMcpServer | undefined,
-): Record<string, unknown> {
-  const extensions: Record<string, unknown> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
-}
-
 export function toGitHubCopilotCliMcpServer(
   server: OvertureMcpServer,
   existing?: GitHubCopilotCliWritableMcpServer,
 ): GitHubCopilotCliWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(existing, GITHUB_COPILOT_CLI_CANONICAL_FIELD_NAMES);
 
   // Canonical fields first, extensions last — preserves the existing entry's
   // JSON key order so JSON.stringify(a) === JSON.stringify(b) is true when the

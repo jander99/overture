@@ -22,6 +22,7 @@ import {
 import { normalized } from './normalize-mcp-config.js';
 import { atomicWrite } from './writers/lib/atomic-write.js';
 import { readIfExists } from './writers/lib/read-if-exists.js';
+import { collectExtensions } from './writers/lib/collect-extensions.js';
 import { detectCanonicalSettingsDrift } from './parse-mcp-servers.js';
 import type {
   AgentMcpReadResult,
@@ -76,27 +77,6 @@ const CLAUDE_CODE_CANONICAL_FIELD_NAMES = new Set<string>([
   'headers',
 ]);
 
-function collectExtensions(
-  existing: ClaudeCodeWritableMcpServer | undefined,
-): Record<string, JsonValue> {
-  const extensions: Record<string, JsonValue> = {};
-  if (existing === undefined) {
-    return extensions;
-  }
-
-  for (const key of Object.keys(existing)) {
-    if (CLAUDE_CODE_CANONICAL_FIELD_NAMES.has(key)) {
-      continue;
-    }
-    const value = existing[key];
-    if (value !== undefined) {
-      extensions[key] = value;
-    }
-  }
-
-  return extensions;
-}
-
 /**
  * Convert a canonical `OvertureMcpServer` to a Claude Code native server.
  *
@@ -110,7 +90,7 @@ export function toClaudeCodeMcpServer(
   server: OvertureMcpServer,
   existing?: ClaudeCodeWritableMcpServer,
 ): ClaudeCodeWritableMcpServer {
-  const extensions = collectExtensions(existing);
+  const extensions = collectExtensions(existing, CLAUDE_CODE_CANONICAL_FIELD_NAMES);
   // Claude Code treats `type: 'stdio'` as the implicit default — fixtures in the wild
   // commonly omit it. Preserve byte-equivalence with the existing entry on update:
   // when existing is provided AND lacks `type`, omit `type` from the new value.
