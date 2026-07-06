@@ -1,8 +1,9 @@
 {
   "name": "@overture/agents",
-  "root": "packages/agents",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/agents/src",
   "projectType": "library",
+  "tags": [],
   "targets": {
     "build": {
       "executor": "@nx/esbuild:esbuild",
@@ -19,12 +20,13 @@
       }
     },
     "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{projectRoot}/test-output/vitest/coverage"
+      ],
       "options": {
-        "reportsDirectory": "coverage/packages/agents"
+        "coverage.reportsDirectory": "../../coverage/packages/agents"
       }
     }
-  },
-  "tags": []
+  }
 }
