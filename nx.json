@@ -1,6 +1,6 @@
 {
   "installation": {
-    "version": "22.7.5"
+    "version": "23.0.1"
   },
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "targetDefaults": {
@@ -45,6 +45,20 @@
           "watchDepsName": "watch-deps"
         }
       }
+    },
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testTargetName": "test",
+        "testMode": "watch"
+      },
+      "include": [
+        "apps/cli/**/*",
+        "packages/agents/**/*",
+        "packages/config/**/*",
+        "packages/os/**/*",
+        "packages/scan-matrix/**/*"
+      ]
     }
   ],
   "analytics": false

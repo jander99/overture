@@ -147,12 +147,12 @@
         }
       },
       "test": {
-        "executor": "@nx/vitest:test",
         "outputs": [
-          "{options.reportsDirectory}"
+          "{projectRoot}/{options.coverage.reportsDirectory}",
+          "{projectRoot}/test-output/vitest/coverage"
         ],
         "options": {
-          "reportsDirectory": "coverage/apps/cli"
+          "coverage.reportsDirectory": "../../coverage/apps/cli"
         }
       },
       "validate": {
@@ -180,7 +180,8 @@
           "cwd": "{workspaceRoot}"
         }
       }
-    }
+    },
+    "// targets": "to see all targets run: nx show project @jander99/overture --web"
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1",

@@ -1,8 +1,9 @@
 {
   "name": "@overture/os",
-  "root": "packages/os",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/os/src",
   "projectType": "library",
+  "tags": [],
   "targets": {
     "build": {
       "executor": "@nx/esbuild:esbuild",
@@ -19,12 +20,13 @@
       }
     },
     "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{projectRoot}/test-output/vitest/coverage"
+      ],
       "options": {
-        "reportsDirectory": "coverage/packages/os"
+        "coverage.reportsDirectory": "../../coverage/packages/os"
       }
     }
-  },
-  "tags": []
+  }
 }
