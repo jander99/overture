@@ -30,7 +30,8 @@
     "LICENSE"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
     "link": "yarn nx build @jander99/overture --skip-nx-cache && npm link",

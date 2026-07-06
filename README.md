@@ -33,9 +33,9 @@ npx @jander99/overture@latest --help
 Requires **Node.js >= 24** (the CLI's first published version targets the
 Node 24 LTS baseline; local Node 25 also works).
 
-> **Status**: the npm package shape is ready and the first publish is gated
-> behind a manual approval step. See `.omo/plans/npm-npx-readiness-phase-set.md`
-> for the publish-readiness phase-set.
+> **Status**: the npm package shape is ready. The first publish is gated
+> behind a manual approval step; see [`docs/publishing.md`](docs/publishing.md)
+> for the publish runbook.
 
 ## What it does
 
