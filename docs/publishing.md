@@ -1,7 +1,7 @@
 # Publishing `@jander99/overture` to npm — manual runbook
 
-This runbook is the executable counterpart to the npm/npx readiness
-phase-set plan at `.omo/plans/npm-npx-readiness-phase-set.md`. It is
+This runbook is the canonical publish procedure for `@jander99/overture`
+on npmjs.com. It is
 written for a maintainer (you) who has **not yet registered on
 npmjs.com** — so it starts with the one-time setup and ends with the
 publish trigger.

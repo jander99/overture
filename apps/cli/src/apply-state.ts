@@ -354,8 +354,8 @@ export async function pruneApplyState(
 
 /**
  * Inline atomic write — open temp → write → fsync → close → rename. Mirrors
- * the G1 plan's "write-to-temp + fsync before rename" contract (see
- * `.omo/plans/g1-apply-state-file.md`); fsync is what guarantees the bytes
+ * the G1 plan's "write-to-temp + fsync before rename" contract; fsync
+ * is what guarantees the bytes
  * survive a crash between the temp write and the rename. Kept local to G1
  * (no shared helper per the plan's "Must NOT introduce a shared atomic-write
  * helper" guardrail). On failure the temp file is unlinked best-effort so

@@ -101,8 +101,8 @@ export interface RestorePlan {
  * Per-pair result of an `mv` execution. `ok` = exit 0; `failed` =
  * `mv` exited non-zero, a `mismatch` was blocked (no `--force`), or
  * `integrityStatus: 'missing-backup'`. Per the **user verdict
- * 2026-07-04** recorded in `.omo/plans/g3-restore-last-helper.md`
- * gate G3-8, a missing backup is a FAILURE, not a silent skip — we
+ * 2026-07-04**, gate G3-8, a missing backup is a FAILURE, not a silent
+ * skip — we
  * cannot prove whether the file was consumed by a prior restore or
  * never existed, so the restore request cannot be fulfilled and the
  * user must investigate. The `'skipped'` status is reserved for
