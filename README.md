@@ -608,3 +608,25 @@ command.
   `@types/node` after CI is bumped off Node 20)
 - Yarn 4 (this repo uses Corepack via `.yarnrc.yml`)
 - A POSIX shell for the `npm link` workflow
+
+## Releases
+
+Releases are manual-gated end to end. There is no auto-publish.
+
+1. **Cut a release** — From the GitHub Actions UI, run
+   `.github/workflows/release.yml` (workflow_dispatch) with the desired
+   `specifier` (`major` / `minor` / `patch`). Default `dry-run: true`
+   previews the proposed version and changelog without applying anything;
+   re-run with `dry-run: false` to commit, tag, and create the GitHub
+   Release. Driven by `yarn nx release --skip-publish` (Nx 23).
+2. **Publish to npm** — Run `.github/workflows/publish.yml` with the
+   new tag (e.g. `v0.1.1`). The workflow uses npm Trusted Publishing
+   (OIDC, no long-lived npm token) and is gated on the
+   `npm-production` GitHub environment (manual reviewer approval).
+3. **Smoke check** — Run `npx -y @jander99/overture@latest detect --json`
+   on any clean machine to confirm the new version is live.
+
+The full maintainer runbook — including the one-time npm Trusted
+Publisher setup, the `npm-production` environment, branch protection
+bypass for `github-actions[bot]`, rollback, and troubleshooting — is in
+[`docs/publishing.md`](docs/publishing.md).

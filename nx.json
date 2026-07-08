@@ -61,5 +61,26 @@
       ]
     }
   ],
-  "analytics": false
+  "release": {
+    "projects": ["@jander99/overture"],
+    "projectsRelationship": "fixed",
+    "releaseTag": {
+      "pattern": "v{version}"
+    },
+    "git": {
+      "commit": true,
+      "commitMessage": "chore(release): publish v{version} [skip ci]",
+      "tag": true,
+      "push": true
+    },
+    "changelog": {
+      "workspaceChangelog": {
+        "file": "CHANGELOG.md",
+        "createRelease": "github"
+      },
+      "projectChangelogs": false
+    }
+  },
+  "analytics": false,
+  "neverConnectToCloud": true
 }

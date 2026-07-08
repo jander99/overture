@@ -1,37 +1,33 @@
 # Publishing `@jander99/overture` to npm — manual runbook
 
 This runbook is the canonical publish procedure for `@jander99/overture`
-on npmjs.com. It is
-written for a maintainer (you) who has **not yet registered on
-npmjs.com** — so it starts with the one-time setup and ends with the
-publish trigger.
-
-The publish workflow is intentionally **disabled** until you complete
-the one-time UI setup. See [Enabling the publish workflow](#enabling-the-publish-workflow)
-below.
+on npmjs.com. It is written for a maintainer (you) who has **not yet
+completed the one-time setup** — so it starts with that and ends with
+the publish trigger.
 
 ## Overview
 
-The publish flow is manual-gated end to end:
+The release flow is **manual-gated** end to end. There are two distinct
+workflows, each triggered from the GitHub Actions UI:
 
-1. **release-please** opens a release PR from conventional commits on
-   `main` and tags the merge commit. (Already configured;
-   `.github/workflows/release-please.yml` is active.)
-2. A maintainer reviews and merges the release PR. This creates a tag
-   like `v0.1.0` on the merge commit.
-3. A maintainer **enables** the publish workflow (rename
-   `.github/workflows/publish.yml.disabled` →
-   `.github/workflows/publish.yml`) and runs it via
-   `workflow_dispatch` from the Actions UI.
-4. The publish workflow builds, verifies, and `npm publish`es the
-   tarball under the `npm-production` GitHub environment (manual
-   approval required).
-5. A maintainer runs the post-publish `npx` smoke commands.
+1. **`.github/workflows/release.yml`** — cuts the release. Produces a
+   `vX.Y.Z` tag, a `CHANGELOG.md` update at the workspace root, and a
+   GitHub Release whose body is the changelog. Driven by
+   `yarn nx release --skip-publish` from Nx 23.
+2. **`.github/workflows/publish.yml`** — publishes the tagged release
+   to npm. Uses Trusted Publishing (OIDC, no long-lived npm token).
+   Runs in the `npm-production` GitHub environment (requires a reviewer
+   to approve before continuing).
 
-## One-time setup (you, in web UIs)
+Both workflows are **`workflow_dispatch`-only**. No `push` or
+`pull_request` trigger can reach the registry. A release tag created
+by `release.yml` will never auto-publish.
+
+## One-time setup
 
 These are manual steps performed outside git. Tick them off as you
-complete them.
+complete them. They only need to happen once per npm package + GitHub
+repo.
 
 ### Step 1 — npmjs.com account and 2FA
 
@@ -56,9 +52,7 @@ complete them.
 - [ ] Fill in:
   - **Owner or org**: `jander99`
   - **Repository**: `jander99/overture`
-  - **Workflow filename**: `publish.yml` (the actual filename, not
-    the `.disabled` name; GitHub will look for the file at the
-    supplied path when the workflow runs)
+  - **Workflow filename**: `publish.yml`
   - **Allowed action**: `npm publish`
 - [ ] Save. The package `@jander99/overture` will appear in your
       "Trusted Publishers" list. (If the package does not exist yet, you
@@ -85,82 +79,90 @@ complete them.
 - [ ] Save. The environment is now active; the publish workflow
       will hit the "Required reviewers" check on every run.
 
-### Step 4 — Create the first npm package entry (optional)
+### Step 4 — Branch protection bypass for `github-actions[bot]`
 
-If you want the package's npm page (and the post-publish smoke
-checks like `npm view @jander99/overture version`) to work before
-the first publish, you can create a placeholder via `npm init
---scope=jander99 --name=overture` from any machine. This is
-optional — `npm publish` will create the package entry on its own.
+`release.yml` pushes a commit and an annotated tag to `main` from the
+runner. The push is attributed to `github-actions[bot]`.
 
-## Enabling the publish workflow
+- If `main` is unprotected: no action is needed.
+- If `main` is branch-protected: add `github-actions[bot]` as a
+  **bypass actor** for the rule covering `main`. In the repo, go to
+  Settings → Rules → Rulesets (or Settings → Branches → Branch
+  protection rules on the classic model) and add the bypass.
 
-The publish workflow is currently **disabled** to prevent any
-accidental registry action before the one-time setup above is
-complete.
+Without the bypass, the workflow will fail at the `git push` step
+with a clear "remote rejected" error. Verify by triggering
+`release.yml` with `dry-run: true` first (the dry-run doesn't push
+but it confirms config + checkout), then re-run with `dry-run: false`
+and watch the push succeed.
 
-The file `.github/workflows/publish.yml.disabled` is the real
-workflow. GitHub does not pick up `.disabled` files as workflows
-(`.yml` is the recognized extension), so the workflow does not
-appear in the Actions UI and cannot be triggered.
+## Cutting a release
 
-When you are ready to publish:
+`release.yml` is `workflow_dispatch`-only and runs from `main`. It
+will hard-fail if triggered from any other ref.
 
-- [ ] On a feature branch in a PR (or directly on main if you prefer
-      to skip review for this admin change), rename the file:
-  ```bash
-  git mv .github/workflows/publish.yml.disabled \
-        .github/workflows/publish.yml
-  ```
-- [ ] Commit: `chore(ci): enable npm publish workflow`.
-- [ ] Push and open a PR (or merge directly if you're using a
-      personal policy that allows admin changes on main). The
-      `ci.yml` Quality Gates + Test + package-verify jobs all run on
-      the PR; nothing should break since this is a pure rename.
-- [ ] After merge, the workflow appears in the GitHub Actions UI
-      under "Publish @jander99/overture".
+### Step 1 — Ensure `main` is green
 
-## The publish flow (after enabling)
+`ci.yml` runs on `push: branches: [main]`. The release push has
+`[skip ci]` in its commit message, so it does **not** re-trigger
+`ci.yml`. Confirm `main` is green before cutting.
 
-### Step 1 — Land work via conventional commits
+### Step 2 — Preview with `dry-run: true`
 
-release-please derives the next semver from commit messages on
-`main`. The mapping:
+From GitHub → Actions → "Release @jander99/overture" → "Run
+workflow":
 
-| Commit type        | Version bump |
-| ------------------ | ------------ |
-| `fix: ...`         | patch        |
-| `feat: ...`        | minor        |
-| `feat!: ...` or    | major        |
-| `BREAKING CHANGE:` |              |
+- **specifier**: `major` / `minor` / `patch` (default `minor`)
+- **dry-run**: `true` (default — preview only)
+- **first-release**: `true` for the first cut of
+  `@jander99/overture`, `false` thereafter (default `true`)
 
-Other types (`docs:`, `chore:`, `refactor:`, `test:`, `build:`,
-`ci:`, `perf:`) appear in `CHANGELOG.md` but do not bump the
-version.
+The workflow runs `yarn nx release --skip-publish --specifier=<x>
+--dry-run [--first-release]` and prints:
 
-### Step 2 — release-please opens a release PR
+- The proposed new version (e.g. `0.1.0 → 0.1.1`).
+- The proposed `CHANGELOG.md` entry.
+- The git operations it would perform (commit, tag, push).
 
-After commits land on `main`,
-`.github/workflows/release-please.yml` opens (or updates) a PR
-titled `chore(main): release @jander99/overture <new-version>`. The
-PR body shows the changelog for the release.
+Nothing is written. Confirm the version + changelog look right.
 
-Review the PR. Check that:
+### Step 3 — Apply with `dry-run: false`
 
-- The version bump is correct (e.g. `0.0.1` → `0.1.0` for a new
-  minor).
-- The changelog only includes user-visible changes.
-- `apps/cli/package.json` and `CHANGELOG.md` are the only files
-  modified.
+Re-run the workflow with the same `specifier` and `first-release`,
+but `dry-run: false`. The workflow:
 
-Merge the PR. This creates a tag like `v0.1.0` on the merge commit.
+1. Bumps `apps/cli/package.json` version.
+2. Updates `yarn.lock` if needed.
+3. Updates `CHANGELOG.md` at the workspace root.
+4. Creates an annotated `vX.Y.Z` tag.
+5. Commits and pushes the release to `main` (attributed to
+   `github-actions[bot]`).
+6. Creates a GitHub Release whose body is the new `CHANGELOG.md`
+   entry.
 
-### Step 3 — Run the publish workflow
+The push will skip `ci.yml` and `validate.yml` (the `[skip ci]`
+suffix on the release commit message blocks both, and tag pushes
+don't match their `branches: [main]` filter).
+
+After this step, the new tag is on `origin/main`. You can now
+publish.
+
+> **Note**: After the first successful release, change the
+> `first-release` default in `.github/workflows/release.yml` to
+> `false` so subsequent cuts use the latest tag as their baseline.
+
+## Publishing a release
+
+### Step 1 — Trigger and approve
 
 Go to GitHub → Actions → "Publish @jander99/overture" → "Run
-workflow". Supply the tag (e.g. `v0.1.0`). Confirm.
+workflow". Supply the tag created by the release workflow (e.g.
+`v0.1.1`). Confirm.
 
-The workflow:
+The workflow is gated on the `npm-production` environment at the
+**job** level (`publish.yml:54`), which means GitHub holds the
+entire job pending reviewer approval before any step runs. Approve
+when ready; the steps then run in this order:
 
 1. Validates the tag input.
 2. Checks out the tagged commit.
@@ -168,15 +170,12 @@ The workflow:
 4. Builds (`yarn nx build @jander99/overture --skip-nx-cache`).
 5. Runs `node apps/cli/scripts/verify-package.mjs` (golden file
    list + install + smoke).
-6. Enters the `npm-production` environment (requires a reviewer
-   to approve before continuing).
-7. `npm publish --provenance --access public` from `apps/cli/`.
-8. Smoke-checks `npm view @jander99/overture@<version> version`.
+6. `npm publish --provenance --access public` from `apps/cli/`.
+7. Smoke-checks `npm view @jander99/overture@<version> version`.
 
-If the publish workflow fails at any step, see
-[Troubleshooting](#troubleshooting) below.
+If the workflow fails at any step, see [Troubleshooting](#troubleshooting).
 
-### Step 4 — Post-publish smoke checks
+### Step 2 — Post-publish smoke checks
 
 After the publish workflow succeeds, run these from a fresh
 terminal on any machine with Node 24+ and npm 11.5.1+:
@@ -196,8 +195,6 @@ npx -y @jander99/overture@latest detect --json | head -c 200
 The `detect --json` output should print 4 platforms' worth of
 inventory.
 
-If the smoke checks fail, see [Rollback](#rollback) below.
-
 ## Rollback
 
 Do **not** unpublish unless the publish was a clear leak of
@@ -207,7 +204,8 @@ restricted.
 For ordinary mistakes (a bug shipped in the published version):
 
 1. Open a follow-up PR that fixes the bug.
-2. After merge, release-please will propose a patch release.
+2. After merge, trigger `release.yml` with `--specifier=patch`
+   and `first-release: false` (or `true` if you've reset).
 3. After the patch release is published, run:
 
    ```bash
@@ -236,17 +234,24 @@ yarn nx show project @jander99/overture --json | head -1
 If that fails, the package name in `apps/cli/package.json` is
 inconsistent. Fix the name and re-push.
 
+### "release.yml push is rejected by branch protection"
+
+The runner pushes as `github-actions[bot]`. If branch protection
+on `main` blocks this actor, the push fails. Add `github-actions[bot]`
+as a bypass actor (see [Step 4](#step-4--branch-protection-bypass-for-github-actionsbot))
+or temporarily relax the rule for the release.
+
+### "Trusted publishing requires the workflow file to exist"
+
+If you renamed `publish.yml.disabled` → `publish.yml` but the
+Trusted Publisher UI is still referencing the disabled name,
+double-check that the field in the Trusted Publisher config is
+exactly `publish.yml` (no path, no `.yml.disabled`).
+
 ### "Publish workflow doesn't appear in the Actions UI"
 
 The workflow file is still named `.publish.yml.disabled`. Rename
 it to `publish.yml`, commit, push.
-
-### "Trusted publishing requires the workflow file to exist"
-
-If you renamed the file but the Trusted Publisher UI is still
-referencing the disabled name, double-check that the field in the
-Trusted Publisher config is exactly `publish.yml` (no path, no
-`.yml.disabled`).
 
 ### "publish workflow completed but `npm view` returns 404"
 
@@ -271,14 +276,32 @@ Local runs may use a long-lived `NODE_AUTH_TOKEN` that's not set
 in CI. The publish workflow is intentionally tokenless and relies
 on Trusted Publishing only. Do not add a fallback token.
 
+### "release.yml dry-run prints the wrong baseline version"
+
+If `dry-run` proposes a version that doesn't account for prior
+tags, you may have stale `v*` tags from before this workflow
+existed. Check:
+
+```bash
+git tag --list 'v*'
+```
+
+If a stale tag from a previous release line is present, Nx will
+use it as the baseline. Either delete the stale tag or re-run
+with `first-release: true` (which bypasses tag-baseline checks).
+
 ## Operational notes
 
-- The publish workflow uses
+- `release.yml` uses
+  `concurrency: release-${{ github.ref }}` with
+  `cancel-in-progress: false`. Two simultaneous release dispatches
+  will block at the concurrency level, not corrupt state.
+- `publish.yml` uses
   `concurrency: publish-${{ inputs.tag }}` with
   `cancel-in-progress: false`. A second publish of the same tag
   is blocked at the concurrency level, not at the registry.
 - `setup-node` pins `node-version: '24'` (LTS). Local Node 25 is
-  fine for development but the publish uses 24 for
+  fine for development but both workflows use 24 for
   reproducibility.
 - The verify-package step is a no-publish gate: it builds, packs,
   and smoke-tests the tarball. The same script runs in the CI
@@ -288,15 +311,8 @@ on Trusted Publishing only. Do not add a fallback token.
   cache, builds the CLI with the Nx workspace toolchain (`yarn nx
 build @jander99/overture --skip-nx-cache`), then executes the
   freshly built `apps/cli/dist/main.js detect --json` on a runner
-  with no pre-installed agents. It asserts the output is valid JSON
-  with all 14 registry entries, every entry reports
-  `installed: false`, and no platform carries a `parseError`. This
-  catches the class of build-pipeline regressions the unit tests
-  would not (a missing runtime dep like `smol-toml`, a broken Yarn
-  workspace symlink, a transitive `^build` failure, etc.). Together
-  with `package-verify` (which proves the published-tarball
-  contract) the two jobs cover both the workspace build and the
-  shipped artifact.
+  with no pre-installed agents. Together they cover both the
+  workspace build and the shipped artifact.
 - The Trusted Publisher UI is the source of truth for who can
   publish. This runbook does not and should not encode npm
   tokens.
@@ -305,17 +321,20 @@ build @jander99/overture --skip-nx-cache`), then executes the
 
 The path from "ready to publish" to "published" is:
 
-1. Complete the four one-time setup steps above.
-2. Rename `.github/workflows/publish.yml.disabled` to
-   `publish.yml` and merge.
-3. Land work on `main` via conventional commits; merge the
-   release-please PR.
-4. Run the publish workflow with the new tag from the Actions UI.
+1. Complete the four one-time setup steps above (Trusted Publisher +
+   `npm-production` environment; Step 4 only needed if `main` is
+   branch-protected).
+2. Trigger `.github/workflows/release.yml` with `dry-run: true`;
+   review the proposed version + changelog.
+3. Trigger `release.yml` again with `dry-run: false` to create
+   the tag, commit, and GitHub Release.
+4. Trigger `.github/workflows/publish.yml` with the new tag.
 5. Approve in the `npm-production` environment.
 6. Run the post-publish `npx` smoke checks.
 
-Until you complete step 1, the publish workflow is inert: it
-exists in the repo as a `.disabled` file that GitHub does not
-load as a workflow, and the npm registry has no record of the
-package. There is no auto-publish, no scheduled run, and no PR
-trigger that could reach the registry.
+Until you complete at least step 2 (Trusted Publisher) and step 3
+(`npm-production` environment), `publish.yml` cannot reach the
+registry. `release.yml` can push as long as branch protection on
+`main` (if any) allows the `github-actions[bot]` actor. There is no
+auto-publish, no scheduled run, and no PR trigger that could reach
+the registry.

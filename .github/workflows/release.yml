@@ -1,0 +1,125 @@
+name: Release @jander99/overture
+
+# Manual, workflow_dispatch-only release-cut workflow. Drives
+# `yarn nx release --skip-publish` to produce:
+#   - a version bump in apps/cli/package.json
+#   - a CHANGELOG.md update at the workspace root
+#   - a v{version} tag on the release commit
+#   - a GitHub Release with the changelog body
+#
+# Publishing to npm is intentionally NOT triggered here — that is the
+# separate `publish.yml` workflow (which uses Trusted Publishing / OIDC
+# and is gated on the `npm-production` environment). This split
+# preserves the manual-gate philosophy: nothing reaches npm without
+# an explicit, environment-approved dispatch. See docs/publishing.md.
+#
+# Usage:
+#   1. From the GitHub Actions UI, choose "Run workflow" on this file.
+#   2. Pick the semver bump (major / minor / patch). Default `minor`.
+#   3. Leave `dry-run: true` (default) to preview the proposed
+#      version + changelog without applying anything.
+#   4. Re-run with `dry-run: false` to apply (creates commit + tag +
+#      GitHub Release). The push is performed by the github-actions[bot];
+#      ensure your branch protection on `main` permits that actor
+#      (Settings → Rules → Bypass actors).
+#   5. Trigger `.github/workflows/publish.yml` with the new tag to
+#      actually publish to npm.
+#
+# The `[skip ci]` suffix on the release commit message prevents the
+# push from re-triggering ci.yml and validate.yml (both filter on
+# push: branches: [main]). Tag pushes do not re-trigger them anyway.
+
+on:
+  workflow_dispatch:
+    inputs:
+      specifier:
+        description: 'Semver bump to apply'
+        required: true
+        type: choice
+        default: 'minor'
+        options:
+          - major
+          - minor
+          - patch
+      dry-run:
+        description: 'Preview only — no writes, no commit, no push, no GitHub Release'
+        required: true
+        type: boolean
+        default: true
+      first-release:
+        description: 'Treat as the first release of @jander99/overture (bypasses tag baseline checks)'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Cut release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Refuse non-main refs
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::release workflow must run from main; got ${{ github.ref }}"
+          exit 1
+
+      - name: Check out main (full history + tags)
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Cache Yarn Berry offline mirror
+        uses: actions/cache@v5
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Configure git author + committer identity
+        # actions/checkout persists git credentials for the push but does
+        # not configure user.name / user.email. Nx Release performs both
+        # `git commit` and an annotated `git tag`, both of which fail
+        # without an author identity. Use the github-actions[bot] identity
+        # so the release commit is attributed to the same actor that
+        # performs the push.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Cut release (version + changelog + tag + GitHub Release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ARGS="--skip-publish --specifier=${{ inputs.specifier }}"
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          if [ "${{ inputs.first-release }}" = "true" ]; then
+            ARGS="$ARGS --first-release"
+          fi
+          echo "Running: yarn nx release $ARGS"
+          yarn nx release $ARGS
