@@ -2,7 +2,8 @@ name: Publish @jander99/overture
 
 # Manual, environment-gated Trusted Publishing workflow for the
 # `@jander99/overture` CLI. Intentionally NOT triggered by `push: tags:`
-# so release-please tags can never accidentally auto-publish.
+# so release tags created by `.github/workflows/release.yml` can never
+# accidentally auto-publish.
 #
 # Usage:
 #   1. Configure the npm Trusted Publisher for the @jander99/overture
