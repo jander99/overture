@@ -185,7 +185,7 @@
   },
   "dependencies": {
     "jsonc-parser": "^3.3.1",
-    "smol-toml": "^1.6.1",
+    "smol-toml": "^1.7.1",
     "yaml": "^2.9.0"
   }
 }
